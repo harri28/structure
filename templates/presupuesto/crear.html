@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo Presupuesto — {{ proyecto.codigo }}{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
+<li class="breadcrumb-item active">Nuevo Presupuesto Contractual</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Presupuesto</a>
+  <h4>Nuevo Presupuesto Contractual</h4>
+</div>
+
+<div class="card" style="max-width:520px">
+  <div class="card-body">
+    <p class="text-muted" style="font-size:.84rem">
+      El presupuesto contractual es único para el proyecto. Una vez creado, importe las partidas desde un archivo S10.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Nombre del presupuesto</label>
+        <input type="text" name="nombre" class="form-control"
+               placeholder="Presupuesto Contractual" value="Presupuesto Contractual">
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>Crear y continuar
+        </button>
+        <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

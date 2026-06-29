@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar Modificación{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:modificacion_detalle' mod.pk %}">{{ mod.get_tipo_display }} N°{{ mod.numero }}</a></li>
+<li class="breadcrumb-item active">Eliminar</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-danger">
+      <div class="card-header bg-danger text-white">Confirmar Eliminación</div>
+      <div class="card-body text-center py-4">
+        <i class="bi bi-exclamation-triangle-fill fs-1 text-danger mb-3 d-block"></i>
+        <h5>¿Eliminar "{{ mod.nombre }}"?</h5>
+        <p class="text-muted">Se eliminarán todas las partidas de esta modificación.</p>
+        <form method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger me-2">Sí, eliminar</button>
+          <a href="{% url 'presupuesto:modificacion_detalle' mod.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

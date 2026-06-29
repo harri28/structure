@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% load pres_fmt %}
+{% block title %}ACU — {{ partida.codigo }}{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:detalle' presupuesto.pk %}">{{ presupuesto.nombre }}</a></li>
+<li class="breadcrumb-item active">ACU: {{ partida.codigo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'presupuesto:detalle' presupuesto.pk %}" class="btn-back">
+    <i class="bi bi-chevron-left"></i> {{ presupuesto.nombre }}
+  </a>
+  <h4 class="d-flex align-items-center gap-2">
+    <span class="badge" style="background:#d1fae5;color:#065f46;font-size:.7rem;font-weight:700">ACU</span>
+    Análisis de Costos Unitarios
+  </h4>
+</div>
+
+<!-- Info de la partida -->
+<div class="card mb-3" style="border-left:4px solid #3b82f6">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex gap-4 align-items-center flex-wrap">
+      <div>
+        <div style="font-size:.65rem;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em">Ítem</div>
+        <code style="font-size:.9rem;font-weight:700;color:#1d4ed8">{{ partida.codigo }}</code>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:.65rem;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em">Descripción</div>
+        <span style="font-size:.88rem;font-weight:600;color:#111">{{ partida.nombre }}</span>
+      </div>
+      <div>
+        <div style="font-size:.65rem;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em">Und</div>
+        <span style="font-size:.88rem">{{ partida.unidad }}</span>
+      </div>
+      <div>
+        <div style="font-size:.65rem;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em">Metrado</div>
+        <span style="font-size:.88rem">{{ partida.cantidad|miles:4 }}</span>
+      </div>
+      <div>
+        <div style="font-size:.65rem;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em">P.U. Contractual</div>
+        <span style="font-size:.95rem;font-weight:700">S/ {{ partida.precio_unitario|miles:2 }}</span>
+        {% if precio_hist %}
+        <div style="font-size:.65rem;margin-top:.15rem">
+          <span style="color:#6b7280">Histórico ({{ precio_hist.n }} proyectos):</span>
+          <strong style="color:#2563eb">S/ {{ precio_hist.media }}</strong>
+        </div>
+        {% endif %}
+      </div>
+      <div>
+        <div style="font-size:.65rem;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em">Total Partida</div>
+        <span style="font-size:.95rem;font-weight:700">S/ {% with t=partida.total %}{{ t|miles:2 }}{% endwith %}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Grupos de recursos -->
+{% if grupos %}
+{% for grupo in grupos %}
+<div class="mb-3">
+  <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:{{ grupo.color }};margin-bottom:.35rem;display:flex;align-items:center;gap:6px">
+    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{{ grupo.color }}"></span>
+    {{ grupo.label }}
+  </div>
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead style="background:{{ grupo.bg }}">
+            <tr>
+              <th style="width:11%;font-size:.75rem">Código</th>
+              <th style="font-size:.75rem">Descripción</th>
+              <th style="width:7%;font-size:.75rem">Und</th>
+              <th style="width:10%;font-size:.75rem" class="text-end">Cantidad</th>
+              <th style="width:12%;font-size:.75rem" class="text-end">P.U. (S/)</th>
+              <th style="width:12%;font-size:.75rem" class="text-end">Parcial (S/)</th>
+              <th style="width:80px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in grupo.recursos %}
+            <tr>
+              <td><code style="font-size:.76rem;color:#6b7280">{{ r.codigo }}</code></td>
+              <td style="font-size:.83rem">{{ r.descripcion }}</td>
+              <td style="font-size:.8rem;color:#6b7280">{{ r.unidad }}</td>
+              <td class="text-end" style="font-size:.82rem">{{ r.cantidad|miles:4 }}</td>
+              <td class="text-end" style="font-size:.82rem">{{ r.precio_unitario|miles:2 }}</td>
+              <td class="text-end fw-semibold" style="font-size:.82rem">{{ r.total|miles:2 }}</td>
+              <td class="text-end pe-2">
+                <a href="{% url 'presupuesto:acu_recurso_editar' r.pk %}"
+                   class="btn btn-outline-secondary btn-sm" style="padding:1px 7px" title="Editar">
+                  <i class="bi bi-pencil" style="font-size:.72rem"></i>
+                </a>
+                <form method="post" action="{% url 'presupuesto:acu_recurso_eliminar' r.pk %}"
+                      class="d-inline" onsubmit="return confirm('¿Eliminar este recurso?')">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-danger btn-sm"
+                          style="padding:1px 7px" title="Eliminar">
+                    <i class="bi bi-trash" style="font-size:.72rem"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background:{{ grupo.bg }}">
+              <td colspan="5" class="text-end fw-semibold" style="font-size:.8rem;color:#374151">
+                Subtotal {{ grupo.label }}
+              </td>
+              <td class="text-end fw-bold" style="color:{{ grupo.color }};font-size:.85rem">
+                {{ grupo.subtotal|miles:2 }}
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Comparación Total ACU vs P.U. -->
+<div class="card mb-4" style="border:1px solid #e5e7eb;background:#f8fafc">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex gap-4 align-items-center flex-wrap justify-content-end">
+      <div class="text-end">
+        <div style="font-size:.65rem;color:#6b7280;font-weight:700;text-transform:uppercase">Total ACU</div>
+        <span style="font-size:1.05rem;font-weight:800">S/ {{ total_acu|miles:2 }}</span>
+      </div>
+      <div style="color:#d1d5db;font-size:1.2rem">vs</div>
+      <div class="text-end">
+        <div style="font-size:.65rem;color:#6b7280;font-weight:700;text-transform:uppercase">P.U. Contractual</div>
+        <span style="font-size:1.05rem;font-weight:800">S/ {{ partida.precio_unitario|miles:2 }}</span>
+      </div>
+      <div class="text-end ps-3" style="border-left:2px solid #e5e7eb">
+        <div style="font-size:.65rem;color:#6b7280;font-weight:700;text-transform:uppercase">Diferencia</div>
+        {% if diferencia == 0 %}
+        <span style="font-size:1.05rem;font-weight:800;color:#10b981">
+          <i class="bi bi-check-circle-fill me-1"></i>Cuadrado
+        </span>
+        {% elif diferencia > 0 %}
+        <span style="font-size:1.05rem;font-weight:800;color:#ef4444">
+          +S/ {{ diferencia|miles:2 }}
+        </span>
+        {% else %}
+        <span style="font-size:1.05rem;font-weight:800;color:#f59e0b">
+          −S/ {{ diferencia_abs|miles:2 }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<!-- Estado vacío -->
+<div class="text-center py-5 text-muted mb-3">
+  <i class="bi bi-calculator" style="font-size:3rem;opacity:.2"></i>
+  <p class="mt-2 mb-0" style="font-size:.9rem">Sin recursos registrados.</p>
+  <p style="font-size:.82rem">Agregue el primer recurso en el formulario de abajo.</p>
+</div>
+{% endif %}
+
+<!-- Formulario: Agregar recurso -->
+<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#6b7280;margin-bottom:.4rem">
+  Agregar Recurso
+</div>
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="post" id="form-agregar">
+      {% csrf_token %}
+      <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label fw-semibold" style="font-size:.78rem">Tipo</label>
+          <select name="tipo" class="form-select form-select-sm">
+            {% for val, lbl in tipos %}
+            <option value="{{ val }}">{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-1">
+          <label class="form-label fw-semibold" style="font-size:.78rem">Código</label>
+          <input type="text" name="codigo" class="form-control form-control-sm" placeholder="02.01">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.78rem">
+            Descripción <span class="text-danger">*</span>
+          </label>
+          <input type="text" name="descripcion" class="form-control form-control-sm"
+                 placeholder="Nombre del recurso" required>
+        </div>
+        <div class="col-md-1">
+          <label class="form-label fw-semibold" style="font-size:.78rem">Und</label>
+          <input type="text" name="unidad" class="form-control form-control-sm" placeholder="kg">
+        </div>
+        <div class="col-md-1">
+          <label class="form-label fw-semibold" style="font-size:.78rem">Cantidad</label>
+          <input type="number" name="cantidad" id="add-cant"
+                 class="form-control form-control-sm text-end"
+                 placeholder="0.0000" step="0.0001" min="0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold" style="font-size:.78rem">P.U. (S/)</label>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text" style="font-size:.78rem">S/</span>
+            <input type="number" name="precio_unitario" id="add-pu"
+                   class="form-control text-end"
+                   placeholder="0.00" step="0.01" min="0">
+          </div>
+        </div>
+        <div class="col-md-1">
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-plus-lg"></i> Agregar
+          </button>
+        </div>
+      </div>
+      <!-- Preview parcial -->
+      <div class="mt-2 text-end" style="font-size:.78rem;color:#6b7280">
+        Parcial: <strong id="add-parcial" style="color:#111">—</strong>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Panel de sugerencias ML -->
+<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#6b7280;margin-bottom:.4rem;margin-top:1.5rem">
+  <i class="bi bi-stars me-1" style="color:#f59e0b"></i>Sugerencias de Recursos (IA)
+</div>
+<div class="card mb-4" id="ml-panel">
+  <div class="card-body text-center py-4" id="ml-loading">
+    <div class="spinner-border spinner-border-sm text-secondary me-2" role="status"></div>
+    <span style="font-size:.82rem;color:#6b7280">Buscando partidas similares…</span>
+  </div>
+  <div id="ml-resultados" class="d-none">
+    <div class="card-header d-flex justify-content-between align-items-center py-2">
+      <span id="ml-titulo" style="font-size:.78rem;color:#6b7280"></span>
+      <button id="ml-importar-btn" class="btn btn-sm btn-primary d-none"
+              style="font-size:.75rem;padding:2px 10px">
+        <i class="bi bi-download me-1"></i>Importar seleccionados
+      </button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead style="background:#fafafa">
+          <tr>
+            <th style="width:32px"></th>
+            <th style="font-size:.74rem">Tipo</th>
+            <th style="font-size:.74rem">Descripción</th>
+            <th style="width:7%;font-size:.74rem">Und</th>
+            <th style="width:10%;font-size:.74rem" class="text-end">Cantidad</th>
+            <th style="width:11%;font-size:.74rem" class="text-end">P.U. (S/)</th>
+            <th style="width:8%;font-size:.74rem" class="text-center">Similitud</th>
+            <th style="font-size:.74rem;color:#9ca3af">Fuente</th>
+          </tr>
+        </thead>
+        <tbody id="ml-tbody"></tbody>
+      </table>
+    </div>
+    <div id="ml-empty" class="text-center py-4 text-muted d-none" style="font-size:.82rem">
+      <i class="bi bi-info-circle me-1"></i>
+      No se encontraron partidas similares con recursos configurados.
+      El sistema aprenderá a medida que configures más ACU.
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── Parcial preview ──────────────────────────────────────────
+  var cant = document.getElementById('add-cant');
+  var pu   = document.getElementById('add-pu');
+  var prev = document.getElementById('add-parcial');
+  function recalc() {
+    var c = parseFloat(cant.value) || 0;
+    var p = parseFloat(pu.value)   || 0;
+    var t = c * p;
+    prev.textContent = t ? 'S/ ' + t.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+  }
+  cant.addEventListener('input', recalc);
+  pu.addEventListener('input',   recalc);
+
+  // ── Sugerencias ML ──────────────────────────────────────────
+  var TIPOS_COLOR = {
+    'MATERIAL':    '#3b82f6',
+    'MANO_OBRA':   '#10b981',
+    'EQUIPO':      '#f59e0b',
+    'SUBCONTRATO': '#8b5cf6',
+    'OTRO':        '#6b7280',
+  };
+  var TIPOS_LABEL = {
+    'MATERIAL':    'Material',
+    'MANO_OBRA':   'Mano Obra',
+    'EQUIPO':      'Equipo',
+    'SUBCONTRATO': 'Subcontrato',
+    'OTRO':        'Otro',
+  };
+
+  function fmt(n) {
+    return parseFloat(n).toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4});
+  }
+
+  function pct(score) {
+    var p = Math.round(score * 100);
+    var color = p >= 80 ? '#10b981' : p >= 50 ? '#f59e0b' : '#9ca3af';
+    return '<span style="font-size:.7rem;font-weight:700;color:' + color + '">' + p + '%</span>';
+  }
+
+  fetch('{% url "presupuesto:ml_sugeridos" partida.pk %}')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      document.getElementById('ml-loading').classList.add('d-none');
+      document.getElementById('ml-resultados').classList.remove('d-none');
+
+      var items = data.sugeridos || [];
+      var tbody = document.getElementById('ml-tbody');
+
+      if (items.length === 0) {
+        document.getElementById('ml-empty').classList.remove('d-none');
+        document.getElementById('ml-titulo').textContent = 'Sin sugerencias disponibles';
+        return;
+      }
+
+      document.getElementById('ml-titulo').textContent =
+        items.length + ' recursos sugeridos de partidas similares';
+      document.getElementById('ml-importar-btn').classList.remove('d-none');
+
+      items.forEach(function(r, i) {
+        var color = TIPOS_COLOR[r.tipo] || '#6b7280';
+        var label = TIPOS_LABEL[r.tipo] || r.tipo;
+        var row = document.createElement('tr');
+        row.innerHTML =
+          '<td class="text-center"><input type="checkbox" class="ml-chk" value="' + i + '" checked></td>' +
+          '<td><span style="font-size:.7rem;color:' + color + ';font-weight:700">' + label + '</span></td>' +
+          '<td style="font-size:.8rem">' + r.descripcion + '</td>' +
+          '<td style="font-size:.78rem;color:#6b7280">' + (r.unidad||'') + '</td>' +
+          '<td class="text-end" style="font-size:.78rem">' + fmt(r.cantidad) + '</td>' +
+          '<td class="text-end" style="font-size:.78rem">' + fmt(r.precio_unitario) + '</td>' +
+          '<td class="text-center">' + pct(r.score) + '</td>' +
+          '<td style="font-size:.7rem;color:#9ca3af;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + r.fuente_nombre + '">' + r.fuente_nombre + '</td>';
+        tbody.appendChild(row);
+      });
+
+      // ── Importar seleccionados ─────────────────────────────
+      document.getElementById('ml-importar-btn').addEventListener('click', function() {
+        var checked = document.querySelectorAll('.ml-chk:checked');
+        if (checked.length === 0) { alert('Selecciona al menos un recurso.'); return; }
+
+        var recursos = [];
+        checked.forEach(function(chk) { recursos.push(items[parseInt(chk.value)]); });
+
+        var btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Importando…';
+
+        fetch('{% url "presupuesto:ml_importar" partida.pk %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken':  '{{ csrf_token }}',
+          },
+          body: JSON.stringify({ recursos: recursos }),
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (data.creados > 0) {
+            window.location.reload();
+          } else {
+            btn.disabled = false;
+            btn.textContent = 'Importar seleccionados';
+            alert('No se importó ningún recurso.');
+          }
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = 'Importar seleccionados';
+        });
+      });
+    })
+    .catch(function() {
+      document.getElementById('ml-loading').innerHTML =
+        '<span style="font-size:.8rem;color:#9ca3af"><i class="bi bi-wifi-off me-1"></i>No se pudo cargar sugerencias</span>';
+    });
+})();
+</script>
+{% endblock %}

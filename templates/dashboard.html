@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+
+{% if sin_proyecto %}
+<div class="card" style="max-width:480px;margin:4rem auto">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-folder2-open" style="font-size:2.5rem;color:#d1d5db"></i>
+    <h5 class="mt-3 fw-bold">Sin proyecto activo</h5>
+    <p class="text-muted" style="font-size:.88rem">
+      Ve a Administración → Proyectos y activa un proyecto para comenzar.
+    </p>
+    <a href="{% url 'proyectos:lista' %}" class="btn btn-primary btn-sm mt-1">
+      <i class="bi bi-folder2-open me-1"></i>Ir a Proyectos
+    </a>
+  </div>
+</div>
+
+{% else %}
+
+<!-- ── KPIs del proyecto ─────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-lg-3">
+    {% if presupuesto_obj %}
+    <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="text-decoration-none">
+    {% endif %}
+    <div class="card h-100" style="border-left:4px solid #2563eb{% if presupuesto_obj %};cursor:pointer{% endif %}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div style="min-width:0">
+            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+              Presupuesto
+            </div>
+            <div style="font-size:1.35rem;font-weight:800;color:#2563eb;line-height:1.2;margin-top:.2rem">
+              {% if presupuesto_total %}
+              S/ {{ presupuesto_total|miles:0 }}
+              {% else %}
+              —
+              {% endif %}
+            </div>
+            <div style="font-size:.72rem;color:#9ca3af;margin-top:.1rem">
+              {% if pres_detalle %}
+              C.D. S/ {{ pres_detalle.costo_directo|miles:0 }} · inc. IGV
+              {% else %}
+              contractual total
+              {% endif %}
+            </div>
+          </div>
+          <div style="width:42px;height:42px;border-radius:10px;background:#eff6ff;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-calculator" style="color:#2563eb;font-size:1.1rem"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% if presupuesto_obj %}</a>{% endif %}
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card h-100" style="border-left:4px solid #f59e0b">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+              Requerimientos
+            </div>
+            <div style="font-size:2rem;font-weight:800;color:#f59e0b;line-height:1.1;margin-top:.2rem">
+              {{ reqs_pendientes }}
+            </div>
+            <div style="font-size:.78rem;color:#9ca3af;margin-top:.1rem">pendientes de atender</div>
+          </div>
+          <div style="width:42px;height:42px;border-radius:10px;background:#fffbeb;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-file-earmark-text" style="color:#f59e0b;font-size:1.1rem"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card h-100" style="border-left:4px solid #7c3aed">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+              Cotizaciones
+            </div>
+            <div style="font-size:2rem;font-weight:800;color:#7c3aed;line-height:1.1;margin-top:.2rem">
+              {{ cots_pendientes }}
+            </div>
+            <div style="font-size:.78rem;color:#9ca3af;margin-top:.1rem">pendientes de aprobar</div>
+          </div>
+          <div style="width:42px;height:42px;border-radius:10px;background:#f5f3ff;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-tags" style="color:#7c3aed;font-size:1.1rem"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card h-100" style="border-left:4px solid #16a34a">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+              Órdenes de Compra
+            </div>
+            <div style="font-size:2rem;font-weight:800;color:#16a34a;line-height:1.1;margin-top:.2rem">
+              {{ ocs_activas }}
+            </div>
+            <div style="font-size:.78rem;color:#9ca3af;margin-top:.1rem">activas (borrador + enviada)</div>
+          </div>
+          <div style="width:42px;height:42px;border-radius:10px;background:#f0fdf4;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-cart-check" style="color:#16a34a;font-size:1.1rem"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Resumen Financiero del Presupuesto ─────────────────────── -->
+{% if pres_detalle %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center py-2">
+    <span style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#374151">
+      <i class="bi bi-bar-chart-line me-2 text-primary"></i>Resumen Financiero
+    </span>
+    <a href="{% url 'presupuesto:lista' proyecto.pk %}" style="font-size:.75rem;color:#2563eb">
+      Ver presupuesto →
+    </a>
+  </div>
+  <div class="card-body p-0">
+    <div class="row g-0 text-center" style="border-bottom:1px solid #f3f4f6">
+
+      <div class="col border-end py-3 px-2">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
+          Costo Directo
+        </div>
+        <div style="font-size:1rem;font-weight:700;color:#111;margin-top:.25rem">
+          S/ {{ pres_detalle.costo_directo|miles:2 }}
+        </div>
+        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">partidas de obra</div>
+      </div>
+
+      {% if pres_detalle.gg_pct %}
+      <div class="col border-end py-3 px-2">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
+          Gastos Generales
+        </div>
+        <div style="font-size:1rem;font-weight:700;color:#374151;margin-top:.25rem">
+          S/ {{ pres_detalle.gastos_generales|miles:2 }}
+        </div>
+        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">{{ pres_detalle.gg_pct }}%</div>
+      </div>
+      {% endif %}
+
+      {% if pres_detalle.ut_pct %}
+      <div class="col border-end py-3 px-2">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
+          Utilidad
+        </div>
+        <div style="font-size:1rem;font-weight:700;color:#374151;margin-top:.25rem">
+          S/ {{ pres_detalle.utilidad|miles:2 }}
+        </div>
+        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">{{ pres_detalle.ut_pct }}%</div>
+      </div>
+      {% endif %}
+
+      <div class="col border-end py-3 px-2">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
+          Sub Total
+        </div>
+        <div style="font-size:1rem;font-weight:700;color:#374151;margin-top:.25rem">
+          S/ {{ pres_detalle.sub_total|miles:2 }}
+        </div>
+        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">sin IGV</div>
+      </div>
+
+      {% if pres_detalle.igv_pct %}
+      <div class="col border-end py-3 px-2">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
+          IGV
+        </div>
+        <div style="font-size:1rem;font-weight:700;color:#374151;margin-top:.25rem">
+          S/ {{ pres_detalle.igv|miles:2 }}
+        </div>
+        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">{{ pres_detalle.igv_pct }}%</div>
+      </div>
+      {% endif %}
+
+      <div class="col py-3 px-2" style="background:#eff6ff">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#3b82f6">
+          Total Presupuesto
+        </div>
+        <div style="font-size:1.1rem;font-weight:800;color:#1d4ed8;margin-top:.25rem">
+          S/ {{ pres_detalle.total|miles:2 }}
+        </div>
+        <div style="font-size:.68rem;color:#93c5fd;margin-top:.1rem">inc. IGV</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Actividad reciente ─────────────────────────────────────── -->
+<div class="row g-3">
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-file-earmark-text me-2 text-warning"></i>Últimos Requerimientos</span>
+        <a href="{% url 'almacen:req_lista' proyecto.pk %}" style="font-size:.78rem;color:#2563eb">Ver todos →</a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table-modern">
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in reqs_recientes %}
+            <tr>
+              <td>
+                <a href="{% url 'almacen:req_detalle' r.pk %}"
+                   style="font-size:.8rem;font-weight:600;color:#2563eb">
+                  {{ r.numero }}
+                </a>
+              </td>
+              <td style="font-size:.78rem;color:#6b7280">{{ r.fecha|date:"d/m/Y" }}</td>
+              <td style="font-size:.78rem;color:#6b7280">{{ r.get_tipo_display }}</td>
+              <td>
+                {% if r.estado == 'PENDIENTE' %}
+                <span class="badge" style="background:#fef9c3;color:#854d0e;font-size:.68rem">Pendiente</span>
+                {% elif r.estado == 'APROBADO' %}
+                <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.68rem">Aprobado</span>
+                {% elif r.estado == 'ATENDIDO' %}
+                <span class="badge bg-secondary" style="font-size:.68rem">Atendido</span>
+                {% elif r.estado == 'PARCIAL' %}
+                <span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:.68rem">Parcial</span>
+                {% elif r.estado == 'ANULADO' %}
+                <span class="badge bg-danger" style="font-size:.68rem">Anulado</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center py-3 text-muted">Sin requerimientos registrados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-arrow-down-circle me-2 text-success"></i>Últimas Entradas</span>
+        <a href="{% url 'almacen:entrada_lista' proyecto.pk %}" style="font-size:.78rem;color:#2563eb">Ver todas →</a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table-modern">
+          <thead>
+            <tr>
+              <th>Guía</th>
+              <th>Proveedor</th>
+              <th>Fecha</th>
+              <th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in entradas_recientes %}
+            <tr>
+              <td>
+                <a href="{% url 'almacen:entrada_detalle' e.pk %}"
+                   style="font-size:.8rem;font-weight:600;color:#2563eb">
+                  {{ e.serie }}-{{ e.numero_guia }}
+                </a>
+              </td>
+              <td style="font-size:.78rem;color:#6b7280;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                {{ e.proveedor|default:"—" }}
+              </td>
+              <td style="font-size:.78rem;color:#6b7280">{{ e.fecha|date:"d/m/Y" }}</td>
+              <td style="font-size:.78rem;text-align:right">
+                {% if e.total %}S/ {{ e.total|miles:2 }}{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center py-3 text-muted">Sin entradas registradas</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endif %}
+{% endblock %}

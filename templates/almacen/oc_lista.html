@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Órdenes de Compra{% endblock %}
+{% block nav_almacen %}active{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'almacen:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Almacén</a>
+    <h4><i class="bi bi-cart-check me-2"></i>Órdenes de Compra</h4>
+    <div class="text-muted">Pedidos a proveedores del proyecto</div>
+  </div>
+  <a href="{% url 'almacen:oc_crear' proyecto.pk %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Nueva OC
+  </a>
+</div>
+
+<!-- Filtro estado -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex gap-2 align-items-center">
+      <select name="estado" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <option value="">Todos los estados</option>
+        {% for val, label in estados %}
+        <option value="{{ val }}" {% if estado_sel == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if estado_sel %}
+      <a href="{% url 'almacen:oc_lista' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>N° OC</th>
+          <th>Fecha</th>
+          <th>Proveedor</th>
+          <th>REQ vinculado</th>
+          <th>Estado</th>
+          <th class="text-end">Total (S/.)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for oc in ordenes %}
+        <tr>
+          <td><a href="{% url 'almacen:oc_detalle' oc.pk %}" class="fw-semibold text-decoration-none">OC-{{ oc.numero }}</a></td>
+          <td style="font-size:.82rem">{{ oc.fecha|date:"d/m/Y" }}</td>
+          <td>{{ oc.proveedor }}</td>
+          <td>
+            {% if oc.requerimiento %}
+            <a href="{% url 'almacen:req_detalle' oc.requerimiento.pk %}" class="text-decoration-none" style="font-size:.82rem">
+              REQ-{{ oc.requerimiento.numero }}
+            </a>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <span class="badge
+              {% if oc.estado == 'COMPLETADA' %}bg-success
+              {% elif oc.estado == 'ENVIADA' %}bg-primary
+              {% elif oc.estado == 'PARCIAL' %}bg-warning text-dark
+              {% elif oc.estado == 'ANULADA' %}bg-danger
+              {% else %}bg-secondary{% endif %}">
+              {{ oc.get_estado_display }}
+            </span>
+          </td>
+          <td class="text-end fw-semibold">{{ oc.total|floatformat:2 }}</td>
+          <td class="d-flex gap-1">
+            <a href="{% url 'almacen:oc_detalle' oc.pk %}" class="btn-tbl"><i class="bi bi-eye"></i></a>
+            <a href="{% url 'almacen:oc_editar' oc.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center py-4 text-muted">Sin órdenes de compra registradas</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

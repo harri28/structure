@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Stock — {{ proyecto.codigo }}{% endblock %}
+{% block nav_almacen %}active{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'almacen:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Almacén</a>
+    <h4><i class="bi bi-archive me-2"></i>Inventario / Stock Actual</h4>
+    <div class="text-muted">Saldo de materiales por diferencia de entradas y salidas</div>
+  </div>
+</div>
+
+<!-- Filtro -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+      <select name="categoria" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <option value="">Todas las categorías</option>
+        {% for val, label in categorias %}
+        <option value="{{ val }}" {% if categoria_sel == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if categoria_sel %}
+      <a href="{% url 'almacen:stock' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+      {% endif %}
+      <span class="ms-auto text-muted" style="font-size:.78rem">{{ items|length }} productos</span>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Descripción</th>
+          <th>Categoría</th>
+          <th>Unidad</th>
+          <th class="text-end">Entradas</th>
+          <th class="text-end">Salidas</th>
+          <th class="text-end">Saldo</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr {% if item.saldo <= 0 %}class="table-danger bg-opacity-10"{% endif %}>
+          <td><code>{{ item.producto.codigo }}</code></td>
+          <td>{{ item.producto.descripcion }}</td>
+          <td><span class="badge bg-secondary" style="font-size:.7rem">{{ item.producto.get_categoria_display }}</span></td>
+          <td class="text-muted">{{ item.producto.get_unidad_display }}</td>
+          <td class="text-end text-success fw-semibold">{{ item.total_entrada|floatformat:2 }}</td>
+          <td class="text-end text-danger">{{ item.total_salida|floatformat:2 }}</td>
+          <td class="text-end fw-bold {% if item.saldo <= 0 %}text-danger{% else %}text-success{% endif %}">
+            {{ item.saldo|floatformat:2 }}
+          </td>
+          <td>
+            <a href="{% url 'almacen:kardex' proyecto.pk item.producto.pk %}" class="btn-tbl" title="Kardex">
+              <i class="bi bi-clock-history"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="bi bi-archive d-block"></i>
+              <p>Sin movimientos registrados. Registra <a href="{% url 'almacen:entrada_crear' proyecto.pk %}">entradas</a> de material.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

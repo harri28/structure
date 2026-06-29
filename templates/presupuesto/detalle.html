@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% block title %}{{ presupuesto.nombre }}{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
+<li class="breadcrumb-item active">{{ presupuesto.nombre }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Presupuesto</a>
+    <h4 class="d-flex align-items-center gap-2">
+      <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7rem;font-weight:700">Contractual</span>
+      {{ presupuesto.nombre }}
+    </h4>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'presupuesto:insumos' presupuesto.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-boxes me-1"></i>Insumos
+    </a>
+    <a href="{% url 'presupuesto:importar' presupuesto.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-upload me-1"></i>Importar S10
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center gap-2">
+    <span class="flex-shrink-0">Partidas del Presupuesto</span>
+    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end">
+      <!-- Búsqueda semántica ML -->
+      <div class="input-group input-group-sm" style="max-width:280px">
+        <span class="input-group-text" style="background:#fff;border-color:#e5e7eb">
+          <i class="bi bi-stars" style="color:#f59e0b;font-size:.8rem"></i>
+        </span>
+        <input type="text" id="ml-search-input" class="form-control form-control-sm"
+               placeholder="Buscar partida (IA)…" autocomplete="off"
+               style="border-left:none;font-size:.8rem">
+        <button id="ml-search-clear" class="btn btn-outline-secondary btn-sm d-none"
+                title="Limpiar">✕</button>
+      </div>
+      <span class="badge bg-secondary flex-shrink-0">{{ presupuesto.partidas.count }} partidas</span>
+      <span style="font-size:.82rem;color:#6b7280;flex-shrink:0">
+        C.D.: <strong style="color:#111">S/ {{ costo_directo|miles:2 }}</strong>
+      </span>
+    </div>
+  </div>
+
+  <!-- Resultados de búsqueda ML (se muestra/oculta dinámicamente) -->
+  <div id="ml-search-results" class="d-none" style="border-bottom:1px solid #f3f4f6">
+    <table class="table table-sm mb-0">
+      <thead style="background:#fffbeb">
+        <tr>
+          <th style="width:16%;font-size:.75rem">Ítem</th>
+          <th style="font-size:.75rem">Descripción</th>
+          <th style="width:8%;font-size:.75rem">Und</th>
+          <th style="width:12%;font-size:.75rem" class="text-end">P.U. (S/)</th>
+          <th style="width:8%;font-size:.75rem" class="text-center">Similitud</th>
+          <th style="width:44px"></th>
+        </tr>
+      </thead>
+      <tbody id="ml-search-tbody"></tbody>
+    </table>
+    <div id="ml-search-empty" class="text-center py-3 text-muted d-none" style="font-size:.82rem">
+      Sin resultados similares a "<span id="ml-empty-q"></span>"
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead>
+          <tr>
+            <th style="width:15%">Ítem</th>
+            <th>Descripción</th>
+            <th style="width:8%">Und</th>
+            <th style="width:10%" class="text-end">Metrado</th>
+            <th style="width:12%" class="text-end">P.U.</th>
+            <th style="width:13%" class="text-end">Parcial (S/.)</th>
+            <th style="width:44px" class="text-center"
+                title="Análisis de Costos Unitarios">
+              <i class="bi bi-calculator-fill text-muted" style="font-size:.75rem"></i>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for partida in partidas_raiz %}
+            {% include 'presupuesto/_partida_row.html' with partida=partida %}
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">
+              No hay partidas. <a href="{% url 'presupuesto:importar' presupuesto.pk %}">Importar desde S10</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# Resumen de costos al pie de la tabla #}
+  <div class="card-footer p-0">
+    <table class="table table-sm mb-0" style="max-width:420px;margin-left:auto">
+      <tbody>
+        <tr>
+          <td class="text-muted ps-3" style="font-size:.82rem">Costo Directo</td>
+          <td class="text-end pe-3 fw-semibold" style="font-size:.82rem">S/ {{ costo_directo|miles:2 }}</td>
+        </tr>
+        {% if presupuesto.gastos_generales_pct %}
+        <tr>
+          <td class="text-muted ps-3" style="font-size:.82rem">Gastos Generales ({{ presupuesto.gastos_generales_pct }}%)</td>
+          <td class="text-end pe-3" style="font-size:.82rem">S/ {{ gastos_generales|miles:2 }}</td>
+        </tr>
+        {% endif %}
+        {% if presupuesto.utilidad_pct %}
+        <tr>
+          <td class="text-muted ps-3" style="font-size:.82rem">Utilidad ({{ presupuesto.utilidad_pct }}%)</td>
+          <td class="text-end pe-3" style="font-size:.82rem">S/ {{ utilidad|miles:2 }}</td>
+        </tr>
+        {% endif %}
+        {% if presupuesto.gastos_generales_pct or presupuesto.utilidad_pct %}
+        <tr style="border-top:1px solid #e5e7eb">
+          <td class="text-muted ps-3" style="font-size:.82rem">Sub Total</td>
+          <td class="text-end pe-3" style="font-size:.82rem">S/ {{ sub_total|miles:2 }}</td>
+        </tr>
+        {% endif %}
+        {% if presupuesto.igv_pct %}
+        <tr>
+          <td class="text-muted ps-3" style="font-size:.82rem">IGV ({{ presupuesto.igv_pct }}%)</td>
+          <td class="text-end pe-3" style="font-size:.82rem">S/ {{ igv|miles:2 }}</td>
+        </tr>
+        {% endif %}
+        <tr style="border-top:2px solid #1d4ed8;background:#eff6ff">
+          <td class="ps-3 fw-bold" style="font-size:.9rem;color:#1d4ed8">TOTAL PRESUPUESTO</td>
+          <td class="text-end pe-3 fw-bold" style="font-size:.9rem;color:#1d4ed8">S/ {{ total_presupuesto|miles:2 }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var input   = document.getElementById('ml-search-input');
+  var clearBtn= document.getElementById('ml-search-clear');
+  var panel   = document.getElementById('ml-search-results');
+  var tbody   = document.getElementById('ml-search-tbody');
+  var empty   = document.getElementById('ml-search-empty');
+  var emptyQ  = document.getElementById('ml-empty-q');
+  var tableWrap = document.querySelector('.table-responsive');
+  var timer   = null;
+
+  function fmt(n) {
+    return parseFloat(n).toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function pctBadge(score) {
+    var p = Math.round(score * 100);
+    var bg = p >= 80 ? '#d1fae5' : p >= 50 ? '#fef9c3' : '#f3f4f6';
+    var c  = p >= 80 ? '#065f46' : p >= 50 ? '#854d0e' : '#6b7280';
+    return '<span style="background:' + bg + ';color:' + c + ';padding:1px 6px;border-radius:10px;font-size:.7rem;font-weight:700">' + p + '%</span>';
+  }
+
+  function buscar(q) {
+    if (!q) { resetear(); return; }
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3 text-muted" style="font-size:.8rem"><span class="spinner-border spinner-border-sm me-2"></span>Buscando…</td></tr>';
+    panel.classList.remove('d-none');
+    empty.classList.add('d-none');
+    if (tableWrap) tableWrap.classList.add('d-none');
+
+    fetch('{% url "presupuesto:ml_buscar" presupuesto.pk %}?q=' + encodeURIComponent(q))
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        tbody.innerHTML = '';
+        var items = data.resultados || [];
+        if (items.length === 0) {
+          emptyQ.textContent = q;
+          empty.classList.remove('d-none');
+          return;
+        }
+        items.forEach(function(r) {
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td><code style="font-size:.78rem;color:#1d4ed8">' + r.codigo + '</code></td>' +
+            '<td style="font-size:.82rem">' + r.nombre + '</td>' +
+            '<td style="font-size:.78rem;color:#6b7280">' + r.unidad + '</td>' +
+            '<td class="text-end" style="font-size:.82rem">' + fmt(r.precio_unitario) + '</td>' +
+            '<td class="text-center">' + pctBadge(r.score) + '</td>' +
+            '<td class="text-center"><a href="' + r.acu_url + '" class="btn btn-outline-secondary btn-sm" style="padding:1px 7px;font-size:.72rem" title="Ver ACU"><i class="bi bi-calculator-fill"></i></a></td>';
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(function() {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-2 text-muted" style="font-size:.8rem">Error al buscar</td></tr>';
+      });
+  }
+
+  function resetear() {
+    panel.classList.add('d-none');
+    clearBtn.classList.add('d-none');
+    empty.classList.add('d-none');
+    tbody.innerHTML = '';
+    if (tableWrap) tableWrap.classList.remove('d-none');
+  }
+
+  input.addEventListener('input', function() {
+    var q = this.value.trim();
+    clearBtn.classList.toggle('d-none', !q);
+    clearTimeout(timer);
+    if (!q) { resetear(); return; }
+    timer = setTimeout(function(){ buscar(q); }, 400);
+  });
+
+  clearBtn.addEventListener('click', function() {
+    input.value = '';
+    resetear();
+    input.focus();
+  });
+})();
+</script>
+{% endblock %}

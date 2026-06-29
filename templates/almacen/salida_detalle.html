@@ -1,0 +1,53 @@
+﻿{% extends 'base.html' %}
+{% block title %}SAL-{{ salida.numero }}{% endblock %}
+{% block nav_salidas %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'almacen:salida_lista' proyecto.pk %}">Salidas</a></li>
+<li class="breadcrumb-item active">SAL-{{ salida.numero }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'almacen:salida_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Salidas</a>
+    <h4>Salida <code>SAL-{{ salida.numero }}</code></h4>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'almacen:salida_editar' salida.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+    <a href="{% url 'almacen:salida_eliminar' salida.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+  </div>
+</div>
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-sm-3"><label class="text-muted small">Fecha</label><p class="mb-0 fw-semibold">{{ salida.fecha|date:"d/m/Y" }}</p></div>
+      <div class="col-sm-3"><label class="text-muted small">Destino</label><p class="mb-0">{{ salida.destino|default:"—" }}</p></div>
+      <div class="col-sm-3"><label class="text-muted small">Responsable</label><p class="mb-0">{{ salida.responsable|default:"—" }}</p></div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header d-flex justify-content-between">
+    <span>Materiales Despachados</span>
+    <strong>Total: S/. {{ salida.total|floatformat:2 }}</strong>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Código</th><th>Descripción</th><th class="text-end">Cantidad</th><th>Unidad</th><th class="text-end">P.U.</th><th class="text-end">Subtotal</th></tr></thead>
+      <tbody>
+        {% for d in salida.detalles.all %}
+        <tr>
+          <td><code>{{ d.producto.codigo }}</code></td>
+          <td>{{ d.producto.descripcion }}</td>
+          <td class="text-end">{{ d.cantidad|floatformat:2 }}</td>
+          <td>{{ d.get_unidad_display }}</td>
+          <td class="text-end">{{ d.precio_unitario|floatformat:2 }}</td>
+          <td class="text-end fw-semibold">{{ d.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

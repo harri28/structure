@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}{{ mod }}{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
+<li class="breadcrumb-item active">{{ mod.get_tipo_display }} N°{{ mod.numero }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Presupuesto</a>
+    <h4 class="d-flex align-items-center gap-2">
+      {% if mod.tipo == 'ADICIONAL' %}
+        <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.72rem">Adicional N°{{ mod.numero }}</span>
+      {% elif mod.tipo == 'DEDUCTIVO' %}
+        <span class="badge" style="background:#fee2e2;color:#b91c1c;font-size:.72rem">Deductivo N°{{ mod.numero }}</span>
+      {% else %}
+        <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.72rem">Vinculante N°{{ mod.numero }}</span>
+      {% endif %}
+      {{ mod.nombre }}
+    </h4>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <!-- Estado rápido -->
+    <form method="post" action="{% url 'presupuesto:modificacion_estado' mod.pk %}" class="d-flex gap-1 align-items-center">
+      {% csrf_token %}
+      <select name="estado" class="form-select form-select-sm" style="min-width:170px">
+        {% for value, label in estados %}
+        <option value="{{ value }}" {% if value == mod.estado %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Guardar estado">
+        <i class="bi bi-check-lg"></i>
+      </button>
+    </form>
+    <a href="{% url 'presupuesto:modificacion_editar' mod.pk %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    <a href="{% url 'presupuesto:modificacion_eliminar' mod.pk %}" class="btn btn-sm btn-outline-danger">
+      <i class="bi bi-trash"></i>
+    </a>
+  </div>
+</div>
+
+<!-- ── Resumen ─────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  {% if mod.tipo in 'ADICIONAL,VINCULANTE' %}
+  <div class="col-auto">
+    <div class="card" style="border-left:4px solid #16a34a">
+      <div class="card-body py-2 px-3">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#6b7280">Adicional</div>
+        <div style="font-size:1.1rem;font-weight:800;color:#16a34a">+ S/ {{ mod.total_adicional|miles:2 }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if mod.tipo in 'DEDUCTIVO,VINCULANTE' %}
+  <div class="col-auto">
+    <div class="card" style="border-left:4px solid #dc2626">
+      <div class="card-body py-2 px-3">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#6b7280">Deductivo</div>
+        <div style="font-size:1.1rem;font-weight:800;color:#dc2626">− S/ {{ mod.total_deductivo|miles:2 }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if mod.tipo == 'VINCULANTE' %}
+  <div class="col-auto">
+    <div class="card" style="border-left:4px solid var(--accent)">
+      <div class="card-body py-2 px-3">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#6b7280">Neto</div>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--accent)">S/ {{ mod.total_neto|miles:2 }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Partidas Adicionales ────────────────────────────────────── -->
+{% if partidas_ad %}
+<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#16a34a;margin-bottom:.5rem">
+  Partidas Adicionales
+</div>
+<div class="card mb-4">
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Descripción</th>
+          <th>Und</th>
+          <th class="text-end">Metrado</th>
+          <th class="text-end">P.U. (S/)</th>
+          <th class="text-end">Parcial (S/)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in partidas_ad %}
+        <tr>
+          <td style="font-size:.78rem"><code>{{ p.codigo }}</code></td>
+          <td style="font-size:.82rem">{{ p.nombre }}</td>
+          <td style="font-size:.78rem;color:#6b7280">{{ p.unidad }}</td>
+          <td class="text-end" style="font-size:.78rem">{{ p.cantidad|miles:4 }}</td>
+          <td class="text-end" style="font-size:.78rem">{{ p.precio_unitario|miles:2 }}</td>
+          <td class="text-end" style="font-size:.82rem;font-weight:600;color:#16a34a">{{ p.subtotal|miles:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#f9fafb">
+          <td colspan="5" class="text-end fw-bold" style="font-size:.82rem">Total Adicional:</td>
+          <td class="text-end fw-bold" style="color:#16a34a">S/ {{ mod.total_adicional|miles:2 }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Partidas Deductivas ─────────────────────────────────────── -->
+{% if partidas_ded %}
+<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#dc2626;margin-bottom:.5rem">
+  Partidas Deductivas
+</div>
+<div class="card mb-3">
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Descripción</th>
+          <th>Und</th>
+          <th class="text-end">Metrado</th>
+          <th class="text-end">P.U. (S/)</th>
+          <th class="text-end">Parcial (S/)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in partidas_ded %}
+        <tr>
+          <td style="font-size:.78rem"><code>{{ p.codigo }}</code></td>
+          <td style="font-size:.82rem">{{ p.nombre }}</td>
+          <td style="font-size:.78rem;color:#6b7280">{{ p.unidad }}</td>
+          <td class="text-end" style="font-size:.78rem">{{ p.cantidad|miles:4 }}</td>
+          <td class="text-end" style="font-size:.78rem">{{ p.precio_unitario|miles:2 }}</td>
+          <td class="text-end" style="font-size:.82rem;font-weight:600;color:#dc2626">({{ p.subtotal|miles:2 }})</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#f9fafb">
+          <td colspan="5" class="text-end fw-bold" style="font-size:.82rem">Total Deductivo:</td>
+          <td class="text-end fw-bold" style="color:#dc2626">(S/ {{ mod.total_deductivo|miles:2 }})</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if not partidas_ad and not partidas_ded %}
+<div class="card">
+  <div class="card-body text-center py-4 text-muted">
+    <i class="bi bi-table fs-2 d-block mb-2"></i>
+    Esta modificación no tiene partidas registradas.
+    <br><a href="{% url 'presupuesto:modificacion_editar' mod.pk %}" class="d-inline-block mt-2">Editar modificación</a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

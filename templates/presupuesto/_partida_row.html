@@ -1,0 +1,47 @@
+{% load pres_fmt %}
+<tr class="partida-row nivel-{{ partida.nivel }}{% if partida.padre_id %} children-of-{{ partida.padre_id }}{% endif %}"
+    id="partida-{{ partida.pk }}">
+  <td style="white-space:nowrap">
+    {% if partida.hijos.exists %}
+    <i class="bi bi-chevron-down partida-toggle" data-target="{{ partida.pk }}"></i>
+    {% else %}
+    <span style="display:inline-block;width:1.2rem"></span>
+    {% endif %}
+    {{ partida.codigo }}
+  </td>
+  <td style="padding-left:{{ partida.nivel|add:"-1" }}rem">{{ partida.nombre }}</td>
+  <td>{{ partida.unidad }}</td>
+  <td class="text-end">{% if partida.cantidad %}{{ partida.cantidad|miles:4 }}{% endif %}</td>
+  <td class="text-end">{% if partida.precio_unitario %}{{ partida.precio_unitario|miles:2 }}{% endif %}</td>
+  <td class="text-end fw-semibold">
+    {% with t=partida.total %}{% if t %}{{ t|miles:2 }}{% endif %}{% endwith %}
+  </td>
+  <td class="text-center" style="width:44px">
+    {% if not partida.hijos.exists %}
+    <a href="{% url 'presupuesto:acu_partida' partida.pk %}"
+       class="btn btn-outline-secondary btn-sm"
+       style="padding:1px 7px;font-size:.75rem;color:#6b7280"
+       title="Análisis de Costos Unitarios">
+      <i class="bi bi-calculator-fill"></i>
+    </a>
+    {% with hint=precio_hints|get_item:partida.pk %}
+    {% if hint %}
+      {% if hint.alerta %}
+      <span title="P.U. difiere {{ hint.diff_pct }}% del histórico ({{ hint.n }} proy.)"
+            style="cursor:help;color:#f59e0b;font-size:.7rem;margin-left:2px">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </span>
+      {% else %}
+      <span title="P.U. dentro del rango histórico ({{ hint.n }} proy.)"
+            style="cursor:help;color:#10b981;font-size:.7rem;margin-left:2px">
+        <i class="bi bi-check-circle-fill"></i>
+      </span>
+      {% endif %}
+    {% endif %}
+    {% endwith %}
+    {% endif %}
+  </td>
+</tr>
+{% for hijo in partida.hijos.all %}
+  {% include 'presupuesto/_partida_row.html' with partida=hijo %}
+{% endfor %}

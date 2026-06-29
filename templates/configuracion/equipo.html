@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% block title %}Usuarios & Roles{% endblock %}
+{% block nav_config_equipo %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Usuarios & Roles</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.eq-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:0; }
+.eq-tab {
+  padding:.55rem 1.25rem; font-size:.83rem; font-weight:600;
+  border:none; background:none; cursor:pointer; color:var(--text-muted);
+  border-bottom:2px solid transparent; margin-bottom:-2px;
+  display:flex; align-items:center; gap:.4rem; transition:color .1s;
+}
+.eq-tab:hover { color:var(--text); }
+.eq-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.eq-tab .count {
+  font-size:.65rem; padding:.1em .45em; border-radius:10px;
+  background:#f3f4f6; color:var(--text-muted); font-weight:700;
+}
+.eq-tab.active .count { background:#eff6ff; color:var(--accent); }
+.eq-panel { display:none; }
+.eq-panel.active { display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h4><i class="bi bi-people-fill me-2"></i>Usuarios & Roles</h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'configuracion:rol_crear' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo Rol
+    </a>
+    <a href="{% url 'configuracion:usuario_crear' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo Usuario
+    </a>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="eq-tabs" id="eq-tabs">
+  <button class="eq-tab {% if tab_activo != 'roles' %}active{% endif %}"
+          data-panel="panel-usuarios" type="button">
+    <i class="bi bi-people"></i> Usuarios
+    <span class="count">{{ users|length }}</span>
+  </button>
+  <button class="eq-tab {% if tab_activo == 'roles' %}active{% endif %}"
+          data-panel="panel-roles" type="button">
+    <i class="bi bi-shield-lock"></i> Roles
+    <span class="count">{{ roles_data|length }}</span>
+  </button>
+</div>
+
+<div class="card" style="border-radius:0 0 var(--radius) var(--radius);border-top:none">
+
+  <!-- ── Panel Usuarios ── -->
+  <div id="panel-usuarios" class="eq-panel {% if tab_activo != 'roles' %}active{% endif %} p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Nombre completo</th>
+          <th>E-mail</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Último acceso</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:30px;height:30px;border-radius:50%;background:#eff6ff;
+                          display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="bi bi-person-fill" style="color:#2563eb;font-size:.78rem"></i>
+              </div>
+              <span class="fw-semibold">{{ u.username }}</span>
+              {% if u.pk == request.user.pk %}
+              <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.65rem">Tú</span>
+              {% endif %}
+              {% if u.is_superuser %}
+              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.65rem">Superadmin</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>{{ u.get_full_name|default:"—" }}</td>
+          <td class="text-muted">{{ u.email|default:"—" }}</td>
+          <td>
+            {% if u.perfil.rol %}
+            <span style="font-size:.72rem;padding:.2em .55em;border-radius:4px;
+                         background:#eff6ff;color:#1d4ed8;font-weight:600">
+              {{ u.perfil.rol.nombre }}
+            </span>
+            {% else %}
+            <span class="text-muted" style="font-size:.78rem">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_active %}
+            <span class="badge bg-success">Activo</span>
+            {% else %}
+            <span class="badge bg-danger">Inactivo</span>
+            {% endif %}
+          </td>
+          <td class="text-muted" style="font-size:.8rem">
+            {% if u.last_login %}{{ u.last_login|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'configuracion:usuario_editar' u.pk %}" class="btn-tbl" title="Editar">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'configuracion:usuario_password' u.pk %}" class="btn-tbl" title="Cambiar contraseña">
+                <i class="bi bi-key"></i>
+              </a>
+              {% if u.pk != request.user.pk %}
+              <form method="post" action="{% url 'configuracion:usuario_toggle' u.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn-tbl {% if u.is_active %}danger{% endif %}"
+                        title="{% if u.is_active %}Desactivar{% else %}Activar{% endif %}">
+                  <i class="bi bi-{% if u.is_active %}person-x{% else %}person-check{% endif %}"></i>
+                </button>
+              </form>
+              <a href="{% url 'configuracion:usuario_eliminar' u.pk %}" class="btn-tbl danger" title="Eliminar">
+                <i class="bi bi-trash"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center py-4 text-muted">Sin usuarios registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Panel Roles ── -->
+  <div id="panel-roles" class="eq-panel {% if tab_activo == 'roles' %}active{% endif %} p-0">
+    {% if roles_data %}
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Descripción</th>
+          <th>Permisos activos</th>
+          <th>Usuarios</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in roles_data %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:28px;height:28px;border-radius:6px;background:#eff6ff;
+                          display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="bi bi-shield-check" style="color:#2563eb;font-size:.75rem"></i>
+              </div>
+              <span class="fw-semibold">{{ item.rol.nombre }}</span>
+              {% if item.rol.es_superadmin %}
+              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.65rem">Superadmin</span>
+              {% endif %}
+            </div>
+          </td>
+          <td class="text-muted" style="font-size:.82rem">{{ item.rol.descripcion|default:"—" }}</td>
+          <td>
+            {% if item.permisos_activos %}
+            <div style="display:flex;flex-wrap:wrap;gap:.25rem;max-width:320px">
+              {% for p in item.permisos_activos|slice:":4" %}
+              <span style="font-size:.65rem;padding:.15em .45em;border-radius:4px;
+                           background:#f0fdf4;color:#15803d;font-weight:600;white-space:nowrap">
+                {{ p }}
+              </span>
+              {% endfor %}
+              {% if item.permisos_activos|length > 4 %}
+              <span style="font-size:.65rem;padding:.15em .45em;border-radius:4px;
+                           background:#f3f4f6;color:#6b7280;font-weight:600">
+                +{{ item.permisos_activos|length|add:"-4" }} más
+              </span>
+              {% endif %}
+            </div>
+            {% else %}
+            <span class="text-muted" style="font-size:.78rem">Sin permisos</span>
+            {% endif %}
+          </td>
+          <td>
+            <span style="font-size:.82rem;font-weight:600;color:var(--text)">
+              {{ item.rol.usuarios.count }}
+            </span>
+            <span class="text-muted" style="font-size:.78rem"> usuario{{ item.rol.usuarios.count|pluralize:"s" }}</span>
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'configuracion:rol_editar' item.rol.pk %}" class="btn-tbl" title="Editar rol">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'configuracion:rol_eliminar' item.rol.pk %}" class="btn-tbl danger" title="Eliminar rol">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state py-5">
+      <i class="bi bi-shield-lock d-block mb-2" style="font-size:2rem;opacity:.1"></i>
+      <p>No hay roles creados aún.</p>
+      <a href="{% url 'configuracion:rol_crear' %}" class="btn btn-primary btn-sm mt-2">
+        <i class="bi bi-plus-lg me-1"></i>Crear primer rol
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.eq-tab').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.eq-tab').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.eq-panel').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.panel).classList.add('active');
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Django
+staticfiles/
+media/
+*.log
+db.sqlite3
+
+# Entorno virtual
+venv/
+env/
+anlisis-pdf/venv/
+
+# Archivos generados por PDF parser
+anlisis-pdf/*.xlsx
+anlisis-pdf/*.json
+anlisis-pdf/*.txt
+
+# Archivos sensibles / locales
+.env
+*.env
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp

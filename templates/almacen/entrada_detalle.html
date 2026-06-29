@@ -1,0 +1,54 @@
+﻿{% extends 'base.html' %}
+{% block title %}Entrada {{ entrada.serie }}-{{ entrada.numero_guia }}{% endblock %}
+{% block nav_entradas %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'almacen:entrada_lista' proyecto.pk %}">Entradas</a></li>
+<li class="breadcrumb-item active">{{ entrada.serie }}-{{ entrada.numero_guia }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'almacen:entrada_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Entradas</a>
+    <h4>Guía <code>{{ entrada.serie }}-{{ entrada.numero_guia }}</code></h4>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'almacen:entrada_editar' entrada.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+    <a href="{% url 'almacen:entrada_eliminar' entrada.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+  </div>
+</div>
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-sm-3"><label class="text-muted small">Fecha</label><p class="mb-0 fw-semibold">{{ entrada.fecha|date:"d/m/Y" }}</p></div>
+      <div class="col-sm-3"><label class="text-muted small">Proveedor</label><p class="mb-0">{{ entrada.proveedor|default:"—" }}</p></div>
+      <div class="col-sm-3"><label class="text-muted small">Requerimiento</label><p class="mb-0">{% if entrada.requerimiento %}REQ-{{ entrada.requerimiento.numero }}{% else %}—{% endif %}</p></div>
+      <div class="col-sm-3"><label class="text-muted small">Descripción</label><p class="mb-0">{{ entrada.descripcion|default:"—" }}</p></div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header d-flex justify-content-between">
+    <span>Materiales Recibidos</span>
+    <strong>Total: S/. {{ entrada.total|floatformat:2 }}</strong>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Código</th><th>Descripción</th><th class="text-end">Cantidad</th><th>Unidad</th><th class="text-end">P.U. (S/.)</th><th class="text-end">Subtotal (S/.)</th></tr></thead>
+      <tbody>
+        {% for d in entrada.detalles.all %}
+        <tr>
+          <td><code>{{ d.producto.codigo }}</code></td>
+          <td>{{ d.producto.descripcion }}</td>
+          <td class="text-end">{{ d.cantidad|floatformat:2 }}</td>
+          <td>{{ d.get_unidad_display }}</td>
+          <td class="text-end">{{ d.precio_unitario|floatformat:2 }}</td>
+          <td class="text-end fw-semibold">{{ d.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

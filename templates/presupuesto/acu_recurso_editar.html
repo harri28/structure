@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load pres_fmt %}
+{% block title %}Editar Recurso — {{ partida.codigo }}{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:detalle' presupuesto.pk %}">{{ presupuesto.nombre }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:acu_partida' partida.pk %}">ACU: {{ partida.codigo }}</a></li>
+<li class="breadcrumb-item active">Editar Recurso</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'presupuesto:acu_partida' partida.pk %}" class="btn-back">
+    <i class="bi bi-chevron-left"></i> ACU: {{ partida.codigo }}
+  </a>
+  <h4>Editar Recurso</h4>
+</div>
+
+<!-- Info partida (referencia) -->
+<div class="alert alert-light border mb-3" style="font-size:.82rem;padding:.6rem 1rem">
+  <i class="bi bi-info-circle me-1 text-primary"></i>
+  Partida: <code>{{ partida.codigo }}</code> — {{ partida.nombre }}
+  &nbsp;|&nbsp; P.U. contractual: <strong>S/ {{ partida.precio_unitario|miles:2 }}</strong>
+</div>
+
+<div class="card" style="max-width:680px">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Tipo</label>
+          <select name="tipo" class="form-select">
+            {% for val, lbl in tipos %}
+            <option value="{{ val }}" {% if val == recurso.tipo %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Código</label>
+          <input type="text" name="codigo" class="form-control" value="{{ recurso.codigo }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Unidad</label>
+          <input type="text" name="unidad" class="form-control" value="{{ recurso.unidad }}">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Descripción <span class="text-danger">*</span></label>
+          <input type="text" name="descripcion" class="form-control"
+                 value="{{ recurso.descripcion }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Cantidad</label>
+          <input type="number" name="cantidad" id="edit-cant"
+                 class="form-control text-end"
+                 value="{{ recurso.cantidad }}" step="0.0001" min="0">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Precio Unitario (S/)</label>
+          <div class="input-group">
+            <span class="input-group-text">S/</span>
+            <input type="number" name="precio_unitario" id="edit-pu"
+                   class="form-control text-end"
+                   value="{{ recurso.precio_unitario }}" step="0.01" min="0">
+          </div>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <div class="w-100 rounded p-2" style="background:#f8fafc;border:1px solid #e5e7eb">
+            <div style="font-size:.68rem;color:#6b7280;font-weight:700;text-transform:uppercase">Parcial</div>
+            <div style="font-size:1rem;font-weight:800;color:#111" id="edit-parcial">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+        <a href="{% url 'presupuesto:acu_partida' partida.pk %}" class="btn btn-outline-secondary">
+          Cancelar
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  var cant    = document.getElementById('edit-cant');
+  var pu      = document.getElementById('edit-pu');
+  var preview = document.getElementById('edit-parcial');
+  function recalc() {
+    var c = parseFloat(cant.value) || 0;
+    var p = parseFloat(pu.value)   || 0;
+    var t = c * p;
+    preview.textContent = t
+      ? 'S/ ' + t.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2})
+      : '—';
+  }
+  cant.addEventListener('input', recalc);
+  pu.addEventListener('input',   recalc);
+  recalc();
+})();
+</script>
+{% endblock %}

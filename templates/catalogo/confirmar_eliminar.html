@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-warning">
+      <div class="card-header bg-warning">Desactivar Producto</div>
+      <div class="card-body text-center py-4">
+        <h5>¿Desactivar "{{ producto.descripcion }}"?</h5>
+        <p class="text-muted">El producto se ocultará del catálogo pero no se eliminará de la base de datos.</p>
+        <form method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-warning me-2">Desactivar</button>
+          <a href="{% url 'catalogo:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}Presupuesto — {{ proyecto.codigo }}{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Presupuesto</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4><i class="bi bi-table me-2"></i>Presupuesto — {{ proyecto.codigo }}</h4>
+    <div class="text-muted" style="font-size:.82rem">{{ proyecto.nombre }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    {% if presupuesto %}
+    <div class="dropdown">
+      <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="bi bi-plus-lg me-1"></i>Nueva Modificación
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <a class="dropdown-item" href="{% url 'presupuesto:modificacion_crear' proyecto.pk %}?tipo=ADICIONAL">
+            <i class="bi bi-plus-circle me-2 text-success"></i>Adicional de Obra
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="{% url 'presupuesto:modificacion_crear' proyecto.pk %}?tipo=DEDUCTIVO">
+            <i class="bi bi-dash-circle me-2 text-danger"></i>Deductivo de Obra
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="{% url 'presupuesto:modificacion_crear' proyecto.pk %}?tipo=VINCULANTE">
+            <i class="bi bi-arrow-left-right me-2 text-warning"></i>Adicional con Deductivo Vinculante
+          </a>
+        </li>
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if presupuesto %}
+<!-- ── Monto Vigente ──────────────────────────────────────────── -->
+<div class="card mb-4" style="border-left:4px solid var(--accent)">
+  <div class="card-body py-3">
+    <div class="row g-0 text-center">
+      <div class="col border-end px-3">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">Contractual</div>
+        <div style="font-size:1.05rem;font-weight:700;margin-top:.2rem">S/ {{ total_contractual|miles:2 }}</div>
+      </div>
+      <div class="col border-end px-3">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#16a34a">+ Adicionales</div>
+        <div style="font-size:1.05rem;font-weight:700;color:#16a34a;margin-top:.2rem">S/ {{ total_adicional|miles:2 }}</div>
+      </div>
+      <div class="col border-end px-3">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#dc2626">− Deductivos</div>
+        <div style="font-size:1.05rem;font-weight:700;color:#dc2626;margin-top:.2rem">(S/ {{ total_deductivo|miles:2 }})</div>
+      </div>
+      <div class="col px-3">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)">Monto Vigente</div>
+        <div style="font-size:1.25rem;font-weight:800;color:var(--accent);margin-top:.1rem">S/ {{ total_vigente|miles:2 }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Presupuesto Contractual ───────────────────────────────── -->
+<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:.5rem">
+  Presupuesto Contractual
+</div>
+<div class="card mb-4" style="cursor:pointer"
+     onclick="window.location='{% url 'presupuesto:detalle' presupuesto.pk %}'">
+  <div class="card-body py-3">
+    <div class="d-flex justify-content-between align-items-center gap-3">
+      <div style="min-width:0">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7rem">Contractual</span>
+          <span class="fw-bold" style="font-size:.9rem">{{ presupuesto.nombre }}</span>
+        </div>
+        <div style="font-size:.78rem;color:#6b7280">
+          Costo Directo: <strong style="color:#111">S/ {{ costo_directo|miles:2 }}</strong>
+          &nbsp;·&nbsp;
+          Total c/IGV: <strong style="color:#1d4ed8">S/ {{ total_contractual|miles:2 }}</strong>
+          {% if presupuesto.gastos_generales_pct %}
+          &nbsp;·&nbsp;GG {{ presupuesto.gastos_generales_pct }}% / Ut. {{ presupuesto.utilidad_pct }}% / IGV {{ presupuesto.igv_pct }}%
+          {% endif %}
+          {% if presupuesto.fecha_importacion %}
+          &nbsp;·&nbsp;Importado {{ presupuesto.fecha_importacion|date:"d/m/Y" }}
+          {% endif %}
+        </div>
+      </div>
+      <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end"
+           onclick="event.stopPropagation()">
+        <a href="{% url 'presupuesto:detalle' presupuesto.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-eye me-1"></i>Ver Partidas
+        </a>
+        <a href="{% url 'presupuesto:insumos' presupuesto.pk %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-boxes me-1"></i>Insumos
+        </a>
+        <a href="{% url 'presupuesto:importar' presupuesto.pk %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-upload me-1"></i>Importar S10
+        </a>
+        <a href="{% url 'presupuesto:eliminar' presupuesto.pk %}" class="btn btn-sm btn-outline-danger"
+           onclick="return confirm('¿Eliminar el presupuesto contractual y todas sus partidas?')">
+          <i class="bi bi-trash"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modificaciones ────────────────────────────────────────── -->
+{% if modificaciones %}
+<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:.5rem">
+  Modificaciones
+</div>
+{% for mod in modificaciones %}
+<div class="card mb-2"
+     style="border-left:3px solid {% if mod.tipo == 'ADICIONAL' %}#16a34a{% elif mod.tipo == 'DEDUCTIVO' %}#dc2626{% else %}#f59e0b{% endif %}">
+  <div class="card-body py-3">
+    <div class="d-flex justify-content-between align-items-center gap-3">
+      <div style="min-width:0">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          {% if mod.tipo == 'ADICIONAL' %}
+            <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.7rem">Adicional N°{{ mod.numero }}</span>
+          {% elif mod.tipo == 'DEDUCTIVO' %}
+            <span class="badge" style="background:#fee2e2;color:#b91c1c;font-size:.7rem">Deductivo N°{{ mod.numero }}</span>
+          {% else %}
+            <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.7rem">Vinculante N°{{ mod.numero }}</span>
+          {% endif %}
+          {% if mod.estado == 'APROBADO' %}
+            <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.68rem">Aprobado</span>
+          {% elif mod.estado == 'EJECUTADO' %}
+            <span class="badge bg-secondary" style="font-size:.68rem">Ejecutado</span>
+          {% elif mod.estado == 'RECHAZADO' %}
+            <span class="badge bg-danger" style="font-size:.68rem">Rechazado</span>
+          {% else %}
+            <span class="badge" style="background:#fef9c3;color:#854d0e;font-size:.68rem">Pendiente</span>
+          {% endif %}
+          <span class="fw-bold" style="font-size:.9rem">{{ mod.nombre }}</span>
+        </div>
+        <div style="font-size:.78rem;color:#6b7280">
+          {% if mod.tipo == 'ADICIONAL' %}
+            Total: <strong style="color:#16a34a">+ S/ {{ mod.total_adicional|miles:2 }}</strong>
+          {% elif mod.tipo == 'DEDUCTIVO' %}
+            Total: <strong style="color:#dc2626">− S/ {{ mod.total_deductivo|miles:2 }}</strong>
+          {% else %}
+            Adicional: <strong style="color:#16a34a">+ S/ {{ mod.total_adicional|miles:2 }}</strong>
+            &nbsp;·&nbsp;Deductivo: <strong style="color:#dc2626">− S/ {{ mod.total_deductivo|miles:2 }}</strong>
+            &nbsp;·&nbsp;Neto: <strong>S/ {{ mod.total_neto|miles:2 }}</strong>
+          {% endif %}
+        </div>
+      </div>
+      <div class="d-flex gap-1 flex-shrink-0">
+        <a href="{% url 'presupuesto:modificacion_detalle' mod.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-eye me-1"></i>Ver
+        </a>
+        <a href="{% url 'presupuesto:modificacion_editar' mod.pk %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <a href="{% url 'presupuesto:modificacion_eliminar' mod.pk %}" class="btn btn-sm btn-outline-danger">
+          <i class="bi bi-trash"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% else %}
+<!-- ── Sin Presupuesto ────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-calculator fs-1 text-muted"></i>
+    <h6 class="mt-3 text-muted">Sin presupuesto contractual</h6>
+    <p class="text-muted" style="font-size:.83rem;max-width:380px;margin:0 auto .75rem">
+      Crea el presupuesto contractual e importa las partidas desde S10.
+    </p>
+    <a href="{% url 'presupuesto:crear' proyecto.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Crear Presupuesto Contractual
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

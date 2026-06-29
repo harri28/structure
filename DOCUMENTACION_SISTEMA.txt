@@ -1,0 +1,574 @@
+================================================================================
+  S&S GESTIÓN — CONTROL DE OBRAS
+  Documentación del Sistema
+  Versión 1.0  |  Fecha: Junio 2026
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 1. QUÉ ES ESTE SISTEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+S&S Gestión es un ERP (sistema de gestión empresarial) diseñado para empresas
+constructoras. Permite administrar proyectos de construcción desde la etapa de
+formulación hasta la liquidación, controlando presupuestos, materiales,
+requerimientos, cotizaciones y órdenes de compra.
+
+El sistema corre en una red local (LAN) y puede ser accedido desde cualquier
+dispositivo conectado a la misma red (PC, tablet, celular).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 2. TECNOLOGÍAS UTILIZADAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Backend:
+    · Django 6.0.6          Framework web (Python)
+    · PostgreSQL 16         Base de datos relacional
+    · Python 3.12           Lenguaje de programación
+
+  Frontend:
+    · Bootstrap 5.3.3       Estilos y componentes UI
+    · Bootstrap Icons 1.11  Íconos vectoriales
+    · Inter (Google Fonts)  Tipografía principal
+    · JavaScript vanilla    Sin frameworks adicionales
+
+  Infraestructura:
+    · XAMPP (local)         Servidor de desarrollo
+    · Puerto 8000           HTTP (Django runserver)
+    · Puerto 5432           PostgreSQL
+
+  Acceso:
+    · PC local:   http://localhost:8000
+    · Red local:  http://192.168.100.38:8000  (reemplazar con la IP actual)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 3. ESTRUCTURA DE CARPETAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  c:\xampp\htdocs\structure\
+  │
+  ├── config\                   Configuración global del proyecto Django
+  │   ├── settings.py           Variables de entorno, BD, apps instaladas
+  │   ├── urls.py               Enrutamiento principal (raíz de todas las URLs)
+  │   ├── middleware.py         Middleware de autenticación (LoginRequired)
+  │   └── context_processors.py Inyecta proyecto activo y lista de proyectos
+  │
+  ├── apps\                     Módulos del sistema
+  │   ├── catalogo\             Catálogo de productos/insumos
+  │   ├── proyectos\            Gestión de proyectos de construcción
+  │   ├── presupuesto\          Presupuestos contractuales, adicionales, deductivos
+  │   ├── almacen\              Almacén: requerimientos, entradas, salidas, OC, COT
+  │   └── configuracion\        Empresa y usuarios del sistema
+  │
+  ├── templates\                Plantillas HTML
+  │   ├── base.html             Layout principal (sidebar + topbar + contenido)
+  │   ├── dashboard.html        Página de inicio del sistema
+  │   ├── registration\
+  │   │   └── login.html        Pantalla de inicio de sesión
+  │   ├── catalogo\
+  │   ├── proyectos\
+  │   ├── presupuesto\
+  │   ├── almacen\
+  │   └── configuracion\
+  │
+  ├── static\                   Archivos estáticos (CSS, JS, imágenes)
+  │   └── css\
+  │       └── main.css          Estilos personalizados del sistema
+  │
+  ├── media\                    Archivos subidos por el usuario
+  ├── iniciar.bat               Script para iniciar el servidor (doble clic)
+  └── manage.py                 Comando de administración de Django
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 4. MÓDULOS DEL SISTEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━ 4.1  DASHBOARD  (/proyectos/dashboard/)
+────────────────────────────────────────────
+  Página de inicio del sistema. Muestra un resumen ejecutivo:
+
+  · KPI 1: Proyectos en ejecución (vs. total)
+  · KPI 2: Requerimientos pendientes de atender
+  · KPI 3: Cotizaciones pendientes de aprobar
+  · KPI 4: Órdenes de compra activas (borrador + enviada)
+  · Tabla de proyectos en ejecución con su presupuesto contractual y
+    requerimientos pendientes
+  · Últimos 8 requerimientos creados (con estado)
+  · Últimas 6 entradas de almacén registradas
+
+
+━━ 4.2  CATÁLOGO  (/catalogo/)
+────────────────────────────────
+  Registro maestro de todos los productos e insumos que usa la empresa.
+  Es compartido por todos los proyectos.
+
+  Modelo: Producto
+    · codigo         Código único del producto (ej: MAT-001)
+    · descripcion    Nombre completo del producto
+    · categoria      MATERIAL / EQUIPO / EPP / UTIL / HERRAMIENTA / OTRO
+    · unidad         UND / KG / M2 / ML / BLS / GAL / etc.
+    · activo         Si está disponible para usar en el sistema
+
+  Función: Desde el catálogo se seleccionan los productos al crear
+  requerimientos, entradas y salidas de almacén.
+
+
+━━ 4.3  PROYECTOS  (/proyectos/)
+──────────────────────────────────
+  Núcleo del sistema. Cada proyecto es una obra de construcción.
+
+  Modelo: Proyecto
+    · codigo         Código único (ej: PRY-2024-001)
+    · nombre         Nombre completo de la obra
+    · cliente        Nombre del cliente/entidad contratante
+    · ubicacion      Dirección de la obra
+    · responsable    Jefe de obra o responsable designado
+    · fecha_inicio   Fecha de inicio de la obra
+    · fecha_fin      Fecha de término programada
+    · estado         FORMULACION / EJECUCION / PAUSADO / TERMINADO / LIQUIDADO
+    · descripcion    Descripción libre del proyecto
+
+  Estados del proyecto:
+    FORMULACION → Proyecto en planificación, sin ejecutar
+    EJECUCION   → Obra en marcha (activa)
+    PAUSADO     → Obra detenida temporalmente
+    TERMINADO   → Obra física terminada
+    LIQUIDADO   → Proyecto cerrado económicamente
+
+  URLs disponibles:
+    /proyectos/dashboard/     → Dashboard general
+    /proyectos/               → Lista de proyectos
+    /proyectos/nuevo/         → Crear nuevo proyecto
+    /proyectos/<id>/          → Detalle del proyecto
+    /proyectos/<id>/editar/   → Editar datos del proyecto
+    /proyectos/<id>/eliminar/ → Eliminar proyecto
+
+
+━━ 4.4  PRESUPUESTO  (/presupuesto/)
+──────────────────────────────────────
+  Gestión de presupuestos de obra. Soporta 3 tipos de presupuesto.
+
+  ── Tipos de presupuesto:
+
+    CONTRACTUAL  El presupuesto original firmado con el cliente.
+                 Contiene la estructura completa de partidas con código,
+                 nombre, unidad, cantidad y precio unitario.
+
+    ADICIONAL    Ampliación del contrato. Se crea a partir del contractual.
+                 Hereda unidades y precios unitarios — solo se editan cantidades.
+                 Representa trabajos extra no previstos en el contrato.
+
+    DEDUCTIVO    Reducción del contrato. Se crea a partir del contractual.
+                 Hereda unidades y precios unitarios — solo se editan cantidades.
+                 Representa trabajos que se eliminan del contrato.
+
+  Modelos:
+
+    Presupuesto
+      · proyecto          FK a Proyecto
+      · tipo              CONTRACTUAL / ADICIONAL / DEDUCTIVO
+      · presupuesto_base  FK a sí mismo (para adicionales/deductivos apunta
+                          al presupuesto contractual del que se derivan)
+      · nombre            Nombre descriptivo (ej: "Presupuesto Principal")
+      · archivo_origen    Nombre del archivo Excel importado
+      · fecha_importacion Fecha y hora de importación
+      · activo            Estado del presupuesto
+
+    Partida (árbol jerárquico de ítems del presupuesto)
+      · presupuesto       FK a Presupuesto
+      · padre             FK a sí misma (estructura de árbol: padres e hijos)
+      · partida_origen    FK a sí misma (en adicionales/deductivos, apunta a
+                          la partida original del contractual)
+      · codigo            Código de la partida (ej: 01.02.03.01)
+      · nombre            Descripción de la partida
+      · nivel             Profundidad en el árbol (1=capítulo, 2=subcap, etc.)
+      · orden             Posición dentro del nivel
+      · unidad            Unidad de medida (m2, ml, und, etc.)
+      · cantidad          Metrado de la partida
+      · precio_unitario   Precio por unidad
+
+    RecursoPartida (análisis de precios unitarios por partida)
+      · partida           FK a Partida
+      · tipo              MATERIAL / MANO_OBRA / EQUIPO / SUBCONTRATO / OTRO
+      · descripcion       Nombre del recurso
+      · cantidad          Cuánto se usa por unidad de partida
+      · precio_unitario   Precio del recurso
+
+    InsumoPresupuesto (resumen de materiales del presupuesto completo)
+      · presupuesto       FK a Presupuesto
+      · tipo              Tipo de recurso
+      · descripcion       Nombre del insumo
+      · cantidad          Cantidad total requerida en todo el presupuesto
+      · costo_unitario    Precio unitario del insumo
+
+  Funcionalidad importante:
+    · Los presupuestos se importan desde archivos Excel (S10/S10 Pres.)
+    · Las partidas se visualizan como un árbol colapsable
+    · El total de cada partida padre es la suma de sus hijos
+    · El total del presupuesto es la suma de todas las partidas raíz
+
+  URLs:
+    /presupuesto/proyecto/<id>/             → Lista de presupuestos del proyecto
+    /presupuesto/proyecto/<id>/nuevo/       → Crear presupuesto contractual
+    /presupuesto/<id>/                      → Ver partidas del presupuesto
+    /presupuesto/<id>/insumos/             → Ver insumos del presupuesto
+    /presupuesto/<id>/importar/            → Importar desde Excel
+    /presupuesto/<id>/adicional/           → Crear presupuesto adicional
+    /presupuesto/<id>/deductivo/           → Crear presupuesto deductivo
+    /presupuesto/<id>/editar-cantidades/   → Editar cantidades (adicional/deductivo)
+
+
+━━ 4.5  ALMACÉN  (/almacen/)
+──────────────────────────────
+  Módulo más amplio del sistema. Gestiona el flujo completo de materiales:
+  desde que se solicitan hasta que llegan a la obra y se despachan.
+
+  FLUJO NORMAL:
+    1. Almacenero crea un REQUERIMIENTO (lista de materiales que se necesitan)
+    2. Jefe aprueba el requerimiento
+    3. Se crea una COTIZACIÓN (pedido de precios a proveedores)
+    4. Se aprueba la cotización y se genera una ORDEN DE COMPRA
+    5. Llega el material → se registra como ENTRADA (con guía de remisión)
+    6. Se despacha el material a la obra → se registra como SALIDA
+
+  ── Requerimiento
+       Solicitud formal de materiales para un proyecto.
+       · numero        Número correlativo por proyecto (ej: REQ-001)
+       · fecha         Fecha de la solicitud
+       · tipo          Tipo de material: MATERIAL / EQUIPO / EPP / etc.
+       · solicitante   Persona que solicita (almacenero, capataz, etc.)
+       · estado        PENDIENTE → APROBADO → ATENDIDO / PARCIAL / ANULADO
+       · detalles      Lista de productos con cantidad y unidad
+
+  ── Entrada
+       Registro de materiales que ingresan al almacén de obra.
+       · numero_guia   Número de la guía de remisión del proveedor
+       · serie         Serie de la guía (ej: 001)
+       · fecha         Fecha de recepción
+       · proveedor     Nombre del proveedor/tienda
+       · requerimiento Requerimiento al que corresponde (opcional)
+       · detalles      Lista de productos con cantidad y precio recibidos
+
+  ── Salida
+       Registro de materiales que salen del almacén hacia la obra.
+       · numero        Número correlativo de salida
+       · fecha         Fecha de despacho
+       · destino       Frente de obra o área destino
+       · responsable   Persona que recibe el material
+       · detalles      Lista de productos con cantidad despachada
+
+  ── Cotización
+       Solicitud de precios a un proveedor para un requerimiento.
+       · numero        Número correlativo
+       · fecha         Fecha de la cotización
+       · proveedor     Nombre del proveedor
+       · estado        PENDIENTE / APROBADA / RECHAZADA
+       · detalles      Lista de productos cotizados con precio ofertado
+
+  ── Orden de Compra
+       Documento formal de compra enviado al proveedor aprobado.
+       · numero        Número correlativo por proyecto (ej: OC-001)
+       · fecha         Fecha de la OC
+       · proveedor     Proveedor seleccionado
+       · requerimiento Requerimiento de origen (opcional)
+       · cotizacion    Cotización aprobada de origen (opcional)
+       · estado        BORRADOR → ENVIADA → PARCIAL → COMPLETADA / ANULADA
+       · plazo_entrega Tiempo de entrega prometido por el proveedor
+       · detalles      Lista de productos con cantidad y precio pactado
+
+  Stock y Kardex:
+    El sistema calcula el stock actual de cada producto en el almacén del
+    proyecto sumando entradas y restando salidas (kardex valorizado).
+
+  URLs:
+    /almacen/proyecto/<id>/              → Dashboard almacén del proyecto
+    /almacen/proyecto/<id>/stock/        → Stock actual del almacén
+    /almacen/proyecto/<id>/stock/<pid>/kardex/ → Movimientos de un producto
+    /almacen/proyecto/<id>/requerimientos/     → Lista de requerimientos
+    /almacen/proyecto/<id>/entradas/           → Lista de entradas
+    /almacen/proyecto/<id>/salidas/            → Lista de salidas
+    /almacen/proyecto/<id>/cotizaciones/       → Lista de cotizaciones
+    /almacen/proyecto/<id>/ordenes/            → Lista de órdenes de compra
+
+
+━━ 4.6  CONFIGURACIÓN  (/configuracion/)
+──────────────────────────────────────────
+  Administración de la empresa y los usuarios del sistema.
+
+  ── Empresa
+       · razon_social  Nombre legal de la empresa
+       · ruc           RUC de la empresa
+       · direccion     Dirección fiscal
+       · telefono      Teléfono de contacto
+       · email         Correo electrónico
+       · web           Sitio web
+       · moneda        Símbolo de moneda (S/. por defecto)
+       · igv           Porcentaje de IGV (18% por defecto)
+
+  ── Usuarios
+       Gestión de usuarios que pueden acceder al sistema.
+       Usa el modelo User de Django (auth_user en la base de datos).
+       · username      Nombre de usuario para iniciar sesión
+       · first_name    Nombre
+       · last_name     Apellido
+       · email         Correo electrónico
+       · is_active     Si el usuario puede iniciar sesión
+       · is_staff      Usuario con permisos de staff (rol: STAFF)
+       · is_superuser  Usuario con todos los permisos (rol: SUPERADMIN)
+
+  Roles actuales (simplificados):
+       USUARIO      → is_staff=False, is_superuser=False
+       STAFF        → is_staff=True,  is_superuser=False
+       SUPERADMIN   → is_superuser=True (acceso total, incluido panel /admin/)
+
+  URLs:
+    /configuracion/empresa/              → Ver/editar datos de empresa
+    /configuracion/usuarios/             → Lista de usuarios
+    /configuracion/usuarios/nuevo/       → Crear usuario
+    /configuracion/usuarios/<id>/editar/ → Editar usuario
+    /configuracion/usuarios/<id>/password/ → Cambiar contraseña
+    /configuracion/usuarios/<id>/toggle/ → Activar/desactivar usuario
+    /configuracion/usuarios/<id>/eliminar/ → Eliminar usuario
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 5. AUTENTICACIÓN Y SEGURIDAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  · Toda ruta del sistema requiere estar autenticado.
+  · Si el usuario no ha iniciado sesión, es redirigido a /login/.
+  · Esto se logra con un Middleware personalizado:
+      config/middleware.py → LoginRequiredMiddleware
+      Intercepta cada petición HTTP y verifica request.user.is_authenticated.
+
+  · Las únicas rutas públicas (sin login) son:
+      /login/   → Pantalla de inicio de sesión
+      /admin/   → Panel de administración de Django (solo superadmins)
+
+  · Las contraseñas se almacenan hasheadas (Django usa PBKDF2-SHA256).
+  · El sistema de sesiones usa cookies seguras de Django.
+
+  Configuración relevante en settings.py:
+    LOGIN_URL          = '/login/'
+    LOGIN_REDIRECT_URL = '/'         (dashboard al iniciar sesión)
+    LOGOUT_REDIRECT_URL = '/login/'  (login al cerrar sesión)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 6. FUNCIONAMIENTO TÉCNICO CLAVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ── Proyecto activo en sidebar
+      El sidebar muestra los links del proyecto activo (presupuesto, almacén,
+      requerimientos, etc.) usando JavaScript y localStorage del navegador.
+      Cuando el usuario navega a cualquier página de un proyecto, el servidor
+      inyecta el ID y nombre del proyecto como variables de contexto. El JS las
+      guarda en localStorage (clave: ss_pid, ss_pnombre) y rellena los hrefs
+      del sidebar con el ID real. Así, el sidebar siempre recuerda el último
+      proyecto visitado aunque se navegue a otras secciones.
+
+  ── Formateo de números (español peruano)
+      Los números monetarios se muestran con formato español:
+      · Punto como separador de miles:    200.669,58
+      · Coma como separador de decimales: 1.631,46
+      Esto se implementa con un filtro de template personalizado:
+        apps/presupuesto/templatetags/pres_fmt.py → filtro "miles"
+        Uso en templates: {{ valor|miles:2 }} → "200.669,58"
+        Uso con 4 decimales: {{ cantidad|miles:4 }} → "1.000,0000"
+      El filtro está registrado como builtin en settings.py para estar
+      disponible en TODOS los templates sin necesidad de cargarlo.
+
+  ── Árbol de partidas (presupuesto)
+      Las partidas se renderizan como una tabla plana (no tablas anidadas).
+      Cada fila <tr> lleva una clase "children-of-<padre_id>" para identificar
+      qué filas son hijos de qué padre. El JS maneja el colapso/expansión
+      de forma recursiva: al colapsar un nodo, también oculta todos sus
+      descendientes (hijos de hijos de hijos...).
+
+  ── Context processors (datos globales en templates)
+      Dos funciones en config/context_processors.py inyectan datos en TODOS
+      los templates automáticamente:
+        · proyecto_activo:  ID y nombre del proyecto actual (si aplica)
+        · todos_proyectos:  Lista completa de proyectos (para el modal selector)
+
+  ── Filtro de template pres_fmt
+      Registrado en settings.py como builtin:
+        TEMPLATES > OPTIONS > builtins: ['apps.presupuesto.templatetags.pres_fmt']
+      Esto significa que el filtro "miles" está disponible en todos los
+      templates SIN necesidad de {% load pres_fmt %} al inicio de cada archivo.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 7. BASE DE DATOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Motor:      PostgreSQL 16
+  Base:       ss_gestion
+  Usuario:    postgres
+  Contraseña: 1234
+  Host:       localhost
+  Puerto:     5432
+
+  Tablas principales (prefijo del app Django):
+    auth_user                  → Usuarios del sistema (Django built-in)
+    catalogo_producto          → Catálogo de productos
+    proyectos_proyecto         → Proyectos de construcción
+    presupuesto_presupuesto    → Presupuestos por proyecto
+    presupuesto_partida        → Partidas del presupuesto (árbol)
+    presupuesto_recursopartida → Recursos/APU por partida
+    presupuesto_insumopresupuesto → Insumos totales del presupuesto
+    almacen_requerimiento      → Solicitudes de materiales
+    almacen_detallerequerimiento
+    almacen_entrada            → Ingresos de material al almacén
+    almacen_detalleentrada
+    almacen_salida             → Despachos de material desde almacén
+    almacen_detallesalida
+    almacen_cotizacion         → Cotizaciones a proveedores
+    almacen_detallecotizacion
+    almacen_ordencompra        → Órdenes de compra
+    almacen_detalleordencompra
+    configuracion_configempresa → Datos de la empresa
+
+  Cómo aplicar migraciones (cambios al modelo de datos):
+    python manage.py makemigrations
+    python manage.py migrate
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 8. CÓMO INICIAR EL SISTEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Opción A (recomendada): Doble clic en iniciar.bat
+    El archivo iniciar.bat hace automáticamente:
+      1. Cierra todos los procesos Python que usan el puerto 8000
+      2. Verifica que PostgreSQL esté activo
+      3. Aplica migraciones pendientes
+      4. Inicia el servidor Django en 0.0.0.0:8000 (accesible por red local)
+      5. Abre el navegador automáticamente en http://localhost:8000
+
+  Opción B (manual desde terminal):
+    cd c:\xampp\htdocs\structure
+    python manage.py runserver 0.0.0.0:8000
+
+  Problema común — múltiples servidores en el puerto 8000:
+    Si Django no responde o hay errores raros, puede haber varios procesos
+    Python corriendo en el mismo puerto. Solución:
+      netstat -ano | findstr :8000
+      taskkill /PID <numero_pid> /F
+    (repetir para cada PID que aparezca)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 9. ARQUITECTURA DE ROLES (PROPUESTA — EN DESARROLLO)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  El sistema implementará un modelo híbrido:
+    · Roles globales: definen qué módulos puede ver el usuario
+    · Membresía por proyecto: cada usuario es asignado solo a sus proyectos
+
+  Roles planificados:
+
+    SUPERADMIN
+      · Acceso total al sistema
+      · Administra usuarios, empresa y configuración
+      · Ve todos los proyectos
+      · Accede al panel /admin/ de Django
+
+    JEFE_OBRA  (Administrador de obra)
+      · Ve los proyectos donde está asignado
+      · Acceso completo a: presupuesto, aprobaciones, reportes
+      · Aprueba requerimientos y órdenes de compra
+      · No puede administrar usuarios
+
+    ALMACENERO
+      · Ve los proyectos donde está asignado
+      · Acceso a: requerimientos, entradas, salidas, cotizaciones, OC
+      · No ve ni edita presupuestos
+      · No puede aprobar documentos (solo crear)
+
+    AUDITOR
+      · Ve TODOS los proyectos (lectura únicamente)
+      · No puede crear, editar ni eliminar nada
+      · Acceso a reportes y kardex
+
+    OPERARIO  (Albañil / campo)
+      · Ve los proyectos donde está asignado
+      · Solo puede crear requerimientos de materiales
+      · No ve precios ni presupuestos
+
+  Modelo ProyectoMiembro (a implementar):
+    · usuario    FK a User
+    · proyecto   FK a Proyecto
+    · rol        JEFE_OBRA / ALMACENERO / AUDITOR / OPERARIO
+    Esto permite que un usuario sea Jefe de obra en un proyecto
+    y Auditor en otro, o que el almacenero solo vea sus obras.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 10. ESTADO ACTUAL DEL SISTEMA (Junio 2026)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  IMPLEMENTADO Y FUNCIONANDO:
+    ✓ Autenticación (login / logout)
+    ✓ Middleware de protección de rutas
+    ✓ Dashboard con KPIs y tablas de actividad reciente
+    ✓ Catálogo de productos
+    ✓ Gestión completa de proyectos (CRUD)
+    ✓ Presupuesto contractual (con importación Excel y árbol de partidas)
+    ✓ Presupuesto adicional y deductivo (edición de cantidades)
+    ✓ Insumos del presupuesto
+    ✓ Almacén: requerimientos, entradas, salidas
+    ✓ Almacén: cotizaciones, órdenes de compra
+    ✓ Stock y kardex por proyecto
+    ✓ Módulo de usuarios (CRUD interno, sin depender del admin Django)
+    ✓ Configuración de empresa
+    ✓ Formateo de números español (200.669,58)
+    ✓ Acceso por red local (0.0.0.0:8000)
+    ✓ Sidebar con proyecto activo persistente (localStorage)
+
+  EN DESARROLLO / PRÓXIMO:
+    ○ Sistema de roles granulares (JEFE_OBRA, ALMACENERO, AUDITOR, OPERARIO)
+    ○ Membresía de usuarios por proyecto (ProyectoMiembro)
+    ○ Permisos por módulo según rol
+    ○ Guías de remisión (seguimiento de materiales despachados de tiendas)
+    ○ Reportes y exportación a Excel/PDF
+    ○ Registro de auditoría (log de acciones de usuarios)
+
+  PENDIENTE DE EVALUAR:
+    ○ Módulo de planillas o mano de obra
+    ○ Módulo de avance de obra (curva S, % completado por partida)
+    ○ Notificaciones internas entre usuarios
+    ○ Adjuntos de documentos (facturas, guías escaneadas)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 11. GLOSARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  APU            Análisis de Precio Unitario (desglose de un ítem del presupuesto)
+  Contractual    Presupuesto original del contrato firmado
+  Adicional      Ampliación del contrato por trabajos extra
+  Deductivo      Reducción del contrato por trabajos eliminados
+  Django         Framework web Python en el que está construido el sistema
+  ERP            Enterprise Resource Planning (sistema integrado de gestión)
+  FK             Foreign Key (relación entre tablas de la base de datos)
+  Guía           Guía de remisión: documento que acompaña el despacho de bienes
+  IGV            Impuesto General a las Ventas (18% en Perú)
+  Insumo         Material o recurso necesario para ejecutar partidas de obra
+  Kardex         Registro cronológico de entradas y salidas de un producto
+  LAN            Red de área local (red interna de la empresa)
+  Middleware     Capa de software que procesa peticiones HTTP antes de las vistas
+  Migración      Script que aplica cambios al esquema de la base de datos
+  OC             Orden de Compra
+  Partida        Ítem del presupuesto de obra (puede tener hijos = subpartidas)
+  PostgreSQL     Sistema de base de datos relacional usado por el sistema
+  REQ            Requerimiento de materiales
+  RUC            Registro Único de Contribuyentes (Perú)
+  Stock          Cantidad disponible de un producto en el almacén de obra
+
+================================================================================
+  Fin del documento
+================================================================================

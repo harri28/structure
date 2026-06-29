@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block title %}Nueva Modificación — {{ proyecto.codigo }}{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
+<li class="breadcrumb-item active">Nueva Modificación</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .mod-section { display:none }
+  .mod-section.visible { display:block }
+  .partidas-ad-table td, .partidas-ad-table th { padding:.35rem .5rem; font-size:.82rem }
+  .partidas-ad-table input { font-size:.82rem; padding:.28rem .45rem }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Presupuesto</a>
+  <h4>Nueva Modificación</h4>
+</div>
+
+<form method="post" id="modForm">
+  {% csrf_token %}
+
+  <!-- ── Tipo + Nombre + Estado ───────────────────────────────── -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Tipo de Modificación</label>
+          <select name="tipo" id="tipoSelect" class="form-select" required>
+            {% for value, label in tipos_modificacion %}
+            <option value="{{ value }}" {% if value == tipo %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">Nombre</label>
+          <input type="text" name="nombre" class="form-control" value="{{ nombre_sugerido }}" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Estado inicial</label>
+          <select name="estado" class="form-select">
+            {% for value, label in estados %}
+            <option value="{{ value }}" {% if value == 'PENDIENTE' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sección ADICIONAL ────────────────────────────────────── -->
+  <div class="mod-section" id="seccionAdicional">
+    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#16a34a;margin-bottom:.5rem">
+      Partidas Adicionales
+    </div>
+    <div class="card mb-3">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 partidas-ad-table" id="tablaAdicional">
+            <thead>
+              <tr>
+                <th style="width:10%">Código</th>
+                <th>Descripción</th>
+                <th style="width:8%">Und</th>
+                <th style="width:10%" class="text-end">Metrado</th>
+                <th style="width:12%" class="text-end">P.U. (S/)</th>
+                <th style="width:10%" class="text-end">Parcial</th>
+                <th style="width:4%"></th>
+              </tr>
+            </thead>
+            <tbody id="filasAdicional">
+              <!-- JS adds rows here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button type="button" class="btn btn-sm btn-outline-success" onclick="agregarFilaAdicional()">
+          <i class="bi bi-plus-lg me-1"></i>Agregar Partida
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sección DEDUCTIVO ────────────────────────────────────── -->
+  <div class="mod-section" id="seccionDeductivo">
+    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#dc2626;margin-bottom:.5rem">
+      Partidas Deductivas
+    </div>
+    <div class="card mb-3">
+      <div class="card-header" style="font-size:.82rem;color:#6b7280">
+        Ingrese la cantidad a deducir de cada partida del presupuesto contractual (deje en blanco para no deducir).
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th style="width:10%">Código</th>
+                <th>Descripción</th>
+                <th style="width:7%">Und</th>
+                <th style="width:10%" class="text-end">Metrado Contractual</th>
+                <th style="width:10%" class="text-end">P.U. (S/)</th>
+                <th style="width:12%">Cantidad Deductiva</th>
+                <th style="width:10%" class="text-end">Parcial (S/)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in partidas_hoja %}
+              <tr>
+                <td style="font-size:.78rem"><code>{{ p.codigo }}</code></td>
+                <td style="font-size:.82rem">
+                  {% if p.padre %}
+                  <span style="color:#9ca3af;font-size:.75rem">{{ p.padre.codigo }} / </span>
+                  {% endif %}
+                  {{ p.nombre }}
+                </td>
+                <td style="font-size:.78rem;color:#6b7280">{{ p.unidad }}</td>
+                <td class="text-end" style="font-size:.78rem">{{ p.cantidad|miles:4 }}</td>
+                <td class="text-end" style="font-size:.78rem">{{ p.precio_unitario|miles:2 }}</td>
+                <td>
+                  <input type="number" name="ded_cantidad_{{ p.pk }}"
+                         class="form-control form-control-sm ded-qty"
+                         data-pu="{{ p.precio_unitario }}"
+                         placeholder="0.0000" min="0" step="0.0001">
+                </td>
+                <td class="text-end parcial-ded" style="font-size:.78rem;color:#dc2626">—</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center py-3 text-muted">
+                  El presupuesto contractual no tiene partidas hoja. Importe partidas primero.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Botones ───────────────────────────────────────────────── -->
+  <div class="d-flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>Crear Modificación
+    </button>
+    <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const tipoSelect = document.getElementById('tipoSelect');
+const secAd = document.getElementById('seccionAdicional');
+const secDed = document.getElementById('seccionDeductivo');
+let filaIdx = 0;
+
+function actualizarSecciones() {
+  const tipo = tipoSelect.value;
+  secAd.classList.toggle('visible', tipo === 'ADICIONAL' || tipo === 'VINCULANTE');
+  secDed.classList.toggle('visible', tipo === 'DEDUCTIVO' || tipo === 'VINCULANTE');
+}
+
+tipoSelect.addEventListener('change', actualizarSecciones);
+actualizarSecciones();
+
+// Add initial empty row for ADICIONAL if visible
+if (secAd.classList.contains('visible') && document.getElementById('filasAdicional').children.length === 0) {
+  agregarFilaAdicional();
+}
+
+function agregarFilaAdicional() {
+  const tbody = document.getElementById('filasAdicional');
+  const i = filaIdx++;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" name="ad_codigo[]" class="form-control form-control-sm" placeholder="01.01.01"></td>
+    <td><input type="text" name="ad_nombre[]" class="form-control form-control-sm" placeholder="Descripción de la partida" required></td>
+    <td><input type="text" name="ad_unidad[]" class="form-control form-control-sm" placeholder="m3" style="width:60px"></td>
+    <td><input type="number" name="ad_cantidad[]" class="form-control form-control-sm ad-qty text-end" placeholder="0" min="0" step="0.0001"></td>
+    <td><input type="number" name="ad_pu[]" class="form-control form-control-sm ad-pu text-end" placeholder="0.00" min="0" step="0.01"></td>
+    <td class="text-end ad-parcial" style="font-size:.82rem;color:#16a34a">—</td>
+    <td><button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="this.closest('tr').remove()"><i class="bi bi-trash"></i></button></td>
+    <input type="hidden" name="ad_origen[]" value="">
+  `;
+  tbody.appendChild(tr);
+
+  // Live parcial calculation
+  const qty = tr.querySelector('.ad-qty');
+  const pu  = tr.querySelector('.ad-pu');
+  const parc = tr.querySelector('.ad-parcial');
+  function calcParcial() {
+    const v = parseFloat(qty.value || 0) * parseFloat(pu.value || 0);
+    parc.textContent = v > 0 ? 'S/ ' + v.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+  }
+  qty.addEventListener('input', calcParcial);
+  pu.addEventListener('input', calcParcial);
+}
+
+// Live parcial for deductivo rows
+document.querySelectorAll('.ded-qty').forEach(input => {
+  const pu = parseFloat(input.dataset.pu || 0);
+  const cell = input.closest('tr').querySelector('.parcial-ded');
+  input.addEventListener('input', () => {
+    const v = parseFloat(input.value || 0) * pu;
+    cell.textContent = v > 0
+      ? 'S/ ' + v.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2})
+      : '—';
+  });
+});
+</script>
+{% endblock %}

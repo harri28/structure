@@ -1,0 +1,75 @@
+﻿{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_req %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'almacen:req_lista' proyecto.pk %}">Requerimientos</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<h4 class="fw-bold mb-4">{{ titulo }}</h4>
+<form method="post">
+  {% csrf_token %}
+  <div class="card mb-3">
+    <div class="card-header">Datos del Requerimiento</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">N° Requerimiento</label>
+          <input type="text" name="numero" value="{{ form.numero.value|default:'' }}" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Fecha</label>
+          <input type="date" name="fecha" value="{{ form.fecha.value|default:'' }}" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Tipo</label>
+          {{ form.tipo }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Estado</label>
+          {{ form.estado }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Solicitante</label>
+          <input type="text" name="solicitante" value="{{ form.solicitante.value|default:'' }}" class="form-control">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Observaciones</label>
+          <textarea name="observaciones" rows="2" class="form-control">{{ form.observaciones.value|default:'' }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Materiales Requeridos</div>
+    <div class="card-body">
+      {% include 'almacen/_formset_detalle.html' with formset=formset %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+    <a href="{% url 'almacen:req_lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const totalForms = document.querySelector('[name="{{ formset.prefix }}-TOTAL_FORMS"]') ||
+                   document.querySelector('[name="detalles-TOTAL_FORMS"]');
+document.getElementById('add-row')?.addEventListener('click', function() {
+  const container = document.getElementById('formset-container');
+  const rows = container.querySelectorAll('.formset-row');
+  const idx = rows.length;
+  const newRow = rows[0].cloneNode(true);
+  newRow.innerHTML = newRow.innerHTML.replace(/__prefix__|detalles-0/g, `detalles-${idx}`);
+  newRow.querySelectorAll('input:not([type=hidden])').forEach(i => i.value = '');
+  container.appendChild(newRow);
+  if (totalForms) totalForms.value = idx + 1;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_almacen %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'almacen:oc_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Órdenes de Compra</a>
+  <h4>{{ titulo }}</h4>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div class="card mb-3">
+    <div class="card-header">Datos de la Orden</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">N° Orden <span class="text-danger">*</span></label>
+          <input type="text" name="numero" value="{{ form.numero.value|default:'' }}" class="form-control" required>
+          {% if form.numero.errors %}<div class="text-danger small">{{ form.numero.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+          <input type="date" name="fecha" value="{{ form.fecha.value|default:'' }}" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Estado</label>
+          {{ form.estado }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Plazo de Entrega</label>
+          <input type="text" name="plazo_entrega" value="{{ form.plazo_entrega.value|default:'' }}" class="form-control" placeholder="ej. 7 días hábiles">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">Proveedor <span class="text-danger">*</span></label>
+          <input type="text" name="proveedor" value="{{ form.proveedor.value|default:'' }}" class="form-control" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Requerimiento (opcional)</label>
+          {{ form.requerimiento }}
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Observaciones</label>
+          <textarea name="observaciones" rows="2" class="form-control">{{ form.observaciones.value|default:'' }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Ítems a Comprar</div>
+    <div class="card-body">
+      {% include 'almacen/_formset_detalle.html' with formset=formset %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Guardar Orden</button>
+    <a href="{% url 'almacen:oc_lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

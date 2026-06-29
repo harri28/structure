@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Kardex — {{ producto.codigo }}{% endblock %}
+{% block nav_almacen %}active{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'almacen:stock' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Stock</a>
+    <h4><i class="bi bi-clock-history me-2"></i>Kardex</h4>
+    <div class="text-muted"><code>{{ producto.codigo }}</code> — {{ producto.descripcion }}</div>
+  </div>
+  <div class="text-end">
+    <div class="text-muted" style="font-size:.78rem">Saldo final</div>
+    <div class="fw-bold fs-4 {% if saldo_final <= 0 %}text-danger{% else %}text-success{% endif %}">
+      {{ saldo_final|floatformat:2 }} <small class="text-muted fs-6">{{ producto.get_unidad_display }}</small>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Referencia</th>
+          <th>Detalle</th>
+          <th class="text-end">Entrada</th>
+          <th class="text-end">Salida</th>
+          <th class="text-end">Saldo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movimientos %}
+        <tr>
+          <td style="font-size:.82rem">{{ m.fecha|date:"d/m/Y" }}</td>
+          <td>
+            {% if m.tipo == 'ENTRADA' %}
+            <span class="badge bg-success">↓ Entrada</span>
+            {% else %}
+            <span class="badge bg-danger">↑ Salida</span>
+            {% endif %}
+          </td>
+          <td><code style="font-size:.78rem">{{ m.referencia }}</code></td>
+          <td class="text-muted" style="font-size:.82rem">{{ m.detalle }}</td>
+          <td class="text-end text-success">{% if m.entrada %}{{ m.entrada|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="text-end text-danger">{% if m.salida %}{{ m.salida|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="text-end fw-semibold {% if m.saldo <= 0 %}text-danger{% endif %}">{{ m.saldo|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-clock-history d-block"></i>
+              <p>Sin movimientos para este producto.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

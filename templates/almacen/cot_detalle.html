@@ -1,0 +1,55 @@
+﻿{% extends 'base.html' %}
+{% block title %}COT-{{ cot.numero }}{% endblock %}
+{% block nav_cot %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'almacen:cot_lista' proyecto.pk %}">Cotizaciones</a></li>
+<li class="breadcrumb-item active">COT-{{ cot.numero }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'almacen:cot_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Cotizaciones</a>
+    <h4>Cotización <code>COT-{{ cot.numero }}</code></h4>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'almacen:cot_editar' cot.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+    <a href="{% url 'almacen:cot_eliminar' cot.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+  </div>
+</div>
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-sm-3"><label class="text-muted small">Fecha</label><p class="mb-0 fw-semibold">{{ cot.fecha|date:"d/m/Y" }}</p></div>
+      <div class="col-sm-4"><label class="text-muted small">Proveedor / Tienda</label><p class="mb-0">{{ cot.proveedor }}</p></div>
+      <div class="col-sm-2"><label class="text-muted small">Estado</label>
+        <p class="mb-0"><span class="badge {% if cot.estado == 'APROBADA' %}bg-success{% elif cot.estado == 'RECHAZADA' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ cot.get_estado_display }}</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header d-flex justify-content-between">
+    <span>Materiales Cotizados</span>
+    <strong>Total: S/. {{ cot.total|floatformat:2 }}</strong>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Código</th><th>Descripción</th><th class="text-end">Cantidad</th><th>Unidad</th><th class="text-end">P.U. (S/.)</th><th class="text-end">Subtotal (S/.)</th></tr></thead>
+      <tbody>
+        {% for d in cot.detalles.all %}
+        <tr>
+          <td><code>{{ d.producto.codigo }}</code></td>
+          <td>{{ d.producto.descripcion }}</td>
+          <td class="text-end">{{ d.cantidad|floatformat:2 }}</td>
+          <td>{{ d.get_unidad_display }}</td>
+          <td class="text-end">{{ d.precio_unitario|floatformat:2 }}</td>
+          <td class="text-end fw-semibold">{{ d.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

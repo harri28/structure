@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load pres_fmt %}
+{% block title %}Nuevo {{ label }} — {{ contractual.nombre }}{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'proyectos:lista' %}">Proyectos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuestos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:detalle' contractual.pk %}">{{ contractual.nombre }}</a></li>
+<li class="breadcrumb-item active">Nuevo {{ label }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'presupuesto:detalle' contractual.pk %}" class="btn-back">
+    <i class="bi bi-chevron-left"></i> {{ contractual.nombre }}
+  </a>
+  <h4>
+    {% if tipo == 'ADICIONAL' %}
+      <i class="bi bi-plus-circle me-2 text-success"></i>Nuevo Presupuesto Adicional
+    {% else %}
+      <i class="bi bi-dash-circle me-2 text-danger"></i>Nuevo Presupuesto Deductivo
+    {% endif %}
+  </h4>
+  <div class="text-muted" style="font-size:.83rem">
+    Base contractual: <strong>{{ contractual.nombre }}</strong>
+  </div>
+</div>
+
+{% if sin_partidas %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-exclamation-circle fs-1 text-muted"></i>
+    <h6 class="mt-3 text-muted">El presupuesto contractual no tiene partidas</h6>
+    <p class="text-muted small">Importe las partidas primero desde S10.</p>
+    <a href="{% url 'presupuesto:importar' contractual.pk %}" class="btn btn-primary btn-sm mt-1">
+      <i class="bi bi-upload me-1"></i>Importar S10
+    </a>
+  </div>
+</div>
+{% else %}
+<form method="post">
+  {% csrf_token %}
+
+  <!-- Nombre -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <label class="form-label fw-semibold">Nombre del {{ label }}</label>
+      <input type="text" name="nombre" class="form-control" value="{{ nombre_sugerido }}"
+             placeholder="{{ nombre_sugerido }}" style="max-width:400px">
+      <div class="form-text">Puede dejar el nombre sugerido o escribir uno descriptivo.</div>
+    </div>
+  </div>
+
+  <!-- Instrucciones -->
+  <div class="alert alert-info d-flex gap-2 align-items-start py-2 mb-3" style="font-size:.82rem">
+    <i class="bi bi-info-circle-fill mt-1"></i>
+    <span>
+      Ingrese la <strong>cantidad</strong> de las partidas que formarán parte de este {{ label|lower }}.
+      Las partidas sin cantidad serán ignoradas. El precio unitario y la unidad se heredan del contractual.
+    </span>
+  </div>
+
+  <!-- Tabla de partidas -->
+  <div class="card">
+    <div class="card-header">
+      Partidas del contractual — seleccione cantidades
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th style="width:14%">Ítem</th>
+              <th>Descripción</th>
+              <th style="width:8%" class="text-center">Und <i class="bi bi-lock-fill text-muted" style="font-size:.65rem"></i></th>
+              <th style="width:11%" class="text-end">Metrado orig.</th>
+              <th style="width:11%" class="text-end">P.U. <i class="bi bi-lock-fill text-muted" style="font-size:.65rem"></i></th>
+              <th style="width:13%" class="text-end">
+                Cantidad {{ label }}
+                <span class="text-danger">*</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for grupo in grupos %}
+            {% if grupos|length > 1 %}
+            <tr style="background:#f8fafc">
+              <td colspan="6" style="font-size:.75rem;font-weight:600;color:#64748b;padding:.4rem 1rem">
+                <i class="bi bi-folder2 me-1"></i>{{ grupo.nombre }}
+              </td>
+            </tr>
+            {% endif %}
+            {% for p in grupo.partidas %}
+            <tr>
+              <td><code style="font-size:.77rem">{{ p.codigo }}</code></td>
+              <td style="font-size:.83rem">{{ p.nombre }}</td>
+              <td class="text-center text-muted" style="font-size:.8rem">{{ p.unidad }}</td>
+              <td class="text-end text-muted" style="font-size:.8rem">{{ p.cantidad|miles:4 }}</td>
+              <td class="text-end text-muted" style="font-size:.8rem">{{ p.precio_unitario|miles:2 }}</td>
+              <td class="text-end">
+                <input type="number" name="cantidad_{{ p.pk }}"
+                       step="0.0001" min="0"
+                       class="form-control form-control-sm text-end"
+                       style="width:110px;margin-left:auto"
+                       placeholder="0.0000">
+              </td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-3 d-flex gap-2">
+    {% if tipo == 'ADICIONAL' %}
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-plus-lg me-1"></i>Crear Adicional
+    </button>
+    {% else %}
+    <button type="submit" class="btn btn-warning">
+      <i class="bi bi-dash-lg me-1"></i>Crear Deductivo
+    </button>
+    {% endif %}
+    <a href="{% url 'presupuesto:detalle' contractual.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

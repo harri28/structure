@@ -1,0 +1,157 @@
+{{ formset.management_form }}
+<div id="formset-container">
+{% for form in formset %}
+<div class="formset-row {% if form.instance.pk %}existing-row{% endif %}">
+  <div class="row g-2 align-items-end">
+    <!-- Buscador de producto (autocomplete) -->
+    <div class="col-md-5">
+      <label class="form-label">Producto</label>
+      <div class="prod-wrap" style="position:relative">
+        <input type="text" class="form-control form-control-sm prod-search"
+               placeholder="Buscar por código o descripción..."
+               autocomplete="off"
+               value="{% if form.instance.producto_id %}{{ form.instance.producto.codigo }} — {{ form.instance.producto.descripcion }}{% endif %}">
+        <input type="hidden" name="{{ form.producto.html_name }}"
+               value="{{ form.instance.producto_id|default:'' }}" class="prod-id">
+        <div class="prod-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;
+             background:#fff;border:1px solid #dee2e6;border-radius:4px;
+             max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+      </div>
+    </div>
+    <!-- Cantidad -->
+    <div class="col-md-2">
+      <label class="form-label">Cantidad</label>
+      <input type="number" step="0.0001" name="{{ form.cantidad.html_name }}"
+             value="{{ form.cantidad.value|default:'' }}"
+             class="form-control form-control-sm" placeholder="0.00">
+    </div>
+    <!-- Precio (opcional según formset) -->
+    {% if form.precio_unitario %}
+    <div class="col-md-2">
+      <label class="form-label">P.U. (S/.)</label>
+      <input type="number" step="0.01" name="{{ form.precio_unitario.html_name }}"
+             value="{{ form.precio_unitario.value|default:'' }}"
+             class="form-control form-control-sm" placeholder="0.00">
+    </div>
+    {% endif %}
+    <!-- Unidad -->
+    <div class="col-md-2">
+      <label class="form-label">Unidad</label>
+      {{ form.unidad }}
+    </div>
+    <!-- Eliminar -->
+    <div class="col-md-1 text-center">
+      <label class="form-label d-block" style="color:transparent">X</label>
+      <label class="btn-tbl danger d-inline-flex align-items-center justify-content-center"
+             style="cursor:pointer;padding:.32rem .5rem" title="Quitar ítem">
+        <i class="bi bi-trash"></i>
+        <input type="checkbox" name="{{ form.DELETE.html_name }}" class="d-none">
+      </label>
+      {{ form.id }}
+    </div>
+  </div>
+</div>
+{% endfor %}
+</div>
+
+<button type="button" class="btn-add-row mt-2 w-100" id="add-row">
+  <i class="bi bi-plus-lg me-1"></i>Agregar ítem
+</button>
+
+<script>
+(function() {
+  const API_URL = '/almacen/api/productos/';
+  let activeDropdown = null;
+
+  // Fetch & render opciones
+  function buscar(input) {
+    const q = input.value.trim();
+    const wrap = input.closest('.prod-wrap');
+    const dropdown = wrap.querySelector('.prod-dropdown');
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+    fetch(API_URL + '?q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(data => {
+        if (!data.length) {
+          dropdown.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:.8rem">Sin resultados</div>';
+        } else {
+          dropdown.innerHTML = data.map(p =>
+            `<div class="prod-opt" data-id="${p.id}" data-unidad="${p.unidad}"
+                  data-label="${p.codigo} — ${p.descripcion.replace(/"/g,'&quot;')}"
+                  style="padding:6px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.8rem">
+               <strong style="color:var(--amber-dark)">${p.codigo}</strong>
+               <span style="color:#374151"> ${p.descripcion}</span>
+             </div>`
+          ).join('');
+        }
+        dropdown.style.display = 'block';
+        activeDropdown = dropdown;
+      });
+  }
+
+  // Seleccionar opción
+  document.addEventListener('click', function(e) {
+    const opt = e.target.closest('.prod-opt');
+    if (opt) {
+      const wrap = opt.closest('.prod-wrap');
+      wrap.querySelector('.prod-search').value = opt.dataset.label;
+      wrap.querySelector('.prod-id').value = opt.dataset.id;
+      // Copiar unidad al select de la misma fila si está vacío
+      const row = wrap.closest('.formset-row');
+      const undSel = row ? row.querySelector('select[name$="-unidad"]') : null;
+      if (undSel && !undSel.value) undSel.value = opt.dataset.unidad;
+      opt.closest('.prod-dropdown').style.display = 'none';
+      return;
+    }
+    // Cerrar dropdown al hacer clic fuera
+    if (activeDropdown && !e.target.classList.contains('prod-search')) {
+      activeDropdown.style.display = 'none';
+      activeDropdown = null;
+    }
+  });
+
+  // Input handler con debounce
+  let timer;
+  document.addEventListener('input', function(e) {
+    if (!e.target.classList.contains('prod-search')) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => buscar(e.target), 280);
+  });
+
+  // Limpiar hidden al borrar texto
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('prod-search') && !e.target.value.trim()) {
+      e.target.closest('.prod-wrap').querySelector('.prod-id').value = '';
+    }
+  });
+
+  // Feedback visual al marcar DELETE
+  document.getElementById('formset-container').addEventListener('change', function(e) {
+    if (e.target.type === 'checkbox' && e.target.name?.endsWith('-DELETE')) {
+      const row = e.target.closest('.formset-row');
+      if (row) row.style.opacity = e.target.checked ? '0.35' : '1';
+    }
+  });
+
+  // Agregar nueva fila
+  document.getElementById('add-row').addEventListener('click', function() {
+    const container = document.getElementById('formset-container');
+    const rows = container.querySelectorAll('.formset-row');
+    const idx = rows.length;
+    const prefix = document.querySelector('[name$="-TOTAL_FORMS"]')?.name.replace('-TOTAL_FORMS','') || 'detalles';
+    const template = rows[0].cloneNode(true);
+    template.innerHTML = template.innerHTML.replace(new RegExp(prefix + '-0-', 'g'), `${prefix}-${idx}-`);
+    // Limpiar valores
+    template.querySelectorAll('input:not([type=hidden]):not([type=checkbox])').forEach(i => i.value = '');
+    template.querySelectorAll('input[type=checkbox]').forEach(i => i.checked = false);
+    template.querySelectorAll('input[type=hidden][name$="-id"]').forEach(i => i.value = '');
+    template.querySelectorAll('.prod-dropdown').forEach(d => d.style.display = 'none');
+    template.style.opacity = '1';
+    container.appendChild(template);
+    const tf = document.querySelector('[name$="-TOTAL_FORMS"]');
+    if (tf) tf.value = idx + 1;
+    // Foco en el nuevo buscador
+    template.querySelector('.prod-search')?.focus();
+  });
+})();
+</script>

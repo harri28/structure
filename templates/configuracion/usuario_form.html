@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_config_equipo %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'configuracion:equipo' %}" class="btn-back">
+    <i class="bi bi-chevron-left"></i> Usuarios & Roles
+  </a>
+  <h4><i class="bi bi-person-gear me-2"></i>{{ titulo }}</h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <form method="post">
+      {% csrf_token %}
+
+      <!-- Datos personales -->
+      <div class="card mb-3">
+        <div class="card-header">Información del usuario</div>
+        <div class="card-body">
+
+          {% if accion == 'crear' %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Usuario <span class="text-danger">*</span></label>
+            <input type="text" name="username" class="form-control {% if error.username %}is-invalid{% endif %}"
+                   value="{{ form_username }}" placeholder="nombre_usuario" autocomplete="off">
+            {% if error.username %}<div class="invalid-feedback">{{ error.username }}</div>{% endif %}
+            <div class="form-text">Sin espacios ni caracteres especiales.</div>
+          </div>
+          {% else %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Usuario</label>
+            <input type="text" class="form-control" value="{{ usuario.username }}" disabled>
+          </div>
+          {% endif %}
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Nombres</label>
+              <input type="text" name="first_name" class="form-control"
+                     value="{{ form_first_name }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Apellidos</label>
+              <input type="text" name="last_name" class="form-control"
+                     value="{{ form_last_name }}">
+            </div>
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label fw-semibold">E-mail</label>
+            <input type="email" name="email" class="form-control"
+                   value="{{ form_email }}">
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Rol del sistema -->
+      <div class="card mb-3">
+        <div class="card-header">Rol del Sistema</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Rol asignado</label>
+            <select name="rol_id" class="form-control">
+              <option value="">— Sin rol (sin permisos) —</option>
+              {% for r in roles_list %}
+              <option value="{{ r.pk }}"
+                {% if r.pk|stringformat:"s" == form_rol_id %}selected{% endif %}>
+                {{ r.nombre }}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">
+              El rol determina a qué módulos y acciones puede acceder este usuario.
+              <a href="{% url 'configuracion:roles' %}" target="_blank">Gestionar roles →</a>
+            </div>
+          </div>
+
+          <!-- Nivel de acceso Django (técnico) -->
+          <div>
+            <label class="form-label fw-semibold" style="font-size:.82rem">
+              Nivel de acceso técnico
+              <span class="text-muted fw-normal">(opcional, para el panel /admin/)</span>
+            </label>
+            <div class="d-flex gap-3 mt-1">
+              {% with niv=form_nivel %}
+              <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+                <input type="radio" name="nivel" value="usuario" {% if niv == 'usuario' %}checked{% endif %}>
+                <span style="font-size:.83rem"><strong>Normal</strong></span>
+              </label>
+              <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+                <input type="radio" name="nivel" value="staff" {% if niv == 'staff' %}checked{% endif %}>
+                <span style="font-size:.83rem"><strong>Staff</strong> <span class="text-muted">(acceso a /admin/)</span></span>
+              </label>
+              <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+                <input type="radio" name="nivel" value="superadmin" {% if niv == 'superadmin' %}checked{% endif %}>
+                <span style="font-size:.83rem"><strong>Superadmin</strong> <span class="text-muted">(Django total)</span></span>
+              </label>
+              {% endwith %}
+            </div>
+          </div>
+
+          {% if accion == 'editar' and usuario.pk != request.user.pk %}
+          <div class="mt-3">
+            <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+              <input type="checkbox" name="is_active" value="1"
+                     {% if usuario.is_active %}checked{% endif %}>
+              <span class="fw-semibold" style="font-size:.83rem">Usuario activo</span>
+            </label>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Contraseña (solo crear) -->
+      {% if accion == 'crear' %}
+      <div class="card mb-3">
+        <div class="card-header">Contraseña</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Contraseña <span class="text-danger">*</span></label>
+              <input type="password" name="password1"
+                     class="form-control {% if error.password1 %}is-invalid{% endif %}"
+                     autocomplete="new-password">
+              {% if error.password1 %}<div class="invalid-feedback">{{ error.password1 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Confirmar <span class="text-danger">*</span></label>
+              <input type="password" name="password2"
+                     class="form-control {% if error.password2 %}is-invalid{% endif %}"
+                     autocomplete="new-password">
+              {% if error.password2 %}<div class="invalid-feedback">{{ error.password2 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>
+          {% if accion == 'crear' %}Crear Usuario{% else %}Guardar Cambios{% endif %}
+        </button>
+        {% if accion == 'editar' %}
+        <a href="{% url 'configuracion:usuario_password' usuario.pk %}" class="btn btn-outline-secondary">
+          <i class="bi bi-key me-1"></i>Cambiar Contraseña
+        </a>
+        {% endif %}
+        <a href="{% url 'configuracion:equipo' %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

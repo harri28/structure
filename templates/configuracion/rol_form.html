@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_config_equipo %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:equipo' %}?tab=roles">Usuarios & Roles</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'configuracion:equipo' %}?tab=roles" class="btn-back"><i class="bi bi-chevron-left"></i> Roles</a>
+  <h4>{{ titulo }}</h4>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="row g-3">
+
+    <!-- Datos del rol -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">Datos del Rol</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" class="form-control {% if error.nombre %}is-invalid{% endif %}"
+                   value="{{ form_nombre }}" placeholder="Ej: Jefe de Obra">
+            {% if error.nombre %}<div class="invalid-feedback">{{ error.nombre }}</div>{% endif %}
+          </div>
+          <div>
+            <label class="form-label fw-semibold">Descripción</label>
+            <textarea name="descripcion" class="form-control" rows="3"
+                      placeholder="Descripción breve del rol...">{{ form_descripcion }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permisos por grupo -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Permisos</span>
+          <div class="d-flex gap-2">
+            <button type="button" onclick="marcarTodos(true)"
+                    style="font-size:.75rem;padding:.2rem .6rem;border:1px solid #e5e7eb;
+                           border-radius:5px;background:#f9fafb;cursor:pointer">
+              Marcar todos
+            </button>
+            <button type="button" onclick="marcarTodos(false)"
+                    style="font-size:.75rem;padding:.2rem .6rem;border:1px solid #e5e7eb;
+                           border-radius:5px;background:#f9fafb;cursor:pointer">
+              Limpiar
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          {% for grupo, campos in grupos %}
+          <div class="mb-4">
+            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                        color:#6b7280;margin-bottom:.6rem;padding-bottom:.3rem;border-bottom:1px solid #f3f4f6">
+              {{ grupo }}
+            </div>
+            {% for campo, label in campos %}
+            <label style="display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;border-radius:6px;
+                          cursor:pointer;margin-bottom:.1rem;transition:background .08s"
+                   onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+              <input type="checkbox" name="{{ campo }}" value="1" class="perm-check"
+                     style="width:15px;height:15px;flex-shrink:0;accent-color:#2563eb"
+                     {% if campo in permisos_checked %}checked{% endif %}>
+              <span style="font-size:.83rem">{{ label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="mt-3 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>
+      {% if accion == 'crear' %}Crear Rol{% else %}Guardar Cambios{% endif %}
+    </button>
+    <a href="{% url 'configuracion:equipo' %}?tab=roles" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function marcarTodos(estado) {
+  document.querySelectorAll('.perm-check').forEach(function(c) { c.checked = estado; });
+}
+</script>
+{% endblock %}

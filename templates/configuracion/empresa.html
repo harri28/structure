@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Configuración — Empresa{% endblock %}
+{% block nav_config_empresa %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="bi bi-building me-2"></i>Datos de la Empresa</h4>
+  <div class="text-muted">Información que aparecerá en documentos y reportes</div>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="row g-3">
+
+    <div class="col-lg-8">
+      <div class="card mb-3">
+        <div class="card-header">Identificación</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Razón Social</label>
+              {{ form.razon_social }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">RUC</label>
+              {{ form.ruc }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Dirección</label>
+              {{ form.direccion }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Teléfono</label>
+              {{ form.telefono }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">E-mail</label>
+              {{ form.email }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Sitio web</label>
+              {{ form.web }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Parámetros Financieros</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Símbolo de moneda</label>
+              {{ form.moneda }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">IGV (%)</label>
+              {{ form.igv }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card mb-3">
+        <div class="card-body text-center" style="padding:1.5rem">
+          <div style="width:72px;height:72px;border-radius:14px;background:#eff6ff;
+                      display:flex;align-items:center;justify-content:center;margin:0 auto .75rem">
+            <i class="bi bi-buildings-fill" style="font-size:1.8rem;color:#2563eb"></i>
+          </div>
+          <div class="fw-bold" style="font-size:.9rem">{{ config.razon_social }}</div>
+          {% if config.ruc %}<div class="text-muted" style="font-size:.78rem">RUC {{ config.ruc }}</div>{% endif %}
+          {% if config.direccion %}<div class="text-muted" style="font-size:.75rem;margin-top:.3rem">{{ config.direccion }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Accesos rápidos</div>
+        <div class="card-body p-2">
+          <a href="{% url 'configuracion:usuarios' %}"
+             class="d-flex align-items-center gap-2 p-2 text-decoration-none rounded"
+             style="color:var(--text);transition:background .1s" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">
+            <i class="bi bi-people" style="color:#2563eb"></i>
+            <span style="font-size:.84rem">Gestión de Usuarios</span>
+            <i class="bi bi-arrow-right ms-auto text-muted" style="font-size:.75rem"></i>
+          </a>
+          <a href="{% url 'catalogo:lista' %}"
+             class="d-flex align-items-center gap-2 p-2 text-decoration-none rounded"
+             style="color:var(--text);transition:background .1s" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">
+            <i class="bi bi-database" style="color:#2563eb"></i>
+            <span style="font-size:.84rem">Catálogo de Materiales</span>
+            <i class="bi bi-arrow-right ms-auto text-muted" style="font-size:.75rem"></i>
+          </a>
+          <a href="/admin/"
+             class="d-flex align-items-center gap-2 p-2 text-decoration-none rounded"
+             style="color:var(--text);transition:background .1s" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''" target="_blank">
+            <i class="bi bi-gear" style="color:#2563eb"></i>
+            <span style="font-size:.84rem">Panel de Admin</span>
+            <i class="bi bi-box-arrow-up-right ms-auto text-muted" style="font-size:.75rem"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="mt-3">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>Guardar Cambios
+    </button>
+  </div>
+</form>
+{% endblock %}

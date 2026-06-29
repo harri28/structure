@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block title %}Almacén - {{ proyecto.nombre }}{% endblock %}
+{% block nav_almacen %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'proyectos:lista' %}">Proyectos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
+<li class="breadcrumb-item active">Almacén</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'proyectos:detalle' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> {{ proyecto.codigo }}</a>
+  <h4><i class="bi bi-box-seam me-2"></i>Almacén y Logística</h4>
+  <div class="text-muted">Control de materiales del proyecto</div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-primary bg-opacity-10">
+          <i class="bi bi-file-earmark-text" style="color:var(--blue-light)"></i>
+        </div>
+        <div>
+          <div class="stat-val">{{ total_requerimientos }}</div>
+          <div class="stat-label">Requerimientos</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card stat-card" style="border-top-color:var(--success)">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-success bg-opacity-10">
+          <i class="bi bi-arrow-down-circle" style="color:var(--success)"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:var(--success)">{{ total_entradas }}</div>
+          <div class="stat-label">Entradas / Guías</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card stat-card" style="border-top-color:var(--danger)">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-danger bg-opacity-10">
+          <i class="bi bi-arrow-up-circle" style="color:var(--danger)"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:var(--danger)">{{ total_salidas }}</div>
+          <div class="stat-label">Salidas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card stat-card" style="border-top-color:#7c3aed">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:rgba(124,58,237,.1)">
+          <i class="bi bi-tags" style="color:#7c3aed"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:#7c3aed">{{ total_cotizaciones }}</div>
+          <div class="stat-label">Cotizaciones</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card stat-card" style="border-top-color:#0ea5e9">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#e0f2fe">
+          <i class="bi bi-cart-check" style="color:#0ea5e9"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:#0ea5e9">{{ total_ordenes }}</div>
+          <div class="stat-label">Órdenes de Compra</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'almacen:stock' proyecto.pk %}" class="card stat-card text-decoration-none" style="border-top-color:var(--amber)">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fef3c7">
+          <i class="bi bi-archive" style="color:var(--amber-dark)"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:var(--amber-dark)">Stock</div>
+          <div class="stat-label">Ver inventario →</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <a href="{% url 'almacen:req_lista' proyecto.pk %}" class="card mod-card mb-3">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="mod-icon bg-warning bg-opacity-10">
+          <i class="bi bi-file-earmark-text" style="color:var(--accent)"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-bold">Requerimientos</div>
+          <small class="text-muted">Solicitudes de materiales</small>
+        </div>
+        <i class="bi bi-arrow-right text-muted"></i>
+      </div>
+    </a>
+    <a href="{% url 'almacen:entrada_lista' proyecto.pk %}" class="card mod-card mb-3">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="mod-icon bg-success bg-opacity-10">
+          <i class="bi bi-arrow-down-circle" style="color:var(--success)"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-bold">Entradas</div>
+          <small class="text-muted">Guías de remisión recibidas</small>
+        </div>
+        <i class="bi bi-arrow-right text-muted"></i>
+      </div>
+    </a>
+    <a href="{% url 'almacen:salida_lista' proyecto.pk %}" class="card mod-card mb-3">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="mod-icon bg-danger bg-opacity-10">
+          <i class="bi bi-arrow-up-circle" style="color:var(--danger)"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-bold">Salidas</div>
+          <small class="text-muted">Despacho de materiales</small>
+        </div>
+        <i class="bi bi-arrow-right text-muted"></i>
+      </div>
+    </a>
+    <a href="{% url 'almacen:cot_lista' proyecto.pk %}" class="card mod-card mb-3">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="mod-icon" style="background:rgba(124,58,237,.1)">
+          <i class="bi bi-tags" style="color:#7c3aed"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-bold">Cotizaciones</div>
+          <small class="text-muted">Precios de proveedores/tienda</small>
+        </div>
+        <i class="bi bi-arrow-right text-muted"></i>
+      </div>
+    </a>
+    <a href="{% url 'almacen:oc_lista' proyecto.pk %}" class="card mod-card">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="mod-icon" style="background:#e0f2fe">
+          <i class="bi bi-cart-check" style="color:#0ea5e9"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-bold">Órdenes de Compra</div>
+          <small class="text-muted">Pedidos a proveedores</small>
+        </div>
+        <i class="bi bi-arrow-right text-muted"></i>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Últimos Requerimientos</span>
+        <a href="{% url 'almacen:req_crear' proyecto.pk %}" class="btn-tbl">
+          <i class="bi bi-plus-lg"></i> Nuevo
+        </a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table-modern">
+          <thead><tr><th>N°</th><th>Fecha</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+          {% for r in ultimos_req %}
+          <tr>
+            <td><a href="{% url 'almacen:req_detalle' r.pk %}" class="fw-semibold text-decoration-none">REQ-{{ r.numero }}</a></td>
+            <td>{{ r.fecha|date:"d/m/Y" }}</td>
+            <td>{{ r.get_tipo_display }}</td>
+            <td><span class="badge {% if r.estado == 'ATENDIDO' %}bg-success{% elif r.estado == 'PENDIENTE' %}bg-warning text-dark{% elif r.estado == 'ANULADO' %}bg-danger{% else %}bg-secondary{% endif %}">{{ r.get_estado_display }}</span></td>
+            <td><a href="{% url 'almacen:req_detalle' r.pk %}" class="btn-tbl"><i class="bi bi-eye"></i></a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-4">Sin registros</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Últimas Entradas</span>
+        <a href="{% url 'almacen:entrada_crear' proyecto.pk %}" class="btn-tbl">
+          <i class="bi bi-plus-lg"></i> Nueva
+        </a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table-modern">
+          <thead><tr><th>Guía</th><th>Fecha</th><th>Proveedor</th><th></th></tr></thead>
+          <tbody>
+          {% for e in ultimas_entradas %}
+          <tr>
+            <td><a href="{% url 'almacen:entrada_detalle' e.pk %}" class="fw-semibold text-decoration-none">{{ e.serie }}-{{ e.numero_guia }}</a></td>
+            <td>{{ e.fecha|date:"d/m/Y" }}</td>
+            <td>{{ e.proveedor|default:"—" }}</td>
+            <td><a href="{% url 'almacen:entrada_detalle' e.pk %}" class="btn-tbl"><i class="bi bi-eye"></i></a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted py-4">Sin registros</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
