@@ -24,6 +24,12 @@ anlisis-pdf/*.txt
 .env
 *.env
 
+# Archivos de datos / documentos binarios
+*.pdf
+*.xlsx
+*.xls
+*.xlsm
+
 # Windows
 Thumbs.db
 desktop.ini
