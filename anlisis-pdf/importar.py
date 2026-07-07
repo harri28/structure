@@ -33,7 +33,7 @@ else:
         def read(self):
             return self._data
 
-    total = importar_presupuesto_excel(FakeFile(XLSX), presupuesto)
+    total, _ = importar_presupuesto_excel(FakeFile(XLSX), presupuesto)
 
     presupuesto.gastos_generales_pct = gg_pct
     presupuesto.utilidad_pct         = ut_pct

@@ -1,0 +1,26 @@
+﻿{% extends 'base.html' %}
+{% block title %}Inventarios — {{ proyecto.codigo }}{% endblock %}
+{% block nav_log_inventarios %}active{% endblock %}
+{% block submodule_chips %}{% include 'logistica/_logistica_nav.html' with active_tab='inventarios' %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
+<li class="breadcrumb-item active">Inventarios</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4 class="d-flex align-items-center gap-2">
+    <i class="bi bi-archive" style="color:#2563eb"></i>
+    Inventarios — {{ proyecto.codigo }}
+  </h4>
+</div>
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state py-5">
+      <i class="bi bi-archive d-block" style="font-size:2.5rem;opacity:.2;margin-bottom:.75rem"></i>
+      <p class="text-muted">Módulo en construcción</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

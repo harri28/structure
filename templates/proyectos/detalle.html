@@ -6,6 +6,12 @@
 <li class="breadcrumb-item active">{{ proyecto.codigo }}</li>
 {% endblock %}
 
+{% block submodule_chips %}
+<div class="submodule-chips">
+  <a href="{% url 'proyectos:detalle' proyecto.pk %}" class="s-chip active"><i class="bi bi-info-circle me-1"></i>Información</a>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
@@ -18,7 +24,7 @@
       {{ proyecto.get_estado_display }}
     </span>
     <a href="{% url 'proyectos:editar' proyecto.pk %}" class="btn-tbl">
-      <i class="bi bi-pencil"></i> Editar
+      <i class="bi bi-pencil"></i> Editar datos
     </a>
     <a href="{% url 'proyectos:eliminar' proyecto.pk %}" class="btn-tbl danger">
       <i class="bi bi-trash"></i>
@@ -60,53 +66,6 @@
       </div>
       {% endif %}
     </div>
-  </div>
-</div>
-
-<!-- Módulos -->
-<div class="text-muted mb-2" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Módulos del Proyecto</div>
-<div class="row g-3 mb-4">
-  <div class="col-md-4">
-    <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="card mod-card">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="mod-icon bg-primary bg-opacity-10">
-          <i class="bi bi-calculator" style="color:var(--blue-light)"></i>
-        </div>
-        <div class="flex-grow-1">
-          <div class="fw-bold">Presupuesto</div>
-          <small class="text-muted">Partidas importadas de S10</small>
-        </div>
-        <i class="bi bi-arrow-right text-muted"></i>
-      </div>
-    </a>
-  </div>
-  <div class="col-md-4">
-    <a href="{% url 'almacen:dashboard' proyecto.pk %}" class="card mod-card">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="mod-icon bg-success bg-opacity-10">
-          <i class="bi bi-boxes" style="color:var(--success)"></i>
-        </div>
-        <div class="flex-grow-1">
-          <div class="fw-bold">Almacén</div>
-          <small class="text-muted">Entradas, salidas y cotizaciones</small>
-        </div>
-        <i class="bi bi-arrow-right text-muted"></i>
-      </div>
-    </a>
-  </div>
-  <div class="col-md-4">
-    <a href="{% url 'almacen:req_lista' proyecto.pk %}" class="card mod-card">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="mod-icon bg-warning bg-opacity-10">
-          <i class="bi bi-file-earmark-text" style="color:var(--accent)"></i>
-        </div>
-        <div class="flex-grow-1">
-          <div class="fw-bold">Requerimientos</div>
-          <small class="text-muted">{{ proyecto.requerimientos.count }} registrados</small>
-        </div>
-        <i class="bi bi-arrow-right text-muted"></i>
-      </div>
-    </a>
   </div>
 </div>
 

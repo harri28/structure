@@ -3,19 +3,19 @@
 {% block nav_req %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
-<li class="breadcrumb-item"><a href="{% url 'almacen:req_lista' proyecto.pk %}">Requerimientos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Requerimientos</a></li>
 <li class="breadcrumb-item active">REQ-{{ req.numero }}</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
-    <a href="{% url 'almacen:req_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Requerimientos</a>
+    <a href="{% url 'requerimientos:lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Requerimientos</a>
     <h4>Requerimiento <code>REQ-{{ req.numero }}</code></h4>
   </div>
   <div class="d-flex gap-2">
-    <a href="{% url 'almacen:req_editar' req.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
-    <a href="{% url 'almacen:req_eliminar' req.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+    <a href="{% url 'requerimientos:editar' req.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+    <a href="{% url 'requerimientos:eliminar' req.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
   </div>
 </div>
 <div class="row g-3 mb-3">
@@ -43,10 +43,10 @@
       <tbody>
         {% for d in req.detalles.all %}
         <tr>
-          <td><code>{{ d.producto.codigo }}</code></td>
-          <td>{{ d.producto.descripcion }}</td>
+          <td><code>{% if d.insumo %}{{ d.insumo.codigo }}{% else %}—{% endif %}</code></td>
+          <td>{{ d.descripcion|default:d.insumo.descripcion }}</td>
           <td>{{ d.cantidad|floatformat:2 }}</td>
-          <td>{{ d.get_unidad_display }}</td>
+          <td>{{ d.unidad }}</td>
           <td class="text-muted small">{{ d.observacion|default:"" }}</td>
         </tr>
         {% empty %}

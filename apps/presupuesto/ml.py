@@ -15,9 +15,6 @@ import re
 import logging
 from functools import lru_cache
 
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
@@ -57,6 +54,7 @@ class _PartidaIndex:
     """Índice en memoria de todas las partidas hoja."""
 
     def __init__(self, filas: list):
+        from sklearn.feature_extraction.text import TfidfVectorizer
         self.filas = filas          # lista de dicts con metadatos
         nombres = [_normalizar(f['nombre']) for f in filas]
 
@@ -76,6 +74,7 @@ class _PartidaIndex:
         Retorna hasta n partidas ordenadas por similitud coseno.
         Cada elemento: {'fila': dict, 'score': float}
         """
+        from sklearn.metrics.pairwise import cosine_similarity
         if self.mat is None:
             return []
         q = self.vec.transform([_normalizar(query)])
@@ -232,6 +231,7 @@ def precio_historico(nombre: str, excluir_presupuesto_id: int = None):
     if len(precios) < 2:
         return None
 
+    import numpy as np
     arr = np.array(precios)
     return {
         'media': round(float(arr.mean()), 2),

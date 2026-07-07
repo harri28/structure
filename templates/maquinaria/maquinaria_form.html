@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_maq_catalogo %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maquinaria_lista' %}">Maquinaria</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'maquinaria:maquinaria_lista' %}" class="btn-back"><i class="bi bi-chevron-left"></i> Maquinaria</a>
+  <h4><i class="bi bi-truck me-2"></i>{{ titulo }}</h4>
+</div>
+
+<div class="card" style="max-width:560px">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3 mb-3">
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Código</label>
+          {{ form.codigo }}
+        </div>
+        <div class="col-sm-8">
+          <label class="form-label fw-semibold">Nombre</label>
+          {{ form.nombre }}
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Tipo</label>
+          {{ form.tipo }}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Placa</label>
+          {{ form.placa }}
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Costo por hora (S/.)</label>
+        {{ form.costo_hora }}
+      </div>
+      <div class="mb-4 form-check">
+        {{ form.activo }}
+        <label class="form-check-label">Activo</label>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <a href="{% url 'maquinaria:maquinaria_lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,76 +1,202 @@
 {% extends 'base.html' %}
 {% block title %}Importar — {{ presupuesto.nombre }}{% endblock %}
-{% block nav_presupuesto %}active{% endblock %}
+{% block nav_pres_importar %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
 <li class="breadcrumb-item"><a href="{% url 'presupuesto:detalle' presupuesto.pk %}">{{ presupuesto.nombre }}</a></li>
 <li class="breadcrumb-item active">Importar</li>
 {% endblock %}
 
+{% block submodule_chips %}
+{% include 'presupuesto/_pres_nav.html' with active_tab='importar' %}
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <a href="{% url 'presupuesto:detalle' presupuesto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> {{ presupuesto.nombre }}</a>
-  <h4>Importar archivo Excel</h4>
+  <h4>Importar archivo</h4>
 </div>
 
-<div class="row g-3">
+<!-- ── Protagonistas ─────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
 
-  <!-- Importar Partidas -->
+  <!-- Partidas del Presupuesto -->
   <div class="col-lg-6">
     <div class="card h-100">
-      <div class="card-header"><i class="bi bi-table me-2"></i>Partidas del Presupuesto</div>
+      <div class="card-header fw-semibold">
+        <i class="bi bi-table me-2 text-primary"></i>Partidas del Presupuesto
+      </div>
       <div class="card-body">
-        <p class="text-muted" style="font-size:.84rem">
-          Importa la jerarquía de partidas (niveles 1–5) con código, descripción, unidad, metrado y precio unitario.<br>
-          <strong>Reemplaza</strong> todas las partidas existentes de este presupuesto.
+        <p class="text-muted mb-3" style="font-size:.84rem">
+          Importa la jerarquía de partidas (niveles 1–5) con código, descripción, unidad, metrado y precio unitario.
+          <strong>Reemplaza</strong> todas las partidas existentes.
         </p>
-        <div class="alert alert-warning" style="font-size:.8rem">
+        <div class="alert alert-warning py-2 mb-3" style="font-size:.78rem">
           <i class="bi bi-exclamation-triangle me-1"></i>
-          El archivo debe tener columnas: <code>código · descripción · unidad · metrado · P.U.</code>
+          Columnas requeridas: <code>código · descripción · unidad · metrado · P.U.</code>
         </div>
+        {% if tiene_partidas %}
+        <div class="d-flex align-items-center gap-2 p-3 rounded mb-3"
+             style="background:#f0fdf4;border:1px solid #bbf7d0">
+          <i class="bi bi-check-circle-fill text-success" style="font-size:1.1rem;flex-shrink:0"></i>
+          <div class="flex-grow-1" style="min-width:0">
+            <div class="fw-semibold" style="font-size:.84rem">{{ n_partidas }} partidas importadas</div>
+            {% if presupuesto.archivo_origen %}
+            <div class="text-muted text-truncate" style="font-size:.76rem">{{ presupuesto.archivo_origen }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <form method="post" action="{% url 'presupuesto:partidas_limpiar' presupuesto.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger w-100 btn-sm"
+                  onclick="return confirm('¿Eliminar todas las partidas? Esta acción no se puede deshacer.')">
+            <i class="bi bi-trash me-1"></i>Eliminar partidas para reimportar
+          </button>
+        </form>
+        {% else %}
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
           <input type="hidden" name="tipo_importacion" value="presupuesto">
           <div class="mb-3">
-            <label class="form-label">Archivo (.xls / .xlsx)</label>
-            <input type="file" name="archivo" class="form-control" accept=".xls,.xlsx" required>
+            <label class="form-label fw-semibold" style="font-size:.84rem">Archivo (.xls / .xlsx)</label>
+            <div class="d-flex align-items-center gap-2">
+              <label for="archivo-partidas" class="btn btn-outline-secondary btn-sm mb-0" style="white-space:nowrap;cursor:pointer">
+                <i class="bi bi-folder2-open me-1"></i>Subir archivo
+              </label>
+              <span id="nombre-partidas" class="text-muted" style="font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sin archivo seleccionado</span>
+            </div>
+            <input type="file" id="archivo-partidas" name="archivo" class="d-none" accept=".xls,.xlsx" required
+                   onchange="document.getElementById('nombre-partidas').textContent = this.files[0]?.name || 'Sin archivo seleccionado'">
           </div>
           <button type="submit" class="btn btn-primary w-100">
             <i class="bi bi-upload me-1"></i>Importar Partidas
           </button>
         </form>
+        {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Importar Insumos -->
+  <!-- Lista de Insumos -->
   <div class="col-lg-6">
     <div class="card h-100">
-      <div class="card-header"><i class="bi bi-boxes me-2"></i>Lista de Insumos</div>
+      <div class="card-header fw-semibold">
+        <i class="bi bi-boxes me-2 text-success"></i>Lista de Insumos
+      </div>
       <div class="card-body">
-        <p class="text-muted" style="font-size:.84rem">
-          Importa la lista de insumos del presupuesto: materiales, mano de obra, equipos y subcontratos con sus cantidades totales.<br>
-          <strong>Reemplaza</strong> los insumos existentes de este presupuesto.
+        <p class="text-muted mb-3" style="font-size:.84rem">
+          Importa materiales, mano de obra, equipos y subcontratos con sus cantidades totales.
+          <strong>Reemplaza</strong> los insumos existentes.
         </p>
-        <div class="alert alert-info" style="font-size:.8rem">
+        <div class="alert alert-info py-2 mb-3" style="font-size:.78rem">
           <i class="bi bi-info-circle me-1"></i>
-          El archivo debe tener las categorías <code>MANO DE OBRA · MATERIALES · EQUIPO · SUB-CONTRATOS</code>
-          y columnas: <code>código · descripción · unidad · cantidad · costo</code>
+          Categorías: <code>MANO DE OBRA · MATERIALES · EQUIPO · SUB-CONTRATOS</code> — columnas: <code>código · descripción · unidad · cantidad · costo</code>
         </div>
+        {% if tiene_insumos %}
+        <div class="d-flex align-items-center gap-2 p-3 rounded"
+             style="background:#f0fdf4;border:1px solid #bbf7d0">
+          <i class="bi bi-check-circle-fill text-success" style="font-size:1.1rem;flex-shrink:0"></i>
+          <div class="flex-grow-1" style="min-width:0">
+            <div class="fw-semibold" style="font-size:.84rem">{{ n_insumos }} insumos importados</div>
+            {% if presupuesto.archivo_origen %}
+            <div class="text-muted text-truncate" style="font-size:.76rem">{{ presupuesto.archivo_origen }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% else %}
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
           <input type="hidden" name="tipo_importacion" value="insumos">
           <div class="mb-3">
-            <label class="form-label">Archivo (.xls / .xlsx)</label>
-            <input type="file" name="archivo" class="form-control" accept=".xls,.xlsx" required>
+            <label class="form-label fw-semibold" style="font-size:.84rem">Archivo (.xls / .xlsx)</label>
+            <div class="d-flex align-items-center gap-2">
+              <label for="archivo-insumos" class="btn btn-outline-secondary btn-sm mb-0" style="white-space:nowrap;cursor:pointer">
+                <i class="bi bi-folder2-open me-1"></i>Subir archivo
+              </label>
+              <span id="nombre-insumos" class="text-muted" style="font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sin archivo seleccionado</span>
+            </div>
+            <input type="file" id="archivo-insumos" name="archivo" class="d-none" accept=".xls,.xlsx" required
+                   onchange="document.getElementById('nombre-insumos').textContent = this.files[0]?.name || 'Sin archivo seleccionado'">
           </div>
-          <button type="submit" class="btn btn-primary w-100">
+          <button type="submit" class="btn btn-success w-100">
             <i class="bi bi-upload me-1"></i>Importar Insumos
           </button>
         </form>
+        {% endif %}
       </div>
     </div>
   </div>
 
 </div>
+
+<!-- ── Opciones adicionales ──────────────────────────────────────── -->
+<div class="card border-0" style="background:var(--surface-2,#f8fafc)">
+  <div class="card-body py-3 px-3">
+    <div class="text-muted mb-2" style="font-size:.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase">
+      Otras formas de importar
+    </div>
+    <div class="row g-2">
+
+      <!-- Auto-detección -->
+      <div class="col-lg-6">
+        <div class="card border mb-0">
+          <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-magic text-success" style="font-size:1rem"></i>
+              <span class="fw-semibold" style="font-size:.84rem">Detección Automática</span>
+              <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-auto" style="font-size:.68rem">Recomendado</span>
+            </div>
+            <p class="text-muted mb-2" style="font-size:.78rem">
+              Detecta automáticamente si el Excel es un Presupuesto o un Listado de Insumos.
+            </p>
+            <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-end">
+              {% csrf_token %}
+              <input type="hidden" name="tipo_importacion" value="auto">
+              <div class="flex-grow-1">
+                <input type="file" name="archivo" class="form-control form-control-sm" accept=".xls,.xlsx" required>
+              </div>
+              <button type="submit" class="btn btn-sm btn-outline-success" style="white-space:nowrap">
+                <i class="bi bi-magic me-1"></i>Importar
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF S10 -->
+      <div class="col-lg-6">
+        <div class="card border mb-0">
+          <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-file-earmark-pdf text-danger" style="font-size:1rem"></i>
+              <span class="fw-semibold" style="font-size:.84rem">Importar desde PDF S10</span>
+              <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-auto" style="font-size:.68rem">ML</span>
+            </div>
+            <p class="text-muted mb-2" style="font-size:.78rem">
+              Extrae la jerarquía de partidas directamente del PDF exportado desde S10.
+            </p>
+            {% if pymupdf_ok %}
+            <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-end">
+              {% csrf_token %}
+              <input type="hidden" name="tipo_importacion" value="pdf">
+              <div class="flex-grow-1">
+                <input type="file" name="archivo" class="form-control form-control-sm" accept=".pdf" required>
+              </div>
+              <button type="submit" class="btn btn-sm btn-outline-primary" style="white-space:nowrap">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Importar
+              </button>
+            </form>
+            {% else %}
+            <div class="alert alert-warning py-1 mb-0" style="font-size:.76rem">
+              <i class="bi bi-exclamation-triangle me-1"></i>PyMuPDF no instalado — <code>pip install pymupdf</code>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 {% endblock %}

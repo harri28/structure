@@ -1,0 +1,180 @@
+﻿{% extends 'base.html' %}
+{% block title %}Guía {{ guia.numero }}{% endblock %}
+{% block nav_log_guias %}active{% endblock %}
+{% block submodule_chips %}{% include 'logistica/_logistica_nav.html' with active_tab='guias' %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
+<li class="breadcrumb-item"><a href="{% url 'logistica:guia_lista' proyecto.pk %}">Guías</a></li>
+<li class="breadcrumb-item active">{{ guia.numero }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <a href="{% url 'logistica:guia_lista' proyecto.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Guías
+    </a>
+    <h4 class="d-flex align-items-center gap-2 mt-1">
+      <i class="bi bi-file-earmark-arrow-right" style="color:#2563eb"></i>
+      Guía {{ guia.numero }}
+      {% with b=guia.estado_badge %}
+      <span class="badge bg-{{ b.0 }} ms-1" style="font-size:.75rem">
+        <i class="bi {{ b.1 }} me-1"></i>{{ guia.get_estado_display }}
+      </span>
+      {% endwith %}
+    </h4>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'logistica:guia_editar' guia.pk %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Info principal -->
+  <div class="col-md-8">
+    <div class="card h-100">
+      <div class="card-header" style="font-size:.82rem;font-weight:700;background:#f8fafc">
+        <i class="bi bi-info-circle me-1"></i> Información del Traslado
+      </div>
+      <div class="card-body">
+        <div class="row g-2" style="font-size:.85rem">
+          <div class="col-sm-4">
+            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em">Fecha Emisión</div>
+            <strong>{{ guia.fecha_emision|date:"d/m/Y" }}</strong>
+          </div>
+          <div class="col-sm-4">
+            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em">Fecha Traslado</div>
+            <strong>{{ guia.fecha_traslado|date:"d/m/Y" }}</strong>
+          </div>
+          <div class="col-sm-4">
+            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em">Motivo</div>
+            <strong>{{ guia.get_motivo_display }}</strong>
+          </div>
+          <div class="col-sm-6 mt-2">
+            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em">Punto de Partida</div>
+            <div>{{ guia.origen }}</div>
+          </div>
+          <div class="col-sm-6 mt-2">
+            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em">Punto de Llegada</div>
+            <div><strong>{{ guia.destino }}</strong></div>
+          </div>
+          {% if guia.observaciones %}
+          <div class="col-12 mt-2">
+            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em">Observaciones</div>
+            <div style="font-size:.83rem">{{ guia.observaciones }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transporte -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-header" style="font-size:.82rem;font-weight:700;background:#f8fafc">
+        <i class="bi bi-truck me-1"></i> Transporte
+      </div>
+      <div class="card-body" style="font-size:.85rem">
+        <div class="mb-2">
+          <div class="text-muted" style="font-size:.72rem;text-transform:uppercase">Transportista</div>
+          <strong>{{ guia.transportista.razon_social|default:"—" }}</strong>
+          {% if guia.transportista.telefono %}
+          <div style="font-size:.78rem;color:#6b7280"><i class="bi bi-telephone me-1"></i>{{ guia.transportista.telefono }}</div>
+          {% endif %}
+        </div>
+        {% if guia.placa %}
+        <div class="mb-2">
+          <div class="text-muted" style="font-size:.72rem;text-transform:uppercase">Vehículo</div>
+          <code style="font-size:.9rem;font-weight:700;color:#2563eb">{{ guia.placa }}</code>
+        </div>
+        {% endif %}
+        {% if guia.conductor %}
+        <div class="mb-2">
+          <div class="text-muted" style="font-size:.72rem;text-transform:uppercase">Conductor</div>
+          {{ guia.conductor }}
+          {% if guia.licencia %}<span class="text-muted ms-2" style="font-size:.78rem">Lic. {{ guia.licencia }}</span>{% endif %}
+        </div>
+        {% endif %}
+        {% if guia.peso_kg %}
+        <div>
+          <div class="text-muted" style="font-size:.72rem;text-transform:uppercase">Peso bruto</div>
+          <strong>{{ guia.peso_kg }} kg</strong>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Bienes -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header" style="font-size:.82rem;font-weight:700;background:#f8fafc">
+        <i class="bi bi-boxes me-1"></i> Bienes Trasladados
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Descripción</th>
+              <th class="text-end" style="width:12%">Cantidad</th>
+              <th style="width:10%">Unidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in guia.detalles.all %}
+            <tr>
+              <td style="color:#9ca3af;font-size:.78rem">{{ forloop.counter }}</td>
+              <td>{{ d.descripcion }}</td>
+              <td class="text-end fw-semibold">{{ d.cantidad }}</td>
+              <td style="font-size:.82rem;color:#6b7280">{{ d.unidad }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:.82rem">Sin bienes registrados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cambiar estado -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header" style="font-size:.82rem;font-weight:700;background:#f8fafc">
+        <i class="bi bi-arrow-repeat me-1"></i> Cambiar Estado
+      </div>
+      <div class="card-body d-flex gap-2 flex-wrap">
+        {% for val, label in estados %}
+        {% if val != guia.estado %}
+        <form method="post" action="{% url 'logistica:guia_estado' guia.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="estado" value="{{ val }}">
+          <button type="submit" class="btn btn-outline-secondary btn-sm">
+            {% if val == 'EN_TRANSITO' %}<i class="bi bi-truck me-1"></i>
+            {% elif val == 'ENTREGADO' %}<i class="bi bi-check-circle me-1"></i>
+            {% elif val == 'ANULADO' %}<i class="bi bi-x-circle me-1"></i>
+            {% else %}<i class="bi bi-clock me-1"></i>{% endif %}
+            → {{ label }}
+          </button>
+        </form>
+        {% endif %}
+        {% endfor %}
+        <form method="post" action="{% url 'logistica:guia_eliminar' guia.pk %}" class="ms-auto"
+              onsubmit="return confirm('¿Eliminar esta guía de remisión?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-trash3 me-1"></i>Eliminar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

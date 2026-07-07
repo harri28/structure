@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_transportistas %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'logistica:transportista_lista' %}">Transportistas</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'logistica:transportista_lista' %}" class="btn-back">
+    <i class="bi bi-chevron-left"></i> Transportistas
+  </a>
+  <h4>{{ titulo }}</h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-sm-5">
+              <label class="form-label">RUC</label>
+              {{ form.ruc }}
+            </div>
+            <div class="col-sm-7">
+              <label class="form-label">Razón Social *</label>
+              {{ form.razon_social }}
+              {% if form.razon_social.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.razon_social.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Persona de Contacto</label>
+              {{ form.contacto }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Teléfono</label>
+              {{ form.telefono }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">E-mail</label>
+              {{ form.email }}
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                {{ form.activo }}
+                <label class="form-check-label" style="font-size:.85rem">Transportista activo</label>
+              </div>
+            </div>
+            <div class="col-12 d-flex gap-2 pt-1">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-check-lg me-1"></i>
+                {% if obj %}Guardar cambios{% else %}Registrar{% endif %}
+              </button>
+              <a href="{% url 'logistica:transportista_lista' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

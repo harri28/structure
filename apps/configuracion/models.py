@@ -11,6 +11,7 @@ class ConfigEmpresa(models.Model):
     web          = models.URLField('Sitio web', blank=True)
     moneda       = models.CharField('Moneda', max_length=10, default='S/.')
     igv          = models.DecimalField('IGV (%)', max_digits=5, decimal_places=2, default=18.00)
+    logo         = models.ImageField('Logo', upload_to='empresa/', blank=True)
     updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -25,6 +26,32 @@ class ConfigEmpresa(models.Model):
             pk=1,
             defaults={'razon_social': 'S&S Consultores y Ejecutores E.I.R.L.'}
         )
+        return obj
+
+
+class ConfigSunat(models.Model):
+    REGIMENES = [
+        ('RG',  'Régimen General'),
+        ('RER', 'Régimen Especial de Renta'),
+        ('RUS', 'Nuevo RUS'),
+        ('MYPE', 'Régimen MYPE Tributario'),
+    ]
+    regimen_tributario   = models.CharField('Régimen Tributario', max_length=10, choices=REGIMENES, blank=True)
+    usuario_sol          = models.CharField('Usuario SOL',        max_length=100, blank=True)
+    clave_sol            = models.CharField('Clave SOL',          max_length=100, blank=True)
+    tipo_comprobante     = models.CharField('Tipo de Comprobante por defecto', max_length=20, blank=True)
+    serie_factura        = models.CharField('Serie Factura',      max_length=10,  blank=True)
+    serie_boleta         = models.CharField('Serie Boleta',       max_length=10,  blank=True)
+    numero_correlativo   = models.CharField('N° Correlativo',     max_length=20,  blank=True)
+    ose                  = models.CharField('OSE / PSE',          max_length=100, blank=True)
+    updated_at           = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Configuración SUNAT'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
         return obj
 
 
@@ -50,6 +77,14 @@ GRUPOS_PERMISOS = [
     ]),
     ('Catálogo', [
         ('puede_editar_catalogo', 'Crear y editar productos del catálogo'),
+    ]),
+    ('Maquinaria y Cuadrilla', [
+        ('puede_ver_maquinaria',      'Ver registros de maquinaria y cuadrilla'),
+        ('puede_gestionar_maquinaria', 'Crear y editar registros de maquinaria y cuadrilla'),
+    ]),
+    ('Logística', [
+        ('puede_ver_logistica',      'Ver guías de remisión y transportistas'),
+        ('puede_gestionar_logistica','Crear y gestionar guías de remisión'),
     ]),
     ('Administración', [
         ('puede_administrar_usuarios', 'Gestionar usuarios del sistema'),
@@ -89,6 +124,14 @@ class Rol(models.Model):
     # Catálogo
     puede_editar_catalogo = models.BooleanField(default=False)
 
+    # Maquinaria y Cuadrilla
+    puede_ver_maquinaria       = models.BooleanField(default=False)
+    puede_gestionar_maquinaria = models.BooleanField(default=False)
+
+    # Logística
+    puede_ver_logistica       = models.BooleanField(default=True)
+    puede_gestionar_logistica = models.BooleanField(default=False)
+
     # Administración
     puede_administrar_usuarios = models.BooleanField(default=False)
     puede_administrar_roles    = models.BooleanField(default=False)
@@ -110,6 +153,23 @@ class Rol(models.Model):
 
     def cantidad_permisos(self):
         return sum(1 for campo in TODOS_LOS_PERMISOS if getattr(self, campo, False))
+
+
+class ParametroSistema(models.Model):
+    """Parámetros por defecto del sistema (singleton pk=1)."""
+    gg_pct_default       = models.DecimalField('GG % por defecto',       max_digits=5, decimal_places=2, default=10.00)
+    utilidad_pct_default = models.DecimalField('Utilidad % por defecto', max_digits=5, decimal_places=2, default=5.00)
+    igv_pct_default      = models.DecimalField('IGV % por defecto',      max_digits=5, decimal_places=2, default=18.00)
+    dias_vigencia_cot    = models.IntegerField('Días vigencia cotización', default=30)
+    updated_at           = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Parámetros del Sistema'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
 
 
 class PerfilUsuario(models.Model):

@@ -1,0 +1,114 @@
+﻿{% extends 'base.html' %}
+{% block title %}Logística — {{ proyecto.codigo }}{% endblock %}
+{% block nav_log_dashboard %}active{% endblock %}
+{% block submodule_chips %}{% include 'logistica/_logistica_nav.html' with active_tab='dashboard' %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
+<li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h4 class="d-flex align-items-center gap-2">
+    <i class="bi bi-truck-front" style="color:#2563eb"></i>
+    Logística — {{ proyecto.codigo }}
+  </h4>
+  <a href="{% url 'logistica:guia_crear' proyecto.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nueva Guía
+  </a>
+</div>
+
+<!-- KPI cards -->
+<div class="row g-3 mb-4">
+  {% with cards=total|default:0 %}
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #6b7280">
+      <div class="card-body py-3">
+        <div style="font-size:1.8rem;font-weight:800;color:#111">{{ total }}</div>
+        <div style="font-size:.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Total guías</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #d97706">
+      <div class="card-body py-3">
+        <div style="font-size:1.8rem;font-weight:800;color:#d97706">{{ pendientes }}</div>
+        <div style="font-size:.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Pendientes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #2563eb">
+      <div class="card-body py-3">
+        <div style="font-size:1.8rem;font-weight:800;color:#2563eb">{{ en_transito }}</div>
+        <div style="font-size:.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">En Tránsito</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #16a34a">
+      <div class="card-body py-3">
+        <div style="font-size:1.8rem;font-weight:800;color:#16a34a">{{ entregadas }}</div>
+        <div style="font-size:.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Entregadas</div>
+      </div>
+    </div>
+  </div>
+  {% endwith %}
+</div>
+
+<!-- Últimas guías -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Actividad reciente</span>
+    <a href="{% url 'logistica:guia_lista' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
+      Ver todas <i class="bi bi-arrow-right ms-1"></i>
+    </a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr>
+          <th>N° Guía</th>
+          <th>Fecha</th>
+          <th>Motivo</th>
+          <th>Destino</th>
+          <th>Transportista</th>
+          <th class="text-center">Estado</th>
+          <th style="width:44px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in recientes %}
+        <tr>
+          <td><a href="{% url 'logistica:guia_detalle' g.pk %}" style="font-weight:600;color:#2563eb">{{ g.numero }}</a></td>
+          <td style="font-size:.8rem">{{ g.fecha_emision|date:"d/m/Y" }}</td>
+          <td style="font-size:.8rem">{{ g.get_motivo_display }}</td>
+          <td style="font-size:.8rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.destino }}</td>
+          <td style="font-size:.8rem">{{ g.transportista.razon_social|default:"—" }}</td>
+          <td class="text-center">
+            {% with b=g.estado_badge %}
+            <span class="badge bg-{{ b.0 }}">
+              <i class="bi {{ b.1 }} me-1"></i>{{ g.get_estado_display }}
+            </span>
+            {% endwith %}
+          </td>
+          <td class="text-center">
+            <a href="{% url 'logistica:guia_detalle' g.pk %}" class="btn btn-outline-secondary btn-sm" style="padding:1px 7px;font-size:.75rem">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">
+            <i class="bi bi-truck-front" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.3"></i>
+            Sin guías registradas. <a href="{% url 'logistica:guia_crear' proyecto.pk %}">Crear la primera</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

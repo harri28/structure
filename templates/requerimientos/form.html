@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_req %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Requerimientos</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<h4 class="fw-bold mb-4">{{ titulo }}</h4>
+<form method="post">
+  {% csrf_token %}
+
+  <div class="card mb-3">
+    <div class="card-header">Datos Generales</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">N° Requerimiento</label>
+          <input type="text" class="form-control fw-bold"
+                 value="N° {{ req.numero_global|default:numero_global }}" readonly
+                 style="background:#f8faff;border-color:#93c5fd;color:#1d4ed8;letter-spacing:.04em">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Razón Social</label>
+          <input type="text" class="form-control" value="{{ empresa.razon_social }}" readonly>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">RUC</label>
+          <input type="text" class="form-control" value="{{ empresa.ruc }}" readonly>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Fecha</label>
+          <input type="date" name="fecha" value="{{ form.fecha.value|default:'' }}" class="form-control" required id="id_fecha_general">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Orden de Requerimiento</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-12">
+          <label class="form-label fw-semibold">Obra</label>
+          <input type="text" name="obra" value="{{ form.obra.value|default:'' }}"
+                 class="form-control" placeholder="Nombre de la obra">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Solicitante</label>
+          {{ form.solicitante }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Cargo del Solicitante</label>
+          <input type="text" name="cargo_solicitante" value="{{ form.cargo_solicitante.value|default:'' }}"
+                 class="form-control" placeholder="Ej: Administrador de Obra">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Sector de la Obra</label>
+          <input type="text" name="sector_obra" value="{{ form.sector_obra.value|default:'' }}"
+                 class="form-control" placeholder="Ubicación del sector">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Relación de Productos</div>
+    <div class="card-body">
+      {% include 'requerimientos/_formset_detalle.html' with formset=formset %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    {% if req and req.estado != 'BORRADOR' %}
+    <button type="submit" name="accion" value="guardar" class="btn btn-outline-secondary">
+      <i class="bi bi-floppy me-1"></i>Guardar cambios
+    </button>
+    {% else %}
+    <button type="submit" name="accion" value="borrador" class="btn btn-outline-secondary">
+      <i class="bi bi-floppy me-1"></i>Guardar borrador
+    </button>
+    <button type="submit" name="accion" value="enviar" class="btn btn-primary">
+      <i class="bi bi-send me-1"></i>Enviar a Logística
+    </button>
+    {% endif %}
+    <a href="{% url 'requerimientos:lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('btn-auto-num')?.addEventListener('click', function() {
+  document.getElementById('id_numero').value = '{{ siguiente_numero }}';
+});
+(function() {
+  const fechaInput = document.querySelector('input[name="fecha"]');
+  if (fechaInput && !fechaInput.value) {
+    fechaInput.value = new Date().toISOString().split('T')[0];
+  }
+})();
+</script>
+{% endblock %}

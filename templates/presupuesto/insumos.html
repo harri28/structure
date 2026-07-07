@@ -1,10 +1,14 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}Insumos — {{ presupuesto.nombre }}{% endblock %}
-{% block nav_presupuesto %}active{% endblock %}
+{% block nav_pres_insumos %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
 <li class="breadcrumb-item"><a href="{% url 'presupuesto:detalle' presupuesto.pk %}">{{ presupuesto.nombre }}</a></li>
 <li class="breadcrumb-item active">Insumos</li>
+{% endblock %}
+
+{% block submodule_chips %}
+{% include 'presupuesto/_pres_nav.html' with active_tab='insumos' %}
 {% endblock %}
 
 {% block content %}

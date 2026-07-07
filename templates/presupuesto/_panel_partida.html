@@ -1,0 +1,191 @@
+{% load pres_fmt %}
+<!-- Header -->
+<div class="pnl-header">
+  <div class="d-flex align-items-start justify-content-between gap-2">
+    <div style="min-width:0">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="pnl-nivel">Nivel {{ partida.nivel }}</span>
+        {% if not es_hoja %}
+        <span class="badge bg-secondary" style="font-size:.62rem">Grupo</span>
+        {% else %}
+        <span class="badge" style="background:#d1fae5;color:#065f46;font-size:.62rem">ACU</span>
+        {% endif %}
+      </div>
+      <div class="pnl-codigo">{{ partida.codigo }}</div>
+      <div class="pnl-nombre">{{ partida.nombre }}</div>
+    </div>
+    <button id="pnl-close-btn" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+            style="padding:2px 8px;font-size:.78rem" title="Cerrar (Esc)">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="pnl-kpis">
+  <div class="pnl-kpi">
+    <span class="pnl-kpi-label">Unidad</span>
+    <span class="pnl-kpi-val" style="font-family:inherit;font-size:.82rem">{{ partida.unidad|default:"—" }}</span>
+  </div>
+  <div class="pnl-kpi">
+    <span class="pnl-kpi-label">Metrado</span>
+    <span class="pnl-kpi-val">{% if partida.cantidad %}{{ partida.cantidad|miles:3 }}{% else %}—{% endif %}</span>
+  </div>
+  <div class="pnl-kpi">
+    <span class="pnl-kpi-label">P.U. (S/)</span>
+    <span class="pnl-kpi-val">{% if partida.precio_unitario %}{{ partida.precio_unitario|miles:2 }}{% else %}—{% endif %}</span>
+  </div>
+  <div class="pnl-kpi">
+    <span class="pnl-kpi-label">Parcial (S/)</span>
+    <span class="pnl-kpi-val" style="color:#2563eb">{% if partida.parcial %}{{ partida.parcial|miles:2 }}{% else %}—{% endif %}</span>
+  </div>
+</div>
+
+<!-- Cuerpo -->
+<div class="pnl-body">
+
+{% if es_hoja %}
+
+  <!-- Lista de recursos ACU -->
+  {% if grupos %}
+    {% for tipo_label, grupo in grupos.items %}
+    <div class="pnl-tipo-label">{{ tipo_label }}</div>
+    {% for r in grupo.recursos %}
+    <div class="pnl-recurso-row" style="align-items:center">
+      <div style="min-width:0;flex:1">
+        <div class="pnl-recurso-desc">{{ r.descripcion }}</div>
+        <div style="font-size:.7rem;color:#9ca3af;margin-top:1px">
+          {% if r.codigo %}<code style="color:#6b7280;font-size:.68rem">{{ r.codigo }}</code> · {% endif %}
+          {{ r.cantidad|miles:3 }} {{ r.unidad }} × S/ {{ r.precio_unitario|miles:2 }}
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-1 flex-shrink-0">
+        <span class="pnl-recurso-total">{{ r.total|miles:2 }}</span>
+        <form method="post" action="{% url 'presupuesto:acu_recurso_eliminar' r.pk %}"
+              class="pnl-del-form" style="margin:0">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger btn-sm pnl-delete-recurso"
+                  data-partida="{{ partida.pk }}"
+                  title="Eliminar"
+                  style="padding:1px 6px;font-size:.7rem">
+            <i class="bi bi-trash3"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+    <div class="pnl-subtotal">
+      <span>Subtotal {{ tipo_label }}</span>
+      <strong>S/ {{ grupo.subtotal|miles:2 }}</strong>
+    </div>
+    {% endfor %}
+
+    <!-- Total ACU -->
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;
+                padding:.45rem .75rem;margin:.75rem 0 .5rem;
+                display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:.78rem;font-weight:600;color:#1d4ed8">Total ACU</span>
+      <span style="font-size:.9rem;font-weight:700;color:#1d4ed8;font-family:var(--mono)">
+        S/ {{ total_acu|miles:2 }}
+      </span>
+    </div>
+
+  {% else %}
+    <div style="text-align:center;padding:1.5rem 1rem;color:var(--text-muted)">
+      <i class="bi bi-calculator" style="font-size:2rem;display:block;margin-bottom:.5rem;opacity:.3"></i>
+      <div style="font-size:.82rem;margin-bottom:.5rem">Sin recursos ACU. Agrega uno abajo.</div>
+    </div>
+  {% endif %}
+
+  <!-- Separador + título formulario -->
+  <div style="border-top:2px solid #e5e7eb;margin:.6rem 0 .55rem"></div>
+  <div style="font-size:.72rem;font-weight:700;color:#374151;margin-bottom:.45rem;
+              display:flex;align-items:center;gap:.35rem;letter-spacing:.02em;text-transform:uppercase">
+    <i class="bi bi-plus-circle-fill" style="color:#2563eb;font-size:.8rem"></i>
+    Agregar recurso
+  </div>
+
+  <!-- Formulario inline -->
+  <form class="pnl-add-form"
+        action="{% url 'presupuesto:acu_partida' partida.pk %}"
+        method="post">
+    {% csrf_token %}
+    <div class="d-flex gap-1 mb-1">
+      <select name="tipo" class="form-select form-select-sm" style="flex:1.4;font-size:.78rem">
+        {% for val, label in tipos %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      <input type="text" name="codigo" placeholder="Código" maxlength="50"
+             class="form-control form-control-sm" style="flex:.9;font-size:.78rem">
+    </div>
+    <input type="text" name="descripcion" placeholder="Descripción *" required
+           class="form-control form-control-sm mb-1" style="font-size:.78rem">
+    <div class="d-flex gap-1 mb-2">
+      <input type="text" name="unidad" placeholder="Und" maxlength="20"
+             class="form-control form-control-sm" style="flex:.55;font-size:.78rem">
+      <input type="text" name="cantidad" placeholder="Cantidad"
+             class="form-control form-control-sm text-end" style="flex:.85;font-size:.78rem">
+      <input type="text" name="precio_unitario" placeholder="P.U. (S/)"
+             class="form-control form-control-sm text-end" style="flex:.85;font-size:.78rem">
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm w-100 pnl-add-btn" style="font-size:.8rem">
+      <i class="bi bi-plus-lg me-1"></i>Agregar recurso
+    </button>
+  </form>
+
+{% else %}
+
+  <!-- Partida de grupo: lista sub-partidas -->
+  <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem;
+              display:flex;align-items:center;gap:.4rem">
+    <i class="bi bi-diagram-3" style="color:#6b7280"></i>
+    Sub-partidas de <strong>{{ partida.codigo }}</strong>
+  </div>
+  {% for hijo in hijos %}
+  <div style="display:flex;justify-content:space-between;align-items:baseline;
+              padding:.38rem .25rem;border-bottom:1px solid #f3f4f6;gap:.5rem">
+    <div style="min-width:0;flex:1">
+      <span style="font-family:var(--mono);font-size:.7rem;color:#2563eb">{{ hijo.codigo }}</span>
+      <span style="color:#374151;font-size:.78rem;margin-left:.4rem;
+                   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                   display:inline-block;max-width:200px;vertical-align:middle">{{ hijo.nombre }}</span>
+    </div>
+    <span style="font-family:var(--mono);font-weight:600;color:#111;white-space:nowrap;font-size:.78rem">
+      {% if hijo.parcial %}S/ {{ hijo.parcial|miles:2 }}{% else %}<span style="color:#9ca3af">—</span>{% endif %}
+    </span>
+  </div>
+  {% empty %}
+  <div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:.82rem">
+    Sin sub-partidas cargadas
+  </div>
+  {% endfor %}
+  {% if hijos|length == 30 %}
+  <div style="font-size:.72rem;color:var(--text-muted);text-align:center;padding:.5rem">
+    Se muestran las primeras 30 sub-partidas
+  </div>
+  {% endif %}
+
+{% endif %}
+
+</div>
+
+<!-- Footer -->
+<div class="pnl-footer">
+  {% if es_hoja %}
+  <a href="{% url 'presupuesto:acu_partida' partida.pk %}"
+     class="btn btn-sm btn-outline-secondary flex-fill"
+     title="Página ACU completa con sugerencias ML, edición y exportación">
+    <i class="bi bi-arrow-up-right-square me-1"></i>Ver ACU completo
+  </a>
+  <button class="btn btn-sm btn-outline-warning" title="Sugerencias ML"
+          onclick="abrirSugerenciasML({{ partida.pk }})">
+    <i class="bi bi-stars"></i>
+  </button>
+  {% else %}
+  <p class="text-muted mb-0" style="font-size:.76rem;align-self:center;line-height:1.4">
+    <i class="bi bi-info-circle me-1"></i>
+    Selecciona una partida hoja para editar su ACU
+  </p>
+  {% endif %}
+</div>

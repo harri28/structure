@@ -1,4 +1,5 @@
 import json
+import os
 from decimal import Decimal, InvalidOperation
 
 from django.http import JsonResponse
@@ -13,8 +14,10 @@ from .models import (
     Modificacion, PartidaModificacion,
     TIPOS_RECURSO, TIPOS_MODIFICACION, ESTADOS_MODIFICACION,
 )
-from .importador import importar_presupuesto_excel, importar_insumos_excel
+from .importador import importar_presupuesto_excel, importar_insumos_excel, importar_automatico
+from .pdf_parser import importar_pdf, PYMUPDF_OK
 from . import ml as ml_engine
+from apps.registro.utils import log, notificar
 
 _ESTADOS_VALIDOS = [e[0] for e in ESTADOS_MODIFICACION]
 
@@ -59,37 +62,35 @@ def lista(request, proyecto_id):
 
 def detalle(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
-    partidas_raiz = presupuesto.partidas.filter(padre__isnull=True).prefetch_related(
-        'hijos__hijos__hijos__hijos'
+    partidas_raiz = (
+        presupuesto.partidas
+        .filter(padre__isnull=True)
+        .prefetch_related('hijos')
     )
-
-    # Precio histórico por partida hoja (para indicadores ML)
-    hojas = presupuesto.partidas.filter(hijos__isnull=True)
-    precio_hints = {}
-    for p in hojas:
-        hist = ml_engine.precio_historico(p.nombre, excluir_presupuesto_id=presupuesto.pk)
-        if hist and hist['n'] >= 2:
-            pu = float(p.precio_unitario)
-            if pu > 0:
-                diff_pct = (pu - hist['media']) / hist['media'] * 100
-                precio_hints[p.pk] = {
-                    'media':    hist['media'],
-                    'n':        hist['n'],
-                    'diff_pct': round(diff_pct, 1),
-                    'alerta':   abs(diff_pct) > 20,
-                }
+    cd = presupuesto.costo_directo()
+    insumos_qs = presupuesto.insumos.all()
 
     return render(request, 'presupuesto/detalle.html', {
         'presupuesto':       presupuesto,
         'proyecto':          presupuesto.proyecto,
         'partidas_raiz':     partidas_raiz,
-        'costo_directo':     presupuesto.costo_directo(),
+        'costo_directo':     cd,
         'gastos_generales':  presupuesto.gastos_generales(),
         'utilidad':          presupuesto.utilidad(),
         'sub_total':         presupuesto.sub_total(),
         'igv':               presupuesto.igv(),
+        'costo_total_obra':  presupuesto.costo_total_obra(),
+        'supervision':       presupuesto.supervision(),
         'total_presupuesto': presupuesto.total_presupuesto(),
-        'precio_hints':      precio_hints,
+        'precio_hints':      {},
+        'insumos':           insumos_qs,
+        'tipos':             TIPOS_RECURSO,
+        'totales': {
+            'mano_obra':    presupuesto.insumos.filter(tipo='MANO_OBRA').count(),
+            'materiales':   presupuesto.insumos.filter(tipo='MATERIAL').count(),
+            'equipos':      presupuesto.insumos.filter(tipo='EQUIPO').count(),
+            'subcontratos': presupuesto.insumos.filter(tipo='SUBCONTRATO').count(),
+        },
     })
 
 
@@ -118,41 +119,127 @@ def crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
 
     if hasattr(proyecto, 'presupuesto'):
-        messages.warning(request, 'El proyecto ya tiene un presupuesto contractual.')
-        return redirect('presupuesto:lista', proyecto_id=proyecto_id)
+        return redirect('presupuesto:importar', pk=proyecto.presupuesto.pk)
 
-    if request.method == 'POST':
-        nombre = request.POST.get('nombre', '').strip() or 'Presupuesto Contractual'
-        presupuesto = Presupuesto.objects.create(proyecto=proyecto, nombre=nombre)
-        messages.success(request, 'Presupuesto contractual creado. Importe las partidas desde S10.')
-        return redirect('presupuesto:importar', pk=presupuesto.pk)
-
-    return render(request, 'presupuesto/crear.html', {'proyecto': proyecto})
+    presupuesto = Presupuesto.objects.create(proyecto=proyecto, nombre='Presupuesto Contractual')
+    return redirect('presupuesto:importar', pk=presupuesto.pk)
 
 
 def importar(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     if request.method == 'POST' and request.FILES.get('archivo'):
         archivo = request.FILES['archivo']
-        tipo = request.POST.get('tipo_importacion', 'presupuesto')
+        tipo    = request.POST.get('tipo_importacion', 'presupuesto')
         try:
-            if tipo == 'insumos':
+            if tipo == 'auto':
+                tipo_det, total, info = importar_automatico(archivo, presupuesto)
+                presupuesto.nombre            = os.path.splitext(archivo.name)[0]
+                presupuesto.archivo_origen    = archivo.name
+                presupuesto.fecha_importacion = timezone.now()
+                presupuesto.save()
+                if tipo_det == 'insumos':
+                    messages.success(request,
+                        f'Detectado: Lista de Insumos. {total} recursos importados '
+                        f'(Mano de Obra, Materiales, Equipos, Sub-contratos).')
+                    return redirect('presupuesto:insumos', pk=presupuesto.pk)
+                else:
+                    if info['sin_precio'] == total:
+                        messages.warning(request,
+                            f'Detectado: Presupuesto. {total} partidas importadas, '
+                            f'pero ninguna tiene precio unitario. '
+                            f'Verifica que tu Excel tenga columna P.U. o PRECIO UNITARIO.')
+                    else:
+                        messages.success(request,
+                            f'Detectado: Presupuesto. {total} partidas importadas correctamente.')
+                    return redirect('presupuesto:detalle', pk=presupuesto.pk)
+
+            elif tipo == 'insumos':
                 total = importar_insumos_excel(archivo, presupuesto)
-                msg = f'{total} insumos importados correctamente.'
-            else:
-                total = importar_presupuesto_excel(archivo, presupuesto)
+                presupuesto.nombre = os.path.splitext(archivo.name)[0]
                 presupuesto.archivo_origen = archivo.name
                 presupuesto.fecha_importacion = timezone.now()
                 presupuesto.save()
-                msg = f'{total} partidas importadas correctamente.'
-            messages.success(request, msg)
+                log(request, 'IMPORTAR', 'Presupuesto',
+                    f'{total} insumos importados en {presupuesto.proyecto.codigo} desde {archivo.name}')
+                messages.success(request, f'{total} insumos importados correctamente.')
+                return redirect('presupuesto:insumos', pk=presupuesto.pk)
+
+            elif tipo == 'pdf':
+                total, avisos = importar_pdf(archivo, presupuesto)
+                presupuesto.nombre            = os.path.splitext(archivo.name)[0]
+                presupuesto.archivo_origen    = archivo.name
+                presupuesto.fecha_importacion = timezone.now()
+                presupuesto.save()
+                log(request, 'IMPORTAR', 'Presupuesto',
+                    f'{total} partidas importadas desde PDF en {presupuesto.proyecto.codigo}')
+                messages.success(request, f'{total} partidas importadas desde PDF.')
+                return render(request, 'presupuesto/importar_pdf_resultado.html', {
+                    'presupuesto': presupuesto,
+                    'proyecto':    presupuesto.proyecto,
+                    'total':       total,
+                    'avisos':      avisos,
+                })
+
+            else:
+                total, info = importar_presupuesto_excel(archivo, presupuesto)
+                presupuesto.nombre            = os.path.splitext(archivo.name)[0]
+                presupuesto.archivo_origen    = archivo.name
+                presupuesto.fecha_importacion = timezone.now()
+                presupuesto.save()
+                log(request, 'IMPORTAR', 'Presupuesto',
+                    f'{total} partidas importadas en {presupuesto.proyecto.codigo} desde {archivo.name}')
+                notificar(
+                    f'Presupuesto importado — {total} partidas',
+                    mensaje=f'{presupuesto.proyecto.codigo}: {archivo.name}',
+                    tipo='success',
+                )
+                if info['sin_precio'] == total:
+                    messages.warning(request,
+                        f'{total} partidas importadas, pero ninguna tiene precio unitario. '
+                        f'Verifica que tu Excel tenga columna P.U. o PRECIO UNITARIO.')
+                elif info['sin_precio'] > 0:
+                    messages.warning(request,
+                        f'{total} partidas importadas. {info["sin_precio"]} sin precio unitario.')
+                else:
+                    messages.success(request, f'{total} partidas importadas correctamente.')
+                return redirect('presupuesto:detalle', pk=presupuesto.pk)
+
+        except (ValueError, ImportError) as e:
+            messages.error(request, str(e))
         except Exception as e:
             messages.error(request, f'Error al importar: {str(e)}')
-        return redirect('presupuesto:detalle', pk=presupuesto.pk)
+        return redirect('presupuesto:importar', pk=pk)
+
     return render(request, 'presupuesto/importar.html', {
-        'presupuesto': presupuesto,
-        'proyecto':    presupuesto.proyecto,
+        'presupuesto':    presupuesto,
+        'proyecto':       presupuesto.proyecto,
+        'pymupdf_ok':     PYMUPDF_OK,
+        'tiene_partidas': presupuesto.partidas.exists(),
+        'tiene_insumos':  presupuesto.insumos.exists(),
+        'n_partidas':     presupuesto.partidas.count(),
+        'n_insumos':      presupuesto.insumos.count(),
     })
+
+
+@require_POST
+def partidas_limpiar(request, pk):
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    presupuesto.partidas.all().delete()
+    if not presupuesto.insumos.exists():
+        presupuesto.nombre = 'Presupuesto Contractual'
+        presupuesto.archivo_origen = ''
+        presupuesto.fecha_importacion = None
+        presupuesto.save()
+    messages.success(request, 'Partidas eliminadas. Ya puedes importar un nuevo archivo.')
+    return redirect('presupuesto:importar', pk=pk)
+
+
+@require_POST
+def insumos_limpiar(request, pk):
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    presupuesto.insumos.all().delete()
+    messages.success(request, 'Insumos eliminados. Ya puedes importar un nuevo archivo.')
+    return redirect('presupuesto:importar', pk=pk)
 
 
 def eliminar(request, pk):
@@ -446,8 +533,12 @@ def acu_partida(request, pk):
                 precio_unitario=precio_unitario,
             )
             ml_engine.invalidar_cache()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'ok': True})
             messages.success(request, 'Recurso agregado.')
         else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'ok': False, 'error': 'La descripción es requerida.'}, status=400)
             messages.warning(request, 'La descripción es requerida.')
         return redirect('presupuesto:acu_partida', pk=pk)
 
@@ -526,6 +617,8 @@ def acu_recurso_eliminar(request, pk):
     if request.method == 'POST':
         recurso.delete()
         ml_engine.invalidar_cache()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True})
         messages.success(request, 'Recurso eliminado.')
     return redirect('presupuesto:acu_partida', pk=partida_pk)
 
@@ -574,6 +667,49 @@ def ml_importar(request, pk):
     if creados:
         ml_engine.invalidar_cache()
     return JsonResponse({'creados': creados})
+
+
+@require_GET
+def partida_hijos(request, pk):
+    """AJAX: retorna las filas hijas directas de una partida (lazy tree expand)."""
+    partida = get_object_or_404(Partida, pk=pk)
+    hijos = partida.hijos.prefetch_related('hijos').order_by('orden')
+    return render(request, 'presupuesto/_partida_rows.html', {'partidas': hijos})
+
+
+@require_GET
+def partida_panel(request, pk):
+    """AJAX: fragmento HTML del panel lateral de detalle de una partida."""
+    partida = get_object_or_404(Partida.objects.prefetch_related('hijos', 'recursos'), pk=pk)
+    es_hoja = not partida.hijos.exists()
+    recursos = list(partida.recursos.order_by('tipo', 'descripcion'))
+
+    TIPO_LABELS = {
+        'MANO_OBRA':   'Mano de Obra',
+        'MATERIAL':    'Materiales',
+        'EQUIPO':      'Equipo / Maquinaria',
+        'SUBCONTRATO': 'Sub-Contratos',
+        'OTRO':        'Otros',
+    }
+    grupos = {}   # label → {'recursos': [...], 'subtotal': Decimal}
+    for r in recursos:
+        label = TIPO_LABELS.get(r.tipo, r.tipo)
+        if label not in grupos:
+            grupos[label] = {'recursos': [], 'subtotal': Decimal('0')}
+        grupos[label]['recursos'].append(r)
+        grupos[label]['subtotal'] += r.total()
+
+    hijos = list(partida.hijos.order_by('orden')[:30]) if not es_hoja else []
+    total_acu = sum(g['subtotal'] for g in grupos.values()) if grupos else Decimal('0')
+
+    return render(request, 'presupuesto/_panel_partida.html', {
+        'partida':   partida,
+        'es_hoja':   es_hoja,
+        'grupos':    grupos,
+        'hijos':     hijos,
+        'tipos':     TIPOS_RECURSO,
+        'total_acu': total_acu,
+    })
 
 
 @require_GET

@@ -1,0 +1,210 @@
+{{ formset.management_form }}
+
+<div style="overflow-x:auto">
+<table class="table table-sm align-middle mb-0" id="tabla-detalle">
+  <thead class="table-light">
+    <tr>
+      <th style="width:3rem;text-align:center">Ítem</th>
+      <th style="min-width:220px">Descripción</th>
+      <th style="width:90px">Cantidad</th>
+      <th style="width:80px">Unidad</th>
+      <th style="width:90px">Stock</th>
+      <th style="width:110px">Cant. Requerida</th>
+      <th style="min-width:180px">Justificación</th>
+      <th style="width:2rem"></th>
+    </tr>
+  </thead>
+  <tbody id="formset-container">
+    {% for form in formset %}
+    <tr class="formset-row {% if form.instance.pk %}existing-row{% endif %}" data-index="{{ forloop.counter0 }}">
+      <td class="text-center fw-semibold text-muted item-num">{{ forloop.counter }}</td>
+      <td>
+        <div class="prod-wrap" style="position:relative">
+          <input type="text" class="form-control form-control-sm prod-search"
+                 placeholder="Buscar material..."
+                 autocomplete="off"
+                 value="{% if form.instance.insumo_id %}{{ form.instance.insumo.codigo }} — {{ form.instance.insumo.descripcion }}{% elif form.instance.descripcion %}{{ form.instance.descripcion }}{% endif %}">
+          {{ form.insumo }}
+          {{ form.descripcion }}
+          <div class="prod-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;
+               background:#fff;border:1px solid #dee2e6;border-radius:4px;
+               max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+        </div>
+      </td>
+      <td>
+        <input type="number" step="0.0001" name="{{ form.cantidad.html_name }}"
+               value="{{ form.cantidad.value|default:'' }}"
+               class="form-control form-control-sm">
+      </td>
+      <td>
+        <input type="text" name="{{ form.unidad.html_name }}"
+               value="{{ form.unidad.value|default:'' }}"
+               class="form-control form-control-sm insumo-unidad" placeholder="und">
+      </td>
+      <td>
+        <input type="text" class="form-control form-control-sm stock-display"
+               value="{% if form.instance.insumo_id %}—{% else %}—{% endif %}"
+               readonly style="background:#f8f9fa;color:#6c757d;text-align:right"
+               data-insumo-id="{{ form.instance.insumo_id|default:'' }}">
+      </td>
+      <td>
+        <input type="number" step="0.0001" name="{{ form.cantidad_requerida.html_name }}"
+               value="{{ form.cantidad_requerida.value|default:'' }}"
+               class="form-control form-control-sm">
+      </td>
+      <td>
+        <input type="text" name="{{ form.justificacion.html_name }}"
+               value="{{ form.justificacion.value|default:'' }}"
+               class="form-control form-control-sm" placeholder="Motivo del pedido">
+      </td>
+      <td class="text-center">
+        <label class="btn-tbl danger d-inline-flex align-items-center justify-content-center"
+               style="cursor:pointer;padding:.3rem .45rem" title="Quitar ítem">
+          <i class="bi bi-trash"></i>
+          <input type="checkbox" name="{{ form.DELETE.html_name }}" class="d-none">
+        </label>
+        {{ form.id }}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<button type="button" class="btn-add-row mt-2 w-100" id="add-row">
+  <i class="bi bi-plus-lg me-1"></i>Agregar ítem
+</button>
+
+<script>
+(function() {
+  const API_PROD  = '/almacen/api/productos/';
+  const API_STOCK = '/almacen/api/insumo/';
+  let activeDropdown = null;
+
+  function actualizarItems() {
+    document.querySelectorAll('#formset-container .formset-row:not([style*="display:none"])').forEach(function(row, i) {
+      const n = row.querySelector('.item-num');
+      if (n) n.textContent = i + 1;
+    });
+  }
+
+  function cargarStock(insumoId, stockInput) {
+    if (!insumoId) { stockInput.value = '—'; return; }
+    fetch(API_STOCK + insumoId + '/stock/')
+      .then(r => r.json())
+      .then(data => { stockInput.value = parseFloat(data.stock).toFixed(2); })
+      .catch(() => { stockInput.value = '—'; });
+  }
+
+  function buscar(input) {
+    const q = input.value.trim();
+    const wrap = input.closest('.prod-wrap');
+    const dropdown = wrap.querySelector('.prod-dropdown');
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+    fetch(API_PROD + '?q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(data => {
+        if (!data.length) {
+          dropdown.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:.8rem">Sin resultados</div>';
+        } else {
+          dropdown.innerHTML = data.map(p =>
+            `<div class="prod-opt" data-id="${p.id}" data-unidad="${p.unidad}"
+                  data-desc="${p.descripcion.replace(/"/g,'&quot;')}"
+                  data-label="${p.codigo} — ${p.descripcion.replace(/"/g,'&quot;')}"
+                  style="padding:6px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.8rem">
+               <strong style="color:var(--amber-dark)">${p.codigo}</strong>
+               <span style="color:#374151"> ${p.descripcion}</span>
+             </div>`
+          ).join('');
+        }
+        dropdown.style.display = 'block';
+        activeDropdown = dropdown;
+      });
+  }
+
+  document.addEventListener('click', function(e) {
+    const opt = e.target.closest('.prod-opt');
+    if (opt) {
+      const wrap   = opt.closest('.prod-wrap');
+      const row    = wrap.closest('.formset-row');
+      wrap.querySelector('.prod-search').value = opt.dataset.label;
+      const insumoInput = wrap.querySelector('input[name$="-insumo"]');
+      if (insumoInput) insumoInput.value = opt.dataset.id;
+      const descInput = wrap.querySelector('input[name$="-descripcion"]');
+      if (descInput) descInput.value = opt.dataset.desc;
+      const undInp = row ? row.querySelector('.insumo-unidad') : null;
+      if (undInp) undInp.value = opt.dataset.unidad;
+      const stockInp = row ? row.querySelector('.stock-display') : null;
+      if (stockInp) cargarStock(opt.dataset.id, stockInp);
+      opt.closest('.prod-dropdown').style.display = 'none';
+      return;
+    }
+    if (activeDropdown && !e.target.classList.contains('prod-search')) {
+      activeDropdown.style.display = 'none';
+      activeDropdown = null;
+    }
+  });
+
+  let timer;
+  document.addEventListener('input', function(e) {
+    if (!e.target.classList.contains('prod-search')) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => buscar(e.target), 280);
+  });
+
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('prod-search') && !e.target.value.trim()) {
+      const wrap = e.target.closest('.prod-wrap');
+      const row  = wrap.closest('.formset-row');
+      const insumoInput = wrap.querySelector('input[name$="-insumo"]');
+      if (insumoInput) insumoInput.value = '';
+      const descInput = wrap.querySelector('input[name$="-descripcion"]');
+      if (descInput) descInput.value = '';
+      const stockInp = row ? row.querySelector('.stock-display') : null;
+      if (stockInp) stockInp.value = '—';
+    }
+  });
+
+  // DELETE checkbox — tachar fila y actualizar numeración
+  document.getElementById('formset-container').addEventListener('change', function(e) {
+    if (e.target.type === 'checkbox' && e.target.name?.endsWith('-DELETE')) {
+      const row = e.target.closest('.formset-row');
+      if (row) row.style.opacity = e.target.checked ? '0.35' : '1';
+      actualizarItems();
+    }
+  });
+
+  // Agregar fila
+  document.getElementById('add-row').addEventListener('click', function() {
+    const tbody  = document.getElementById('formset-container');
+    const rows   = tbody.querySelectorAll('.formset-row');
+    const idx    = rows.length;
+    const prefix = document.querySelector('[name$="-TOTAL_FORMS"]')?.name.replace('-TOTAL_FORMS','') || 'detalles';
+    const tpl    = rows[0].cloneNode(true);
+    tpl.innerHTML = tpl.innerHTML.replace(new RegExp(prefix + '-\\d+-', 'g'), `${prefix}-${idx}-`);
+    tpl.querySelectorAll('input:not([type=hidden]):not([type=checkbox])').forEach(i => {
+      if (!i.classList.contains('stock-display')) i.value = '';
+    });
+    tpl.querySelectorAll('input[type=checkbox]').forEach(i => i.checked = false);
+    tpl.querySelectorAll('input[type=hidden][name$="-id"]').forEach(i => i.value = '');
+    tpl.querySelectorAll('input[type=hidden][name$="-insumo"]').forEach(i => i.value = '');
+    tpl.querySelectorAll('input[type=hidden][name$="-descripcion"]').forEach(i => i.value = '');
+    tpl.querySelectorAll('.prod-dropdown').forEach(d => d.style.display = 'none');
+    tpl.querySelector('.prod-search').value = '';
+    tpl.querySelector('.stock-display').value = '—';
+    tpl.style.opacity = '1';
+    tbody.appendChild(tpl);
+    const tf = document.querySelector('[name$="-TOTAL_FORMS"]');
+    if (tf) tf.value = idx + 1;
+    actualizarItems();
+    tpl.querySelector('.prod-search')?.focus();
+  });
+
+  // Cargar stock para filas existentes con insumo
+  document.querySelectorAll('.stock-display[data-insumo-id]').forEach(function(inp) {
+    if (inp.dataset.insumoId) cargarStock(inp.dataset.insumoId, inp);
+  });
+
+  actualizarItems();
+})();
+</script>

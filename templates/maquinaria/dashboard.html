@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Maquinaria — {{ proyecto.nombre }}{% endblock %}
+{% block nav_maquinaria %}active{% endblock %}
+{% block nav_maq_dash %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
+<li class="breadcrumb-item active">Maquinaria y Cuadrilla</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'proyectos:detalle' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> {{ proyecto.codigo }}</a>
+  <h4><i class="bi bi-truck me-2"></i>Maquinaria y Cuadrilla</h4>
+  <div class="text-muted">Registro de horas hombre y horas máquina</div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card stat-card" style="border-top-color:#0ea5e9">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#e0f2fe">
+          <i class="bi bi-people-fill" style="color:#0ea5e9"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:#0ea5e9">{{ total_hh }}</div>
+          <div class="stat-label">Horas Hombre (HH)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card stat-card" style="border-top-color:#f59e0b">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fef3c7">
+          <i class="bi bi-truck" style="color:#f59e0b"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:#f59e0b">{{ total_hm }}</div>
+          <div class="stat-label">Horas Máquina (HM)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'maquinaria:resumen' proyecto.pk %}" class="card stat-card text-decoration-none" style="border-top-color:#7c3aed">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:rgba(124,58,237,.1)">
+          <i class="bi bi-bar-chart-line" style="color:#7c3aed"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:#7c3aed">Resumen</div>
+          <div class="stat-label">HH y HM por partida →</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <a href="{% url 'maquinaria:registro_lista' proyecto.pk %}" class="card mod-card mb-3">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="mod-icon" style="background:#e0f2fe">
+          <i class="bi bi-people-fill" style="color:#0ea5e9"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-bold">Registro de Cuadrilla</div>
+          <small class="text-muted">Horas hombre por fecha y partida</small>
+        </div>
+        <i class="bi bi-arrow-right text-muted"></i>
+      </div>
+    </a>
+    <a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}" class="card mod-card mb-3">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="mod-icon" style="background:#fef3c7">
+          <i class="bi bi-truck" style="color:#f59e0b"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-bold">Registro de Maquinaria</div>
+          <small class="text-muted">Horas máquina por fecha y partida</small>
+        </div>
+        <i class="bi bi-arrow-right text-muted"></i>
+      </div>
+    </a>
+    <a href="{% url 'maquinaria:resumen' proyecto.pk %}" class="card mod-card">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="mod-icon" style="background:rgba(124,58,237,.1)">
+          <i class="bi bi-bar-chart-line" style="color:#7c3aed"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-bold">Resumen por Partida</div>
+          <small class="text-muted">HH y HM acumuladas</small>
+        </div>
+        <i class="bi bi-arrow-right text-muted"></i>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Últimos Registros de Cuadrilla</span>
+        <a href="{% url 'maquinaria:registro_crear' proyecto.pk %}" class="btn-tbl">
+          <i class="bi bi-plus-lg"></i> Nuevo
+        </a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table-modern">
+          <thead><tr><th>Fecha</th><th>Cuadrilla</th><th>Horas</th><th>HH</th><th>Partida</th></tr></thead>
+          <tbody>
+          {% for r in registros_recientes %}
+          <tr>
+            <td>{{ r.fecha|date:"d/m/Y" }}</td>
+            <td>{{ r.cuadrilla }}</td>
+            <td>{{ r.horas }}</td>
+            <td class="fw-semibold">{{ r.horas_hombre }}</td>
+            <td class="text-muted">{{ r.partida.codigo|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-4">Sin registros</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Últimos Registros de Maquinaria</span>
+        <a href="{% url 'maquinaria:maq_registro_crear' proyecto.pk %}" class="btn-tbl">
+          <i class="bi bi-plus-lg"></i> Nuevo
+        </a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table-modern">
+          <thead><tr><th>Fecha</th><th>Equipo</th><th>HM</th><th>Operador</th><th>Partida</th></tr></thead>
+          <tbody>
+          {% for r in maq_recientes %}
+          <tr>
+            <td>{{ r.fecha|date:"d/m/Y" }}</td>
+            <td>{{ r.maquinaria.nombre }}</td>
+            <td class="fw-semibold">{{ r.horas }}</td>
+            <td class="text-muted">{{ r.operador|default:"—" }}</td>
+            <td class="text-muted">{{ r.partida.codigo|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-4">Sin registros</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

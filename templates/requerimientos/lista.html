@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Requerimientos — {{ proyecto.codigo }}{% endblock %}
+{% block nav_req %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Requerimientos</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4><i class="bi bi-file-earmark-text me-2"></i>Requerimientos</h4>
+    <div class="text-muted">Solicitudes de materiales del proyecto</div>
+    <div class="d-flex flex-wrap mt-2" style="border:1px solid #dee2e6;border-radius:4px;overflow:hidden;width:fit-content">
+      <a href="{% url 'requerimientos:lista' proyecto.pk %}" class="req-chip {% if not estado_sel %}active{% endif %}">Todos</a>
+      {% for val, label in estados %}
+      <a href="{% url 'requerimientos:lista' proyecto.pk %}?estado={{ val }}"
+         class="req-chip {% if estado_sel == val %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  <a href="{% url 'requerimientos:crear' proyecto.pk %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo Requerimiento
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>N° REQ</th><th>Fecha</th><th>Tipo</th><th>Solicitante</th><th>Estado</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in requerimientos %}
+        <tr class="req-row" style="cursor:pointer" onclick="window.location='{% url 'requerimientos:detalle' r.pk %}'">
+          <td class="fw-semibold">REQ-{{ r.numero }}</td>
+          <td>{{ r.fecha|date:"d/m/Y" }}</td>
+          <td>{{ r.get_tipo_display }}</td>
+          <td>{{ r.solicitante|default:"—" }}</td>
+          <td>
+            <span class="badge rounded-1
+              {% if r.estado == 'ENVIADO' %}bg-primary
+              {% elif r.estado == 'ATENDIDO' %}bg-success
+              {% elif r.estado == 'BORRADOR' %}bg-secondary
+              {% elif r.estado == 'APROBADO' %}bg-info
+              {% elif r.estado == 'ANULADO' %}bg-danger
+              {% else %}bg-warning text-dark{% endif %}">
+              {{ r.get_estado_display }}
+            </span>
+          </td>
+          <td onclick="event.stopPropagation()">
+            {% if r.estado == 'BORRADOR' %}
+            <a href="{% url 'requerimientos:editar' r.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center py-4 text-muted">Sin requerimientos registrados</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .req-chip {
+    cursor: pointer; font-size: .875rem; font-weight: 500;
+    padding: .375rem .75rem; background: #fff; color: #374151;
+    border-right: 1px solid #dee2e6; transition: background .15s, color .15s;
+    user-select: none; text-decoration: none; display: inline-block;
+  }
+  .req-chip:last-child { border-right: none; }
+  .req-chip:hover, .req-chip.active { background: #2563eb; color: #fff; }
+  .req-row { cursor: pointer; }
+  .req-row.selected { background: #eff6ff; }
+  .req-row td:first-child { cursor: default; }
+</style>
+{% endblock %}
+

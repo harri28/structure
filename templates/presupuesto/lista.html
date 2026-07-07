@@ -1,9 +1,13 @@
 {% extends 'base.html' %}
 {% block title %}Presupuesto — {{ proyecto.codigo }}{% endblock %}
-{% block nav_presupuesto %}active{% endblock %}
+{% block nav_pres_resumen %}active{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item active">Presupuesto</li>
+{% endblock %}
+
+{% block submodule_chips %}
+{% include 'presupuesto/_pres_nav.html' with active_tab='resumen' %}
 {% endblock %}
 
 {% block content %}
@@ -84,6 +88,7 @@
           Total c/IGV: <strong style="color:#1d4ed8">S/ {{ total_contractual|miles:2 }}</strong>
           {% if presupuesto.gastos_generales_pct %}
           &nbsp;·&nbsp;GG {{ presupuesto.gastos_generales_pct }}% / Ut. {{ presupuesto.utilidad_pct }}% / IGV {{ presupuesto.igv_pct }}%
+          {% if presupuesto.supervision_pct %}/ Sup. {{ presupuesto.supervision_pct }}%{% endif %}
           {% endif %}
           {% if presupuesto.fecha_importacion %}
           &nbsp;·&nbsp;Importado {{ presupuesto.fecha_importacion|date:"d/m/Y" }}
@@ -112,7 +117,7 @@
 
 <!-- ── Modificaciones ────────────────────────────────────────── -->
 {% if modificaciones %}
-<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:.5rem">
+<div id="adicionales" style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:.5rem">
   Modificaciones
 </div>
 {% for mod in modificaciones %}

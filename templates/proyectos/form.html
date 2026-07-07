@@ -1,9 +1,17 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block title %}{{ titulo }}{% endblock %}
 {% block nav_proyectos %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:lista' %}">Proyectos</a></li>
 <li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block submodule_chips %}
+{% if proyecto %}
+<div class="submodule-chips">
+  <a href="{% url 'proyectos:detalle' proyecto.pk %}" class="s-chip active"><i class="bi bi-info-circle me-1"></i>Información</a>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -15,54 +23,109 @@
         <form method="post" novalidate>
           {% csrf_token %}
           <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">Código <span class="text-danger">*</span></label>
-              {{ form.codigo.errors }}
-              <input type="text" name="codigo" value="{{ form.codigo.value|default:'' }}"
-                     class="form-control {% if form.codigo.errors %}is-invalid{% endif %}" required>
+
+            <!-- Código (auto) + Nombre -->
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Código</label>
+              {{ form.codigo }}
             </div>
-            <div class="col-md-8">
+            <div class="col-md-9">
               <label class="form-label fw-semibold">Nombre del Proyecto <span class="text-danger">*</span></label>
               {{ form.nombre.errors }}
-              <input type="text" name="nombre" value="{{ form.nombre.value|default:'' }}"
-                     class="form-control {% if form.nombre.errors %}is-invalid{% endif %}" required>
+              {{ form.nombre }}
             </div>
+
+            <!-- Cliente + Responsable -->
             <div class="col-md-6">
               <label class="form-label fw-semibold">Cliente</label>
-              <input type="text" name="cliente" value="{{ form.cliente.value|default:'' }}" class="form-control">
+              {{ form.cliente }}
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">Responsable</label>
-              <input type="text" name="responsable" value="{{ form.responsable.value|default:'' }}" class="form-control">
+              {{ form.responsable }}
             </div>
+
+            <!-- Ubicación -->
             <div class="col-12">
               <label class="form-label fw-semibold">Ubicación</label>
-              <input type="text" name="ubicacion" value="{{ form.ubicacion.value|default:'' }}" class="form-control">
+              {{ form.ubicacion }}
             </div>
-            <div class="col-md-4">
+
+            <!-- Fecha Inicio · Fecha Fin · Plazo · Estado -->
+            <div class="col-md-3">
               <label class="form-label fw-semibold">Fecha Inicio</label>
-              <input type="date" name="fecha_inicio" value="{{ form.fecha_inicio.value|default:'' }}" class="form-control">
+              {{ form.fecha_inicio }}
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label fw-semibold">Fecha Fin</label>
-              <input type="date" name="fecha_fin" value="{{ form.fecha_fin.value|default:'' }}" class="form-control">
+              {{ form.fecha_fin }}
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">
+                Plazo
+                <span class="text-muted fw-normal" style="font-size:.75rem">(días)</span>
+                <span id="plazo-badge" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-1"
+                      style="font-size:.65rem;display:none">Auto</span>
+              </label>
+              {{ form.plazo_dias }}
+            </div>
+            <div class="col-md-3">
               <label class="form-label fw-semibold">Estado</label>
               {{ form.estado }}
             </div>
+
+            <!-- Descripción -->
             <div class="col-12">
               <label class="form-label fw-semibold">Descripción</label>
-              <textarea name="descripcion" rows="3" class="form-control">{{ form.descripcion.value|default:'' }}</textarea>
+              {{ form.descripcion }}
             </div>
+
           </div>
+
           <div class="d-flex gap-2 mt-4">
             <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+            {% if proyecto %}
+            <a href="{% url 'proyectos:detalle' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+            {% else %}
             <a href="{% url 'proyectos:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+            {% endif %}
           </div>
         </form>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+(function () {
+  const inicio  = document.getElementById('id_fecha_inicio');
+  const fin     = document.getElementById('id_fecha_fin');
+  const plazo   = document.getElementById('id_plazo_dias');
+  const badge   = document.getElementById('plazo-badge');
+
+  function calcular() {
+    const d1 = inicio.value ? new Date(inicio.value) : null;
+    const d2 = fin.value    ? new Date(fin.value)    : null;
+
+    if (d1 && d2 && d2 > d1) {
+      const dias = Math.round((d2 - d1) / 86400000);
+      plazo.value    = dias;
+      plazo.readOnly = true;
+      plazo.style.background = '#f8f9fa';
+      badge.style.display = '';
+    } else {
+      plazo.readOnly = false;
+      plazo.style.background = '';
+      badge.style.display = 'none';
+      if (d2 && d1 && d2 <= d1) plazo.value = '';
+    }
+  }
+
+  inicio.addEventListener('change', calcular);
+  fin.addEventListener('change', calcular);
+
+  // Si al cargar ya hay fechas (modo editar), calcular en silent
+  if (inicio.value && fin.value) calcular();
+})();
+</script>
 {% endblock %}

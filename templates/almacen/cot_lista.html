@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Cotizaciones{% endblock %}
 {% block nav_cot %}active{% endblock %}
+{% block submodule_chips %}{% include 'logistica/_logistica_nav.html' with active_tab='cotizaciones' %}{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
 <li class="breadcrumb-item active">Cotizaciones</li>

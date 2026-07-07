@@ -4,9 +4,9 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q, Sum
 from apps.proyectos.models import Proyecto
-from apps.catalogo.models import Producto
+from apps.presupuesto.models import InsumoPresupuesto, TIPOS_RECURSO
+from apps.registro.utils import log, notificar
 from .models import (
-    Requerimiento, DetalleRequerimiento,
     Entrada, DetalleEntrada,
     Salida, DetalleSalida,
     Cotizacion, DetalleCotizacion,
@@ -14,12 +14,22 @@ from .models import (
     ESTADOS_OC,
 )
 from .forms import (
-    RequerimientoForm, DetalleRequerimientoFormSet,
     EntradaForm, DetalleEntradaFormSet,
     SalidaForm, DetalleSalidaFormSet,
     CotizacionForm, DetalleCotizacionFormSet,
     OrdenCompraForm, DetalleOrdenCompraFormSet,
 )
+from apps.requerimientos.models import Requerimiento
+
+
+def _sync_insumo_snapshot(detalle):
+    """Populate descripcion/unidad snapshot from insumo FK if blank."""
+    if detalle.insumo:
+        if not detalle.descripcion:
+            detalle.descripcion = detalle.insumo.descripcion
+        if not detalle.unidad:
+            detalle.unidad = detalle.insumo.unidad
+    detalle.save()
 
 
 def dashboard(request, proyecto_id):
@@ -42,57 +52,102 @@ def dashboard(request, proyecto_id):
 
 def stock(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    categoria = request.GET.get('categoria', '')
+    tipo_sel = request.GET.get('tipo', '')
 
     entradas_agg = {
-        r['producto_id']: r['total']
+        r['insumo_id']: r['total']
         for r in DetalleEntrada.objects
         .filter(entrada__proyecto=proyecto)
-        .values('producto_id')
+        .values('insumo_id')
         .annotate(total=Sum('cantidad'))
     }
     salidas_agg = {
-        r['producto_id']: r['total']
+        r['insumo_id']: r['total']
         for r in DetalleSalida.objects
         .filter(salida__proyecto=proyecto)
-        .values('producto_id')
+        .values('insumo_id')
         .annotate(total=Sum('cantidad'))
     }
 
-    producto_ids = set(entradas_agg) | set(salidas_agg)
-    qs = Producto.objects.filter(pk__in=producto_ids)
-    if categoria:
-        qs = qs.filter(categoria=categoria)
+    insumo_ids = set(entradas_agg) | set(salidas_agg)
+    insumo_ids.discard(None)
+    qs = InsumoPresupuesto.objects.filter(pk__in=insumo_ids)
+    if tipo_sel:
+        qs = qs.filter(tipo=tipo_sel)
 
     items = []
-    for p in qs:
-        entrada = entradas_agg.get(p.pk, Decimal('0'))
-        salida  = salidas_agg.get(p.pk, Decimal('0'))
+    for ins in qs:
+        entrada = entradas_agg.get(ins.pk, Decimal('0'))
+        salida  = salidas_agg.get(ins.pk, Decimal('0'))
         items.append({
-            'producto': p,
+            'insumo': ins,
             'total_entrada': entrada,
             'total_salida':  salida,
             'saldo': entrada - salida,
         })
-    items.sort(key=lambda x: x['producto'].codigo)
+    items.sort(key=lambda x: x['insumo'].codigo or '')
 
-    from apps.catalogo.models import CATEGORIAS
     return render(request, 'almacen/stock.html', {
         'proyecto': proyecto,
         'items': items,
-        'categorias': CATEGORIAS,
-        'categoria_sel': categoria,
+        'tipos': TIPOS_RECURSO,
+        'tipo_sel': tipo_sel,
     })
 
 
-def kardex(request, proyecto_id, producto_id):
+def consumo(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    producto = get_object_or_404(Producto, pk=producto_id)
+    tipo_sel = request.GET.get('tipo', '')
+    desde    = request.GET.get('desde', '')
+    hasta    = request.GET.get('hasta', '')
+
+    qs = DetalleSalida.objects.filter(salida__proyecto=proyecto).select_related('insumo', 'salida')
+    if desde:
+        qs = qs.filter(salida__fecha__gte=desde)
+    if hasta:
+        qs = qs.filter(salida__fecha__lte=hasta)
+    if tipo_sel:
+        qs = qs.filter(insumo__tipo=tipo_sel)
+
+    agg = {}
+    for det in qs:
+        key = det.insumo_id if det.insumo_id else f'__{det.descripcion}'
+        if key not in agg:
+            agg[key] = {
+                'insumo': det.insumo,
+                'descripcion': det.insumo.descripcion if det.insumo else (det.descripcion or '—'),
+                'unidad': det.insumo.unidad if det.insumo else det.unidad,
+                'tipo_display': det.insumo.get_tipo_display() if det.insumo else '—',
+                'total_cantidad': Decimal('0'),
+                'total_costo': Decimal('0'),
+                'num_registros': 0,
+            }
+        agg[key]['total_cantidad'] += det.cantidad
+        agg[key]['total_costo']    += det.subtotal()
+        agg[key]['num_registros']  += 1
+
+    items = sorted(agg.values(), key=lambda x: x['descripcion'].lower())
+    total_costo = sum(i['total_costo'] for i in items)
+
+    return render(request, 'almacen/consumo.html', {
+        'proyecto': proyecto,
+        'items': items,
+        'total_costo': total_costo,
+        'tipos': TIPOS_RECURSO,
+        'tipo_sel': tipo_sel,
+        'desde': desde,
+        'hasta': hasta,
+    })
+
+
+def kardex(request, proyecto_id, insumo_id):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    insumo = get_object_or_404(InsumoPresupuesto, pk=insumo_id)
 
     movimientos = []
 
     for d in (DetalleEntrada.objects
-              .filter(entrada__proyecto=proyecto, producto=producto)
+              .filter(entrada__proyecto=proyecto, insumo=insumo)
               .select_related('entrada').order_by('entrada__fecha')):
         movimientos.append({
             'fecha':      d.entrada.fecha,
@@ -105,7 +160,7 @@ def kardex(request, proyecto_id, producto_id):
         })
 
     for d in (DetalleSalida.objects
-              .filter(salida__proyecto=proyecto, producto=producto)
+              .filter(salida__proyecto=proyecto, insumo=insumo)
               .select_related('salida').order_by('salida__fecha')):
         movimientos.append({
             'fecha':      d.salida.fecha,
@@ -129,81 +184,10 @@ def kardex(request, proyecto_id, producto_id):
 
     return render(request, 'almacen/kardex.html', {
         'proyecto': proyecto,
-        'producto': producto,
+        'insumo': insumo,
         'movimientos': movimientos,
         'saldo_final': saldo,
     })
-
-
-# ── Requerimientos ──────────────────────────────────────────────────────────
-
-def req_lista(request, proyecto_id):
-    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    qs = proyecto.requerimientos.all()
-    estado = request.GET.get('estado', '')
-    if estado:
-        qs = qs.filter(estado=estado)
-    return render(request, 'almacen/req_lista.html', {
-        'proyecto': proyecto, 'requerimientos': qs, 'estado_sel': estado,
-    })
-
-
-def req_detalle(request, pk):
-    req = get_object_or_404(Requerimiento, pk=pk)
-    return render(request, 'almacen/req_detalle.html', {'req': req, 'proyecto': req.proyecto})
-
-
-def req_crear(request, proyecto_id):
-    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    if request.method == 'POST':
-        form = RequerimientoForm(request.POST)
-        formset = DetalleRequerimientoFormSet(request.POST, prefix='detalles')
-        if form.is_valid() and formset.is_valid():
-            req = form.save(commit=False)
-            req.proyecto = proyecto
-            req.save()
-            for f in formset:
-                if f.cleaned_data and not f.cleaned_data.get('DELETE'):
-                    d = f.save(commit=False)
-                    d.requerimiento = req
-                    d.save()
-            messages.success(request, 'Requerimiento registrado.')
-            return redirect('almacen:req_detalle', pk=req.pk)
-    else:
-        form = RequerimientoForm()
-        formset = DetalleRequerimientoFormSet(prefix='detalles')
-    return render(request, 'almacen/req_form.html', {
-        'form': form, 'formset': formset, 'proyecto': proyecto, 'titulo': 'Nuevo Requerimiento',
-    })
-
-
-def req_editar(request, pk):
-    req = get_object_or_404(Requerimiento, pk=pk)
-    proyecto = req.proyecto
-    if request.method == 'POST':
-        form = RequerimientoForm(request.POST, instance=req)
-        formset = DetalleRequerimientoFormSet(request.POST, instance=req, prefix='detalles')
-        if form.is_valid() and formset.is_valid():
-            form.save()
-            formset.save()
-            messages.success(request, 'Requerimiento actualizado.')
-            return redirect('almacen:req_detalle', pk=req.pk)
-    else:
-        form = RequerimientoForm(instance=req)
-        formset = DetalleRequerimientoFormSet(instance=req, prefix='detalles')
-    return render(request, 'almacen/req_form.html', {
-        'form': form, 'formset': formset, 'proyecto': proyecto, 'titulo': 'Editar Requerimiento',
-    })
-
-
-def req_eliminar(request, pk):
-    req = get_object_or_404(Requerimiento, pk=pk)
-    proyecto = req.proyecto
-    if request.method == 'POST':
-        req.delete()
-        messages.success(request, 'Requerimiento eliminado.')
-        return redirect('almacen:req_lista', proyecto_id=proyecto.pk)
-    return render(request, 'almacen/confirmar_eliminar.html', {'obj': req, 'proyecto': proyecto})
 
 
 # ── Entradas ────────────────────────────────────────────────────────────────
@@ -233,7 +217,14 @@ def entrada_crear(request, proyecto_id):
                 if f.cleaned_data and not f.cleaned_data.get('DELETE'):
                     d = f.save(commit=False)
                     d.entrada = entrada
-                    d.save()
+                    _sync_insumo_snapshot(d)
+            log(request, 'CREAR', 'Almacén',
+                f'Entrada GUIA {entrada.serie}-{entrada.numero_guia} registrada en {proyecto.codigo}')
+            notificar(
+                f'Nueva entrada registrada — Guía {entrada.serie}-{entrada.numero_guia}',
+                mensaje=f'Por {request.user.get_full_name() or request.user.username} en {proyecto.codigo}',
+                tipo='success',
+            )
             messages.success(request, 'Entrada registrada.')
             return redirect('almacen:entrada_detalle', pk=entrada.pk)
     else:
@@ -252,7 +243,10 @@ def entrada_editar(request, pk):
         formset = DetalleEntradaFormSet(request.POST, instance=entrada, prefix='detalles')
         if form.is_valid() and formset.is_valid():
             form.save()
-            formset.save()
+            for d in formset.save():
+                _sync_insumo_snapshot(d)
+            log(request, 'EDITAR', 'Almacén',
+                f'Entrada GUIA {entrada.serie}-{entrada.numero_guia} editada en {proyecto.codigo}')
             messages.success(request, 'Entrada actualizada.')
             return redirect('almacen:entrada_detalle', pk=entrada.pk)
     else:
@@ -267,10 +261,46 @@ def entrada_eliminar(request, pk):
     entrada = get_object_or_404(Entrada, pk=pk)
     proyecto = entrada.proyecto
     if request.method == 'POST':
+        ref = f'GUIA {entrada.serie}-{entrada.numero_guia}'
         entrada.delete()
+        log(request, 'ELIMINAR', 'Almacén', f'Entrada {ref} eliminada en {proyecto.codigo}')
         messages.success(request, 'Entrada eliminada.')
         return redirect('almacen:entrada_lista', proyecto_id=proyecto.pk)
     return render(request, 'almacen/confirmar_eliminar.html', {'obj': entrada, 'proyecto': proyecto})
+
+
+def entrada_aceptar(request, pk):
+    entrada = get_object_or_404(Entrada, pk=pk)
+    if request.method == 'POST' and entrada.estado == 'PENDIENTE':
+        entrada.estado = 'ACEPTADO'
+        entrada.save()
+        log(request, 'EDITAR', 'Almacén',
+            f'Guía {entrada.numero_guia} aceptada en {entrada.proyecto.codigo}')
+        notificar(
+            f'Guía {entrada.numero_guia} aceptada',
+            mensaje=f'Almacén confirmó la recepción de la guía {entrada.numero_guia}.',
+            tipo='success',
+        )
+        messages.success(request, f'Guía {entrada.numero_guia} aceptada.')
+    return redirect('almacen:entrada_lista', proyecto_id=entrada.proyecto.pk)
+
+
+def entrada_rechazar(request, pk):
+    entrada = get_object_or_404(Entrada, pk=pk)
+    if request.method == 'POST' and entrada.estado == 'PENDIENTE':
+        motivo = request.POST.get('motivo', '').strip()
+        entrada.estado = 'RECHAZADO'
+        entrada.motivo_rechazo = motivo
+        entrada.save()
+        log(request, 'EDITAR', 'Almacén',
+            f'Guía {entrada.numero_guia} rechazada en {entrada.proyecto.codigo}. Motivo: {motivo or "—"}')
+        notificar(
+            f'Guía {entrada.numero_guia} rechazada',
+            mensaje=f'Almacén rechazó la guía {entrada.numero_guia}. Motivo: {motivo or "—"}',
+            tipo='danger',
+        )
+        messages.warning(request, f'Guía {entrada.numero_guia} rechazada.')
+    return redirect('almacen:entrada_lista', proyecto_id=entrada.proyecto.pk)
 
 
 # ── Salidas ─────────────────────────────────────────────────────────────────
@@ -288,26 +318,41 @@ def salida_detalle(request, pk):
 
 
 def salida_crear(request, proyecto_id):
+    from apps.requerimientos.models import Requerimiento as Req
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    reqs_aprobados = proyecto.requerimientos.filter(estado='APROBADO')
     if request.method == 'POST':
         form = SalidaForm(request.POST)
         formset = DetalleSalidaFormSet(request.POST, prefix='detalles')
         if form.is_valid() and formset.is_valid():
             salida = form.save(commit=False)
             salida.proyecto = proyecto
+            req_id = request.POST.get('requerimiento_id')
+            if req_id:
+                try:
+                    req = Req.objects.get(pk=req_id, proyecto=proyecto)
+                    salida.requerimiento = req
+                except Req.DoesNotExist:
+                    pass
             salida.save()
             for f in formset:
                 if f.cleaned_data and not f.cleaned_data.get('DELETE'):
                     d = f.save(commit=False)
                     d.salida = salida
-                    d.save()
+                    _sync_insumo_snapshot(d)
+            if salida.requerimiento:
+                salida.requerimiento.estado = 'ATENDIDO'
+                salida.requerimiento.save()
+            log(request, 'CREAR', 'Almacén',
+                f'Salida SAL-{salida.numero} registrada en {proyecto.codigo}')
             messages.success(request, 'Salida registrada.')
             return redirect('almacen:salida_detalle', pk=salida.pk)
     else:
         form = SalidaForm()
         formset = DetalleSalidaFormSet(prefix='detalles')
     return render(request, 'almacen/salida_form.html', {
-        'form': form, 'formset': formset, 'proyecto': proyecto, 'titulo': 'Nueva Salida',
+        'form': form, 'formset': formset, 'proyecto': proyecto,
+        'titulo': 'Nueva Salida', 'reqs_aprobados': reqs_aprobados,
     })
 
 
@@ -319,7 +364,10 @@ def salida_editar(request, pk):
         formset = DetalleSalidaFormSet(request.POST, instance=salida, prefix='detalles')
         if form.is_valid() and formset.is_valid():
             form.save()
-            formset.save()
+            for d in formset.save():
+                _sync_insumo_snapshot(d)
+            log(request, 'EDITAR', 'Almacén',
+                f'Salida SAL-{salida.numero} editada en {proyecto.codigo}')
             messages.success(request, 'Salida actualizada.')
             return redirect('almacen:salida_detalle', pk=salida.pk)
     else:
@@ -334,7 +382,9 @@ def salida_eliminar(request, pk):
     salida = get_object_or_404(Salida, pk=pk)
     proyecto = salida.proyecto
     if request.method == 'POST':
+        ref = f'SAL-{salida.numero}'
         salida.delete()
+        log(request, 'ELIMINAR', 'Almacén', f'Salida {ref} eliminada en {proyecto.codigo}')
         messages.success(request, 'Salida eliminada.')
         return redirect('almacen:salida_lista', proyecto_id=proyecto.pk)
     return render(request, 'almacen/confirmar_eliminar.html', {'obj': salida, 'proyecto': proyecto})
@@ -367,7 +417,9 @@ def cot_crear(request, proyecto_id):
                 if f.cleaned_data and not f.cleaned_data.get('DELETE'):
                     d = f.save(commit=False)
                     d.cotizacion = cot
-                    d.save()
+                    _sync_insumo_snapshot(d)
+            log(request, 'CREAR', 'Almacén',
+                f'Cotización COT-{cot.numero} creada en {proyecto.codigo}')
             messages.success(request, 'Cotización registrada.')
             return redirect('almacen:cot_detalle', pk=cot.pk)
     else:
@@ -386,7 +438,10 @@ def cot_editar(request, pk):
         formset = DetalleCotizacionFormSet(request.POST, instance=cot, prefix='detalles')
         if form.is_valid() and formset.is_valid():
             form.save()
-            formset.save()
+            for d in formset.save():
+                _sync_insumo_snapshot(d)
+            log(request, 'EDITAR', 'Almacén',
+                f'Cotización COT-{cot.numero} editada en {proyecto.codigo}')
             messages.success(request, 'Cotización actualizada.')
             return redirect('almacen:cot_detalle', pk=cot.pk)
     else:
@@ -401,7 +456,9 @@ def cot_eliminar(request, pk):
     cot = get_object_or_404(Cotizacion, pk=pk)
     proyecto = cot.proyecto
     if request.method == 'POST':
+        ref = f'COT-{cot.numero}'
         cot.delete()
+        log(request, 'ELIMINAR', 'Almacén', f'Cotización {ref} eliminada en {proyecto.codigo}')
         messages.success(request, 'Cotización eliminada.')
         return redirect('almacen:cot_lista', proyecto_id=proyecto.pk)
     return render(request, 'almacen/confirmar_eliminar.html', {'obj': cot, 'proyecto': proyecto})
@@ -441,7 +498,8 @@ def oc_crear(request, proyecto_id):
                 if f.cleaned_data and not f.cleaned_data.get('DELETE'):
                     d = f.save(commit=False)
                     d.orden = oc
-                    d.save()
+                    _sync_insumo_snapshot(d)
+            log(request, 'CREAR', 'Almacén', f'OC-{oc.numero} creada en {proyecto.codigo}')
             messages.success(request, f'OC-{oc.numero} creada.')
             return redirect('almacen:oc_detalle', pk=oc.pk)
     else:
@@ -460,7 +518,9 @@ def oc_editar(request, pk):
         formset = DetalleOrdenCompraFormSet(request.POST, instance=oc, prefix='detalles')
         if form.is_valid() and formset.is_valid():
             form.save()
-            formset.save()
+            for d in formset.save():
+                _sync_insumo_snapshot(d)
+            log(request, 'EDITAR', 'Almacén', f'OC-{oc.numero} editada en {proyecto.codigo}')
             messages.success(request, 'Orden actualizada.')
             return redirect('almacen:oc_detalle', pk=oc.pk)
     else:
@@ -475,7 +535,9 @@ def oc_eliminar(request, pk):
     oc = get_object_or_404(OrdenCompra, pk=pk)
     proyecto = oc.proyecto
     if request.method == 'POST':
+        ref = f'OC-{oc.numero}'
         oc.delete()
+        log(request, 'ELIMINAR', 'Almacén', f'{ref} eliminada en {proyecto.codigo}')
         messages.success(request, 'Orden eliminada.')
         return redirect('almacen:oc_lista', proyecto_id=proyecto.pk)
     return render(request, 'almacen/confirmar_eliminar.html', {'obj': oc, 'proyecto': proyecto})
@@ -483,10 +545,47 @@ def oc_eliminar(request, pk):
 
 # ── API ───────────────────────────────────────────────────────────────────────
 
+def api_req_detalles(request, pk):
+    from apps.requerimientos.models import Requerimiento as Req
+    try:
+        req = Req.objects.get(pk=pk)
+        data = [
+            {
+                'descripcion': d.descripcion or (d.insumo.descripcion if d.insumo else ''),
+                'cantidad': str(d.cantidad),
+                'unidad': d.unidad,
+                'insumo_id': d.insumo_id or '',
+            }
+            for d in req.detalles.all()
+        ]
+    except Req.DoesNotExist:
+        data = []
+    return JsonResponse(data, safe=False)
+
+
+def api_insumo_stock(request, insumo_id):
+    proyecto = Proyecto.objects.filter(activo=True).first()
+    if not proyecto:
+        return JsonResponse({'stock': 0})
+    entrada = DetalleEntrada.objects.filter(
+        entrada__proyecto=proyecto, insumo_id=insumo_id
+    ).aggregate(total=Sum('cantidad'))['total'] or 0
+    salida = DetalleSalida.objects.filter(
+        salida__proyecto=proyecto, insumo_id=insumo_id
+    ).aggregate(total=Sum('cantidad'))['total'] or 0
+    return JsonResponse({'stock': float(entrada - salida)})
+
+
 def api_productos(request):
     q = request.GET.get('q', '')
-    productos = Producto.objects.filter(activo=True)
+    proyecto_activo = Proyecto.objects.filter(activo=True).first()
+    if not proyecto_activo or not hasattr(proyecto_activo, 'presupuesto'):
+        return JsonResponse([], safe=False)
+    qs = proyecto_activo.presupuesto.insumos.all()
     if q:
-        productos = productos.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
-    data = [{'id': p.pk, 'codigo': p.codigo, 'descripcion': p.descripcion, 'unidad': p.unidad} for p in productos[:50]]
+        qs = qs.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
+    data = [
+        {'id': p.pk, 'codigo': p.codigo, 'descripcion': p.descripcion, 'unidad': p.unidad}
+        for p in qs[:50]
+    ]
     return JsonResponse(data, safe=False)

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Resumen HH / HM{% endblock %}
+{% block nav_maquinaria %}active{% endblock %}
+{% block nav_maq_resumen %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:dashboard' proyecto.pk %}">Maquinaria</a></li>
+<li class="breadcrumb-item active">Resumen por Partida</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'maquinaria:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Maquinaria</a>
+  <h4><i class="bi bi-bar-chart-line me-2"></i>Resumen HH y HM por Partida</h4>
+  <div class="text-muted">Horas acumuladas de cuadrilla y maquinaria vinculadas a partidas</div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Cód.</th>
+          <th>Partida</th>
+          <th class="text-end" style="color:#0ea5e9">HH<br><small class="fw-normal">Horas Hombre</small></th>
+          <th class="text-end" style="color:#f59e0b">HM<br><small class="fw-normal">Horas Máquina</small></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for item in resumen_list %}
+      <tr>
+        <td class="fw-semibold text-muted">{{ item.partida.codigo }}</td>
+        <td>{{ item.partida.nombre }}</td>
+        <td class="text-end fw-semibold" style="color:#0ea5e9">
+          {% if item.hh %}{{ item.hh }}{% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+        <td class="text-end fw-semibold" style="color:#f59e0b">
+          {% if item.hm %}{{ item.hm }}{% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" class="text-center text-muted py-5">
+          <i class="bi bi-bar-chart" style="font-size:1.8rem"></i>
+          <p class="mt-2 mb-0">Sin registros vinculados a partidas aún.</p>
+          <small>Al crear registros de cuadrilla o maquinaria y asociarlos a una partida, aparecerán aquí.</small>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Almacén - {{ proyecto.nombre }}{% endblock %}
-{% block nav_almacen %}active{% endblock %}
+{% block nav_almacen_dash %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:lista' %}">Proyectos</a></li>
 <li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
@@ -100,7 +100,7 @@
 
 <div class="row g-3">
   <div class="col-lg-4">
-    <a href="{% url 'almacen:req_lista' proyecto.pk %}" class="card mod-card mb-3">
+    <a href="{% url 'requerimientos:lista' proyecto.pk %}" class="card mod-card mb-3">
       <div class="card-body d-flex align-items-center gap-3 py-3">
         <div class="mod-icon bg-warning bg-opacity-10">
           <i class="bi bi-file-earmark-text" style="color:var(--accent)"></i>
@@ -166,7 +166,7 @@
     <div class="card mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Últimos Requerimientos</span>
-        <a href="{% url 'almacen:req_crear' proyecto.pk %}" class="btn-tbl">
+        <a href="{% url 'requerimientos:crear' proyecto.pk %}" class="btn-tbl">
           <i class="bi bi-plus-lg"></i> Nuevo
         </a>
       </div>
@@ -176,11 +176,11 @@
           <tbody>
           {% for r in ultimos_req %}
           <tr>
-            <td><a href="{% url 'almacen:req_detalle' r.pk %}" class="fw-semibold text-decoration-none">REQ-{{ r.numero }}</a></td>
+            <td><a href="{% url 'requerimientos:detalle' r.pk %}" class="fw-semibold text-decoration-none">REQ-{{ r.numero }}</a></td>
             <td>{{ r.fecha|date:"d/m/Y" }}</td>
             <td>{{ r.get_tipo_display }}</td>
             <td><span class="badge {% if r.estado == 'ATENDIDO' %}bg-success{% elif r.estado == 'PENDIENTE' %}bg-warning text-dark{% elif r.estado == 'ANULADO' %}bg-danger{% else %}bg-secondary{% endif %}">{{ r.get_estado_display }}</span></td>
-            <td><a href="{% url 'almacen:req_detalle' r.pk %}" class="btn-tbl"><i class="bi bi-eye"></i></a></td>
+            <td><a href="{% url 'requerimientos:detalle' r.pk %}" class="btn-tbl"><i class="bi bi-eye"></i></a></td>
           </tr>
           {% empty %}
           <tr><td colspan="5" class="text-center text-muted py-4">Sin registros</td></tr>

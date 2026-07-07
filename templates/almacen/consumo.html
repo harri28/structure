@@ -1,0 +1,115 @@
+﻿{% extends 'base.html' %}
+{% block title %}Consumo — {{ proyecto.codigo }}{% endblock %}
+{% block nav_consumo %}active{% endblock %}
+{% block submodule_chips %}{% include 'almacen/_almacen_nav.html' with active_tab='consumo' %}{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'almacen:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Almacén</a>
+    <h4><i class="bi bi-graph-up-arrow me-2"></i>Consumo de Materiales</h4>
+    <div class="text-muted">Materiales despachados acumulados por tipo</div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+      <select name="tipo" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <option value="">Todos los tipos</option>
+        {% for val, label in tipos %}
+        <option value="{{ val }}" {% if tipo_sel == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <div class="d-flex align-items-center gap-1">
+        <label class="text-muted" style="font-size:.82rem;white-space:nowrap">Desde</label>
+        <input type="date" name="desde" value="{{ desde }}" class="form-control form-control-sm" style="width:140px">
+      </div>
+      <div class="d-flex align-items-center gap-1">
+        <label class="text-muted" style="font-size:.82rem;white-space:nowrap">Hasta</label>
+        <input type="date" name="hasta" value="{{ hasta }}" class="form-control form-control-sm" style="width:140px">
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+      {% if tipo_sel or desde or hasta %}
+      <a href="{% url 'almacen:consumo' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+      {% endif %}
+      <span class="ms-auto text-muted" style="font-size:.78rem">{{ items|length }} insumo{{ items|length|pluralize }}</span>
+    </form>
+  </div>
+</div>
+
+{% if items %}
+<!-- Resumen total -->
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="card text-center py-3">
+      <div class="fw-bold" style="font-size:1.5rem">{{ items|length }}</div>
+      <div class="text-muted" style="font-size:.82rem">Insumos consumidos</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center py-3">
+      <div class="fw-bold text-danger" style="font-size:1.5rem">S/ {{ total_costo|floatformat:2 }}</div>
+      <div class="text-muted" style="font-size:.82rem">Costo total despachado</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Descripción</th>
+          <th>Tipo</th>
+          <th>Unidad</th>
+          <th class="text-end">Cantidad consumida</th>
+          <th class="text-end">Costo total (S/)</th>
+          <th class="text-end">Despachos</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>
+            {% if item.insumo %}
+              <div>{{ item.descripcion }}</div>
+              <div class="text-muted" style="font-size:.78rem"><code>{{ item.insumo.codigo }}</code></div>
+            {% else %}
+              {{ item.descripcion }}
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge bg-secondary" style="font-size:.7rem">{{ item.tipo_display }}</span>
+          </td>
+          <td class="text-muted">{{ item.unidad }}</td>
+          <td class="text-end fw-semibold">{{ item.total_cantidad|floatformat:4 }}</td>
+          <td class="text-end text-danger fw-semibold">{{ item.total_costo|floatformat:2 }}</td>
+          <td class="text-end text-muted">{{ item.num_registros }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="bi bi-graph-up-arrow d-block"></i>
+              <p>Sin consumo registrado{% if tipo_sel or desde or hasta %} con los filtros aplicados{% endif %}. Registra <a href="{% url 'almacen:salida_crear' proyecto.pk %}">salidas</a> de material.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if items %}
+      <tfoot>
+        <tr class="fw-bold">
+          <td colspan="4" class="text-end text-muted">Total costo despachado</td>
+          <td class="text-end text-danger">S/ {{ total_costo|floatformat:2 }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}

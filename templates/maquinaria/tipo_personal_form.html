@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_tipo_personal %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:tipo_personal_lista' %}">Tipos de Personal</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'maquinaria:tipo_personal_lista' %}" class="btn-back"><i class="bi bi-chevron-left"></i> Tipos de Personal</a>
+  <h4><i class="bi bi-person-gear me-2"></i>{{ titulo }}</h4>
+</div>
+
+<div class="card" style="max-width:520px">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Código</label>
+        {{ form.codigo }}
+        <div class="form-text">Ej: PEON, OFIC, OPER, CAPAT</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Nombre</label>
+        {{ form.nombre }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Costo por hora (S/.)</label>
+        {{ form.costo_hora }}
+      </div>
+      <div class="mb-4 form-check">
+        {{ form.activo }}
+        <label class="form-check-label">Activo</label>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <a href="{% url 'maquinaria:tipo_personal_lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

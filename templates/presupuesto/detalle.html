@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ presupuesto.nombre }}{% endblock %}
-{% block nav_presupuesto %}active{% endblock %}
+{% block nav_pres_partidas %}active{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
@@ -16,133 +16,246 @@
       {{ presupuesto.nombre }}
     </h4>
   </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'presupuesto:insumos' presupuesto.pk %}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-boxes me-1"></i>Insumos
-    </a>
-    <a href="{% url 'presupuesto:importar' presupuesto.pk %}" class="btn btn-primary btn-sm">
-      <i class="bi bi-upload me-1"></i>Importar S10
-    </a>
-  </div>
 </div>
 
-<div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center gap-2">
-    <span class="flex-shrink-0">Partidas del Presupuesto</span>
-    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end">
-      <!-- Búsqueda semántica ML -->
-      <div class="input-group input-group-sm" style="max-width:280px">
-        <span class="input-group-text" style="background:#fff;border-color:#e5e7eb">
-          <i class="bi bi-stars" style="color:#f59e0b;font-size:.8rem"></i>
-        </span>
-        <input type="text" id="ml-search-input" class="form-control form-control-sm"
-               placeholder="Buscar partida (IA)…" autocomplete="off"
-               style="border-left:none;font-size:.8rem">
-        <button id="ml-search-clear" class="btn btn-outline-secondary btn-sm d-none"
-                title="Limpiar">✕</button>
+<!-- ── Nav ─────────────────────────────────────────────────────────── -->
+{% include 'presupuesto/_pres_nav.html' with active_tab='partidas' %}
+
+<div class="tab-content">
+
+  <!-- ── Tab 1: Partidas ─────────────────────────────────────────── -->
+  <div class="tab-pane fade show active" id="tab-partidas" role="tabpanel">
+    <div class="card" style="border-top-left-radius:0">
+      <div class="card-header d-flex justify-content-between align-items-center gap-2">
+        <span class="flex-shrink-0">Partidas del Presupuesto</span>
+        <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end">
+          <!-- Búsqueda semántica ML -->
+          <div class="input-group input-group-sm" style="max-width:280px">
+            <span class="input-group-text" style="background:#fff;border-color:#e5e7eb">
+              <i class="bi bi-stars" style="color:#f59e0b;font-size:.8rem"></i>
+            </span>
+            <input type="text" id="ml-search-input" class="form-control form-control-sm"
+                   placeholder="Buscar partida (IA)…" autocomplete="off"
+                   style="border-left:none;font-size:.8rem">
+            <button id="ml-search-clear" class="btn btn-outline-secondary btn-sm d-none" title="Limpiar">✕</button>
+          </div>
+          <span class="badge bg-secondary flex-shrink-0">{{ presupuesto.partidas.count }} partidas</span>
+          <span style="font-size:.82rem;color:#6b7280;flex-shrink:0">
+            C.D.: <strong style="color:#111">S/ {{ costo_directo|miles:2 }}</strong>
+          </span>
+        </div>
       </div>
-      <span class="badge bg-secondary flex-shrink-0">{{ presupuesto.partidas.count }} partidas</span>
-      <span style="font-size:.82rem;color:#6b7280;flex-shrink:0">
-        C.D.: <strong style="color:#111">S/ {{ costo_directo|miles:2 }}</strong>
-      </span>
+
+      <!-- Resultados ML -->
+      <div id="ml-search-results" class="d-none" style="border-bottom:1px solid #f3f4f6">
+        <table class="table table-sm mb-0">
+          <thead style="background:#fffbeb">
+            <tr>
+              <th style="width:16%;font-size:.75rem">Ítem</th>
+              <th style="font-size:.75rem">Descripción</th>
+              <th style="width:8%;font-size:.75rem">Und</th>
+              <th style="width:12%;font-size:.75rem" class="text-end">P.U. (S/)</th>
+              <th style="width:8%;font-size:.75rem" class="text-center">Similitud</th>
+              <th style="width:44px"></th>
+            </tr>
+          </thead>
+          <tbody id="ml-search-tbody"></tbody>
+        </table>
+        <div id="ml-search-empty" class="text-center py-3 text-muted d-none" style="font-size:.82rem">
+          Sin resultados similares a "<span id="ml-empty-q"></span>"
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead>
+              <tr>
+                <th style="width:15%">Ítem</th>
+                <th>Descripción</th>
+                <th style="width:8%">Und</th>
+                <th style="width:10%" class="text-end">Metrado</th>
+                <th style="width:12%" class="text-end">P.U.</th>
+                <th style="width:13%" class="text-end">Parcial (S/.)</th>
+                <th style="width:44px" class="text-center" title="Análisis de Costos Unitarios">
+                  <i class="bi bi-calculator-fill text-muted" style="font-size:.75rem"></i>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for partida in partidas_raiz %}
+                {% include 'presupuesto/_partida_row.html' with partida=partida %}
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">
+                  No hay partidas. <a href="{% url 'presupuesto:importar' presupuesto.pk %}">Importar desde S10</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card-footer p-0">
+        <table class="table table-sm mb-0" style="max-width:420px;margin-left:auto">
+          <tbody>
+            <tr>
+              <td class="text-muted ps-3" style="font-size:.82rem">Costo Directo</td>
+              <td class="text-end pe-3 fw-semibold" style="font-size:.82rem">S/ {{ costo_directo|miles:2 }}</td>
+            </tr>
+            {% if presupuesto.gastos_generales_pct %}
+            <tr>
+              <td class="text-muted ps-3" style="font-size:.82rem">Gastos Generales ({{ presupuesto.gastos_generales_pct }}%)</td>
+              <td class="text-end pe-3" style="font-size:.82rem">S/ {{ gastos_generales|miles:2 }}</td>
+            </tr>
+            {% endif %}
+            {% if presupuesto.utilidad_pct %}
+            <tr>
+              <td class="text-muted ps-3" style="font-size:.82rem">Utilidad ({{ presupuesto.utilidad_pct }}%)</td>
+              <td class="text-end pe-3" style="font-size:.82rem">S/ {{ utilidad|miles:2 }}</td>
+            </tr>
+            {% endif %}
+            {% if presupuesto.gastos_generales_pct or presupuesto.utilidad_pct %}
+            <tr style="border-top:1px solid #e5e7eb">
+              <td class="text-muted ps-3" style="font-size:.82rem">Sub Total</td>
+              <td class="text-end pe-3" style="font-size:.82rem">S/ {{ sub_total|miles:2 }}</td>
+            </tr>
+            {% endif %}
+            {% if presupuesto.igv_pct %}
+            <tr>
+              <td class="text-muted ps-3" style="font-size:.82rem">IGV ({{ presupuesto.igv_pct }}%)</td>
+              <td class="text-end pe-3" style="font-size:.82rem">S/ {{ igv|miles:2 }}</td>
+            </tr>
+            {% endif %}
+            {% if presupuesto.supervision_pct %}
+            <tr style="border-top:1px solid #e5e7eb">
+              <td class="ps-3 fw-semibold" style="font-size:.82rem">Costo Total de Obra</td>
+              <td class="text-end pe-3 fw-semibold" style="font-size:.82rem">S/ {{ costo_total_obra|miles:2 }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted ps-3" style="font-size:.82rem">Supervisión ({{ presupuesto.supervision_pct }}%CO)</td>
+              <td class="text-end pe-3" style="font-size:.82rem">S/ {{ supervision|miles:2 }}</td>
+            </tr>
+            {% endif %}
+            <tr style="border-top:2px solid #1d4ed8;background:#eff6ff">
+              <td class="ps-3 fw-bold" style="font-size:.9rem;color:#1d4ed8">
+                {% if presupuesto.supervision_pct %}PRESUPUESTO TOTAL DE OBRA{% else %}TOTAL PRESUPUESTO{% endif %}
+              </td>
+              <td class="text-end pe-3 fw-bold" style="font-size:.9rem;color:#1d4ed8">S/ {{ total_presupuesto|miles:2 }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <!-- Resultados de búsqueda ML (se muestra/oculta dinámicamente) -->
-  <div id="ml-search-results" class="d-none" style="border-bottom:1px solid #f3f4f6">
-    <table class="table table-sm mb-0">
-      <thead style="background:#fffbeb">
-        <tr>
-          <th style="width:16%;font-size:.75rem">Ítem</th>
-          <th style="font-size:.75rem">Descripción</th>
-          <th style="width:8%;font-size:.75rem">Und</th>
-          <th style="width:12%;font-size:.75rem" class="text-end">P.U. (S/)</th>
-          <th style="width:8%;font-size:.75rem" class="text-center">Similitud</th>
-          <th style="width:44px"></th>
-        </tr>
-      </thead>
-      <tbody id="ml-search-tbody"></tbody>
-    </table>
-    <div id="ml-search-empty" class="text-center py-3 text-muted d-none" style="font-size:.82rem">
-      Sin resultados similares a "<span id="ml-empty-q"></span>"
-    </div>
-  </div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-sm table-hover mb-0">
-        <thead>
-          <tr>
-            <th style="width:15%">Ítem</th>
-            <th>Descripción</th>
-            <th style="width:8%">Und</th>
-            <th style="width:10%" class="text-end">Metrado</th>
-            <th style="width:12%" class="text-end">P.U.</th>
-            <th style="width:13%" class="text-end">Parcial (S/.)</th>
-            <th style="width:44px" class="text-center"
-                title="Análisis de Costos Unitarios">
-              <i class="bi bi-calculator-fill text-muted" style="font-size:.75rem"></i>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for partida in partidas_raiz %}
-            {% include 'presupuesto/_partida_row.html' with partida=partida %}
-          {% empty %}
-          <tr>
-            <td colspan="6" class="text-center py-4 text-muted">
-              No hay partidas. <a href="{% url 'presupuesto:importar' presupuesto.pk %}">Importar desde S10</a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <!-- ── Tab 2: Insumos ──────────────────────────────────────────── -->
+  <div class="tab-pane fade" id="tab-insumos" role="tabpanel">
+    <div class="card" style="border-top-left-radius:0">
+
+      <!-- Conteos por tipo -->
+      <div class="card-header d-flex align-items-center gap-3 flex-wrap">
+        <span class="fw-semibold flex-shrink-0">Lista de Insumos</span>
+        <div class="d-flex gap-2 flex-wrap ms-2">
+          <button class="btn btn-sm btn-outline-secondary ins-filter active" data-tipo="">
+            Todos <span class="badge bg-secondary ms-1">{{ insumos.count }}</span>
+          </button>
+          <button class="btn btn-sm btn-outline-warning ins-filter" data-tipo="MANO_OBRA">
+            <i class="bi bi-person-arms-up me-1"></i>Mano de Obra
+            <span class="badge bg-warning text-dark ms-1">{{ totales.mano_obra }}</span>
+          </button>
+          <button class="btn btn-sm btn-outline-primary ins-filter" data-tipo="MATERIAL">
+            <i class="bi bi-box-seam me-1"></i>Materiales
+            <span class="badge bg-primary ms-1">{{ totales.materiales }}</span>
+          </button>
+          <button class="btn btn-sm btn-outline-success ins-filter" data-tipo="EQUIPO">
+            <i class="bi bi-gear me-1"></i>Equipos
+            <span class="badge bg-success ms-1">{{ totales.equipos }}</span>
+          </button>
+          <button class="btn btn-sm ins-filter" data-tipo="SUBCONTRATO"
+                  style="color:#7c3aed;border-color:#7c3aed">
+            <i class="bi bi-building me-1"></i>Subcontratos
+            <span class="badge ms-1" style="background:#7c3aed">{{ totales.subcontratos }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0" id="insumos-table">
+          <thead>
+            <tr>
+              <th style="width:10%">Código</th>
+              <th>Descripción</th>
+              <th style="width:10%">Tipo</th>
+              <th style="width:7%">Unidad</th>
+              <th style="width:11%" class="text-end">Cantidad</th>
+              <th style="width:12%" class="text-end">Costo Unit.</th>
+              <th style="width:13%" class="text-end">Total (S/.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ins in insumos %}
+            <tr data-tipo="{{ ins.tipo }}">
+              <td><code style="font-size:.78rem">{{ ins.codigo }}</code></td>
+              <td style="font-size:.84rem">{{ ins.descripcion }}</td>
+              <td>
+                <span class="badge
+                  {% if ins.tipo == 'MATERIAL' %}bg-primary
+                  {% elif ins.tipo == 'MANO_OBRA' %}bg-warning text-dark
+                  {% elif ins.tipo == 'EQUIPO' %}bg-success
+                  {% else %}bg-secondary{% endif %}"
+                  style="font-size:.68rem">{{ ins.get_tipo_display }}</span>
+              </td>
+              <td style="font-size:.82rem;color:#6b7280">{{ ins.unidad }}</td>
+              <td class="text-end" style="font-size:.82rem">{{ ins.cantidad|floatformat:4 }}</td>
+              <td class="text-end" style="font-size:.82rem">{{ ins.costo_unitario|floatformat:2 }}</td>
+              <td class="text-end fw-semibold" style="font-size:.82rem">{{ ins.total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr id="ins-empty-row">
+              <td colspan="7" class="text-center py-4 text-muted">
+                No hay insumos importados.
+                <a href="{% url 'presupuesto:importar' presupuesto.pk %}">Importar ahora</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
     </div>
   </div>
 
-  {# Resumen de costos al pie de la tabla #}
-  <div class="card-footer p-0">
-    <table class="table table-sm mb-0" style="max-width:420px;margin-left:auto">
-      <tbody>
-        <tr>
-          <td class="text-muted ps-3" style="font-size:.82rem">Costo Directo</td>
-          <td class="text-end pe-3 fw-semibold" style="font-size:.82rem">S/ {{ costo_directo|miles:2 }}</td>
-        </tr>
-        {% if presupuesto.gastos_generales_pct %}
-        <tr>
-          <td class="text-muted ps-3" style="font-size:.82rem">Gastos Generales ({{ presupuesto.gastos_generales_pct }}%)</td>
-          <td class="text-end pe-3" style="font-size:.82rem">S/ {{ gastos_generales|miles:2 }}</td>
-        </tr>
-        {% endif %}
-        {% if presupuesto.utilidad_pct %}
-        <tr>
-          <td class="text-muted ps-3" style="font-size:.82rem">Utilidad ({{ presupuesto.utilidad_pct }}%)</td>
-          <td class="text-end pe-3" style="font-size:.82rem">S/ {{ utilidad|miles:2 }}</td>
-        </tr>
-        {% endif %}
-        {% if presupuesto.gastos_generales_pct or presupuesto.utilidad_pct %}
-        <tr style="border-top:1px solid #e5e7eb">
-          <td class="text-muted ps-3" style="font-size:.82rem">Sub Total</td>
-          <td class="text-end pe-3" style="font-size:.82rem">S/ {{ sub_total|miles:2 }}</td>
-        </tr>
-        {% endif %}
-        {% if presupuesto.igv_pct %}
-        <tr>
-          <td class="text-muted ps-3" style="font-size:.82rem">IGV ({{ presupuesto.igv_pct }}%)</td>
-          <td class="text-end pe-3" style="font-size:.82rem">S/ {{ igv|miles:2 }}</td>
-        </tr>
-        {% endif %}
-        <tr style="border-top:2px solid #1d4ed8;background:#eff6ff">
-          <td class="ps-3 fw-bold" style="font-size:.9rem;color:#1d4ed8">TOTAL PRESUPUESTO</td>
-          <td class="text-end pe-3 fw-bold" style="font-size:.9rem;color:#1d4ed8">S/ {{ total_presupuesto|miles:2 }}</td>
-        </tr>
-      </tbody>
-    </table>
+</div>
+
+<!-- ── Panel lateral de partida ──────────────────────────────── -->
+<div id="partida-panel-overlay"></div>
+<div id="partida-panel">
+  <div id="pnl-loading" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">
+    <span class="spinner-border spinner-border-sm me-2"></span> Cargando…
   </div>
+  <div id="pnl-content" style="display:contents"></div>
 </div>
 {% endblock content %}
 
 {% block extra_js %}
 <script>
+// ── Filtro de insumos (sin recarga) ──────────────────────────────
+(function () {
+  document.querySelectorAll('.ins-filter').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.ins-filter').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var tipo = btn.dataset.tipo;
+      document.querySelectorAll('#insumos-table tbody tr[data-tipo]').forEach(function (row) {
+        row.style.display = (!tipo || row.dataset.tipo === tipo) ? '' : 'none';
+      });
+    });
+  });
+})();
+
+// ── Búsqueda semántica ML ────────────────────────────────────────
 (function () {
   var input   = document.getElementById('ml-search-input');
   var clearBtn= document.getElementById('ml-search-clear');
@@ -150,7 +263,7 @@
   var tbody   = document.getElementById('ml-search-tbody');
   var empty   = document.getElementById('ml-search-empty');
   var emptyQ  = document.getElementById('ml-empty-q');
-  var tableWrap = document.querySelector('.table-responsive');
+  var tableWrap = document.querySelector('#tab-partidas .table-responsive');
   var timer   = null;
 
   function fmt(n) {
@@ -218,6 +331,128 @@
     resetear();
     input.focus();
   });
+})();
+
+// ── Panel lateral de partida ─────────────────────────────────────
+(function () {
+  var panel       = document.getElementById('partida-panel');
+  var overlay     = document.getElementById('partida-panel-overlay');
+  var loading     = document.getElementById('pnl-loading');
+  var content     = document.getElementById('pnl-content');
+  var activeRow   = null;
+  var currentId   = null;
+
+  function getCsrf() {
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  function abrirPanel(id) {
+    currentId = String(id);
+    if (activeRow) activeRow.classList.remove('pnl-active');
+    activeRow = document.querySelector('tr[data-partida-id="' + id + '"]');
+    if (activeRow) activeRow.classList.add('pnl-active');
+
+    loading.style.display = 'flex';
+    content.innerHTML = '';
+    panel.classList.add('open');
+    overlay.classList.add('show');
+
+    fetch('/presupuesto/partida/' + id + '/panel/', {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.text(); })
+    .then(function(html) {
+      loading.style.display = 'none';
+      content.innerHTML = html;
+      var closeBtn = content.querySelector('#pnl-close-btn');
+      if (closeBtn) closeBtn.addEventListener('click', cerrarPanel);
+    })
+    .catch(function() {
+      loading.style.display = 'none';
+      content.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#dc2626">' +
+        '<i class="bi bi-exclamation-circle d-block mb-2" style="font-size:1.5rem"></i>' +
+        'Error al cargar el panel.</div>';
+    });
+  }
+
+  function cerrarPanel() {
+    panel.classList.remove('open');
+    overlay.classList.remove('show');
+    if (activeRow) { activeRow.classList.remove('pnl-active'); activeRow = null; }
+    currentId = null;
+  }
+
+  document.addEventListener('click', function(e) {
+    var delBtn = e.target.closest('.pnl-delete-recurso');
+    if (delBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!confirm('¿Eliminar este recurso?')) return;
+      var form = delBtn.closest('form');
+      delBtn.disabled = true;
+      fetch(form.action, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrf() },
+        body: new URLSearchParams(new FormData(form)),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { if (d.ok && currentId) abrirPanel(currentId); })
+      .catch(function() { delBtn.disabled = false; });
+      return;
+    }
+
+    var btn = e.target.closest('.pnl-trigger');
+    if (btn) {
+      e.stopPropagation();
+      var id = btn.dataset.id;
+      if (panel.classList.contains('open') && currentId === String(id)) {
+        cerrarPanel();
+      } else {
+        abrirPanel(id);
+      }
+      return;
+    }
+
+    if (!e.target.closest('.partida-toggle') && !e.target.closest('.pnl-trigger')) {
+      var row = e.target.closest('tr[data-partida-id]');
+      if (row) abrirPanel(row.dataset.partidaId);
+    }
+  });
+
+  document.addEventListener('submit', function(e) {
+    var form = e.target.closest('.pnl-add-form');
+    if (!form) return;
+    e.preventDefault();
+    var addBtn = form.querySelector('.pnl-add-btn');
+    if (addBtn) { addBtn.disabled = true; addBtn.textContent = 'Guardando…'; }
+    fetch(form.action, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrf() },
+      body: new URLSearchParams(new FormData(form)),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok && currentId) {
+        abrirPanel(currentId);
+      } else {
+        if (addBtn) { addBtn.disabled = false; addBtn.textContent = 'Agregar recurso'; }
+        if (d.error) alert(d.error);
+      }
+    })
+    .catch(function() {
+      if (addBtn) { addBtn.disabled = false; addBtn.textContent = 'Agregar recurso'; }
+    });
+  });
+
+  overlay.addEventListener('click', cerrarPanel);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') cerrarPanel();
+  });
+
+  window.abrirSugerenciasML = function(id) {
+    window.open('/presupuesto/partida/' + id + '/acu/', '_blank');
+  };
 })();
 </script>
 {% endblock %}

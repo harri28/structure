@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar REQ-{{ obj.numero }}{% endblock %}
+{% block nav_req %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Requerimientos</a></li>
+<li class="breadcrumb-item active">Eliminar</li>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:500px;margin:2rem auto">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:2.5rem"></i>
+    <h5 class="mt-3">¿Eliminar REQ-{{ obj.numero }}?</h5>
+    <p class="text-muted">Esta acción no se puede deshacer.</p>
+    <div class="d-flex gap-2 justify-content-center mt-4">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+      </form>
+      <a href="{% url 'requerimientos:detalle' obj.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

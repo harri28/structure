@@ -3,15 +3,30 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-from .models import ConfigEmpresa, Rol, PerfilUsuario, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS
+from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, ParametroSistema, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS
+
+
+# ── Hub ───────────────────────────────────────────────────────────
+
+def hub(request):
+    config = ConfigEmpresa.get()
+    params = ParametroSistema.get()
+    sunat  = ConfigSunat.get()
+    return render(request, 'configuracion/hub.html', {
+        'config':     config,
+        'params':     params,
+        'sunat':      sunat,
+        'n_usuarios': User.objects.filter(is_active=True).count(),
+        'n_roles':    Rol.objects.count(),
+    })
 
 
 # ── Empresa ───────────────────────────────────────────────────────
 
 class EmpresaForm(forms.ModelForm):
     class Meta:
-        model = ConfigEmpresa
-        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email', 'web', 'moneda', 'igv']
+        model  = ConfigEmpresa
+        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email', 'web', 'moneda', 'igv', 'logo']
         widgets = {
             'razon_social': forms.TextInput(attrs={'class': 'form-control'}),
             'ruc':          forms.TextInput(attrs={'class': 'form-control', 'maxlength': 11}),
@@ -21,13 +36,14 @@ class EmpresaForm(forms.ModelForm):
             'web':          forms.URLInput(attrs={'class': 'form-control'}),
             'moneda':       forms.TextInput(attrs={'class': 'form-control', 'style': 'width:100px'}),
             'igv':          forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'style': 'width:120px'}),
+            'logo':         forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
 
 
 def empresa(request):
     config = ConfigEmpresa.get()
     if request.method == 'POST':
-        form = EmpresaForm(request.POST, instance=config)
+        form = EmpresaForm(request.POST, request.FILES, instance=config)
         if form.is_valid():
             form.save()
             messages.success(request, 'Configuración guardada.')
@@ -35,6 +51,64 @@ def empresa(request):
     else:
         form = EmpresaForm(instance=config)
     return render(request, 'configuracion/empresa.html', {'form': form, 'config': config})
+
+
+# ── Parámetros del Sistema ────────────────────────────────────────
+
+class ParametrosForm(forms.ModelForm):
+    class Meta:
+        model  = ParametroSistema
+        fields = ['gg_pct_default', 'utilidad_pct_default', 'igv_pct_default', 'dias_vigencia_cot']
+        widgets = {
+            'gg_pct_default':       forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'utilidad_pct_default': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'igv_pct_default':      forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'dias_vigencia_cot':    forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+        }
+
+
+class SunatForm(forms.ModelForm):
+    class Meta:
+        model  = ConfigSunat
+        fields = ['regimen_tributario', 'usuario_sol', 'clave_sol',
+                  'tipo_comprobante', 'serie_factura', 'serie_boleta',
+                  'numero_correlativo', 'ose']
+        widgets = {
+            'regimen_tributario': forms.Select(attrs={'class': 'form-select'}),
+            'usuario_sol':        forms.TextInput(attrs={'class': 'form-control'}),
+            'clave_sol':          forms.PasswordInput(attrs={'class': 'form-control', 'render_value': True}),
+            'tipo_comprobante':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: FACTURA'}),
+            'serie_factura':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: F001'}),
+            'serie_boleta':       forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: B001'}),
+            'numero_correlativo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 00000001'}),
+            'ose':                forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: SUNAT, Efact, Nubefact…'}),
+        }
+
+
+def sunat(request):
+    config_sunat = ConfigSunat.get()
+    if request.method == 'POST':
+        form = SunatForm(request.POST, instance=config_sunat)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Configuración SUNAT guardada.')
+            return redirect('configuracion:sunat')
+    else:
+        form = SunatForm(instance=config_sunat)
+    return render(request, 'configuracion/sunat.html', {'form': form})
+
+
+def parametros(request):
+    params = ParametroSistema.get()
+    if request.method == 'POST':
+        form = ParametrosForm(request.POST, instance=params)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Parámetros guardados.')
+            return redirect('configuracion:parametros')
+    else:
+        form = ParametrosForm(instance=params)
+    return render(request, 'configuracion/parametros.html', {'form': form, 'params': params})
 
 
 # ── Equipo (Usuarios + Roles combinados) ──────────────────────────

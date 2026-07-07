@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Cuadrillas{% endblock %}
+{% block nav_cuadrillas %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Cuadrillas</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4><i class="bi bi-people me-2"></i>Cuadrillas</h4>
+    <div class="text-muted">Composición de cuadrillas tipo para el registro de campo</div>
+  </div>
+  <a href="{% url 'maquinaria:cuadrilla_crear' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Nueva
+  </a>
+</div>
+
+<div class="row g-3">
+{% for c in cuadrillas %}
+<div class="col-md-6 col-lg-4">
+  <div class="card h-100">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">{{ c.nombre }}</span>
+      {% if c.activo %}<span class="badge bg-success">Activa</span>{% else %}<span class="badge bg-secondary">Inactiva</span>{% endif %}
+    </div>
+    <div class="card-body p-0">
+      <table class="table-modern mb-0">
+        <thead><tr><th>Categoría</th><th class="text-end">Cant.</th><th class="text-end">S/./h</th></tr></thead>
+        <tbody>
+        {% for i in c.integrantes.all %}
+        <tr>
+          <td>{{ i.tipo_personal.nombre }}</td>
+          <td class="text-end">{{ i.cantidad }}</td>
+          <td class="text-end text-muted">{{ i.costo_parcial_hora|miles }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-center text-muted py-2">Sin integrantes</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer d-flex justify-content-between align-items-center">
+      <small class="text-muted">{{ c.hh_por_hora }} HH/hora · S/. {{ c.costo_hora|miles }}/h</small>
+      <div class="d-flex gap-1">
+        <a href="{% url 'maquinaria:cuadrilla_detalle' c.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
+        <a href="{% url 'maquinaria:cuadrilla_eliminar' c.pk %}" class="btn-tbl text-danger"><i class="bi bi-trash"></i></a>
+      </div>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="col-12">
+  <div class="card">
+    <div class="card-body text-center text-muted py-5">
+      <i class="bi bi-people" style="font-size:2rem"></i>
+      <p class="mt-2">Sin cuadrillas registradas.</p>
+      <a href="{% url 'maquinaria:cuadrilla_crear' %}" class="btn btn-primary btn-sm">Crear primera cuadrilla</a>
+    </div>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}

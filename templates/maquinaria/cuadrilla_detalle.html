@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}{{ cuadrilla.nombre }}{% endblock %}
+{% block nav_cuadrillas %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:cuadrilla_lista' %}">Cuadrillas</a></li>
+<li class="breadcrumb-item active">{{ cuadrilla.nombre }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'maquinaria:cuadrilla_lista' %}" class="btn-back"><i class="bi bi-chevron-left"></i> Cuadrillas</a>
+    <h4><i class="bi bi-people me-2"></i>{{ cuadrilla.nombre }}</h4>
+    {% if cuadrilla.descripcion %}<div class="text-muted">{{ cuadrilla.descripcion }}</div>{% endif %}
+  </div>
+  <a href="{% url 'maquinaria:cuadrilla_editar' cuadrilla.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-pencil me-1"></i>Editar
+  </a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">Integrantes</div>
+      <div class="card-body p-0">
+        <table class="table-modern">
+          <thead><tr><th>Categoría</th><th class="text-end">Cantidad</th><th class="text-end">S/./h (parcial)</th><th></th></tr></thead>
+          <tbody>
+          {% for i in cuadrilla.integrantes.all %}
+          <tr>
+            <td>
+              <div class="fw-semibold">{{ i.tipo_personal.nombre }}</div>
+              <small class="text-muted">{{ i.tipo_personal.codigo }} · S/. {{ i.tipo_personal.costo_hora|miles }}/h</small>
+            </td>
+            <td class="text-end fw-semibold">{{ i.cantidad }}</td>
+            <td class="text-end text-muted">{{ i.costo_parcial_hora|miles }}</td>
+            <td>
+              <form method="post" action="{% url 'maquinaria:integrante_eliminar' i.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn-tbl text-danger" title="Eliminar"><i class="bi bi-x-lg"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted py-3">Sin integrantes — agrega uno abajo</td></tr>
+          {% endfor %}
+          </tbody>
+          {% if cuadrilla.integrantes.exists %}
+          <tfoot>
+            <tr style="background:#f8fafc">
+              <td class="fw-bold">Total</td>
+              <td class="text-end fw-bold">{{ cuadrilla.hh_por_hora }} HH/h</td>
+              <td class="text-end fw-bold">S/. {{ cuadrilla.costo_hora|miles }}/h</td>
+              <td></td>
+            </tr>
+          </tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">Agregar Integrante</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'maquinaria:integrante_agregar' cuadrilla.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Tipo de Personal</label>
+            {{ form.tipo_personal }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Cantidad</label>
+            {{ form.cantidad }}
+            <div class="form-text">Puede ser decimal. Ej: 0.1 Capataz + 1 Operario + 4 Peones</div>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Agregar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

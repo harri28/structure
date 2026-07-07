@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_cuadrillas %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:cuadrilla_lista' %}">Cuadrillas</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'maquinaria:cuadrilla_lista' %}" class="btn-back"><i class="bi bi-chevron-left"></i> Cuadrillas</a>
+  <h4><i class="bi bi-people me-2"></i>{{ titulo }}</h4>
+</div>
+
+<div class="card" style="max-width:520px">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Nombre</label>
+        {{ form.nombre }}
+        <div class="form-text">Ej: Cuadrilla Concreto, Cuadrilla Encofrado</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Descripción</label>
+        {{ form.descripcion }}
+      </div>
+      <div class="mb-4 form-check">
+        {{ form.activo }}
+        <label class="form-check-label">Activa</label>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Guardar y agregar integrantes</button>
+        <a href="{% url 'maquinaria:cuadrilla_lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

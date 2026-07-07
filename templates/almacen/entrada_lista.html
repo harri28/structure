@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Entradas{% endblock %}
 {% block nav_entradas %}active{% endblock %}
+{% block submodule_chips %}{% include 'almacen/_almacen_nav.html' with active_tab='entradas' %}{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
 <li class="breadcrumb-item active">Entradas</li>
@@ -21,22 +22,81 @@
 <div class="card">
   <div class="card-body p-0">
     <table class="table-modern">
-      <thead><tr><th>Guía</th><th>Fecha</th><th>Proveedor</th><th>Requerimiento</th><th class="text-end">Total (S/.)</th><th></th></tr></thead>
+      <thead>
+        <tr>
+          <th>Guía</th>
+          <th>Fecha</th>
+          <th>Proveedor</th>
+          <th>Requerimiento</th>
+          <th>Estado</th>
+          <th class="text-end">Total (S/.)</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody>
         {% for e in entradas %}
         <tr>
-          <td><a href="{% url 'almacen:entrada_detalle' e.pk %}" class="fw-semibold text-decoration-none">{{ e.serie }}-{{ e.numero_guia }}</a></td>
+          <td>
+            <a href="{% url 'almacen:entrada_detalle' e.pk %}" class="fw-semibold text-decoration-none">
+              {{ e.serie }}-{{ e.numero_guia }}
+            </a>
+            {% if e.guia %}<span class="badge bg-secondary ms-1" style="font-size:.65rem">Logística</span>{% endif %}
+          </td>
           <td>{{ e.fecha|date:"d/m/Y" }}</td>
           <td>{{ e.proveedor|default:"—" }}</td>
           <td>{% if e.requerimiento %}<code>REQ-{{ e.requerimiento.numero }}</code>{% else %}—{% endif %}</td>
+          <td>
+            <span class="badge rounded-1
+              {% if e.estado == 'ACEPTADO' %}bg-success
+              {% elif e.estado == 'RECHAZADO' %}bg-danger
+              {% else %}bg-warning text-dark{% endif %}">
+              {{ e.get_estado_display }}
+            </span>
+          </td>
           <td class="text-end fw-semibold">S/. {{ e.total|floatformat:2 }}</td>
-          <td class="d-flex gap-1">
+          <td class="d-flex gap-1 align-items-center">
             <a href="{% url 'almacen:entrada_detalle' e.pk %}" class="btn-tbl"><i class="bi bi-eye"></i></a>
+            {% if e.estado == 'PENDIENTE' and e.guia %}
+            <form method="post" action="{% url 'almacen:entrada_aceptar' e.pk %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-success btn-sm" title="Aceptar guía">
+                <i class="bi bi-check-lg me-1"></i>Aceptar
+              </button>
+            </form>
+            <button type="button" class="btn btn-outline-danger btn-sm"
+                    data-bs-toggle="modal" data-bs-target="#modal-rechazar-{{ e.pk }}"
+                    title="Rechazar guía">
+              <i class="bi bi-x-lg me-1"></i>Rechazar
+            </button>
+            <!-- Modal rechazo -->
+            <div class="modal fade" id="modal-rechazar-{{ e.pk }}" tabindex="-1">
+              <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h6 class="modal-title">Rechazar guía {{ e.numero_guia }}</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form method="post" action="{% url 'almacen:entrada_rechazar' e.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                      <label class="form-label fw-semibold">Motivo del rechazo</label>
+                      <textarea name="motivo" rows="3" class="form-control" placeholder="Ej: mercadería incompleta, no corresponde al pedido..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="submit" class="btn btn-danger btn-sm">Confirmar rechazo</button>
+                      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% elif e.estado != 'PENDIENTE' %}
             <a href="{% url 'almacen:entrada_editar' e.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
+            {% endif %}
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="text-center py-4 text-muted">Sin entradas registradas</td></tr>
+        <tr><td colspan="7" class="text-center py-4 text-muted">Sin entradas registradas</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -1,12 +1,16 @@
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-5^92ntrb$=s$=bo1-kf=n(rq900)@$zup8a#7zl9ok1t)@m+bh'
+load_dotenv(BASE_DIR / '.env')
 
-DEBUG = True
+SECRET_KEY = os.environ['SECRET_KEY']
 
-ALLOWED_HOSTS = ['corfiemsistem.com', 'www.corfiemsistem.com']
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -19,7 +23,11 @@ INSTALLED_APPS = [
     'apps.proyectos',
     'apps.presupuesto',
     'apps.almacen',
+    'apps.requerimientos',
     'apps.configuracion',
+    'apps.maquinaria',
+    'apps.logistica',
+    'apps.registro',
 ]
 
 MIDDLEWARE = [
@@ -48,6 +56,8 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'config.context_processors.proyecto_activo',
                 'config.context_processors.permisos_usuario',
+                'config.context_processors.notif_no_leidas',
+                'config.context_processors.req_enviados_count',
             ],
             'builtins': [
                 'apps.presupuesto.templatetags.pres_fmt',
@@ -61,11 +71,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ss_gestion',
-        'USER': 'postgres',
-        'PASSWORD': '1234',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'ss_gestion'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -84,6 +94,15 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

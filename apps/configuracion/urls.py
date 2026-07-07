@@ -4,7 +4,10 @@ from . import views
 app_name = 'configuracion'
 
 urlpatterns = [
+    path('',                                  views.hub,                   name='hub'),
     path('empresa/',                          views.empresa,               name='empresa'),
+    path('sunat/',                            views.sunat,                 name='sunat'),
+    path('parametros/',                       views.parametros,            name='parametros'),
     path('equipo/',                           views.equipo,                name='equipo'),
     # Roles
     path('roles/',                            views.roles,                 name='roles'),

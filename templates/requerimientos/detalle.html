@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}REQ-{{ req.numero }}{% endblock %}
+{% block nav_req %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Requerimientos</a></li>
+<li class="breadcrumb-item active">REQ-{{ req.numero }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'requerimientos:lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Requerimientos</a>
+    <h4>Requerimiento <code>REQ-{{ req.numero }}</code></h4>
+  </div>
+  <div class="d-flex gap-2">
+    {% if req.estado == 'BORRADOR' %}
+    <a href="{% url 'requerimientos:editar' req.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    <form method="post" action="{% url 'requerimientos:editar' req.pk %}" class="d-inline">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="enviar">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-send me-1"></i>Enviar a Logística
+      </button>
+    </form>
+    <a href="{% url 'requerimientos:eliminar' req.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-sm-3">
+            <label class="text-muted small">Fecha</label>
+            <p class="mb-0 fw-semibold">{{ req.fecha|date:"d/m/Y" }}</p>
+          </div>
+          <div class="col-sm-3">
+            <label class="text-muted small">Tipo</label>
+            <p class="mb-0">{{ req.get_tipo_display }}</p>
+          </div>
+          <div class="col-sm-3">
+            <label class="text-muted small">Solicitante</label>
+            <p class="mb-0">{{ req.solicitante|default:"—" }}</p>
+          </div>
+          <div class="col-sm-3">
+            <label class="text-muted small">Estado</label>
+            <p class="mb-0">
+              <span class="badge rounded-1
+                {% if req.estado == 'ENVIADO' %}bg-primary
+                {% elif req.estado == 'ATENDIDO' %}bg-success
+                {% elif req.estado == 'BORRADOR' %}bg-secondary
+                {% elif req.estado == 'APROBADO' %}bg-info
+                {% elif req.estado == 'ANULADO' %}bg-danger
+                {% else %}bg-warning text-dark{% endif %}">
+                {{ req.get_estado_display }}
+              </span>
+            </p>
+          </div>
+          {% if req.observaciones %}
+          <div class="col-12">
+            <label class="text-muted small">Observaciones</label>
+            <p class="mb-0">{{ req.observaciones }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Materiales Solicitados</div>
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr><th>Código</th><th>Descripción</th><th>Cantidad</th><th>Unidad</th><th>Observación</th></tr>
+      </thead>
+      <tbody>
+        {% for d in req.detalles.all %}
+        <tr>
+          <td><code>{% if d.insumo %}{{ d.insumo.codigo }}{% else %}—{% endif %}</code></td>
+          <td>{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
+          <td>{{ d.cantidad|floatformat:2 }}</td>
+          <td>{{ d.unidad }}</td>
+          <td class="text-muted" style="font-size:.82rem">{{ d.observacion|default:"" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center py-3 text-muted">Sin ítems</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

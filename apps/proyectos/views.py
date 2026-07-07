@@ -6,7 +6,8 @@ from .forms import ProyectoForm
 
 
 def dashboard(request):
-    from apps.almacen.models import Requerimiento, Cotizacion, OrdenCompra, Entrada
+    from apps.requerimientos.models import Requerimiento
+    from apps.almacen.models import Cotizacion, OrdenCompra, Entrada
     from apps.presupuesto.models import Presupuesto
 
     proyecto = Proyecto.objects.filter(activo=True).first()
@@ -35,7 +36,7 @@ def dashboard(request):
     except Presupuesto.DoesNotExist:
         pass
 
-    reqs_pendientes = Requerimiento.objects.filter(proyecto=proyecto, estado='PENDIENTE').count()
+    reqs_pendientes = Requerimiento.objects.filter(proyecto=proyecto, estado='ENVIADO').count()
     cots_pendientes = Cotizacion.objects.filter(proyecto=proyecto, estado='PENDIENTE').count()
     ocs_activas     = OrdenCompra.objects.filter(
         proyecto=proyecto, estado__in=['BORRADOR', 'ENVIADA']
@@ -89,6 +90,17 @@ def detalle(request, pk):
     })
 
 
+def _siguiente_codigo_proyecto():
+    existentes = Proyecto.objects.filter(codigo__startswith='PRY-').values_list('codigo', flat=True)
+    nums = []
+    for c in existentes:
+        try:
+            nums.append(int(c[4:]))
+        except ValueError:
+            pass
+    return f'PRY-{max(nums, default=0) + 1:03d}'
+
+
 def crear(request):
     if request.method == 'POST':
         form = ProyectoForm(request.POST)
@@ -97,7 +109,7 @@ def crear(request):
             messages.success(request, f'Proyecto "{proyecto.nombre}" creado correctamente.')
             return redirect('proyectos:detalle', pk=proyecto.pk)
     else:
-        form = ProyectoForm()
+        form = ProyectoForm(initial={'codigo': _siguiente_codigo_proyecto()})
     return render(request, 'proyectos/form.html', {'form': form, 'titulo': 'Nuevo Proyecto'})
 
 
@@ -111,14 +123,16 @@ def editar(request, pk):
             return redirect('proyectos:detalle', pk=proyecto.pk)
     else:
         form = ProyectoForm(instance=proyecto)
-    return render(request, 'proyectos/form.html', {'form': form, 'titulo': 'Editar Proyecto', 'proyecto': proyecto})
+    return render(request, 'proyectos/form.html', {'form': form, 'titulo': 'Datos Generales', 'proyecto': proyecto})
 
 
 def eliminar(request, pk):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     if request.method == 'POST':
+        from apps.registro.models import Notificacion
         nombre = proyecto.nombre
         proyecto.delete()
+        Notificacion.objects.all().delete()
         messages.success(request, f'Proyecto "{nombre}" eliminado.')
         return redirect('proyectos:lista')
     return render(request, 'proyectos/confirmar_eliminar.html', {'proyecto': proyecto})

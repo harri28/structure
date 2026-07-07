@@ -53,7 +53,7 @@
           <div class="col-sm-6">
             <label class="text-muted small">Requerimiento vinculado</label>
             <p class="mb-0">
-              <a href="{% url 'almacen:req_detalle' oc.requerimiento.pk %}" class="text-decoration-none">
+              <a href="{% url 'requerimientos:detalle' oc.requerimiento.pk %}" class="text-decoration-none">
                 REQ-{{ oc.requerimiento.numero }}
               </a>
             </p>
@@ -97,9 +97,9 @@
       <tbody>
         {% for d in oc.detalles.all %}
         <tr>
-          <td><code>{{ d.producto.codigo }}</code></td>
-          <td>{{ d.producto.descripcion }}</td>
-          <td class="text-muted">{{ d.get_unidad_display }}</td>
+          <td><code>{% if d.insumo %}{{ d.insumo.codigo }}{% else %}—{% endif %}</code></td>
+          <td>{{ d.descripcion|default:d.insumo.descripcion }}</td>
+          <td class="text-muted">{{ d.unidad }}</td>
           <td class="text-end">{{ d.cantidad|floatformat:2 }}</td>
           <td class="text-end">{{ d.precio_unitario|floatformat:2 }}</td>
           <td class="text-end fw-semibold">{{ d.subtotal|floatformat:2 }}</td>

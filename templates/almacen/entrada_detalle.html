@@ -1,6 +1,7 @@
 ﻿{% extends 'base.html' %}
 {% block title %}Entrada {{ entrada.serie }}-{{ entrada.numero_guia }}{% endblock %}
 {% block nav_entradas %}active{% endblock %}
+{% block submodule_chips %}{% include 'almacen/_almacen_nav.html' with active_tab='entradas' %}{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
 <li class="breadcrumb-item"><a href="{% url 'almacen:entrada_lista' proyecto.pk %}">Entradas</a></li>
@@ -39,10 +40,10 @@
       <tbody>
         {% for d in entrada.detalles.all %}
         <tr>
-          <td><code>{{ d.producto.codigo }}</code></td>
-          <td>{{ d.producto.descripcion }}</td>
+          <td><code>{% if d.insumo %}{{ d.insumo.codigo }}{% else %}—{% endif %}</code></td>
+          <td>{{ d.descripcion|default:d.insumo.descripcion }}</td>
           <td class="text-end">{{ d.cantidad|floatformat:2 }}</td>
-          <td>{{ d.get_unidad_display }}</td>
+          <td>{{ d.unidad }}</td>
           <td class="text-end">{{ d.precio_unitario|floatformat:2 }}</td>
           <td class="text-end fw-semibold">{{ d.subtotal|floatformat:2 }}</td>
         </tr>

@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% block title %}{{ registro.codigo }} — {{ registro.nombre }}{% endblock %}
+{% block nav_maquinaria %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}">Maquinaria</a></li>
+<li class="breadcrumb-item active">{{ registro.codigo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Registros</a>
+    <h4><i class="bi bi-truck me-2"></i>{{ registro.nombre|default:"Sin nombre" }}</h4>
+    <div class="text-muted" style="font-size:.85rem">{{ registro.codigo }} · {{ registro.get_tipo_equipo_display|default:"—" }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'maquinaria:maq_registro_editar' registro.pk %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    <form method="post" action="{% url 'maquinaria:maq_registro_eliminar' registro.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger btn-sm"
+              onclick="return confirm('¿Eliminar este registro de maquinaria?')">
+        <i class="bi bi-trash me-1"></i>Eliminar
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="card" style="max-width:820px">
+  <div class="card-body">
+
+    <!-- Costo y Modalidad -->
+    <div class="section-label">Contrato</div>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-4">
+        <div class="detail-label">Costo</div>
+        <div class="detail-value">
+          {% if registro.costo %}S/ {{ registro.costo|floatformat:2 }}{% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="detail-label">Período de Costo</div>
+        <div class="detail-value">{{ registro.get_modalidad_costo_display|default:"—" }}</div>
+      </div>
+      <div class="col-sm-4">
+        <div class="detail-label">Modalidad</div>
+        <div class="detail-value">{{ registro.get_modalidad_display|default:"—" }}</div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <!-- Equipo -->
+    <div class="section-label">Equipo</div>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6">
+        <div class="detail-label">Nombre</div>
+        <div class="detail-value">{{ registro.nombre|default:"—" }}</div>
+      </div>
+      <div class="col-sm-6">
+        <div class="detail-label">Tipo de Equipo</div>
+        <div class="detail-value">{{ registro.get_tipo_equipo_display|default:"—" }}</div>
+      </div>
+      <div class="col-sm-4">
+        <div class="detail-label">Marca</div>
+        <div class="detail-value">{{ registro.marca|default:"—" }}</div>
+      </div>
+      <div class="col-sm-4">
+        <div class="detail-label">Placa</div>
+        <div class="detail-value">{{ registro.placa|default:"—" }}</div>
+      </div>
+      <div class="col-sm-4">
+        <div class="detail-label">Modelo</div>
+        <div class="detail-value">{{ registro.modelo|default:"—" }}</div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <!-- Personal -->
+    <div class="section-label">Personal</div>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6">
+        <div class="detail-label">Propietario</div>
+        <div class="detail-value">{{ registro.propietario|default:"—" }}</div>
+      </div>
+      <div class="col-sm-6">
+        <div class="detail-label">Operador</div>
+        <div class="detail-value">{{ registro.operador|default:"—" }}</div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <!-- Fechas de obra -->
+    <div class="section-label">Fechas de Obra</div>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-4">
+        <div class="detail-label">Fecha de llegada</div>
+        <div class="detail-value">{{ registro.fecha_llegada|date:"d/m/Y"|default:"—" }}</div>
+      </div>
+      <div class="col-sm-4">
+        <div class="detail-label">Fecha de reinicio de trabajo</div>
+        <div class="detail-value">{{ registro.fecha_reinicio|date:"d/m/Y"|default:"—" }}</div>
+      </div>
+      <div class="col-sm-4">
+        <div class="detail-label">Fecha de salida de obra</div>
+        <div class="detail-value">{{ registro.fecha_salida|date:"d/m/Y"|default:"—" }}</div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <!-- Actividad -->
+    <div class="section-label">Registro de Actividad</div>
+    <div class="row g-3">
+      <div class="col-sm-3">
+        <div class="detail-label">Fecha de registro</div>
+        <div class="detail-value">{{ registro.fecha|date:"d/m/Y"|default:"—" }}</div>
+      </div>
+      <div class="col-sm-2">
+        <div class="detail-label">Horas máquina (HM)</div>
+        <div class="detail-value">{{ registro.horas }}</div>
+      </div>
+      {% if registro.partida %}
+      <div class="col-sm-7">
+        <div class="detail-label">Partida</div>
+        <div class="detail-value">{{ registro.partida.codigo }} — {{ registro.partida.nombre }}</div>
+      </div>
+      {% endif %}
+      {% if registro.observacion %}
+      <div class="col-12">
+        <div class="detail-label">Observación</div>
+        <div class="detail-value">{{ registro.observacion }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<style>
+.section-label {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: .75rem;
+}
+.detail-label {
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  margin-bottom: .2rem;
+}
+.detail-value {
+  font-size: .9rem;
+}
+</style>
+{% endblock %}

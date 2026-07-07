@@ -1,0 +1,20 @@
+{% block submodule_chips %}
+<div class="submodule-chips">
+  <a href="{% url 'almacen:stock' proyecto.pk %}"
+     class="s-chip {% block chip_stock %}{% endblock %}">
+    <i class="bi bi-archive me-1"></i>Stock
+  </a>
+  <a href="{% url 'almacen:consumo' proyecto.pk %}"
+     class="s-chip {% block chip_consumo %}{% endblock %}">
+    <i class="bi bi-graph-up-arrow me-1"></i>Consumo
+  </a>
+  <a href="{% url 'almacen:entrada_lista' proyecto.pk %}"
+     class="s-chip {% block chip_entradas %}{% endblock %}">
+    <i class="bi bi-arrow-down-circle me-1"></i>Entradas
+  </a>
+  <a href="{% url 'almacen:salida_lista' proyecto.pk %}"
+     class="s-chip {% block chip_salidas %}{% endblock %}">
+    <i class="bi bi-arrow-up-circle me-1"></i>Salidas
+  </a>
+</div>
+{% endblock %}

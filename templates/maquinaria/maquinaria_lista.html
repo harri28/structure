@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Catálogo de Maquinaria{% endblock %}
+{% block nav_maq_catalogo %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Maquinaria</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4><i class="bi bi-truck me-2"></i>Catálogo de Maquinaria</h4>
+    <div class="text-muted">Equipos y vehículos con costo por hora</div>
+  </div>
+  <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Placa</th><th class="text-end">Costo / hora</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for m in maquinas %}
+      <tr>
+        <td class="fw-semibold">{{ m.codigo }}</td>
+        <td>{{ m.nombre }}</td>
+        <td><span class="badge bg-secondary">{{ m.get_tipo_display }}</span></td>
+        <td class="text-muted">{{ m.placa|default:"—" }}</td>
+        <td class="text-end">S/. {{ m.costo_hora|miles }}</td>
+        <td>
+          {% if m.activo %}<span class="badge bg-success">Activo</span>
+          {% else %}<span class="badge bg-secondary">Inactivo</span>{% endif %}
+        </td>
+        <td class="d-flex gap-1">
+          <a href="{% url 'maquinaria:maquinaria_editar' m.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
+          <a href="{% url 'maquinaria:maquinaria_eliminar' m.pk %}" class="btn-tbl text-danger"><i class="bi bi-trash"></i></a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted py-4">Sin maquinaria registrada</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

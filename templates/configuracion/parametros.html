@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Parámetros del Sistema{% endblock %}
+{% block nav_configuracion %}active{% endblock %}
+{% block nav_config_params %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:hub' %}">Configuración</a></li>
+<li class="breadcrumb-item active">Parámetros</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'configuracion:hub' %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Configuración
+    </a>
+    <h4><i class="bi bi-sliders me-2" style="color:#16a34a"></i>Parámetros del Sistema</h4>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+
+    <form method="post">
+      {% csrf_token %}
+
+      <!-- Presupuesto -->
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="bi bi-table" style="color:#2563eb"></i>
+          Defaults para nuevos Presupuestos
+        </div>
+        <div class="card-body">
+          <p class="text-muted" style="font-size:.8rem;margin-bottom:1rem">
+            Valores que se usan al crear un presupuesto nuevo. Pueden ajustarse por proyecto desde el presupuesto mismo.
+          </p>
+          <div class="row g-3">
+            <div class="col-sm-4">
+              <label class="form-label">Gastos Generales (%)</label>
+              {{ form.gg_pct_default }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Utilidad (%)</label>
+              {{ form.utilidad_pct_default }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">IGV (%)</label>
+              {{ form.igv_pct_default }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Almacén -->
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="bi bi-box-seam" style="color:#0284c7"></i>
+          Almacén
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-5">
+              <label class="form-label">Vigencia de cotizaciones (días)</label>
+              {{ form.dias_vigencia_cot }}
+              <div class="form-text">Días que una cotización permanece válida desde su fecha de emisión.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar Parámetros
+        </button>
+        <a href="{% url 'configuracion:hub' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

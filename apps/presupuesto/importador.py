@@ -15,7 +15,9 @@ import re
 import openpyxl
 import xlrd
 from decimal import Decimal, InvalidOperation
+from django.db import transaction
 from .models import Partida, InsumoPresupuesto
+from .pdf_parser import computar_parciales
 
 
 # ── Utilidades ──────────────────────────────────────────────────
@@ -73,25 +75,28 @@ def _detectar_columnas(row):
         t = str(cell).strip().lower()
         if t in ('item', 'ítem', 'partida', 'cod', 'código', 'codigo') and 'codigo' not in mapping:
             mapping['codigo'] = i
-        elif t in ('descripcion', 'descripción', 'descripcion.', 'nombre') and 'nombre' not in mapping:
+        elif t in ('descripcion', 'descripción', 'descripcion.', 'nombre', 'descripcion de la partida') and 'nombre' not in mapping:
             mapping['nombre'] = i
         elif t in ('und', 'unid.', 'unid', 'unidad', 'u.m.') and 'unidad' not in mapping:
             mapping['unidad'] = i
         elif t in ('metrado', 'cant.', 'cant', 'cantidad', 'medida') and 'cantidad' not in mapping:
             mapping['cantidad'] = i
-        elif t in ('pu', 'p.u.', 'precio', 'precio unit.', 'p. unit.', 'p.unitario') and 'precio_unitario' not in mapping:
+        elif t in ('pu', 'p.u.', 'precio', 'precio unit.', 'p. unit.', 'p.unitario',
+                   'precio unitario', 'p. unitario', 'costo unit.', 'costo unitario', 'c.u.') and 'precio_unitario' not in mapping:
             mapping['precio_unitario'] = i
 
-    # Fallback: si no detectó el código, buscar la primera columna con datos no-None
-    if 'codigo' not in mapping:
-        for i, cell in enumerate(row):
-            if cell is not None:
-                mapping.setdefault('codigo', i)
-                mapping.setdefault('nombre', i + 1)
-                mapping.setdefault('unidad', i + 2)
-                mapping.setdefault('cantidad', i + 3)
-                mapping.setdefault('precio_unitario', i + 4)
-                break
+    # Fallback posicional desde la primera columna con datos
+    base = None
+    for i, cell in enumerate(row):
+        if cell is not None:
+            base = i
+            break
+    if base is not None:
+        mapping.setdefault('codigo',          base)
+        mapping.setdefault('nombre',          base + 1)
+        mapping.setdefault('unidad',          base + 2)
+        mapping.setdefault('cantidad',        base + 3)
+        mapping.setdefault('precio_unitario', base + 4)
     return mapping
 
 
@@ -126,7 +131,7 @@ def _elegir_hoja(wb):
 def importar_presupuesto_excel(archivo, presupuesto):
     """
     Lee un archivo .xlsx/.xls e importa las partidas al presupuesto dado.
-    Retorna la cantidad de partidas importadas.
+    Retorna (total_partidas, info_dict) donde info_dict tiene estadísticas del import.
     """
     nombre = getattr(archivo, 'name', '').lower()
 
@@ -135,46 +140,138 @@ def importar_presupuesto_excel(archivo, presupuesto):
     else:
         filas = _leer_xlsx(archivo)
 
-    presupuesto.partidas.all().delete()
+    if not filas:
+        raise ValueError('El archivo está vacío o no tiene filas de datos.')
 
-    pila = {}   # nivel → partida
-    orden = 0
-    total = 0
+    with transaction.atomic():
+        presupuesto.partidas.all().delete()
 
-    for fila in filas:
-        codigo = str(fila.get('codigo', '') or '').strip()
-        nombre_p = str(fila.get('nombre', '') or '').strip()
+        pila = {}
+        orden = 0
+        total = 0
+        con_precio = 0
 
-        if not codigo or not nombre_p:
-            continue
-        if _es_fila_encabezado([codigo, nombre_p]):
-            continue
-        if not _es_codigo_valido(codigo):
-            continue
+        for fila in filas:
+            codigo = str(fila.get('codigo', '') or '').strip()
+            nombre_p = str(fila.get('nombre', '') or '').strip()
 
-        nivel = _nivel_codigo(codigo)
-        padre = pila.get(nivel - 1)
+            if not codigo or not nombre_p:
+                continue
+            if _es_fila_encabezado([codigo, nombre_p]):
+                continue
+            if not _es_codigo_valido(codigo):
+                continue
 
-        partida = Partida.objects.create(
-            presupuesto=presupuesto,
-            padre=padre,
-            codigo=codigo,
-            nombre=nombre_p,
-            nivel=nivel,
-            orden=orden,
-            unidad=str(fila.get('unidad', '') or '').strip()[:20],
-            cantidad=_to_decimal(fila.get('cantidad')),
-            precio_unitario=_to_decimal(fila.get('precio_unitario')),
-        )
-        pila[nivel] = partida
-        # Limpiar niveles más profundos
-        for k in list(pila.keys()):
-            if k > nivel:
-                del pila[k]
-        orden += 1
-        total += 1
+            nivel = _nivel_codigo(codigo)
+            padre = pila.get(nivel - 1)
+            pu = _to_decimal(fila.get('precio_unitario'))
 
-    return total
+            partida = Partida.objects.create(
+                presupuesto=presupuesto,
+                padre=padre,
+                codigo=codigo,
+                nombre=nombre_p,
+                nivel=nivel,
+                orden=orden,
+                unidad=str(fila.get('unidad', '') or '').strip()[:20],
+                cantidad=_to_decimal(fila.get('cantidad')),
+                precio_unitario=pu,
+            )
+            pila[nivel] = partida
+            for k in list(pila.keys()):
+                if k > nivel:
+                    del pila[k]
+            orden += 1
+            total += 1
+            if pu > 0:
+                con_precio += 1
+
+    computar_parciales(presupuesto)
+    info = {
+        'total':      total,
+        'con_precio': con_precio,
+        'sin_precio': total - con_precio,
+    }
+    return total, info
+
+
+# ── Detección automática de tipo ────────────────────────────────
+
+_PALABRAS_INSUMO = {
+    'MANO DE OBRA', 'MATERIALES', 'MATERIAL', 'EQUIPO', 'EQUIPOS',
+    'MAQUINARIA', 'SUB-CONTRATOS', 'SUBCONTRATOS', 'SUBCONTRATO',
+    'MANO DE OBRA.',
+}
+
+def detectar_tipo_excel(archivo):
+    """
+    Lee las primeras 60 filas del Excel y determina si es:
+      'presupuesto' — códigos jerárquicos S10 (01, 01.01, 01.01.01)
+      'insumos'     — lista plana de recursos con códigos de catálogo
+    También resetea el puntero del archivo para que pueda leerse de nuevo.
+    """
+    nombre = getattr(archivo, 'name', '').lower()
+    contenido = archivo.read()
+    try:
+        archivo.seek(0)
+    except Exception:
+        pass
+
+    if nombre.endswith('.xls'):
+        wb  = xlrd.open_workbook(file_contents=contenido)
+        ws  = wb.sheet_by_index(0)
+        raw = [[ws.cell_value(r, c) for c in range(ws.ncols)]
+               for r in range(min(ws.nrows, 60))]
+    else:
+        wb  = openpyxl.load_workbook(io.BytesIO(contenido), read_only=True, data_only=True)
+        ws  = wb.active
+        raw = [list(row) for _, row in zip(range(60), ws.iter_rows(values_only=True))]
+        wb.close()
+
+    score_insumo      = 0
+    score_presupuesto = 0
+
+    for row in raw:
+        # Cabecera de categoría → señal fuerte de insumos
+        for celda in row:
+            if celda and str(celda).strip().upper() in _PALABRAS_INSUMO:
+                score_insumo += 5
+
+        # Analizar el primer campo con datos que parezca código
+        for celda in row:
+            if celda is None or str(celda).strip() == '':
+                continue
+            s = str(celda).strip()
+            try:
+                f = float(s)
+                if f > 10000:           # código de catálogo grande (ej: 470050565)
+                    score_insumo += 1
+                elif 0 < f <= 999:      # código raíz jerárquico (01, 02, 03...)
+                    score_presupuesto += 1
+            except ValueError:
+                pass
+            # patrón jerárquico: 01.01, 01.01.01, 01.05.03.01
+            if re.match(r'^\d{1,3}(\.\d{2,3}){1,4}$', s):
+                score_presupuesto += 3
+            break   # solo evaluar la primera celda con datos
+
+    return 'insumos' if score_insumo > score_presupuesto else 'presupuesto'
+
+
+def importar_automatico(archivo, presupuesto):
+    """
+    Detecta el tipo del Excel e importa al módulo correcto.
+    Retorna (tipo_detectado, total, info_dict).
+    """
+    tipo = detectar_tipo_excel(archivo)
+
+    if tipo == 'insumos':
+        total = importar_insumos_excel(archivo, presupuesto)
+        info  = {'total': total, 'con_precio': total, 'sin_precio': 0}
+    else:
+        total, info = importar_presupuesto_excel(archivo, presupuesto)
+
+    return tipo, total, info
 
 
 # ── Importador de insumos ────────────────────────────────────────
@@ -225,25 +322,30 @@ def importar_insumos_excel(archivo, presupuesto):
         cod  = get(col_cod)
         desc = get(col_desc)
 
-        # Fila de categoría: sin código, descripción en mayúsculas
-        if cod is None and desc:
-            desc_up = str(desc).strip().upper()
-            if desc_up in TIPO_MAP:
-                tipo_actual = TIPO_MAP[desc_up]
-                continue
-
-        # Saltar filas sin código válido
-        if not _es_codigo_valido(cod) or not desc:
+        # Fila de categoría: sin código válido → buscar texto de tipo en toda la fila
+        if not _es_codigo_valido(cod):
+            for celda in row:
+                if celda:
+                    texto = str(celda).strip().upper()
+                    if texto in TIPO_MAP:
+                        tipo_actual = TIPO_MAP[texto]
+                        break
             continue
 
+        if not desc:
+            continue
+
+        cantidad      = _to_decimal(get(col_cant))
+        costo_unitario = _to_decimal(get(col_costo))
         InsumoPresupuesto.objects.create(
             presupuesto=presupuesto,
             tipo=tipo_actual,
             codigo=str(cod).strip().split('.')[0] if cod else '',
             descripcion=str(desc).strip()[:400],
             unidad=str(get(col_und) or '').strip()[:20],
-            cantidad=_to_decimal(get(col_cant)),
-            costo_unitario=_to_decimal(get(col_costo)),
+            cantidad=cantidad,
+            costo_unitario=costo_unitario,
+            total=(cantidad * costo_unitario).quantize(Decimal('0.01')),
         )
         total += 1
 

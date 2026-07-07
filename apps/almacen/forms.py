@@ -1,38 +1,13 @@
+from datetime import date
 from django import forms
 from django.forms import inlineformset_factory
 from .models import (
-    Requerimiento, DetalleRequerimiento,
     Entrada, DetalleEntrada,
     Salida, DetalleSalida,
     Cotizacion, DetalleCotizacion,
     OrdenCompra, DetalleOrdenCompra,
 )
-
-
-class RequerimientoForm(forms.ModelForm):
-    class Meta:
-        model = Requerimiento
-        fields = ['numero', 'fecha', 'tipo', 'solicitante', 'estado', 'observaciones']
-        widgets = {
-            'fecha': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-            'observaciones': forms.Textarea(attrs={'rows': 2}),
-        }
-
-
-class DetalleRequerimientoForm(forms.ModelForm):
-    class Meta:
-        model = DetalleRequerimiento
-        fields = ['producto', 'cantidad', 'unidad', 'observacion']
-        widgets = {
-            'producto': forms.Select(attrs={'class': 'producto-select'}),
-        }
-
-
-DetalleRequerimientoFormSet = inlineformset_factory(
-    Requerimiento, DetalleRequerimiento,
-    form=DetalleRequerimientoForm,
-    extra=3, can_delete=True,
-)
+from apps.requerimientos.models import Requerimiento
 
 
 class EntradaForm(forms.ModelForm):
@@ -54,7 +29,11 @@ class EntradaForm(forms.ModelForm):
 class DetalleEntradaForm(forms.ModelForm):
     class Meta:
         model = DetalleEntrada
-        fields = ['producto', 'cantidad', 'precio_unitario', 'unidad']
+        fields = ['insumo', 'descripcion', 'cantidad', 'precio_unitario', 'unidad']
+        widgets = {
+            'insumo': forms.HiddenInput(),
+            'descripcion': forms.HiddenInput(),
+        }
 
 
 DetalleEntradaFormSet = inlineformset_factory(
@@ -77,7 +56,11 @@ class SalidaForm(forms.ModelForm):
 class DetalleSalidaForm(forms.ModelForm):
     class Meta:
         model = DetalleSalida
-        fields = ['producto', 'cantidad', 'precio_unitario', 'unidad']
+        fields = ['insumo', 'descripcion', 'cantidad', 'precio_unitario', 'unidad']
+        widgets = {
+            'insumo': forms.HiddenInput(),
+            'descripcion': forms.HiddenInput(),
+        }
 
 
 DetalleSalidaFormSet = inlineformset_factory(
@@ -100,7 +83,11 @@ class CotizacionForm(forms.ModelForm):
 class DetalleCotizacionForm(forms.ModelForm):
     class Meta:
         model = DetalleCotizacion
-        fields = ['producto', 'cantidad', 'precio_unitario', 'unidad']
+        fields = ['insumo', 'descripcion', 'cantidad', 'precio_unitario', 'unidad']
+        widgets = {
+            'insumo': forms.HiddenInput(),
+            'descripcion': forms.HiddenInput(),
+        }
 
 
 DetalleCotizacionFormSet = inlineformset_factory(
@@ -132,7 +119,11 @@ class OrdenCompraForm(forms.ModelForm):
 class DetalleOrdenCompraForm(forms.ModelForm):
     class Meta:
         model = DetalleOrdenCompra
-        fields = ['producto', 'cantidad', 'precio_unitario', 'unidad']
+        fields = ['insumo', 'descripcion', 'cantidad', 'precio_unitario', 'unidad']
+        widgets = {
+            'insumo': forms.HiddenInput(),
+            'descripcion': forms.HiddenInput(),
+        }
 
 
 DetalleOrdenCompraFormSet = inlineformset_factory(

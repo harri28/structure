@@ -19,6 +19,10 @@ urlpatterns = [
     path('almacen/', include('apps.almacen.urls', namespace='almacen')),
     path('catalogo/', include('apps.catalogo.urls', namespace='catalogo')),
     path('configuracion/', include('apps.configuracion.urls', namespace='configuracion')),
+    path('maquinaria/', include('apps.maquinaria.urls', namespace='maquinaria')),
+    path('logistica/', include('apps.logistica.urls', namespace='logistica')),
+    path('registro/', include('apps.registro.urls', namespace='registro')),
+    path('requerimientos/', include('apps.requerimientos.urls', namespace='requerimientos')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

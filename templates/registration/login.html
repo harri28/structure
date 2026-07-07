@@ -61,11 +61,17 @@
     .btn-login:hover { background: #1d4ed8; color: #fff; }
     .login-footer { font-size: .73rem; color: #9ca3af; text-align: center; margin-top: 1.5rem; }
     .input-icon-wrap { position: relative; }
-    .input-icon-wrap i {
+    .input-icon-wrap > i {
       position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
       color: #9ca3af; font-size: .9rem; pointer-events: none;
     }
-    .input-icon-wrap .form-control { padding-left: 2.4rem; }
+    .input-icon-wrap .form-control { padding-left: 2.4rem; padding-right: 2.4rem; }
+    .toggle-pw {
+      position: absolute; right: .85rem; top: 50%; transform: translateY(-50%);
+      color: #9ca3af; font-size: .9rem; cursor: pointer; border: none;
+      background: none; padding: 0; line-height: 1;
+    }
+    .toggle-pw:hover { color: #374151; }
     .errorlist { list-style: none; padding: 0; margin: 0 0 1rem; }
     .errorlist li {
       background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;
@@ -116,6 +122,9 @@
                class="form-control{% if form.password.errors %} is-invalid{% endif %}"
                placeholder="••••••••"
                autocomplete="current-password">
+        <button type="button" class="toggle-pw" id="toggle-pw" title="Ver contraseña" tabindex="-1">
+          <i class="bi bi-eye" id="toggle-pw-icon"></i>
+        </button>
       </div>
     </div>
 
@@ -130,5 +139,17 @@
 
 </div>
 
+<script>
+(function () {
+  var btn  = document.getElementById('toggle-pw');
+  var inp  = document.getElementById('id_password');
+  var icon = document.getElementById('toggle-pw-icon');
+  btn.addEventListener('click', function () {
+    var show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    icon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+  });
+})();
+</script>
 </body>
 </html>

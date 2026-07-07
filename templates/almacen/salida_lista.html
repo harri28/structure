@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Salidas{% endblock %}
 {% block nav_salidas %}active{% endblock %}
+{% block submodule_chips %}{% include 'almacen/_almacen_nav.html' with active_tab='salidas' %}{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
 <li class="breadcrumb-item active">Salidas</li>

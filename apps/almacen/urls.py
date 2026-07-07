@@ -5,21 +5,18 @@ app_name = 'almacen'
 
 urlpatterns = [
     path('proyecto/<int:proyecto_id>/', views.dashboard, name='dashboard'),
-    # Stock / Kardex
+    # Stock / Kardex / Consumo
     path('proyecto/<int:proyecto_id>/stock/', views.stock, name='stock'),
-    path('proyecto/<int:proyecto_id>/stock/<int:producto_id>/kardex/', views.kardex, name='kardex'),
-    # Requerimientos
-    path('proyecto/<int:proyecto_id>/requerimientos/', views.req_lista, name='req_lista'),
-    path('proyecto/<int:proyecto_id>/requerimientos/nuevo/', views.req_crear, name='req_crear'),
-    path('requerimientos/<int:pk>/', views.req_detalle, name='req_detalle'),
-    path('requerimientos/<int:pk>/editar/', views.req_editar, name='req_editar'),
-    path('requerimientos/<int:pk>/eliminar/', views.req_eliminar, name='req_eliminar'),
+    path('proyecto/<int:proyecto_id>/consumo/', views.consumo, name='consumo'),
+    path('proyecto/<int:proyecto_id>/stock/<int:insumo_id>/kardex/', views.kardex, name='kardex'),
     # Entradas
     path('proyecto/<int:proyecto_id>/entradas/', views.entrada_lista, name='entrada_lista'),
     path('proyecto/<int:proyecto_id>/entradas/nueva/', views.entrada_crear, name='entrada_crear'),
     path('entradas/<int:pk>/', views.entrada_detalle, name='entrada_detalle'),
     path('entradas/<int:pk>/editar/', views.entrada_editar, name='entrada_editar'),
     path('entradas/<int:pk>/eliminar/', views.entrada_eliminar, name='entrada_eliminar'),
+    path('entradas/<int:pk>/aceptar/',  views.entrada_aceptar,  name='entrada_aceptar'),
+    path('entradas/<int:pk>/rechazar/', views.entrada_rechazar,  name='entrada_rechazar'),
     # Salidas
     path('proyecto/<int:proyecto_id>/salidas/', views.salida_lista, name='salida_lista'),
     path('proyecto/<int:proyecto_id>/salidas/nueva/', views.salida_crear, name='salida_crear'),
@@ -40,4 +37,6 @@ urlpatterns = [
     path('ordenes/<int:pk>/eliminar/', views.oc_eliminar, name='oc_eliminar'),
     # AJAX
     path('api/productos/', views.api_productos, name='api_productos'),
+    path('api/req/<int:pk>/detalles/', views.api_req_detalles, name='api_req_detalles'),
+    path('api/insumo/<int:insumo_id>/stock/', views.api_insumo_stock, name='api_insumo_stock'),
 ]

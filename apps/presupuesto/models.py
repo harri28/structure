@@ -46,6 +46,10 @@ class Presupuesto(models.Model):
         max_digits=6, decimal_places=2, default=Decimal('18'),
         verbose_name='IGV (%)'
     )
+    supervision_pct = models.DecimalField(
+        max_digits=6, decimal_places=2, default=Decimal('0'),
+        verbose_name='Supervisión (% sobre Costo Total de Obra)'
+    )
 
     class Meta:
         verbose_name = 'Presupuesto'
@@ -55,7 +59,19 @@ class Presupuesto(models.Model):
         return f'{self.proyecto.codigo} — {self.nombre}'
 
     def costo_directo(self):
-        return sum(p.total() for p in self.partidas.filter(padre__isnull=True))
+        if hasattr(self, '_cd_cache'):
+            return self._cd_cache
+        from django.db.models import Sum, F, DecimalField as DField
+        result = (
+            self.partidas
+            .filter(hijos__isnull=True)
+            .aggregate(cd=Sum(
+                F('cantidad') * F('precio_unitario'),
+                output_field=DField(max_digits=20, decimal_places=4),
+            ))['cd'] or Decimal('0')
+        )
+        self._cd_cache = result.quantize(Decimal('0.01'))
+        return self._cd_cache
 
     def total(self):
         return self.costo_directo()
@@ -72,8 +88,14 @@ class Presupuesto(models.Model):
     def igv(self):
         return (self.sub_total() * self.igv_pct / Decimal('100')).quantize(Decimal('0.01'))
 
-    def total_presupuesto(self):
+    def costo_total_obra(self):
         return self.sub_total() + self.igv()
+
+    def supervision(self):
+        return (self.costo_total_obra() * self.supervision_pct / Decimal('100')).quantize(Decimal('0.01'))
+
+    def total_presupuesto(self):
+        return self.costo_total_obra() + self.supervision()
 
     def monto_vigente(self):
         mods = self.proyecto.modificaciones.filter(estado='APROBADO')
@@ -92,6 +114,10 @@ class Partida(models.Model):
     unidad = models.CharField(max_length=20, blank=True)
     cantidad = models.DecimalField(max_digits=15, decimal_places=4, default=0)
     precio_unitario = models.DecimalField(max_digits=15, decimal_places=4, default=0)
+    parcial = models.DecimalField(
+        max_digits=15, decimal_places=2, null=True, blank=True, default=None,
+        verbose_name='Total calculado'
+    )
 
     class Meta:
         verbose_name = 'Partida'
@@ -102,12 +128,15 @@ class Partida(models.Model):
         return f'{self.codigo} - {self.nombre}'
 
     def es_hoja(self):
-        return not self.hijos.exists()
+        return not self.hijos.all()
 
     def total(self):
-        if self.es_hoja():
+        if self.parcial is not None:
+            return self.parcial
+        hijos = list(self.hijos.all())
+        if not hijos:
             return self.cantidad * self.precio_unitario
-        return sum(h.total() for h in self.hijos.all())
+        return sum(h.total() for h in hijos)
 
 
 class RecursoPartida(models.Model):
@@ -138,6 +167,7 @@ class InsumoPresupuesto(models.Model):
     unidad = models.CharField(max_length=20, blank=True)
     cantidad = models.DecimalField(max_digits=18, decimal_places=4, default=0)
     costo_unitario = models.DecimalField(max_digits=15, decimal_places=4, default=0)
+    total = models.DecimalField(max_digits=15, decimal_places=2, default=0)
 
     class Meta:
         verbose_name = 'Insumo del Presupuesto'
@@ -146,9 +176,6 @@ class InsumoPresupuesto(models.Model):
 
     def __str__(self):
         return f'{self.codigo} - {self.descripcion}'
-
-    def total(self):
-        return self.cantidad * self.costo_unitario
 
 
 class Modificacion(models.Model):

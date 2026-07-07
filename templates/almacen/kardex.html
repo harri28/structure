@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Kardex — {{ producto.codigo }}{% endblock %}
+{% block title %}Kardex — {{ insumo.codigo }}{% endblock %}
 {% block nav_almacen %}active{% endblock %}
 
 {% block content %}
@@ -7,12 +7,12 @@
   <div>
     <a href="{% url 'almacen:stock' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Stock</a>
     <h4><i class="bi bi-clock-history me-2"></i>Kardex</h4>
-    <div class="text-muted"><code>{{ producto.codigo }}</code> — {{ producto.descripcion }}</div>
+    <div class="text-muted"><code>{{ insumo.codigo }}</code> — {{ insumo.descripcion }}</div>
   </div>
   <div class="text-end">
     <div class="text-muted" style="font-size:.78rem">Saldo final</div>
     <div class="fw-bold fs-4 {% if saldo_final <= 0 %}text-danger{% else %}text-success{% endif %}">
-      {{ saldo_final|floatformat:2 }} <small class="text-muted fs-6">{{ producto.get_unidad_display }}</small>
+      {{ saldo_final|floatformat:2 }} <small class="text-muted fs-6">{{ insumo.unidad }}</small>
     </div>
   </div>
 </div>
@@ -53,7 +53,7 @@
           <td colspan="7">
             <div class="empty-state">
               <i class="bi bi-clock-history d-block"></i>
-              <p>Sin movimientos para este producto.</p>
+              <p>Sin movimientos para este insumo.</p>
             </div>
           </td>
         </tr>

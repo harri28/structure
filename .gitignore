@@ -1,40 +1,88 @@
-# Python
+# ── Python ────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
 
-# Django
+# ── Django ────────────────────────────────────────────────────────
 staticfiles/
 media/
 *.log
 db.sqlite3
+local_settings.py
 
-# Entorno virtual
+# ── Variables de entorno / secretos ──────────────────────────────
+.env
+.env.*
+*.env
+!.env.example
+
+# ── Entornos virtuales ────────────────────────────────────────────
 venv/
 env/
+.venv/
 anlisis-pdf/venv/
 
-# Archivos generados por PDF parser
+# ── Archivos generados por el parser PDF ─────────────────────────
 anlisis-pdf/*.xlsx
 anlisis-pdf/*.json
 anlisis-pdf/*.txt
 
-# Archivos sensibles / locales
-.env
-*.env
-
-# Archivos de datos / documentos binarios
+# ── Binarios / documentos (no versionar en git) ──────────────────
 *.pdf
 *.xlsx
 *.xls
 *.xlsm
+*.docx
+*.doc
 
-# Windows
-Thumbs.db
-desktop.ini
+# ── Cobertura y tests ─────────────────────────────────────────────
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.tox/
 
-# Editores
+# ── IDEs y editores ───────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
+
+# ── Sistema operativo ─────────────────────────────────────────────
+# Windows
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+
+# ── Producción / deploy ───────────────────────────────────────────
+gunicorn.pid
+*.pid
+*.sock
+collected-static/
+
+# ── Jupyter (si se usa anlisis-pdf) ──────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Misc ──────────────────────────────────────────────────────────
+*.bak
+*.tmp
+*.orig

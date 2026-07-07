@@ -1,0 +1,26 @@
+<ul class="nav nav-tabs mb-0" style="border-bottom:none">
+  <li class="nav-item">
+    <a class="nav-link {% if active_tab == 'stock' %}active{% endif %}"
+       href="{% url 'almacen:stock' proyecto.pk %}">
+      <i class="bi bi-archive me-1"></i>Stock
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if active_tab == 'consumo' %}active{% endif %}"
+       href="{% url 'almacen:consumo' proyecto.pk %}">
+      <i class="bi bi-graph-up-arrow me-1"></i>Consumo
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if active_tab == 'entradas' %}active{% endif %}"
+       href="{% url 'almacen:entrada_lista' proyecto.pk %}">
+      <i class="bi bi-arrow-down-circle me-1"></i>Entradas
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if active_tab == 'salidas' %}active{% endif %}"
+       href="{% url 'almacen:salida_lista' proyecto.pk %}">
+      <i class="bi bi-arrow-up-circle me-1"></i>Salidas
+    </a>
+  </li>
+</ul>

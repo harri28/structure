@@ -1,6 +1,7 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}Stock — {{ proyecto.codigo }}{% endblock %}
-{% block nav_almacen %}active{% endblock %}
+{% block nav_stock %}active{% endblock %}
+{% block submodule_chips %}{% include 'almacen/_almacen_nav.html' with active_tab='stock' %}{% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
@@ -15,16 +16,16 @@
 <div class="card mb-3">
   <div class="card-body py-2">
     <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
-      <select name="categoria" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
-        <option value="">Todas las categorías</option>
-        {% for val, label in categorias %}
-        <option value="{{ val }}" {% if categoria_sel == val %}selected{% endif %}>{{ label }}</option>
+      <select name="tipo" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <option value="">Todos los tipos</option>
+        {% for val, label in tipos %}
+        <option value="{{ val }}" {% if tipo_sel == val %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
-      {% if categoria_sel %}
+      {% if tipo_sel %}
       <a href="{% url 'almacen:stock' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
       {% endif %}
-      <span class="ms-auto text-muted" style="font-size:.78rem">{{ items|length }} productos</span>
+      <span class="ms-auto text-muted" style="font-size:.78rem">{{ items|length }} insumos</span>
     </form>
   </div>
 </div>
@@ -36,7 +37,7 @@
         <tr>
           <th>Código</th>
           <th>Descripción</th>
-          <th>Categoría</th>
+          <th>Tipo</th>
           <th>Unidad</th>
           <th class="text-end">Entradas</th>
           <th class="text-end">Salidas</th>
@@ -47,17 +48,17 @@
       <tbody>
         {% for item in items %}
         <tr {% if item.saldo <= 0 %}class="table-danger bg-opacity-10"{% endif %}>
-          <td><code>{{ item.producto.codigo }}</code></td>
-          <td>{{ item.producto.descripcion }}</td>
-          <td><span class="badge bg-secondary" style="font-size:.7rem">{{ item.producto.get_categoria_display }}</span></td>
-          <td class="text-muted">{{ item.producto.get_unidad_display }}</td>
+          <td><code>{{ item.insumo.codigo }}</code></td>
+          <td>{{ item.insumo.descripcion }}</td>
+          <td><span class="badge bg-secondary" style="font-size:.7rem">{{ item.insumo.get_tipo_display }}</span></td>
+          <td class="text-muted">{{ item.insumo.unidad }}</td>
           <td class="text-end text-success fw-semibold">{{ item.total_entrada|floatformat:2 }}</td>
           <td class="text-end text-danger">{{ item.total_salida|floatformat:2 }}</td>
           <td class="text-end fw-bold {% if item.saldo <= 0 %}text-danger{% else %}text-success{% endif %}">
             {{ item.saldo|floatformat:2 }}
           </td>
           <td>
-            <a href="{% url 'almacen:kardex' proyecto.pk item.producto.pk %}" class="btn-tbl" title="Kardex">
+            <a href="{% url 'almacen:kardex' proyecto.pk item.insumo.pk %}" class="btn-tbl" title="Kardex">
               <i class="bi bi-clock-history"></i>
             </a>
           </td>

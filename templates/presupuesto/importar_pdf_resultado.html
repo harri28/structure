@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}Resultado Importación PDF{% endblock %}
+{% block nav_presupuesto %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:lista' proyecto.pk %}">Presupuesto</a></li>
+<li class="breadcrumb-item"><a href="{% url 'presupuesto:detalle' presupuesto.pk %}">{{ presupuesto.nombre }}</a></li>
+<li class="breadcrumb-item active">Resultado Importación PDF</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'presupuesto:detalle' presupuesto.pk %}" class="btn-back">
+    <i class="bi bi-chevron-left"></i> {{ presupuesto.nombre }}
+  </a>
+  <h4><i class="bi bi-file-earmark-pdf me-2"></i>Importación PDF completada</h4>
+</div>
+
+<!-- KPI -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card stat-card" style="border-top-color:var(--success)">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-success bg-opacity-10">
+          <i class="bi bi-check-circle-fill" style="color:var(--success)"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:var(--success)">{{ total }}</div>
+          <div class="stat-label">Partidas importadas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% if avisos %}
+  <div class="col-sm-6 col-lg-3">
+    <div class="card stat-card" style="border-top-color:var(--amber)">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:var(--amber-light)">
+          <i class="bi bi-exclamation-triangle-fill" style="color:var(--amber-dark)"></i>
+        </div>
+        <div>
+          <div class="stat-val" style="color:var(--amber-dark)">{{ avisos|length }}</div>
+          <div class="stat-label">Alertas ML de precio</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Alertas ML -->
+{% if avisos %}
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2" style="background:var(--amber-pale);border-color:var(--amber-light)">
+    <i class="bi bi-cpu text-warning"></i>
+    <span class="fw-semibold">Alertas del Motor ML — Precios atípicos</span>
+    <span class="text-muted ms-1" style="font-size:.78rem">
+      Partidas cuyo P.U. difiere más del 40% del precio histórico en proyectos anteriores
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Partida</th>
+          <th class="text-end">P.U. Importado</th>
+          <th class="text-end">Precio histórico ML</th>
+          <th class="text-end">Diferencia</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for a in avisos %}
+      <tr>
+        <td class="text-muted fw-semibold">{{ a.codigo }}</td>
+        <td>{{ a.nombre }}</td>
+        <td class="text-end fw-semibold">S/. {{ a.pu }}</td>
+        <td class="text-end text-muted">S/. {{ a.ml_media }}</td>
+        <td class="text-end">
+          <span class="badge {% if a.diff_pct > 80 %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+            {{ a.diff_pct }}%
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer text-muted" style="font-size:.78rem">
+    <i class="bi bi-info-circle me-1"></i>
+    Las alertas son referenciales. Revisa estos precios en el detalle del presupuesto antes de aprobar.
+  </div>
+</div>
+{% else %}
+<div class="alert alert-success d-flex align-items-center gap-2 mb-4">
+  <i class="bi bi-cpu flex-shrink-0"></i>
+  <span>Motor ML: todos los precios unitarios están dentro del rango histórico normal.</span>
+</div>
+{% endif %}
+
+<div class="d-flex gap-2">
+  <a href="{% url 'presupuesto:detalle' presupuesto.pk %}" class="btn btn-primary">
+    <i class="bi bi-table me-1"></i>Ver partidas importadas
+  </a>
+  <a href="{% url 'presupuesto:importar' presupuesto.pk %}" class="btn btn-outline-secondary">
+    <i class="bi bi-upload me-1"></i>Volver a importar
+  </a>
+</div>
+{% endblock %}

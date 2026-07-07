@@ -3,16 +3,16 @@
 {% for form in formset %}
 <div class="formset-row {% if form.instance.pk %}existing-row{% endif %}">
   <div class="row g-2 align-items-end">
-    <!-- Buscador de producto (autocomplete) -->
+    <!-- Buscador de insumo (autocomplete) -->
     <div class="col-md-5">
-      <label class="form-label">Producto</label>
+      <label class="form-label">Insumo</label>
       <div class="prod-wrap" style="position:relative">
         <input type="text" class="form-control form-control-sm prod-search"
                placeholder="Buscar por código o descripción..."
                autocomplete="off"
-               value="{% if form.instance.producto_id %}{{ form.instance.producto.codigo }} — {{ form.instance.producto.descripcion }}{% endif %}">
-        <input type="hidden" name="{{ form.producto.html_name }}"
-               value="{{ form.instance.producto_id|default:'' }}" class="prod-id">
+               value="{% if form.instance.insumo_id %}{{ form.instance.insumo.codigo }} — {{ form.instance.insumo.descripcion }}{% elif form.instance.descripcion %}{{ form.instance.descripcion }}{% endif %}">
+        {{ form.insumo }}
+        {{ form.descripcion }}
         <div class="prod-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;
              background:#fff;border:1px solid #dee2e6;border-radius:4px;
              max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
@@ -37,7 +37,9 @@
     <!-- Unidad -->
     <div class="col-md-2">
       <label class="form-label">Unidad</label>
-      {{ form.unidad }}
+      <input type="text" name="{{ form.unidad.html_name }}"
+             value="{{ form.unidad.value|default:'' }}"
+             class="form-control form-control-sm insumo-unidad" placeholder="m2, kg...">
     </div>
     <!-- Eliminar -->
     <div class="col-md-1 text-center">
@@ -63,7 +65,6 @@
   const API_URL = '/almacen/api/productos/';
   let activeDropdown = null;
 
-  // Fetch & render opciones
   function buscar(input) {
     const q = input.value.trim();
     const wrap = input.closest('.prod-wrap');
@@ -77,6 +78,7 @@
         } else {
           dropdown.innerHTML = data.map(p =>
             `<div class="prod-opt" data-id="${p.id}" data-unidad="${p.unidad}"
+                  data-desc="${p.descripcion.replace(/"/g,'&quot;')}"
                   data-label="${p.codigo} — ${p.descripcion.replace(/"/g,'&quot;')}"
                   style="padding:6px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.8rem">
                <strong style="color:var(--amber-dark)">${p.codigo}</strong>
@@ -89,28 +91,30 @@
       });
   }
 
-  // Seleccionar opción
   document.addEventListener('click', function(e) {
     const opt = e.target.closest('.prod-opt');
     if (opt) {
       const wrap = opt.closest('.prod-wrap');
       wrap.querySelector('.prod-search').value = opt.dataset.label;
-      wrap.querySelector('.prod-id').value = opt.dataset.id;
-      // Copiar unidad al select de la misma fila si está vacío
+      // Set insumo hidden input
+      const insumoInput = wrap.querySelector('input[name$="-insumo"]');
+      if (insumoInput) insumoInput.value = opt.dataset.id;
+      // Set descripcion snapshot hidden input
+      const descInput = wrap.querySelector('input[name$="-descripcion"]');
+      if (descInput) descInput.value = opt.dataset.desc;
+      // Auto-fill unidad in the same row
       const row = wrap.closest('.formset-row');
-      const undSel = row ? row.querySelector('select[name$="-unidad"]') : null;
-      if (undSel && !undSel.value) undSel.value = opt.dataset.unidad;
+      const undInp = row ? row.querySelector('.insumo-unidad') : null;
+      if (undInp && !undInp.value) undInp.value = opt.dataset.unidad;
       opt.closest('.prod-dropdown').style.display = 'none';
       return;
     }
-    // Cerrar dropdown al hacer clic fuera
     if (activeDropdown && !e.target.classList.contains('prod-search')) {
       activeDropdown.style.display = 'none';
       activeDropdown = null;
     }
   });
 
-  // Input handler con debounce
   let timer;
   document.addEventListener('input', function(e) {
     if (!e.target.classList.contains('prod-search')) return;
@@ -118,14 +122,16 @@
     timer = setTimeout(() => buscar(e.target), 280);
   });
 
-  // Limpiar hidden al borrar texto
   document.addEventListener('change', function(e) {
     if (e.target.classList.contains('prod-search') && !e.target.value.trim()) {
-      e.target.closest('.prod-wrap').querySelector('.prod-id').value = '';
+      const wrap = e.target.closest('.prod-wrap');
+      const insumoInput = wrap.querySelector('input[name$="-insumo"]');
+      if (insumoInput) insumoInput.value = '';
+      const descInput = wrap.querySelector('input[name$="-descripcion"]');
+      if (descInput) descInput.value = '';
     }
   });
 
-  // Feedback visual al marcar DELETE
   document.getElementById('formset-container').addEventListener('change', function(e) {
     if (e.target.type === 'checkbox' && e.target.name?.endsWith('-DELETE')) {
       const row = e.target.closest('.formset-row');
@@ -133,7 +139,6 @@
     }
   });
 
-  // Agregar nueva fila
   document.getElementById('add-row').addEventListener('click', function() {
     const container = document.getElementById('formset-container');
     const rows = container.querySelectorAll('.formset-row');
@@ -141,16 +146,17 @@
     const prefix = document.querySelector('[name$="-TOTAL_FORMS"]')?.name.replace('-TOTAL_FORMS','') || 'detalles';
     const template = rows[0].cloneNode(true);
     template.innerHTML = template.innerHTML.replace(new RegExp(prefix + '-0-', 'g'), `${prefix}-${idx}-`);
-    // Limpiar valores
     template.querySelectorAll('input:not([type=hidden]):not([type=checkbox])').forEach(i => i.value = '');
     template.querySelectorAll('input[type=checkbox]').forEach(i => i.checked = false);
     template.querySelectorAll('input[type=hidden][name$="-id"]').forEach(i => i.value = '');
+    template.querySelectorAll('input[type=hidden][name$="-insumo"]').forEach(i => i.value = '');
+    template.querySelectorAll('input[type=hidden][name$="-descripcion"]').forEach(i => i.value = '');
     template.querySelectorAll('.prod-dropdown').forEach(d => d.style.display = 'none');
+    template.querySelector('.prod-search').value = '';
     template.style.opacity = '1';
     container.appendChild(template);
     const tf = document.querySelector('[name$="-TOTAL_FORMS"]');
     if (tf) tf.value = idx + 1;
-    // Foco en el nuevo buscador
     template.querySelector('.prod-search')?.focus();
   });
 })();

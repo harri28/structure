@@ -30,7 +30,7 @@
   <div class="sb-section">
     <div class="sb-label">General</div>
     <a href="{% url 'proyectos:dashboard' %}" class="sb-link {% block nav_dashboard %}{% endblock %}">
-      <i class="bi bi-grid-1x2"></i> Dashboard
+      <i class="bi bi-grid-1x2"></i> Inicio
     </a>
   </div>
 
@@ -38,34 +38,140 @@
   {% if proyecto_activo %}
   <div class="sb-section">
     <div class="sb-label">{{ proyecto_activo.codigo }}</div>
-    <a href="{% url 'proyectos:detalle' proyecto_activo.pk %}"
-       class="sb-link {% block nav_proyecto %}{% endblock %}">
-      <i class="bi bi-card-text"></i> Descripción
-    </a>
-    <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}"
-       class="sb-link {% block nav_presupuesto %}{% endblock %}">
-      <i class="bi bi-table"></i> Presupuesto
-    </a>
-    <a href="{% url 'almacen:dashboard' proyecto_activo.pk %}"
-       class="sb-link {% block nav_almacen %}{% endblock %}">
-      <i class="bi bi-box-seam"></i> Almacén
-    </a>
-    <a href="{% url 'almacen:req_lista' proyecto_activo.pk %}"
-       class="sb-link sb-sublink {% block nav_req %}{% endblock %}">
+    <div class="sb-module-row">
+      <a href="{% if proyecto_activo.presupuesto %}{% url 'presupuesto:detalle' proyecto_activo.presupuesto.pk %}{% else %}{% url 'presupuesto:lista' proyecto_activo.pk %}{% endif %}"
+         class="sb-link {% block nav_presupuesto %}{% endblock %}">
+        <i class="bi bi-table"></i> Presupuesto
+      </a>
+      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-presupuesto" aria-expanded="false">
+        <i class="bi bi-chevron-right sb-arrow"></i>
+      </button>
+    </div>
+    <div class="collapse" id="nav-presupuesto">
+      <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_pres_resumen %}{% endblock %}">
+        <i class="bi bi-bar-chart-line"></i> Resumen
+      </a>
+      {% if proyecto_activo.presupuesto %}
+      <a href="{% url 'presupuesto:detalle' proyecto_activo.presupuesto.pk %}"
+         class="sb-link sb-sublink {% block nav_pres_partidas %}{% endblock %}">
+        <i class="bi bi-table"></i> Partidas
+      </a>
+      <a href="{% url 'presupuesto:insumos' proyecto_activo.presupuesto.pk %}"
+         class="sb-link sb-sublink {% block nav_pres_insumos %}{% endblock %}">
+        <i class="bi bi-boxes"></i> Insumos
+      </a>
+      <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}#adicionales"
+         class="sb-link sb-sublink {% block nav_pres_adicionales %}{% endblock %}">
+        <i class="bi bi-plus-circle" style="color:#16a34a"></i> Adicionales
+      </a>
+      <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}#deductivos"
+         class="sb-link sb-sublink {% block nav_pres_deductivos %}{% endblock %}">
+        <i class="bi bi-dash-circle" style="color:#dc2626"></i> Deductivos
+      </a>
+      <a href="{% url 'presupuesto:importar' proyecto_activo.presupuesto.pk %}"
+         class="sb-link sb-sublink {% block nav_pres_importar %}{% endblock %}">
+        <i class="bi bi-upload"></i> Importar S10
+      </a>
+      {% else %}
+      <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}"
+         class="sb-link sb-sublink">
+        <i class="bi bi-upload"></i> Importar presupuesto
+      </a>
+      {% endif %}
+    </div>
+    <!-- Requerimientos independiente -->
+    <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
+       class="sb-link {% block nav_req %}{% endblock %}">
       <i class="bi bi-file-earmark-text"></i> Requerimientos
     </a>
-    <a href="{% url 'almacen:entrada_lista' proyecto_activo.pk %}"
-       class="sb-link sb-sublink {% block nav_entradas %}{% endblock %}">
-      <i class="bi bi-arrow-down-circle"></i> Entradas
+
+    <!-- Almacén colapsable -->
+    <div class="sb-module-row">
+      <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
+         class="sb-link {% block nav_almacen %}{% endblock %}">
+        <i class="bi bi-box-seam"></i> Almacén
+      </a>
+      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-almacen" aria-expanded="false">
+        <i class="bi bi-chevron-right sb-arrow"></i>
+      </button>
+    </div>
+    <div class="collapse" id="nav-almacen">
+      <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_stock %}{% endblock %}">
+        <i class="bi bi-archive"></i> Stock
+      </a>
+      <a href="{% url 'almacen:consumo' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_consumo %}{% endblock %}">
+        <i class="bi bi-graph-up-arrow"></i> Consumo
+      </a>
+      <a href="{% url 'almacen:entrada_lista' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_entradas %}{% endblock %}">
+        <i class="bi bi-arrow-down-circle"></i> Entradas
+      </a>
+      <a href="{% url 'almacen:salida_lista' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_salidas %}{% endblock %}">
+        <i class="bi bi-arrow-up-circle"></i> Salidas
+      </a>
+    </div>
+
+    <!-- Logística colapsable -->
+    <div class="sb-module-row">
+      <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}"
+         class="sb-link {% block nav_logistica %}{% endblock %}">
+        <i class="bi bi-truck-front"></i> Logística
+        {% if req_enviados %}<span class="badge bg-danger ms-1" style="font-size:.65rem;padding:.2em .45em">{{ req_enviados }}</span>{% endif %}
+      </a>
+      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-logistica" aria-expanded="false">
+        <i class="bi bi-chevron-right sb-arrow"></i>
+      </button>
+    </div>
+    <div class="collapse" id="nav-logistica">
+      <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_log_dashboard %}{% endblock %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_log_req %}{% endblock %}">
+        <i class="bi bi-file-earmark-text"></i> Requerimientos
+        {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
+      </a>
+      <a href="{% url 'logistica:inventarios' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_log_inventarios %}{% endblock %}">
+        <i class="bi bi-archive"></i> Inventarios
+      </a>
+      <a href="{% url 'logistica:almacen_log' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_log_almacen %}{% endblock %}">
+        <i class="bi bi-box-seam"></i> Almacén
+      </a>
+      <a href="{% url 'logistica:control_maquinaria' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_log_ctrl_maq %}{% endblock %}">
+        <i class="bi bi-gear-wide-connected"></i> Control Maq. y Equipos
+      </a>
+      <a href="{% url 'logistica:abastecimiento' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_log_abastecimiento %}{% endblock %}">
+        <i class="bi bi-cart-check"></i> Abastecimiento
+      </a>
+      <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_cot %}{% endblock %}">
+        <i class="bi bi-tags"></i> Cotizaciones
+      </a>
+      <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_log_guias %}{% endblock %}">
+        <i class="bi bi-file-earmark-arrow-right"></i> Guías de Remisión
+      </a>
+    </div>
+
+    <a href="{% url 'maquinaria:registro_lista' proyecto_activo.pk %}"
+       class="sb-link {% block nav_reg_cuadrilla %}{% endblock %}">
+      <i class="bi bi-people-fill"></i> Cuadrilla
     </a>
-    <a href="{% url 'almacen:salida_lista' proyecto_activo.pk %}"
-       class="sb-link sb-sublink {% block nav_salidas %}{% endblock %}">
-      <i class="bi bi-arrow-up-circle"></i> Salidas
+
+    <a href="{% url 'maquinaria:maq_registro_lista' proyecto_activo.pk %}"
+       class="sb-link {% block nav_maquinaria %}{% endblock %}">
+      <i class="bi bi-truck"></i> Maquinaria
     </a>
-    <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
-       class="sb-link sb-sublink {% block nav_cot %}{% endblock %}">
-      <i class="bi bi-tags"></i> Cotizaciones
-    </a>
+
   </div>
   {% else %}
   <div class="sb-section">
@@ -79,20 +185,46 @@
   {% endif %}
 
   <!-- Administración -->
-  <div class="sb-section" style="margin-top:auto;border-top:1px solid var(--sb-border);padding-top:.5rem">
+  <div class="sb-section">
     <div class="sb-label">Administración</div>
-    <a href="{% url 'proyectos:lista' %}" class="sb-link {% block nav_proyectos %}{% endblock %}">
-      <i class="bi bi-folder2-open"></i> Proyectos
-    </a>
-    <a href="{% url 'catalogo:lista' %}" class="sb-link {% block nav_catalogo %}{% endblock %}">
+<a href="{% url 'catalogo:lista' %}" class="sb-link {% block nav_catalogo %}{% endblock %}">
       <i class="bi bi-database"></i> Catálogo
     </a>
-    <a href="{% url 'configuracion:empresa' %}" class="sb-link {% block nav_config_empresa %}{% endblock %}">
-      <i class="bi bi-building"></i> Empresa
+    <a href="{% url 'maquinaria:cuadrilla_lista' %}" class="sb-link {% block nav_cuadrillas %}{% endblock %}">
+      <i class="bi bi-people"></i> Cuadrillas
     </a>
-    <a href="{% url 'configuracion:equipo' %}" class="sb-link {% block nav_config_equipo %}{% endblock %}">
-      <i class="bi bi-people"></i> Usuarios & Roles
+    <a href="{% url 'registro:lista' %}" class="sb-link {% block nav_registro %}{% endblock %}">
+      <i class="bi bi-journal-text"></i> Actividad
     </a>
+
+    <!-- Configuración colapsable -->
+    <div class="sb-module-row">
+      <a href="{% url 'configuracion:hub' %}"
+         class="sb-link {% block nav_configuracion %}{% endblock %}">
+        <i class="bi bi-gear"></i> Configuración
+      </a>
+      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-configuracion" aria-expanded="false">
+        <i class="bi bi-chevron-right sb-arrow"></i>
+      </button>
+    </div>
+    <div class="collapse" id="nav-configuracion">
+      <a href="{% url 'configuracion:hub' %}"
+         class="sb-link sb-sublink {% block nav_config_hub %}{% endblock %}">
+        <i class="bi bi-grid-3x3-gap"></i> Resumen
+      </a>
+      <a href="{% url 'configuracion:empresa' %}"
+         class="sb-link sb-sublink {% block nav_config_empresa %}{% endblock %}">
+        <i class="bi bi-building"></i> Empresa
+      </a>
+      <a href="{% url 'configuracion:equipo' %}"
+         class="sb-link sb-sublink {% block nav_config_equipo %}{% endblock %}">
+        <i class="bi bi-people-fill"></i> Usuarios & Roles
+      </a>
+      <a href="{% url 'configuracion:parametros' %}"
+         class="sb-link sb-sublink {% block nav_config_params %}{% endblock %}">
+        <i class="bi bi-sliders"></i> Parámetros
+      </a>
+    </div>
   </div>
 
   <div class="sb-footer">
@@ -106,7 +238,7 @@
 
 <!-- ── Topbar ─────────────────────────────────────────────────── -->
 <header id="topbar">
-  <button id="sidebar-toggle" class="btn-topbar d-lg-none" title="Menú" aria-label="Abrir menú">
+  <button id="sidebar-toggle" class="btn-topbar" title="Menú" aria-label="Contraer menú">
     <i class="bi bi-list" style="font-size:1.1rem"></i>
   </button>
   {% if proyecto_activo %}
@@ -125,6 +257,28 @@
       <i class="bi bi-gear-fill"></i>
     </a>
     {% endif %}
+
+    <!-- ── Notificaciones ────────────────────────── -->
+    <div id="notif-wrap" style="position:relative">
+      <button id="notif-btn" class="btn-topbar" title="Notificaciones" aria-label="Notificaciones">
+        <i class="bi bi-bell-fill"></i>
+        {% if notif_count %}<span class="notif-badge" id="notif-badge">{{ notif_count }}</span>{% endif %}
+      </button>
+      <div id="notif-panel" class="notif-panel" style="display:none">
+        <div class="notif-panel-header">
+          <span>Notificaciones</span>
+          <button id="notif-leer-todas" class="notif-leer-btn" title="Marcar todas como leídas">
+            <i class="bi bi-check2-all"></i> Leídas
+          </button>
+        </div>
+        <div id="notif-lista" class="notif-lista">
+          <div class="notif-cargando">
+            <span class="spinner-border spinner-border-sm me-2"></span>Cargando…
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="display:flex;align-items:center;gap:.5rem;padding:.3rem .75rem;
                 border-radius:8px;background:#f8fafc;border:1px solid #e5e7eb;font-size:.82rem">
       <div style="width:26px;height:26px;border-radius:50%;background:#2563eb;
@@ -160,6 +314,7 @@
   {% endif %}
 
   <div class="page-content">
+    {% block submodule_chips %}{% endblock %}
     {% block content %}{% endblock %}
   </div>
 </main>
@@ -180,20 +335,187 @@ document.querySelectorAll('table.table:not(.table-modern)').forEach(function (t)
   t.classList.remove('table', 'table-sm', 'table-hover', 'table-bordered', 'table-striped');
 });
 
-// ── Sidebar mobile toggle ─────────────────────────────────────────
+// ── Sidebar collapse: auto-abrir si hay link activo dentro ───────
+document.querySelectorAll('#sidebar .collapse').forEach(function (col) {
+  if (col.querySelector('.sb-link.active')) {
+    col.classList.add('show');
+    var trigger = document.querySelector('[data-bs-target="#' + col.id + '"]');
+    if (trigger) trigger.setAttribute('aria-expanded', 'true');
+  }
+});
+
+// ── Notificaciones ────────────────────────────────────────────────
+(function () {
+  var wrap     = document.getElementById('notif-wrap');
+  var btn      = document.getElementById('notif-btn');
+  var panel    = document.getElementById('notif-panel');
+  var lista    = document.getElementById('notif-lista');
+  var leerTodo = document.getElementById('notif-leer-todas');
+  var badge    = document.getElementById('notif-badge');
+  var abierto  = false;
+
+  if (!btn) return;
+
+  function getCsrf() {
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  function tipoIcono(tipo) {
+    return { info: 'bi-info-circle-fill', success: 'bi-check-circle-fill',
+             warning: 'bi-exclamation-triangle-fill', danger: 'bi-x-circle-fill' }[tipo] || 'bi-bell-fill';
+  }
+  function tipoColor(tipo) {
+    return { info: '#2563eb', success: '#16a34a', warning: '#d97706', danger: '#dc2626' }[tipo] || '#6b7280';
+  }
+
+  function setBadge(n) {
+    if (!badge) {
+      if (n > 0) {
+        var b = document.createElement('span');
+        b.className = 'notif-badge'; b.id = 'notif-badge'; b.textContent = n > 99 ? '99+' : n;
+        btn.appendChild(b);
+        badge = b;
+      }
+      return;
+    }
+    if (n <= 0) { badge.remove(); badge = null; }
+    else { badge.textContent = n > 99 ? '99+' : n; }
+  }
+
+  function cargar() {
+    lista.innerHTML = '<div class="notif-cargando"><span class="spinner-border spinner-border-sm me-2"></span>Cargando…</div>';
+    fetch('{% url "registro:notif_json" %}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      setBadge(data.no_leidas);
+      if (!data.notificaciones.length) {
+        lista.innerHTML = '<div class="notif-vacia"><i class="bi bi-bell-slash" style="font-size:1.6rem;opacity:.25;display:block;margin-bottom:.5rem"></i>Sin notificaciones</div>';
+        return;
+      }
+      lista.innerHTML = '';
+      data.notificaciones.forEach(function(n) {
+        var div = document.createElement('div');
+        div.className = 'notif-item' + (n.leida ? ' notif-leida' : '');
+        div.dataset.id = n.id;
+        div.innerHTML =
+          '<span class="notif-icono" style="color:' + tipoColor(n.tipo) + '">' +
+            '<i class="bi ' + tipoIcono(n.tipo) + '"></i>' +
+          '</span>' +
+          '<div class="notif-contenido">' +
+            '<div class="notif-titulo">' + n.titulo + '</div>' +
+            (n.mensaje ? '<div class="notif-msg">' + n.mensaje + '</div>' : '') +
+            '<div class="notif-fecha">' + n.fecha + '</div>' +
+          '</div>' +
+          (!n.leida ? '<button class="notif-dot" data-id="' + n.id + '" title="Marcar como leída"></button>' : '');
+        if (n.url) {
+          div.style.cursor = 'pointer';
+          div.addEventListener('click', function(e) {
+            if (e.target.closest('.notif-dot')) return;
+            marcarLeida(n.id, div, function() { window.location.href = n.url; });
+          });
+        }
+        lista.appendChild(div);
+      });
+    })
+    .catch(function() {
+      lista.innerHTML = '<div class="notif-vacia">Error al cargar</div>';
+    });
+  }
+
+  function marcarLeida(id, div, cb) {
+    fetch('{% url "registro:notif_leer" pk=0 %}'.replace('/0/', '/' + id + '/'), {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      setBadge(d.no_leidas);
+      if (div) {
+        div.classList.add('notif-leida');
+        var dot = div.querySelector('.notif-dot');
+        if (dot) dot.remove();
+      }
+      if (cb) cb();
+    });
+  }
+
+  // Delegación: botón "·" de cada notificación
+  lista.addEventListener('click', function(e) {
+    var dot = e.target.closest('.notif-dot');
+    if (!dot) return;
+    e.stopPropagation();
+    marcarLeida(dot.dataset.id, dot.closest('.notif-item'), null);
+  });
+
+  // Marcar todas como leídas
+  if (leerTodo) {
+    leerTodo.addEventListener('click', function() {
+      fetch('{% url "registro:notif_leer_todas" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        setBadge(0);
+        lista.querySelectorAll('.notif-item').forEach(function(el) {
+          el.classList.add('notif-leida');
+          var dot = el.querySelector('.notif-dot');
+          if (dot) dot.remove();
+        });
+      });
+    });
+  }
+
+  // Toggle panel
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    abierto = !abierto;
+    panel.style.display = abierto ? 'flex' : 'none';
+    if (abierto) cargar();
+  });
+
+  // Cerrar al hacer clic fuera
+  document.addEventListener('click', function(e) {
+    if (abierto && !wrap.contains(e.target)) {
+      abierto = false;
+      panel.style.display = 'none';
+    }
+  });
+})();
+
+// ── Sidebar toggle (desktop: colapsar / mobile: slide) ───────────
 (function () {
   var sidebar  = document.getElementById('sidebar');
   var overlay  = document.getElementById('sidebar-overlay');
   var toggle   = document.getElementById('sidebar-toggle');
-  function open()  { sidebar.classList.add('open');  overlay.classList.add('show'); }
-  function close() { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
-  if (toggle)  toggle.addEventListener('click', function() { sidebar.classList.contains('open') ? close() : open(); });
-  if (overlay) overlay.addEventListener('click', close);
-  // cerrar al navegar (cambio de página en mobile)
-  sidebar.querySelectorAll('.sb-link').forEach(function(a) { a.addEventListener('click', close); });
+
+  // Restaurar estado colapsado en desktop
+  if (window.innerWidth >= 992 && localStorage.getItem('sb-collapsed') === '1') {
+    document.body.classList.add('sb-collapsed');
+  }
+
+  function openMobile()  { sidebar.classList.add('open');  overlay.classList.add('show'); }
+  function closeMobile() { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
+
+  if (toggle) {
+    toggle.addEventListener('click', function () {
+      if (window.innerWidth >= 992) {
+        document.body.classList.toggle('sb-collapsed');
+        localStorage.setItem('sb-collapsed', document.body.classList.contains('sb-collapsed') ? '1' : '0');
+      } else {
+        sidebar.classList.contains('open') ? closeMobile() : openMobile();
+      }
+    });
+  }
+
+  if (overlay) overlay.addEventListener('click', closeMobile);
+  sidebar.querySelectorAll('.sb-link').forEach(function(a) {
+    a.addEventListener('click', function() { if (window.innerWidth < 992) closeMobile(); });
+  });
 })();
 
-// ── Partidas tree toggle ──────────────────────────────────────────
+// ── Partidas tree — lazy AJAX expand ─────────────────────────────
 function _ocultarDescendientes(id) {
   document.querySelectorAll('.children-of-' + id).forEach(function (r) {
     r.classList.add('d-none');
@@ -202,20 +524,57 @@ function _ocultarDescendientes(id) {
     if (tog) { tog.classList.remove('bi-chevron-down'); tog.classList.add('bi-chevron-right'); }
   });
 }
-document.querySelectorAll('.partida-toggle').forEach(function (btn) {
-  btn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    var id = this.dataset.target;
-    if (this.classList.contains('bi-chevron-down')) {
-      _ocultarDescendientes(id);
-      this.classList.remove('bi-chevron-down'); this.classList.add('bi-chevron-right');
-    } else {
+
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.partida-toggle');
+  if (!btn) return;
+  e.stopPropagation();
+
+  var id = btn.dataset.target;
+  var row = document.getElementById('partida-' + id);
+
+  if (btn.classList.contains('bi-chevron-down')) {
+    // Colapsar
+    _ocultarDescendientes(id);
+    btn.classList.replace('bi-chevron-down', 'bi-chevron-right');
+    return;
+  }
+
+  // Expandir
+  var existing = document.querySelectorAll('.children-of-' + id);
+  if (existing.length > 0) {
+    // Ya cargados — solo mostrar
+    existing.forEach(function (r) { r.classList.remove('d-none'); });
+    btn.classList.replace('bi-chevron-right', 'bi-chevron-down');
+    return;
+  }
+
+  // Cargar hijos vía AJAX
+  btn.classList.replace('bi-chevron-right', 'bi-hourglass-split');
+  btn.style.pointerEvents = 'none';
+
+  fetch('/presupuesto/partida/' + id + '/hijos/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function (r) { return r.text(); })
+    .then(function (html) {
+      var tmp = document.createElement('tbody');
+      tmp.innerHTML = html;
+      var ref = row;
+      // Use querySelectorAll to skip whitespace text nodes from Django templates
+      Array.from(tmp.querySelectorAll('tr')).forEach(function (tr) {
+        ref.after(tr);
+        ref = tr;
+      });
+      // Mostrar los hijos directos recién insertados (el template los trae con d-none)
       document.querySelectorAll('.children-of-' + id).forEach(function (r) {
         r.classList.remove('d-none');
       });
-      this.classList.remove('bi-chevron-right'); this.classList.add('bi-chevron-down');
-    }
-  });
+      btn.classList.replace('bi-hourglass-split', 'bi-chevron-down');
+      btn.style.pointerEvents = '';
+    })
+    .catch(function () {
+      btn.classList.replace('bi-hourglass-split', 'bi-chevron-right');
+      btn.style.pointerEvents = '';
+    });
 });
 </script>
 {% block extra_js %}{% endblock %}

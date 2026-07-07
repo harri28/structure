@@ -10,7 +10,15 @@ urlpatterns = [
     path('<int:pk>/',                         views.detalle,  name='detalle'),
     path('<int:pk>/insumos/',                 views.insumos,  name='insumos'),
     path('<int:pk>/importar/',                views.importar, name='importar'),
-    path('<int:pk>/eliminar/',                views.eliminar, name='eliminar'),
+    path('<int:pk>/eliminar/',                views.eliminar,         name='eliminar'),
+    path('<int:pk>/partidas/limpiar/',        views.partidas_limpiar, name='partidas_limpiar'),
+    path('<int:pk>/insumos/limpiar/',         views.insumos_limpiar,  name='insumos_limpiar'),
+
+    # Lazy tree expand (AJAX)
+    path('partida/<int:pk>/hijos/',          views.partida_hijos,        name='partida_hijos'),
+
+    # Panel lateral AJAX
+    path('partida/<int:pk>/panel/',          views.partida_panel,        name='partida_panel'),
 
     # ACU — Análisis de Costos Unitarios por partida
     path('partida/<int:pk>/acu/',            views.acu_partida,          name='acu_partida'),

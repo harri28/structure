@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_maquinaria %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}">Maquinaria</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Registros</a>
+  <h4><i class="bi bi-truck me-2"></i>{% if form.instance.pk %}Editar Registro{% else %}Nuevo Registro{% endif %}</h4>
+</div>
+
+<div class="card" style="max-width:820px">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+
+      <!-- Fila 1: COD · Costo · Período de Costo · Modalidad -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-2">
+          <label class="form-label fw-semibold">COD</label>
+          {{ form.codigo }}
+        </div>
+        <div class="col-sm-3">
+          <label class="form-label fw-semibold">Costo (S/)</label>
+          {{ form.costo }}
+        </div>
+        <div class="col-sm-3">
+          <label class="form-label fw-semibold">Período de Costo</label>
+          {{ form.modalidad_costo }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Modalidad</label>
+          {{ form.modalidad }}
+        </div>
+      </div>
+
+      <hr class="my-3">
+
+      <!-- Fila 2: Nombre · Equipo -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Nombre</label>
+          {{ form.nombre }}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Equipo</label>
+          {{ form.tipo_equipo }}
+        </div>
+      </div>
+
+      <!-- Fila 3: Marca · Placa · Modelo -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Marca</label>
+          {{ form.marca }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Placa</label>
+          {{ form.placa }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Modelo</label>
+          {{ form.modelo }}
+        </div>
+      </div>
+
+      <hr class="my-3">
+
+      <!-- Fila 4: Propietario · Operador -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Propietario</label>
+          {{ form.propietario }}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Operador</label>
+          {{ form.operador }}
+        </div>
+      </div>
+
+      <hr class="my-3">
+
+      <!-- Fila 5: Fechas de obra -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Fecha de llegada</label>
+          {{ form.fecha_llegada }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Fecha de reinicio de trabajo</label>
+          {{ form.fecha_reinicio }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Fecha de salida de obra</label>
+          {{ form.fecha_salida }}
+        </div>
+      </div>
+
+      <hr class="my-3">
+
+      <!-- Registro de actividad -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-3">
+          <label class="form-label fw-semibold">Fecha de registro</label>
+          {{ form.fecha }}
+        </div>
+        <div class="col-sm-2">
+          <label class="form-label fw-semibold">HM</label>
+          {{ form.horas }}
+        </div>
+        <div class="col-sm-7">
+          <label class="form-label fw-semibold">Partida <span class="text-muted fw-normal" style="font-size:.8rem">(opcional)</span></label>
+          {{ form.partida }}
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-12">
+          <label class="form-label fw-semibold">Observación</label>
+          {{ form.observacion }}
+        </div>
+      </div>
+      <div class="row g-3 mb-0">
+        <div class="col-12">
+          <label class="form-label fw-semibold text-muted" style="font-size:.8rem">Enlace a catálogo <span class="fw-normal">(opcional)</span></label>
+          {{ form.maquinaria }}
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+        <a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

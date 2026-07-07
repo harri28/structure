@@ -1,0 +1,26 @@
+﻿{% extends 'base.html' %}
+{% block title %}Almacén — {{ proyecto.codigo }}{% endblock %}
+{% block nav_log_almacen %}active{% endblock %}
+{% block submodule_chips %}{% include 'logistica/_logistica_nav.html' with active_tab='almacen' %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
+<li class="breadcrumb-item active">Almacén</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4 class="d-flex align-items-center gap-2">
+    <i class="bi bi-box-seam" style="color:#2563eb"></i>
+    Almacén — {{ proyecto.codigo }}
+  </h4>
+</div>
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state py-5">
+      <i class="bi bi-box-seam d-block" style="font-size:2.5rem;opacity:.2;margin-bottom:.75rem"></i>
+      <p class="text-muted">Módulo en construcción</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

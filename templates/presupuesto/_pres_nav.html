@@ -1,0 +1,50 @@
+<ul class="nav nav-tabs mb-0" style="border-bottom:none">
+  <li class="nav-item">
+    <a class="nav-link {% if active_tab == 'resumen' %}active{% endif %}"
+       href="{% url 'presupuesto:lista' proyecto.pk %}">
+      <i class="bi bi-bar-chart-line me-1"></i>Resumen
+    </a>
+  </li>
+  <li class="nav-item">
+    {% if presupuesto %}
+    <a class="nav-link {% if active_tab == 'partidas' %}active{% endif %}"
+       href="{% url 'presupuesto:detalle' presupuesto.pk %}">
+    {% else %}
+    <a class="nav-link disabled">
+    {% endif %}
+      <i class="bi bi-table me-1"></i>Partidas
+    </a>
+  </li>
+  <li class="nav-item">
+    {% if presupuesto %}
+    <a class="nav-link {% if active_tab == 'insumos' %}active{% endif %}"
+       href="{% url 'presupuesto:insumos' presupuesto.pk %}">
+    {% else %}
+    <a class="nav-link disabled">
+    {% endif %}
+      <i class="bi bi-boxes me-1"></i>Insumos
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if active_tab == 'adicionales' %}active{% endif %}"
+       href="{% url 'presupuesto:lista' proyecto.pk %}#adicionales">
+      <i class="bi bi-plus-circle me-1" style="color:#16a34a"></i>Adicionales
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if active_tab == 'deductivos' %}active{% endif %}"
+       href="{% url 'presupuesto:lista' proyecto.pk %}#deductivos">
+      <i class="bi bi-dash-circle me-1" style="color:#dc2626"></i>Deductivos
+    </a>
+  </li>
+  <li class="nav-item">
+    {% if presupuesto %}
+    <a class="nav-link {% if active_tab == 'importar' %}active{% endif %}"
+       href="{% url 'presupuesto:importar' presupuesto.pk %}">
+    {% else %}
+    <a class="nav-link disabled">
+    {% endif %}
+      <i class="bi bi-upload me-1"></i>Importar S10
+    </a>
+  </li>
+</ul>
