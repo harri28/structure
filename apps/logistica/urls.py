@@ -21,8 +21,12 @@ urlpatterns = [
     path('transportistas/<int:pk>/',  views.transportista_editar, name='transportista_editar'),
 
     # Requerimientos recibidos
-    path('proyecto/<int:proyecto_id>/requerimientos/',        views.requerimientos_log, name='requerimientos_log'),
-    path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/', views.req_detalle_log,  name='req_detalle_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/',                       views.requerimientos_log, name='requerimientos_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/',              views.req_detalle_log,    name='req_detalle_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/revisar/',      views.req_revisar_log,    name='req_revisar_log'),
+
+    # REALTIME POLL — eliminar junto con ping_reqs en views.py para desactivar
+    path('proyecto/<int:proyecto_id>/ping-reqs/', views.ping_reqs, name='ping_reqs'),
 
     # Sub-módulos
     path('proyecto/<int:proyecto_id>/inventarios/',        views.inventarios,        name='inventarios'),

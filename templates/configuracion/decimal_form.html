@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_configuracion %}active{% endblock %}
+{% block nav_unidades %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:hub' %}">Configuración</a></li>
+<li class="breadcrumb-item"><a href="{% url 'configuracion:decimal_lista' %}">Decimal</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'configuracion:decimal_lista' %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Decimal
+    </a>
+    <h4><i class="bi bi-123 me-2" style="color:#0284c7"></i>{{ titulo }}</h4>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Unidad de Medida <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="codigo"
+                   class="form-control{% if error.codigo %} is-invalid{% endif %}"
+                   value="{{ form_codigo }}" maxlength="20"
+                   placeholder="Ej: und, m, kg, m2">
+            {% if error.codigo %}
+            <div class="invalid-feedback">{{ error.codigo }}</div>
+            {% endif %}
+            <div class="form-text">Código estándar usado en todo el sistema.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Variantes de importación</label>
+            <textarea name="aliases" class="form-control" rows="3"
+                      placeholder="Ej: und, unid, unidad">{{ form_aliases }}</textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nombre completo <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" class="form-control{% if error.nombre %} is-invalid{% endif %}"
+                   value="{{ form_nombre }}" placeholder="Ej: Unidad, Metro, Kilogramo">
+            {% if error.nombre %}
+            <div class="invalid-feedback">{{ error.nombre }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Descripción</label>
+            <input type="text" name="descripcion" class="form-control"
+                   value="{{ form_descripcion }}" placeholder="Ej: Longitud lineal, Mano de obra directa">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Cifras decimales
+              {% if error.decimales %}<span class="text-danger ms-2" style="font-size:.82rem">{{ error.decimales }}</span>{% endif %}
+            </label>
+            <select name="decimales" class="form-select form-select-sm" style="max-width:180px">
+              <option value="0" {% if form_decimales == 0 %}selected{% endif %}>0 — entero</option>
+              <option value="1" {% if form_decimales == 1 %}selected{% endif %}>1 decimal</option>
+              <option value="2" {% if form_decimales == 2 %}selected{% endif %}>2 decimales</option>
+              <option value="3" {% if form_decimales == 3 %}selected{% endif %}>3 decimales</option>
+              <option value="4" {% if form_decimales == 4 %}selected{% endif %}>4 decimales</option>
+              <option value="5" {% if form_decimales == 5 %}selected{% endif %}>5 decimales</option>
+              <option value="6" {% if form_decimales == 6 %}selected{% endif %}>6 decimales</option>
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="activo" value="1" id="chk_activo"
+                     {% if form_activo == '1' or form_activo == True %}checked{% endif %}>
+              <label class="form-check-label" for="chk_activo">Activo</label>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg me-1"></i>
+              {% if obj %}Guardar Cambios{% else %}Crear Decimal{% endif %}
+            </button>
+            <a href="{% url 'configuracion:decimal_lista' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

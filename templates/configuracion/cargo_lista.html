@@ -33,6 +33,9 @@
   <span class="chip-seccion chip-activo">
     <i class="bi bi-person-badge me-1"></i>Mano de Obra
   </span>
+  <a href="{% url 'configuracion:decimal_lista' %}" class="chip-seccion">
+    <i class="bi bi-123 me-1"></i>Decimal
+  </a>
   <div class="ms-auto d-flex gap-2">
     <form method="post" action="{% url 'configuracion:cargo_cargar_defaults' %}" class="d-inline">
       {% csrf_token %}

@@ -430,6 +430,116 @@ def cot_crear(request, proyecto_id):
     })
 
 
+def cot_desde_req(request, proyecto_id, req_pk):
+    """Genera una cotización pre-cargada con los ítems de un requerimiento."""
+    from django.utils.timezone import now
+    from apps.requerimientos.models import Requerimiento
+
+    if request.method != 'POST':
+        return redirect('almacen:cot_lista', proyecto_id=proyecto_id)
+
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    req = get_object_or_404(Requerimiento, pk=req_pk, proyecto=proyecto)
+
+    ultimo = proyecto.cotizaciones.order_by('-pk').first()
+    try:
+        siguiente = int(''.join(filter(str.isdigit, str(ultimo.numero)))) + 1 if ultimo else 1
+    except (ValueError, AttributeError):
+        siguiente = proyecto.cotizaciones.count() + 1
+
+    cot = Cotizacion.objects.create(
+        proyecto=proyecto,
+        numero=str(siguiente).zfill(3),
+        fecha=now().date(),
+        proveedor='',
+        estado='PENDIENTE',
+        observaciones=f'Generada desde REQ-{req.numero}',
+    )
+
+    detalles = req.detalles.select_related('insumo').all()
+    for d in detalles:
+        if not d.descripcion and not d.insumo:
+            continue
+        cantidad = d.cantidad_aprobada if d.cantidad_aprobada is not None else d.cantidad_requerida
+        DetalleCotizacion.objects.create(
+            cotizacion=cot,
+            insumo=d.insumo,
+            descripcion=d.descripcion or (d.insumo.descripcion if d.insumo else ''),
+            cantidad=cantidad,
+            precio_unitario=Decimal('0'),
+            unidad=d.unidad,
+        )
+
+    if not req.cotizacion_sistema_id:
+        req.cotizacion_sistema = cot
+        req.save(update_fields=['cotizacion_sistema'])
+
+    log(request, 'CREAR', 'Almacén',
+        f'Cotización COT-{cot.numero} generada desde REQ-{req.numero} en {proyecto.codigo}')
+    messages.success(request, f'Cotización COT-{cot.numero} generada. Completa el proveedor y precios.')
+    return redirect('almacen:cot_editar', pk=cot.pk)
+
+
+def cot_rapida(request, proyecto_id):
+    """Crea una cotización desde el modal rápido de la lista."""
+    from django.utils.dateparse import parse_date
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    if request.method != 'POST':
+        return redirect('almacen:cot_lista', proyecto_id=proyecto_id)
+
+    fecha     = parse_date(request.POST.get('fecha', ''))
+    proveedor = request.POST.get('proveedor', '').strip()
+
+    if not fecha or not proveedor:
+        messages.error(request, 'Fecha y proveedor son obligatorios.')
+        return redirect('almacen:cot_lista', proyecto_id=proyecto_id)
+
+    # Auto-numerar
+    ultimo = proyecto.cotizaciones.order_by('-pk').first()
+    try:
+        siguiente = int(''.join(filter(str.isdigit, str(ultimo.numero)))) + 1 if ultimo else 1
+    except (ValueError, AttributeError):
+        siguiente = proyecto.cotizaciones.count() + 1
+    numero = str(siguiente).zfill(3)
+
+    pdf = request.FILES.get('archivo_pdf') or None
+    cot = Cotizacion.objects.create(
+        proyecto=proyecto,
+        numero=numero,
+        fecha=fecha,
+        proveedor=proveedor,
+        estado='PENDIENTE',
+        observaciones=request.POST.get('observaciones', '').strip(),
+        archivo_pdf=pdf,
+    )
+
+    descripciones = request.POST.getlist('item_desc')
+    cantidades    = request.POST.getlist('item_cant')
+    precios       = request.POST.getlist('item_precio')
+    unidades      = request.POST.getlist('item_und')
+
+    for desc, cant, precio, und in zip(descripciones, cantidades, precios, unidades):
+        desc = desc.strip()
+        if not desc:
+            continue
+        try:
+            cant_d   = Decimal(cant)   if cant   else Decimal('0')
+            precio_d = Decimal(precio) if precio else Decimal('0')
+        except Exception:
+            cant_d = precio_d = Decimal('0')
+        DetalleCotizacion.objects.create(
+            cotizacion=cot,
+            descripcion=desc,
+            cantidad=cant_d,
+            precio_unitario=precio_d,
+            unidad=und.strip(),
+        )
+
+    log(request, 'CREAR', 'Almacén', f'Cotización COT-{cot.numero} creada rápidamente en {proyecto.codigo}')
+    messages.success(request, f'Cotización COT-{cot.numero} registrada.')
+    return redirect('almacen:cot_detalle', pk=cot.pk)
+
+
 def cot_editar(request, pk):
     cot = get_object_or_404(Cotizacion, pk=pk)
     proyecto = cot.proyecto

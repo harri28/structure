@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}{{ titulo }}{% endblock %}
-{% block nav_logistica %}active{% endblock %}
+{% block nav_log_guias %}active{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
@@ -13,7 +13,7 @@
   <a href="{% url 'logistica:guia_lista' proyecto.pk %}" class="btn-back">
     <i class="bi bi-chevron-left"></i> Guías
   </a>
-  <h4>{{ titulo }}</h4>
+  <h4><i class="bi bi-file-earmark-arrow-right me-2" style="color:#2563eb"></i>{{ titulo }}</h4>
 </div>
 
 <form method="post">
@@ -105,7 +105,6 @@
               <th style="width:55%">Descripción</th>
               <th style="width:12%">Unidad</th>
               <th style="width:15%" class="text-end">Cantidad</th>
-              <th style="width:40px"></th>
             </tr>
           </thead>
           <tbody id="formset-body">
@@ -114,15 +113,7 @@
               <td>{{ f.descripcion }}{{ f.id }}</td>
               <td>{{ f.unidad }}</td>
               <td>{{ f.cantidad }}</td>
-              <td class="text-center align-middle">
-                {% if f.instance.pk %}
-                <label style="margin:0;cursor:pointer" title="Eliminar">
-                  {{ f.DELETE }}<i class="bi bi-trash3 text-danger" style="font-size:.85rem"></i>
-                </label>
-                {% else %}
-                <span style="display:none">{{ f.DELETE }}</span>
-                {% endif %}
-              </td>
+              <td style="display:none">{{ f.DELETE }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -148,15 +139,6 @@
       {% if guia %}Guardar cambios{% else %}Crear Guía{% endif %}
     </button>
     <a href="{% url 'logistica:guia_lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
-    {% if guia %}
-    <form method="post" action="{% url 'logistica:guia_eliminar' guia.pk %}" class="ms-auto"
-          onsubmit="return confirm('¿Eliminar esta guía?')">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-outline-danger btn-sm">
-        <i class="bi bi-trash3 me-1"></i>Eliminar
-      </button>
-    </form>
-    {% endif %}
   </div>
 
 </div>

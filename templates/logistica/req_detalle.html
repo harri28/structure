@@ -18,11 +18,20 @@
   </div>
   <div class="d-flex gap-2">
     {% if req.estado == 'EN_REVISION' %}
-    <form method="post" action="{% url 'requerimientos:aprobar' req.pk %}">
+    <a href="{% url 'logistica:req_revisar_log' proyecto.pk req.pk %}" class="btn btn-warning btn-sm">
+      <i class="bi bi-clipboard2-check me-1"></i>Revisar y aprobar
+    </a>
+    {% endif %}
+    {% if req.estado == 'APROBADO' or req.estado == 'PARCIAL' %}
+    <a href="{% url 'logistica:req_revisar_log' proyecto.pk req.pk %}" class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar aprobación
+    </a>
+    {% endif %}
+    {% if req.estado != 'BORRADOR' and req.estado != 'ANULADO' %}
+    <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk req.pk %}">
       {% csrf_token %}
-      <input type="hidden" name="next" value="{% url 'logistica:requerimientos_log' proyecto.pk %}">
-      <button type="submit" class="btn btn-success btn-sm">
-        <i class="bi bi-check-lg me-1"></i>Aprobar requerimiento
+      <button type="submit" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-tags me-1"></i>Generar Cotización
       </button>
     </form>
     {% endif %}
@@ -66,6 +75,7 @@
                 {% elif req.estado == 'ATENDIDO' %}bg-success
                 {% elif req.estado == 'BORRADOR' %}bg-secondary
                 {% elif req.estado == 'APROBADO' %}bg-info
+                {% elif req.estado == 'PARCIAL' %}bg-warning text-dark
                 {% elif req.estado == 'ANULADO' %}bg-danger
                 {% else %}bg-secondary{% endif %}">
                 {{ req.get_estado_display }}
@@ -82,6 +92,33 @@
       </div>
     </div>
   </div>
+
+  <!-- Cotización adjunta -->
+  {% if req.cotizacion_sistema or req.cotizacion_pdf %}
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-header" style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
+        <i class="bi bi-tags me-2 text-primary"></i>Cotización
+      </div>
+      <div class="card-body d-flex flex-column gap-2">
+        {% if req.cotizacion_sistema %}
+        <div>
+          <div class="text-muted" style="font-size:.75rem">Del sistema</div>
+          <div class="fw-semibold" style="font-size:.85rem">COT-{{ req.cotizacion_sistema.numero }} — {{ req.cotizacion_sistema.proveedor }}</div>
+        </div>
+        {% endif %}
+        {% if req.cotizacion_pdf %}
+        <div>
+          <div class="text-muted" style="font-size:.75rem">Archivo PDF</div>
+          <a href="{{ req.cotizacion_pdf.url }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Ver PDF
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- Materiales solicitados -->
@@ -98,24 +135,34 @@
           <th style="width:80px">Und</th>
           <th style="width:110px" class="text-end">Cant. pres.</th>
           <th style="width:110px" class="text-end">Cant. requerida</th>
+          <th style="width:110px" class="text-end">Cant. aprobada</th>
           <th>Justificación</th>
-          <th>Observación</th>
         </tr>
       </thead>
       <tbody>
-        {% for d in req.detalles.all %}
+        {% for d in req.detalles.all %}{% if d.descripcion or d.insumo %}
         <tr>
-          <td><code style="font-size:.78rem">{% if d.insumo %}{{ d.insumo.codigo }}{% else %}—{% endif %}</code></td>
+          <td><code style="font-size:.78rem">{% if d.codigo %}{{ d.codigo }}{% elif d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</code></td>
           <td style="font-size:.83rem">
             {% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}
           </td>
           <td style="font-size:.82rem;color:#6b7280">{{ d.unidad|default:"—" }}</td>
           <td class="text-end" style="font-size:.82rem;color:#6b7280">{{ d.cantidad|floatformat:4 }}</td>
           <td class="text-end" style="font-size:.83rem;font-weight:600">{{ d.cantidad_requerida|floatformat:4 }}</td>
+          <td class="text-end" style="font-size:.83rem">
+            {% if d.cantidad_aprobada is not None %}
+              {% if d.cantidad_aprobada < d.cantidad_requerida %}
+                <span class="fw-semibold" style="color:#d97706">{{ d.cantidad_aprobada|floatformat:4 }}</span>
+              {% else %}
+                <span class="fw-semibold" style="color:#16a34a">{{ d.cantidad_aprobada|floatformat:4 }}</span>
+              {% endif %}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
           <td style="font-size:.78rem;color:#6b7280">{{ d.justificacion|default:"—" }}</td>
-          <td style="font-size:.78rem;color:#6b7280">{{ d.observacion|default:"—" }}</td>
         </tr>
-        {% empty %}
+        {% endif %}{% empty %}
         <tr>
           <td colspan="7" class="text-center py-4 text-muted">Sin ítems</td>
         </tr>

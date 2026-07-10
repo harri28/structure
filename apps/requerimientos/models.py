@@ -35,7 +35,15 @@ class Requerimiento(models.Model):
     sector_obra = models.CharField(max_length=200, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADOS_REQ, default='BORRADOR')
     observaciones = models.TextField(blank=True)
+    aprobacion_vista = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    cotizacion_sistema = models.ForeignKey(
+        'almacen.Cotizacion', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='requerimientos'
+    )
+    cotizacion_pdf = models.FileField(
+        upload_to='requerimientos/cotizaciones/', null=True, blank=True
+    )
 
     class Meta:
         verbose_name = 'Requerimiento'
@@ -50,10 +58,12 @@ class Requerimiento(models.Model):
 class DetalleRequerimiento(models.Model):
     requerimiento = models.ForeignKey(Requerimiento, on_delete=models.CASCADE, related_name='detalles')
     insumo = models.ForeignKey(InsumoPresupuesto, null=True, blank=True, on_delete=models.SET_NULL)
+    codigo = models.CharField(max_length=60, blank=True)
     descripcion = models.CharField(max_length=400, blank=True)
     cantidad = models.DecimalField(max_digits=15, decimal_places=4)
     unidad = models.CharField(max_length=20, blank=True)
     cantidad_requerida = models.DecimalField(max_digits=15, decimal_places=4, default=0)
+    cantidad_aprobada = models.DecimalField(max_digits=15, decimal_places=4, null=True, blank=True)
     justificacion = models.CharField(max_length=400, blank=True)
     observacion = models.CharField(max_length=300, blank=True)
 

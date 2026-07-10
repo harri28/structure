@@ -29,6 +29,10 @@ urlpatterns = [
     path('unidades/exportar/',                        views.unidad_exportar,               name='unidad_exportar'),
     path('unidades/importar/',                        views.unidad_importar,               name='unidad_importar'),
     path('unidades/cargar-defaults/',               views.unidad_cargar_defaults,        name='unidad_cargar_defaults'),
+    # Decimal
+    path('decimal/',                              views.decimal_lista,                 name='decimal_lista'),
+    path('decimal/nuevo/',                        views.decimal_crear,                 name='decimal_crear'),
+    path('decimal/<int:pk>/editar/',              views.decimal_editar,                name='decimal_editar'),
     # Cargos de Mano de Obra
     path('cargos/',                                views.cargo_lista,                   name='cargo_lista'),
     path('cargos/nuevo/',                          views.cargo_crear,                   name='cargo_crear'),

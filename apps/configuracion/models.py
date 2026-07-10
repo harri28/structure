@@ -59,6 +59,7 @@ class ConfigSunat(models.Model):
 
 GRUPOS_PERMISOS = [
     ('Proyectos', [
+        ('puede_ver_dashboard',      'Ver dashboard general del proyecto'),
         ('puede_crear_proyectos',    'Crear y editar proyectos'),
         ('puede_eliminar_proyectos', 'Eliminar proyectos'),
     ]),
@@ -111,6 +112,7 @@ class Rol(models.Model):
     descripcion = models.TextField(blank=True)
 
     # Proyectos
+    puede_ver_dashboard      = models.BooleanField(default=True)
     puede_crear_proyectos    = models.BooleanField(default=False)
     puede_eliminar_proyectos = models.BooleanField(default=False)
 
@@ -177,6 +179,11 @@ class UnidadMedida(models.Model):
         blank=True,
         help_text='Variantes separadas por coma que se normalizan a este código al importar. Ej: hh, hora hombre, horas hombre',
     )
+    decimales   = models.PositiveSmallIntegerField(
+        'Decimales',
+        default=4,
+        help_text='Cifras decimales al mostrar cantidades de esta unidad (0 = entero, 4 = predeterminado).',
+    )
     activo      = models.BooleanField('Activa', default=True)
 
     class Meta:
@@ -187,6 +194,27 @@ class UnidadMedida(models.Model):
     def __str__(self):
         return f'{self.codigo} — {self.nombre}'
 
+
+class ConfigDecimal(models.Model):
+    """Configuración de cifras decimales por unidad de medida."""
+    codigo      = models.CharField('Código', max_length=20, unique=True)
+    nombre      = models.CharField('Nombre', max_length=100)
+    descripcion = models.CharField('Descripción', max_length=200, blank=True)
+    aliases     = models.TextField(
+        'Aliases',
+        blank=True,
+        help_text='Variantes separadas por coma.',
+    )
+    decimales   = models.PositiveSmallIntegerField('Decimales', default=0)
+    activo      = models.BooleanField('Activo', default=True)
+
+    class Meta:
+        verbose_name        = 'Configuración Decimal'
+        verbose_name_plural = 'Configuraciones Decimales'
+        ordering            = ['codigo']
+
+    def __str__(self):
+        return f'{self.codigo} — {self.decimales} dec.'
 
 
 class CargoManoObra(models.Model):

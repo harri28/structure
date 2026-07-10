@@ -19,6 +19,7 @@
 </div>
 
 <!-- ── Requerimientos pendientes de revisión ───────────────────── -->
+<div id="req-alert-zone">
 {% if reqs_n %}
 <div class="card mb-4" style="border:2px solid #f59e0b;background:#fffbeb">
   <div class="card-header d-flex justify-content-between align-items-center py-2"
@@ -77,6 +78,7 @@
   </div>
 </div>
 {% endif %}
+</div>
 
 <!-- KPI cards -->
 <div class="row g-3 mb-4">
@@ -170,4 +172,81 @@
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- ── REALTIME POLL ────────────────────────────────────────────────
+     Para desactivar: eliminar este bloque + ping_reqs en views.py
+     + el path 'ping_reqs' en urls.py
+──────────────────────────────────────────────────────────────────── -->
+<script>
+(function () {
+  var PING   = '{% url "logistica:ping_reqs" proyecto.pk %}';
+  var DASH   = '{% url "logistica:dashboard" proyecto.pk %}';
+  var NORMAL = 30000;
+  var BURST  = 2000;
+  var ultimoId = null;
+
+  var _toastEl = null;
+  function _getToast() {
+    if (_toastEl) return _toastEl;
+    var wrap = document.createElement('div');
+    wrap.innerHTML =
+      '<div id="rt-toast" class="toast align-items-center border-0" role="alert"' +
+      ' style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;min-width:280px;' +
+      'background:#fef3c7;border:1px solid #fde68a!important">' +
+      '<div class="d-flex">' +
+      '<div class="toast-body fw-semibold" id="rt-toast-msg" style="color:#92400e"></div>' +
+      '<button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>' +
+      '</div></div>';
+    document.body.appendChild(wrap);
+    _toastEl = document.getElementById('rt-toast');
+    return _toastEl;
+  }
+
+  function mostrarToast(msg) {
+    try {
+      var el = _getToast();
+      document.getElementById('rt-toast-msg').innerHTML =
+        '<i class="bi bi-bell-fill me-2"></i>' + msg;
+      bootstrap.Toast.getOrCreateInstance(el, {delay: 6000}).show();
+    } catch (e) {}
+  }
+
+  function refrescarZona() {
+    fetch(DASH, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        var nueva  = tmp.querySelector('#req-alert-zone');
+        var actual = document.getElementById('req-alert-zone');
+        if (nueva && actual) actual.innerHTML = nueva.innerHTML;
+      })
+      .catch(function () {});
+  }
+
+  function poll() {
+    fetch(PING, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (ultimoId === null) {
+          ultimoId = data.ultimo_id;
+          return;
+        }
+        if (data.ultimo_id > ultimoId) {
+          ultimoId = data.ultimo_id;
+          mostrarToast('Nuevo requerimiento por revisar');
+          refrescarZona();
+          setTimeout(refrescarZona, BURST);
+        }
+      })
+      .catch(function () {});
+  }
+
+  setTimeout(poll, 1500);
+  setInterval(poll, NORMAL);
+})();
+</script>
+<!-- ── fin REALTIME POLL ──────────────────────────────────────────── -->
 {% endblock %}

@@ -11,6 +11,19 @@ def _es_admin(user):
     )
 
 
+def _sin_dashboard(user):
+    """True si el rol del usuario no tiene permiso para ver el dashboard general."""
+    if _es_admin(user):
+        return False
+    try:
+        rol = user.perfil.rol
+        if rol is None:
+            return False
+        return not rol.puede_ver_dashboard
+    except AttributeError:
+        return False
+
+
 def panel_dashboard(request):
     """Panel de Control general — solo superadmin. URL: /panel/dashboard/"""
     if not _es_admin(request.user):
@@ -36,6 +49,9 @@ def proyecto_dashboard(request, pk):
 
     # Activar en sesión para que el resto de módulos funcione
     request.session['proyecto_id'] = proyecto.pk
+
+    if _sin_dashboard(request.user):
+        return redirect('logistica:dashboard', proyecto_id=proyecto.pk)
 
     from apps.requerimientos.models import Requerimiento
     from apps.almacen.models import Cotizacion, OrdenCompra, Entrada
@@ -114,6 +130,8 @@ def dashboard(request):
     if pid:
         try:
             Proyecto.objects.get(pk=pid)
+            if _sin_dashboard(request.user):
+                return redirect('logistica:dashboard', proyecto_id=pid)
             return redirect('proyecto_dashboard', pk=pid)
         except Proyecto.DoesNotExist:
             del request.session['proyecto_id']
@@ -126,6 +144,8 @@ def dashboard(request):
     if proyectos.count() == 1:
         p = proyectos.first()
         request.session['proyecto_id'] = p.pk
+        if _sin_dashboard(request.user):
+            return redirect('logistica:dashboard', proyecto_id=p.pk)
         return redirect('proyecto_dashboard', pk=p.pk)
 
     return render(request, 'proyectos/selector.html', {

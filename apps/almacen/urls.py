@@ -25,7 +25,9 @@ urlpatterns = [
     path('salidas/<int:pk>/eliminar/', views.salida_eliminar, name='salida_eliminar'),
     # Cotizaciones
     path('proyecto/<int:proyecto_id>/cotizaciones/', views.cot_lista, name='cot_lista'),
-    path('proyecto/<int:proyecto_id>/cotizaciones/nueva/', views.cot_crear, name='cot_crear'),
+    path('proyecto/<int:proyecto_id>/cotizaciones/nueva/',  views.cot_crear,  name='cot_crear'),
+    path('proyecto/<int:proyecto_id>/cotizaciones/rapida/',               views.cot_rapida,    name='cot_rapida'),
+    path('proyecto/<int:proyecto_id>/cotizaciones/desde-req/<int:req_pk>/', views.cot_desde_req, name='cot_desde_req'),
     path('cotizaciones/<int:pk>/', views.cot_detalle, name='cot_detalle'),
     path('cotizaciones/<int:pk>/editar/', views.cot_editar, name='cot_editar'),
     path('cotizaciones/<int:pk>/eliminar/', views.cot_eliminar, name='cot_eliminar'),

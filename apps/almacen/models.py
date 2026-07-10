@@ -106,6 +106,7 @@ class Cotizacion(models.Model):
     proveedor = models.CharField(max_length=200)
     estado = models.CharField(max_length=20, choices=ESTADOS_COT, default='PENDIENTE')
     observaciones = models.TextField(blank=True)
+    archivo_pdf = models.FileField(upload_to='cotizaciones/pdfs/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

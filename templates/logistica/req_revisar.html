@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load l10n %}
+{% block title %}Revisar REQ-{{ req.numero }}{% endblock %}
+{% block nav_log_req %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
+<li class="breadcrumb-item"><a href="{% url 'logistica:requerimientos_log' proyecto.pk %}">Requerimientos</a></li>
+<li class="breadcrumb-item active">REQ-{{ req.numero }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Requerimientos
+    </a>
+    <h4><i class="bi bi-clipboard2-check me-2" style="color:#d97706"></i>Revisión de requerimiento</h4>
+  </div>
+  <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk req.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-tags me-1"></i>Generar Cotización
+    </button>
+  </form>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="form-revision">
+{% csrf_token %}
+
+<!-- Info general (readonly) -->
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-sm-2">
+        <div class="text-muted" style="font-size:.75rem">N° Requerimiento</div>
+        <div class="fw-bold" style="font-size:1.05rem;color:#2563eb">REQ-{{ req.numero }}</div>
+      </div>
+      <div class="col-sm-2">
+        <div class="text-muted" style="font-size:.75rem">Fecha</div>
+        <div>{{ req.fecha|date:"d/m/Y" }}</div>
+      </div>
+      <div class="col-sm-2">
+        <div class="text-muted" style="font-size:.75rem">Tipo</div>
+        <div>{{ req.get_tipo_display }}</div>
+      </div>
+      <div class="col-sm-3">
+        <div class="text-muted" style="font-size:.75rem">Solicitante</div>
+        <div>{{ req.solicitante|default:"—" }}</div>
+      </div>
+      <div class="col-sm-3">
+        <div class="text-muted" style="font-size:.75rem">Sector / Obra</div>
+        <div>{{ req.sector_obra|default:"—" }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de ítems con cantidad a aprobar -->
+<div class="card mb-3">
+  <div class="card-header" style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
+    <i class="bi bi-list-ul me-2 text-primary"></i>Cantidades a aprobar
+  </div>
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th style="width:90px">Código</th>
+          <th>Descripción</th>
+          <th style="width:70px">Und</th>
+          <th style="width:120px" class="text-end">Cant. requerida</th>
+          <th style="width:160px" class="text-center">Cant. a aprobar</th>
+          <th>Justificación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in detalles %}{% if d.descripcion or d.insumo %}
+        <tr id="fila-{{ d.pk }}">
+          <td><code style="font-size:.78rem">{% if d.codigo %}{{ d.codigo }}{% elif d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</code></td>
+          <td style="font-size:.83rem">
+            {% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}
+          </td>
+          <td style="font-size:.82rem;color:#6b7280">{{ d.unidad|default:"—" }}</td>
+          <td class="text-end fw-semibold" style="font-size:.83rem">
+            {{ d.cantidad_requerida|floatformat:4 }}
+          </td>
+          <td class="text-center">
+            <input type="number"
+                   name="aprobada_{{ d.pk }}"
+                   id="aprobada_{{ d.pk }}"
+                   class="form-control form-control-sm text-end cant-aprobada"
+                   style="max-width:130px;margin:0 auto"
+                   value="{{ d.cantidad_requerida|unlocalize }}"
+                   min="0"
+                   max="{{ d.cantidad_requerida|unlocalize }}"
+                   step="0.0001"
+                   data-max="{{ d.cantidad_requerida|unlocalize }}"
+                   required>
+            <div class="invalid-feedback text-start" style="font-size:.72rem"></div>
+          </td>
+          <td style="font-size:.78rem;color:#6b7280">{{ d.justificacion|default:"—" }}</td>
+        </tr>
+        {% endif %}{% empty %}
+        <tr><td colspan="6" class="text-center py-4 text-muted">Sin ítems</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Cotización -->
+<div class="card mb-4">
+  <div class="card-header" style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
+    <i class="bi bi-tags me-2 text-primary"></i>Cotización requerida
+    <span class="text-danger ms-1">*</span>
+    <span class="fw-normal text-muted ms-2" style="font-size:.75rem;text-transform:none">(al menos una opción)</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-4">
+
+      <!-- Opción A: Cotización del sistema -->
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:.82rem">
+          <i class="bi bi-card-list me-1"></i>Cotización del sistema
+        </label>
+        <select name="cotizacion_sistema" class="form-select form-select-sm" id="sel-cot-sistema">
+          <option value="">— Seleccionar cotización —</option>
+          {% for c in cotizaciones %}
+          <option value="{{ c.pk }}"
+            {% if req.cotizacion_sistema_id == c.pk %}selected{% endif %}>
+            COT-{{ c.numero }} | {{ c.proveedor }} — {{ c.fecha|date:"d/m/Y" }}
+            ({{ c.get_estado_display }})
+          </option>
+          {% endfor %}
+        </select>
+        {% if not cotizaciones %}
+        <div class="text-muted mt-1" style="font-size:.75rem">No hay cotizaciones registradas en este proyecto.</div>
+        {% endif %}
+      </div>
+
+      <!-- Opción B: PDF externo -->
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:.82rem">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Subir cotización PDF
+        </label>
+        {% if req.cotizacion_pdf %}
+        <div class="mb-2">
+          <a href="{{ req.cotizacion_pdf.url }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Ver PDF actual
+          </a>
+          <span class="text-muted ms-2" style="font-size:.75rem">Subir nuevo reemplazará el actual</span>
+        </div>
+        {% endif %}
+        <input type="file" name="cotizacion_pdf" class="form-control form-control-sm" accept=".pdf" id="inp-pdf">
+      </div>
+
+    </div>
+    <div id="error-cot" class="alert alert-danger mt-3 py-2 d-none" style="font-size:.82rem">
+      <i class="bi bi-exclamation-triangle me-1"></i>
+      Debes seleccionar una cotización del sistema o subir un archivo PDF.
+    </div>
+  </div>
+</div>
+
+<!-- Acciones -->
+<div class="d-flex gap-2 justify-content-end">
+  <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="btn btn-outline-secondary">
+    Cancelar
+  </a>
+  <button type="submit" class="btn btn-success" id="btn-aprobar">
+    <i class="bi bi-check-lg me-1"></i>Aprobar requerimiento
+  </button>
+</div>
+
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var inputs = document.querySelectorAll('.cant-aprobada');
+
+  inputs.forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      var max = parseFloat(this.dataset.max);
+      var val = parseFloat(this.value);
+      var fb  = this.nextElementSibling;
+      if (isNaN(val) || val < 0) {
+        this.classList.add('is-invalid');
+        fb.textContent = 'Cantidad inválida.';
+      } else if (val > max) {
+        this.classList.add('is-invalid');
+        fb.textContent = 'No puede superar la cantidad requerida (' + max.toFixed(4) + ').';
+      } else {
+        this.classList.remove('is-invalid');
+        fb.textContent = '';
+      }
+    });
+  });
+
+  document.getElementById('form-revision').addEventListener('submit', function (e) {
+    var tieneError = false;
+
+    // Validar cantidades
+    inputs.forEach(function (inp) {
+      var max = parseFloat(inp.dataset.max);
+      var val = parseFloat(inp.value);
+      var fb  = inp.nextElementSibling;
+      if (isNaN(val) || val < 0 || val > max) {
+        inp.classList.add('is-invalid');
+        if (!fb.textContent) fb.textContent = 'Valor fuera de rango (0 – ' + max.toFixed(4) + ').';
+        tieneError = true;
+      }
+    });
+
+    // Validar cotización
+    var selSistema = document.getElementById('sel-cot-sistema').value;
+    var inpPdf     = document.getElementById('inp-pdf');
+    var tienePdf   = inpPdf && inpPdf.files && inpPdf.files.length > 0;
+    var yaHayPdf   = {{ req.cotizacion_pdf|yesno:"true,false" }};
+    var errCot     = document.getElementById('error-cot');
+
+    if (!selSistema && !tienePdf && !yaHayPdf) {
+      errCot.classList.remove('d-none');
+      tieneError = true;
+    } else {
+      errCot.classList.add('d-none');
+    }
+
+    if (tieneError) e.preventDefault();
+  });
+})();
+</script>
+{% endblock %}

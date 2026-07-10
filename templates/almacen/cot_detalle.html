@@ -14,6 +14,9 @@
     <h4>Cotización <code>COT-{{ cot.numero }}</code></h4>
   </div>
   <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-printer me-1"></i>Imprimir / PDF
+    </button>
     <a href="{% url 'almacen:cot_editar' cot.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
     <a href="{% url 'almacen:cot_eliminar' cot.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
   </div>

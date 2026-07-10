@@ -43,12 +43,9 @@
       </thead>
       <tbody>
         {% for r in requerimientos %}
-        <tr>
-          <td>
-            <a href="{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}" class="fw-semibold text-decoration-none">
-              REQ-{{ r.numero }}
-            </a>
-          </td>
+        <tr class="req-row" style="cursor:pointer"
+            onclick="window.location.href='{% if r.estado == 'ENVIADO' or r.estado == 'EN_REVISION' or r.estado == 'APROBADO' or r.estado == 'PARCIAL' %}{% url 'logistica:req_revisar_log' proyecto.pk r.pk %}{% else %}{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}{% endif %}'">
+          <td class="fw-semibold">REQ-{{ r.numero }}</td>
           <td>{{ r.fecha|date:"d/m/Y" }}</td>
           <td>{{ r.get_tipo_display }}</td>
           <td>{{ r.solicitante|default:"—" }}</td>
@@ -59,24 +56,16 @@
               {% elif r.estado == 'ATENDIDO' %}bg-success
               {% elif r.estado == 'ANULADO' %}bg-danger
               {% elif r.estado == 'APROBADO' %}bg-info
+              {% elif r.estado == 'PARCIAL' %}bg-warning text-dark
               {% else %}bg-secondary{% endif %}">
               {{ r.get_estado_display }}
             </span>
           </td>
           <td class="text-muted" style="font-size:.82rem">{{ r.observaciones|default:"—"|truncatechars:60 }}</td>
-          <td class="d-flex gap-1 align-items-center">
+          <td onclick="event.stopPropagation()">
             <a href="{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}" class="btn-tbl" title="Ver detalle">
               <i class="bi bi-eye"></i>
             </a>
-            {% if r.estado == 'ENVIADO' %}
-            <form method="post" action="{% url 'requerimientos:aprobar' r.pk %}">
-              {% csrf_token %}
-              <input type="hidden" name="next" value="{% url 'logistica:requerimientos_log' proyecto.pk %}">
-              <button type="submit" class="btn btn-success btn-sm" title="Aprobar requerimiento">
-                <i class="bi bi-check-lg me-1"></i>Aprobar
-              </button>
-            </form>
-            {% endif %}
           </td>
         </tr>
         {% empty %}

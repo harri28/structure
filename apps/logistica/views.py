@@ -6,6 +6,22 @@ from apps.registro.utils import log, notificar
 from .models import GuiaRemision, DetalleGuia, Transportista, ESTADOS_GUIA, MOTIVOS_TRASLADO
 from .forms import GuiaRemisionForm, DetalleGuiaFormSet, TransportistaForm
 
+# ── REALTIME POLL ──────────────────────────────────────────────────
+# Para desactivar completamente: eliminar esta función + el path
+# 'ping_reqs' en urls.py + el bloque <!-- REALTIME POLL --> en dashboard.html
+def ping_reqs(request, proyecto_id):
+    from django.http import JsonResponse
+    from apps.requerimientos.models import Requerimiento
+    ultimo_id = (
+        Requerimiento.objects
+        .filter(proyecto_id=proyecto_id, estado__in=['ENVIADO', 'EN_REVISION'])
+        .order_by('-pk')
+        .values_list('pk', flat=True)
+        .first()
+    ) or 0
+    return JsonResponse({'ultimo_id': ultimo_id})
+# ── fin REALTIME POLL ──────────────────────────────────────────────
+
 
 def _get_proyecto(pk):
     return get_object_or_404(Proyecto, pk=pk)
@@ -209,6 +225,28 @@ def requerimientos_log(request, proyecto_id):
     })
 
 
+def _backfill_codigos(detalles, proyecto):
+    """Rellena d.codigo desde el presupuesto cuando está vacío, y persiste el cambio."""
+    from apps.requerimientos.models import DetalleRequerimiento
+    try:
+        codigo_por_desc = {
+            ins.descripcion.strip().lower(): ins.codigo
+            for ins in proyecto.presupuesto.insumos.all()
+            if ins.codigo
+        }
+    except Exception:
+        return
+    to_update = []
+    for d in detalles:
+        if not d.codigo and d.descripcion:
+            found = codigo_por_desc.get(d.descripcion.strip().lower(), '')
+            if found:
+                d.codigo = found
+                to_update.append(d)
+    if to_update:
+        DetalleRequerimiento.objects.bulk_update(to_update, ['codigo'])
+
+
 def req_detalle_log(request, proyecto_id, pk):
     from apps.requerimientos.models import Requerimiento
     proyecto = _get_proyecto(proyecto_id)
@@ -218,9 +256,177 @@ def req_detalle_log(request, proyecto_id, pk):
         req.save(update_fields=['estado'])
         log(request, 'EDITAR', 'Logística',
             f'REQ-{req.numero} marcado En revisión por {request.user.get_full_name() or request.user.username}')
+    detalles = list(req.detalles.select_related('insumo').all())
+    _backfill_codigos(detalles, proyecto)
     return render(request, 'logistica/req_detalle.html', {
         'proyecto': proyecto,
         'req':      req,
+    })
+
+
+def _crear_guia_desde_req(req, proyecto, detalles, aprobaciones):
+    """Crea una GuiaRemision automática con los ítems aprobados del requerimiento."""
+    import datetime
+    from .models import GuiaRemision, DetalleGuia
+    from decimal import Decimal
+
+    # Número auto: GR-{año}-{correlativo}
+    anio = datetime.date.today().year
+    prefijo = f'GR-{anio}-'
+    ultimo = (GuiaRemision.objects
+              .filter(proyecto=proyecto, numero__startswith=prefijo)
+              .order_by('-numero').first())
+    if ultimo:
+        try:
+            n = int(ultimo.numero.replace(prefijo, '')) + 1
+        except ValueError:
+            n = 1
+    else:
+        n = 1
+    numero = f'{prefijo}{str(n).zfill(3)}'
+
+    hoy = datetime.date.today()
+    guia = GuiaRemision.objects.create(
+        proyecto=proyecto,
+        numero=numero,
+        fecha_emision=hoy,
+        fecha_traslado=hoy,
+        motivo='TRASLADO_OBRA',
+        origen='Almacén',
+        destino=req.sector_obra or req.obra or proyecto.nombre,
+        observaciones=f'Generada automáticamente desde REQ-{req.numero}',
+    )
+
+    for det in detalles:
+        aprobada = aprobaciones.get(det.pk, Decimal('0'))
+        if aprobada > 0:
+            DetalleGuia.objects.create(
+                guia=guia,
+                descripcion=det.descripcion or (det.insumo.descripcion if det.insumo else '—'),
+                unidad=det.unidad or '',
+                cantidad=aprobada,
+            )
+
+
+def req_revisar_log(request, proyecto_id, pk):
+    from decimal import Decimal, InvalidOperation
+    from apps.requerimientos.models import Requerimiento
+    from apps.almacen.models import Cotizacion
+
+    proyecto = _get_proyecto(proyecto_id)
+    req = get_object_or_404(Requerimiento, pk=pk, proyecto=proyecto)
+
+    ESTADOS_EDITABLES = ('ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL')
+    if req.estado not in ESTADOS_EDITABLES:
+        messages.error(request, 'Este requerimiento no puede editarse en su estado actual.')
+        return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
+
+    # Marcar como EN_REVISION si venía de ENVIADO
+    if req.estado == 'ENVIADO':
+        req.estado = 'EN_REVISION'
+        req.save(update_fields=['estado'])
+
+    cotizaciones = Cotizacion.objects.filter(proyecto=proyecto).order_by('-fecha')
+    detalles = list(req.detalles.select_related('insumo').all())
+    _backfill_codigos(detalles, proyecto)
+
+    if request.method == 'POST':
+        cot_id = request.POST.get('cotizacion_sistema') or None
+        pdf = request.FILES.get('cotizacion_pdf') or None
+
+        # Validar que haya cotización (sistema o PDF ya guardado)
+        tiene_cot = cot_id or pdf or req.cotizacion_pdf
+        if not tiene_cot:
+            messages.error(request, 'Debes adjuntar una cotización del sistema o un archivo PDF antes de aprobar.')
+            return render(request, 'logistica/req_revisar.html', {
+                'proyecto': proyecto, 'req': req,
+                'detalles': detalles, 'cotizaciones': cotizaciones,
+            })
+
+        # Leer y validar cantidades aprobadas
+        aprobaciones = {}
+        errores = []
+        for det in detalles:
+            raw = request.POST.get(f'aprobada_{det.pk}', '').strip()
+            try:
+                aprobada = Decimal(raw) if raw else Decimal('0')
+            except InvalidOperation:
+                aprobada = Decimal('0')
+
+            if aprobada < 0:
+                errores.append(f'Ítem "{det.descripcion or det.pk}": la cantidad no puede ser negativa.')
+            elif aprobada > det.cantidad_requerida:
+                errores.append(
+                    f'Ítem "{det.descripcion or det.pk}": '
+                    f'cantidad aprobada ({aprobada}) supera la requerida ({det.cantidad_requerida}).'
+                )
+            else:
+                aprobaciones[det.pk] = aprobada
+
+        if errores:
+            for e in errores:
+                messages.error(request, e)
+            return render(request, 'logistica/req_revisar.html', {
+                'proyecto': proyecto, 'req': req,
+                'detalles': detalles, 'cotizaciones': cotizaciones,
+            })
+
+        # Guardar cotización
+        if cot_id:
+            req.cotizacion_sistema_id = int(cot_id)
+        if pdf:
+            req.cotizacion_pdf = pdf
+
+        # Revertir descuentos previos si ya había una aprobación anterior
+        for det in detalles:
+            if det.cantidad_aprobada and det.insumo:
+                det.insumo.cantidad += det.cantidad_aprobada
+                det.insumo.save(update_fields=['cantidad'])
+
+        # Aplicar nuevas aprobaciones y descontar de insumos
+        es_parcial = False
+        for det in detalles:
+            aprobada = aprobaciones[det.pk]
+            det.cantidad_aprobada = aprobada
+            det.save(update_fields=['cantidad_aprobada'])
+
+            if aprobada < det.cantidad_requerida:
+                es_parcial = True
+
+            if det.insumo and aprobada > 0:
+                det.insumo.cantidad -= aprobada
+                det.insumo.save(update_fields=['cantidad'])
+
+        req.estado = 'PARCIAL' if es_parcial else 'APROBADO'
+        req.aprobacion_vista = False
+        req.save()
+
+        tipo_estado = 'aprobado parcialmente' if es_parcial else 'aprobado'
+
+        # Auto-crear Guía de Remisión con los ítems aprobados
+        _crear_guia_desde_req(req, proyecto, detalles, aprobaciones)
+
+        log(request, 'EDITAR', 'Logística',
+            f'REQ-{req.numero} {tipo_estado} por {request.user.get_full_name() or request.user.username}')
+        notificar(
+            f'REQ-{req.numero} {tipo_estado}',
+            mensaje=f'{proyecto.codigo} — revisado por Logística.',
+            tipo='warning' if es_parcial else 'success',
+        )
+        # Notificación específica para Almacén
+        notificar(
+            f'Despacho REQ-{req.numero} listo para recibir',
+            mensaje=f'{proyecto.codigo} — Los materiales aprobados han sido registrados en Guías de Remisión. Prepárate para recibirlos en almacén.',
+            tipo='info',
+        )
+        messages.success(request, f'REQ-{req.numero} {tipo_estado} correctamente. Guía de Remisión generada.')
+        return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
+
+    return render(request, 'logistica/req_revisar.html', {
+        'proyecto':     proyecto,
+        'req':          req,
+        'detalles':     detalles,
+        'cotizaciones': cotizaciones,
     })
 
 

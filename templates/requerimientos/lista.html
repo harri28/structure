@@ -24,6 +24,32 @@
   </a>
 </div>
 
+{% if nuevos_aprobados %}
+<div class="alert d-flex align-items-start gap-3 mb-3 py-3"
+     style="background:#f0fdf4;border:1px solid #86efac;color:#15803d;font-size:.88rem">
+  <i class="bi bi-check-circle-fill fs-5 mt-1" style="flex-shrink:0"></i>
+  <div>
+    <div class="fw-bold mb-1">
+      {% if nuevos_aprobados|length == 1 %}
+        1 requerimiento aprobado por Logística
+      {% else %}
+        {{ nuevos_aprobados|length }} requerimientos aprobados por Logística
+      {% endif %}
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% for r in nuevos_aprobados %}
+      <a href="{% url 'requerimientos:detalle' r.pk %}"
+         class="badge text-decoration-none"
+         style="background:#16a34a;color:#fff;font-size:.8rem;padding:.35em .7em">
+        REQ-{{ r.numero }}
+        {% if r.estado == 'PARCIAL' %}<span class="ms-1" style="opacity:.85">(parcial)</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="card">
   <div class="card-body p-0">
     <table class="table-modern">
@@ -35,7 +61,12 @@
       <tbody>
         {% for r in requerimientos %}
         <tr class="req-row" style="cursor:pointer" onclick="window.location='{% url 'requerimientos:detalle' r.pk %}'">
-          <td class="fw-semibold">REQ-{{ r.numero }}</td>
+          <td class="fw-semibold">
+            REQ-{{ r.numero }}
+            {% if not r.aprobacion_vista %}{% if r.estado == 'APROBADO' or r.estado == 'PARCIAL' %}
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-left:4px;vertical-align:middle" title="Aprobado por Logística"></span>
+            {% endif %}{% endif %}
+          </td>
           <td>{{ r.fecha|date:"d/m/Y" }}</td>
           <td>{{ r.get_tipo_display }}</td>
           <td>{{ r.solicitante|default:"—" }}</td>

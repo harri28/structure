@@ -28,6 +28,8 @@ def _sync_snapshot(detalle):
             detalle.descripcion = detalle.insumo.descripcion
         if not detalle.unidad:
             detalle.unidad = detalle.insumo.unidad
+        # Siempre actualizar código desde el insumo mientras el FK exista
+        detalle.codigo = detalle.insumo.codigo or ''
     detalle.save()
 
 
@@ -37,16 +39,23 @@ def lista(request, proyecto_id):
     qs = proyecto.requerimientos.all()
     if estado_sel:
         qs = qs.filter(estado=estado_sel)
+    nuevos = proyecto.requerimientos.filter(
+        estado__in=['APROBADO', 'PARCIAL'], aprobacion_vista=False
+    )
     return render(request, 'requerimientos/lista.html', {
-        'proyecto': proyecto,
+        'proyecto':    proyecto,
         'requerimientos': qs,
-        'estados': ESTADOS_REQ,
-        'estado_sel': estado_sel,
+        'estados':     ESTADOS_REQ,
+        'estado_sel':  estado_sel,
+        'nuevos_aprobados': nuevos,
     })
 
 
 def detalle(request, pk):
     req = get_object_or_404(Requerimiento, pk=pk)
+    if not req.aprobacion_vista and req.estado in ('APROBADO', 'PARCIAL'):
+        req.aprobacion_vista = True
+        req.save(update_fields=['aprobacion_vista'])
     return render(request, 'requerimientos/detalle.html', {
         'req': req, 'proyecto': req.proyecto,
     })

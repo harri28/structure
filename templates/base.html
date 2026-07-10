@@ -51,10 +51,12 @@
   {% else %}
   <!-- ── Vista Usuario de Proyecto ─────────────────────────────── -->
   <div class="sb-section">
+    {% if permisos.puede_ver_dashboard %}
     <a href="{% if proyecto_activo %}{% url 'proyecto_dashboard' pk=proyecto_activo.pk %}{% else %}{% url 'proyectos:dashboard' %}{% endif %}"
        class="sb-link {% block nav_dashboard_user %}{% endblock %}">
       <i class="bi bi-grid-1x2"></i> Dashboard
     </a>
+    {% endif %}
   </div>
   {% if proyecto_activo %}
   <div class="sb-section">
@@ -196,6 +198,18 @@
         {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
       </a>
       {% endif %}
+      {% if permisos.puede_gestionar_cotizaciones_log or permisos.es_superadmin %}
+      <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_cot %}{% endblock %}">
+        <i class="bi bi-tags"></i> Cotizaciones
+      </a>
+      {% endif %}
+      {% if permisos.puede_gestionar_logistica or permisos.es_superadmin %}
+      <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_log_guias %}{% endblock %}">
+        <i class="bi bi-file-earmark-arrow-right"></i> Guías de Remisión
+      </a>
+      {% endif %}
       {% if permisos.puede_gestionar_inventarios_log or permisos.es_superadmin %}
       <a href="{% url 'logistica:inventarios' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_log_inventarios %}{% endblock %}">
@@ -218,18 +232,6 @@
       <a href="{% url 'logistica:abastecimiento' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_log_abastecimiento %}{% endblock %}">
         <i class="bi bi-cart-check"></i> Abastecimiento
-      </a>
-      {% endif %}
-      {% if permisos.puede_gestionar_cotizaciones_log or permisos.es_superadmin %}
-      <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_cot %}{% endblock %}">
-        <i class="bi bi-tags"></i> Cotizaciones
-      </a>
-      {% endif %}
-      {% if permisos.puede_gestionar_logistica or permisos.es_superadmin %}
-      <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_log_guias %}{% endblock %}">
-        <i class="bi bi-file-earmark-arrow-right"></i> Guías de Remisión
       </a>
       {% endif %}
     </div>

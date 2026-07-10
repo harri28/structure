@@ -701,6 +701,107 @@ def unidad_cargar_defaults(request):
     return redirect('configuracion:unidad_lista')
 
 
+# ── Decimal (precisión por unidad) ───────────────────────────────
+
+def decimal_lista(request):
+    from .models import ConfigDecimal
+    configs = ConfigDecimal.objects.all()
+    return render(request, 'configuracion/decimal_lista.html', {'configs': configs})
+
+
+def _decimal_form_ctx(post=None, obj=None, error=None, titulo=''):
+    p = post or {}
+    return {
+        'titulo':           titulo,
+        'obj':              obj,
+        'error':            error or {},
+        'form_codigo':      p.get('codigo', obj.codigo if obj else ''),
+        'form_nombre':      p.get('nombre', obj.nombre if obj else ''),
+        'form_descripcion': p.get('descripcion', obj.descripcion if obj else ''),
+        'form_aliases':     p.get('aliases', obj.aliases if obj else ''),
+        'form_decimales':   int(p.get('decimales', obj.decimales if obj else 0)),
+        'form_activo':      p.get('activo', '1' if (obj.activo if obj else True) else '0'),
+    }
+
+
+def decimal_crear(request):
+    from .models import ConfigDecimal
+    error = {}
+    if request.method == 'POST':
+        codigo      = request.POST.get('codigo', '').strip()
+        nombre      = request.POST.get('nombre', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        aliases     = request.POST.get('aliases', '').strip()
+        activo      = request.POST.get('activo') == '1'
+        try:
+            decimales = int(request.POST.get('decimales', '0'))
+            if not (0 <= decimales <= 6):
+                raise ValueError
+        except (ValueError, TypeError):
+            decimales = 0
+            error['decimales'] = 'Valor entre 0 y 6.'
+
+        if not codigo:
+            error['codigo'] = 'El código es obligatorio.'
+        elif ConfigDecimal.objects.filter(codigo__iexact=codigo).exists():
+            error['codigo'] = 'Ya existe una configuración con ese código.'
+        if not nombre:
+            error['nombre'] = 'El nombre es obligatorio.'
+
+        if not error:
+            ConfigDecimal.objects.create(
+                codigo=codigo, nombre=nombre, descripcion=descripcion,
+                aliases=aliases, decimales=decimales, activo=activo,
+            )
+            messages.success(request, f'Decimal "{codigo}" creado.')
+            return redirect('configuracion:decimal_lista')
+
+    return render(request, 'configuracion/decimal_form.html',
+                  _decimal_form_ctx(request.POST if request.method == 'POST' else None,
+                                    titulo='Nuevo Decimal', error=error))
+
+
+def decimal_editar(request, pk):
+    from .models import ConfigDecimal
+    obj   = get_object_or_404(ConfigDecimal, pk=pk)
+    error = {}
+    if request.method == 'POST':
+        codigo      = request.POST.get('codigo', '').strip()
+        nombre      = request.POST.get('nombre', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        aliases     = request.POST.get('aliases', '').strip()
+        activo      = request.POST.get('activo') == '1'
+        try:
+            decimales = int(request.POST.get('decimales', '0'))
+            if not (0 <= decimales <= 6):
+                raise ValueError
+        except (ValueError, TypeError):
+            decimales = 0
+            error['decimales'] = 'Valor entre 0 y 6.'
+
+        if not codigo:
+            error['codigo'] = 'El código es obligatorio.'
+        elif ConfigDecimal.objects.filter(codigo__iexact=codigo).exclude(pk=pk).exists():
+            error['codigo'] = 'Ya existe otra configuración con ese código.'
+        if not nombre:
+            error['nombre'] = 'El nombre es obligatorio.'
+
+        if not error:
+            obj.codigo      = codigo
+            obj.nombre      = nombre
+            obj.descripcion = descripcion
+            obj.aliases     = aliases
+            obj.decimales   = decimales
+            obj.activo      = activo
+            obj.save()
+            messages.success(request, f'Decimal "{codigo}" actualizado.')
+            return redirect('configuracion:decimal_lista')
+
+    return render(request, 'configuracion/decimal_form.html',
+                  _decimal_form_ctx(request.POST if request.method == 'POST' else None,
+                                    obj=obj, titulo=f'Editar — {obj.codigo}', error=error))
+
+
 # ── Cargos de Mano de Obra ────────────────────────────────────────
 
 _CARGOS_DEFAULT = [

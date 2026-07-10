@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% block title %}Decimal — Unidades de Medida{% endblock %}
+{% block nav_configuracion %}active{% endblock %}
+{% block nav_unidades %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:hub' %}">Configuración</a></li>
+<li class="breadcrumb-item active">Decimal</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'configuracion:hub' %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Configuración
+    </a>
+    <h4><i class="bi bi-123 me-2" style="color:#0284c7"></i>Decimal</h4>
+  </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert" style="font-size:.84rem">
+  {{ msg }} <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'configuracion:unidad_lista' %}" class="chip-seccion">
+    <i class="bi bi-rulers me-1"></i>Materiales
+  </a>
+  <a href="{% url 'configuracion:cargo_lista' %}" class="chip-seccion">
+    <i class="bi bi-person-badge me-1"></i>Mano de Obra
+  </a>
+  <span class="chip-seccion chip-activo">
+    <i class="bi bi-123 me-1"></i>Decimal
+  </span>
+  <div class="ms-auto d-flex gap-2">
+    <button type="button" class="btn btn-outline-secondary btn-sm"
+            data-bs-toggle="modal" data-bs-target="#modalAyuda">
+      <i class="bi bi-question-circle me-1"></i>Ayuda
+    </button>
+    <a href="{% url 'configuracion:decimal_crear' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo Decimal
+    </a>
+  </div>
+</div>
+
+<!-- Modal Ayuda -->
+<div class="modal fade" id="modalAyuda" tabindex="-1" aria-labelledby="modalAyudaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalAyudaLabel">
+          <i class="bi bi-question-circle me-2 text-primary"></i>¿Cómo usar Decimal?
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="font-size:.88rem">
+
+        <p>El chip <strong>Decimal</strong> sirve para registrar cuántas cifras decimales debe mostrar cada unidad de medida en el sistema.</p>
+
+        <p class="fw-semibold mb-1">Cómo usarlo:</p>
+        <ol class="mb-3">
+          <li>Haz clic en <strong>Nuevo Decimal</strong></li>
+          <li>Llena el formulario:
+            <ul class="mt-1">
+              <li><strong>Unidad de Medida:</strong> el código exacto que ya tienes en Materiales (ej: <code>und</code>, <code>m2</code>, <code>kg</code>)</li>
+              <li><strong>Nombre completo:</strong> nombre descriptivo (ej: <code>Unidad</code>, <code>Metro cuadrado</code>)</li>
+              <li><strong>Cifras decimales:</strong> cuántos decimales quieres ver
+                <ul class="mt-1">
+                  <li><code>0</code> → muestra <code>1</code>, <code>2</code>, <code>34</code></li>
+                  <li><code>2</code> → muestra <code>1,00</code>, <code>2,50</code></li>
+                  <li><code>4</code> → muestra <code>1,0000</code> (predeterminado del sistema)</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li>Guarda</li>
+        </ol>
+
+        <p class="fw-semibold mb-2">Ejemplo práctico:</p>
+        <table class="table table-sm table-bordered" style="font-size:.84rem">
+          <thead class="table-light">
+            <tr>
+              <th>Unidad</th>
+              <th>Decimales</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>und</code></td><td>0</td><td><code>1</code>, <code>2</code>, <code>34</code></td></tr>
+            <tr><td><code>glb</code></td><td>0</td><td><code>1</code>, <code>3</code>, <code>12</code></td></tr>
+            <tr><td><code>m2</code></td><td>2</td><td><code>12,50</code>, <code>34,75</code></td></tr>
+            <tr><td><code>ml</code></td><td>3</td><td><code>1,500</code>, <code>2,000</code></td></tr>
+          </tbody>
+        </table>
+
+        <div class="alert alert-warning py-2 mb-0" style="font-size:.82rem">
+          <i class="bi bi-info-circle me-1"></i>
+          Esta configuración es un catálogo manual. Para que el sistema aplique los decimales automáticamente en presupuesto, almacén y logística es necesario conectarla a los templates.
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mb-3">
+  <div class="input-group" style="max-width:320px">
+    <span class="input-group-text" style="background:transparent">
+      <i class="bi bi-search" style="font-size:.85rem;color:#6b7280"></i>
+    </span>
+    <input type="text" id="buscador-decimal" class="form-control"
+           placeholder="Buscar por unidad o nombre…" autocomplete="off"
+           style="font-size:.85rem">
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if configs %}
+    <div class="table-responsive">
+      <table class="table-modern">
+        <thead>
+          <tr>
+            <th style="width:130px">Unidad de Medida</th>
+            <th>Nombre completo</th>
+            <th>Variantes de importación</th>
+            <th>Descripción</th>
+            <th style="width:120px" class="text-center">Decimales</th>
+            <th style="width:90px" class="text-center">Estado</th>
+            <th style="width:100px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in configs %}
+          <tr>
+            <td>
+              <code style="font-size:.85rem;font-weight:700;color:#0284c7">{{ c.codigo }}</code>
+            </td>
+            <td style="font-size:.85rem">{{ c.nombre }}</td>
+            <td style="font-size:.78rem;color:var(--text-muted)">{{ c.aliases|default:"—" }}</td>
+            <td style="font-size:.8rem;color:var(--text-muted)">{{ c.descripcion|default:"—" }}</td>
+            <td class="text-center" style="font-size:.85rem;font-weight:600">{{ c.decimales }}</td>
+            <td class="text-center">
+              {% if c.activo %}
+              <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.7rem">Activo</span>
+              {% else %}
+              <span class="badge bg-secondary" style="font-size:.7rem">Inactivo</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'configuracion:decimal_editar' c.pk %}"
+                 class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.75rem">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-123 d-block mb-3" style="font-size:2.5rem;opacity:.3"></i>
+      <div class="fw-semibold mb-1">Sin configuraciones decimales</div>
+      <div style="font-size:.82rem">Crea una nueva con el botón Nuevo Decimal.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if configs %}
+<div class="text-muted mt-2" style="font-size:.75rem">
+  <span id="conteo-visible">{{ configs|length }}</span> de {{ configs|length }} configuraci{{ configs|length|pluralize:"ón,ones" }}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const buscador = document.getElementById('buscador-decimal');
+if (buscador) {
+  buscador.addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    const filas = document.querySelectorAll('table tbody tr');
+    let visibles = 0;
+    filas.forEach(fila => {
+      const texto = fila.textContent.toLowerCase();
+      const mostrar = !q || texto.includes(q);
+      fila.style.display = mostrar ? '' : 'none';
+      if (mostrar) visibles++;
+    });
+    const conteo = document.getElementById('conteo-visible');
+    if (conteo) conteo.textContent = visibles;
+  });
+  buscador.focus();
+}
+</script>
+{% endblock %}

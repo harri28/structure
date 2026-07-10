@@ -164,13 +164,6 @@
         </form>
         {% endif %}
         {% endfor %}
-        <form method="post" action="{% url 'logistica:guia_eliminar' guia.pk %}" class="ms-auto"
-              onsubmit="return confirm('¿Eliminar esta guía de remisión?')">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-outline-danger btn-sm">
-            <i class="bi bi-trash3 me-1"></i>Eliminar
-          </button>
-        </form>
       </div>
     </div>
   </div>
