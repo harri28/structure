@@ -33,7 +33,13 @@
   <a href="{% url 'configuracion:cargo_lista' %}" class="chip-seccion">
     <i class="bi bi-person-badge me-1"></i>Mano de Obra
   </a>
-  <div class="ms-auto">
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'configuracion:unidad_exportar' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-download me-1"></i>Descargar
+    </a>
+    <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalImportar">
+      <i class="bi bi-upload me-1"></i>Importar
+    </button>
     <a href="{% url 'configuracion:unidad_crear' %}" class="btn btn-primary btn-sm">
       <i class="bi bi-plus-lg me-1"></i>Nueva Unidad
     </a>
@@ -109,6 +115,40 @@
 </div>
 {% endif %}
 
+<!-- Modal Importar -->
+<div class="modal fade" id="modalImportar" tabindex="-1" aria-labelledby="modalImportarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalImportarLabel">
+          <i class="bi bi-upload me-2"></i>Importar Unidades de Medida
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'configuracion:unidad_importar' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Archivo Excel (.xlsx)</label>
+            <input type="file" name="archivo" class="form-control" accept=".xlsx" required>
+          </div>
+          <div style="font-size:.8rem;color:var(--text-muted)">
+            <i class="bi bi-info-circle me-1"></i>
+            Usa el mismo formato que el archivo descargado:
+            columnas <strong>Código, Nombre, Descripción, Aliases, Activo</strong>.
+            Las unidades existentes se actualizan por código; las nuevas se crean.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-upload me-1"></i>Importar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

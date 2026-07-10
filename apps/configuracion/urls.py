@@ -26,6 +26,8 @@ urlpatterns = [
     path('unidades/nueva/',                         views.unidad_crear,                  name='unidad_crear'),
     path('unidades/<int:pk>/editar/',               views.unidad_editar,                 name='unidad_editar'),
     path('unidades/<int:pk>/eliminar/',             views.unidad_eliminar,               name='unidad_eliminar'),
+    path('unidades/exportar/',                        views.unidad_exportar,               name='unidad_exportar'),
+    path('unidades/importar/',                        views.unidad_importar,               name='unidad_importar'),
     path('unidades/cargar-defaults/',               views.unidad_cargar_defaults,        name='unidad_cargar_defaults'),
     # Cargos de Mano de Obra
     path('cargos/',                                views.cargo_lista,                   name='cargo_lista'),

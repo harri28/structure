@@ -64,14 +64,16 @@
             </div>
             {% for campo, label in campos %}
             {% if campo == 'es_superadmin' and superadmin_existe and not es_este_superadmin %}
-            <div style="display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;border-radius:6px;
-                        background:#fef2f2;border:1px solid #fecaca;margin-bottom:.1rem">
-              <i class="bi bi-lock-fill" style="color:#dc2626;font-size:.85rem;flex-shrink:0"></i>
-              <span style="font-size:.83rem;color:#6b7280">{{ label }}</span>
-              <span style="font-size:.72rem;color:#dc2626;margin-left:auto;white-space:nowrap">
-                Ya existe un Superadmin en el sistema
+            <label style="display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;border-radius:6px;
+                          opacity:.5;margin-bottom:.1rem;cursor:not-allowed"
+                   title="Ya existe un rol Superadmin en el sistema">
+              <input type="checkbox" style="width:15px;height:15px;flex-shrink:0;accent-color:#2563eb;pointer-events:none"
+                     disabled>
+              <span style="font-size:.83rem">{{ label }}</span>
+              <span style="font-size:.72rem;color:#dc2626;margin-left:.5rem;white-space:nowrap">
+                <i class="bi bi-lock-fill"></i> Ya existe un Superadmin
               </span>
-            </div>
+            </label>
             {% else %}
             <label style="display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;border-radius:6px;
                           cursor:pointer;margin-bottom:.1rem;transition:background .08s"

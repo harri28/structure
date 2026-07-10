@@ -569,6 +569,112 @@ def unidad_eliminar(request, pk):
 
 
 
+def unidad_exportar(request):
+    import io
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Unidades de Medida'
+
+    header_labels = ['Código', 'Nombre', 'Descripción', 'Aliases', 'Activo (1=Sí, 0=No)']
+    for col, label in enumerate(header_labels, 1):
+        cell = ws.cell(row=1, column=col, value=label)
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = PatternFill('solid', fgColor='0284C7')
+        cell.alignment = Alignment(horizontal='center')
+
+    for row_num, u in enumerate(UnidadMedida.objects.all(), 2):
+        ws.cell(row=row_num, column=1, value=u.codigo)
+        ws.cell(row=row_num, column=2, value=u.nombre)
+        ws.cell(row=row_num, column=3, value=u.descripcion)
+        ws.cell(row=row_num, column=4, value=u.aliases)
+        ws.cell(row=row_num, column=5, value=1 if u.activo else 0)
+
+    ws.column_dimensions['A'].width = 15
+    ws.column_dimensions['B'].width = 25
+    ws.column_dimensions['C'].width = 30
+    ws.column_dimensions['D'].width = 50
+    ws.column_dimensions['E'].width = 20
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    response = HttpResponse(
+        buf.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = 'attachment; filename="unidades_medida.xlsx"'
+    return response
+
+
+def unidad_importar(request):
+    if request.method != 'POST':
+        return redirect('configuracion:unidad_lista')
+
+    archivo = request.FILES.get('archivo')
+    if not archivo:
+        messages.error(request, 'Selecciona un archivo Excel (.xlsx).')
+        return redirect('configuracion:unidad_lista')
+
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(archivo, read_only=True, data_only=True)
+        ws = wb.active
+        rows = list(ws.iter_rows(values_only=True))
+    except Exception as e:
+        messages.error(request, f'No se pudo leer el archivo: {e}')
+        return redirect('configuracion:unidad_lista')
+
+    if not rows:
+        messages.error(request, 'El archivo está vacío.')
+        return redirect('configuracion:unidad_lista')
+
+    creadas = actualizadas = errores = 0
+    for row in rows[1:]:  # skip header
+        try:
+            codigo      = str(row[0] or '').strip() if row[0] is not None else ''
+            nombre      = str(row[1] or '').strip() if len(row) > 1 and row[1] is not None else ''
+            descripcion = str(row[2] or '').strip() if len(row) > 2 and row[2] is not None else ''
+            aliases     = str(row[3] or '').strip() if len(row) > 3 and row[3] is not None else ''
+            activo_raw  = row[4] if len(row) > 4 else 1
+            activo      = str(activo_raw).strip() not in ('0', 'False', 'false', 'No', 'no', '')
+
+            if not codigo or not nombre:
+                errores += 1
+                continue
+
+            _, created = UnidadMedida.objects.update_or_create(
+                codigo=codigo,
+                defaults={'nombre': nombre, 'descripcion': descripcion,
+                          'aliases': aliases, 'activo': activo},
+            )
+            if created:
+                creadas += 1
+            else:
+                actualizadas += 1
+        except Exception:
+            errores += 1
+
+    partes = []
+    if creadas:
+        partes.append(f'{creadas} creadas')
+    if actualizadas:
+        partes.append(f'{actualizadas} actualizadas')
+    if errores:
+        partes.append(f'{errores} filas omitidas por error')
+
+    if creadas or actualizadas:
+        messages.success(request, 'Importación completada: ' + ', '.join(partes) + '.')
+    else:
+        messages.warning(request, 'No se importó ninguna unidad. ' + ', '.join(partes) + '.')
+
+    return redirect('configuracion:unidad_lista')
+
+
 def unidad_cargar_defaults(request):
     if request.method == 'POST':
         creadas = actualizadas = 0
