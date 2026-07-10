@@ -17,6 +17,9 @@ TIPOS_EQUIPO = [
     ('EXCAVADORA',      'Excavadora'),
     ('CARGADOR',        'Cargador Frontal'),
     ('VOLQUETE',        'Volquete'),
+    ('COMPRESORA',      'Compresora'),
+    ('RODILLO',         'Rodillo'),
+    ('ROCK_DRILL',      'Rock Drill'),
     ('GRUA',            'Grúa'),
     ('COMPACTADORA',    'Compactadora'),
     ('MOTONIVELADORA',  'Motoniveladora'),
@@ -25,7 +28,8 @@ TIPOS_EQUIPO = [
 ]
 
 MODALIDADES_COSTO = [
-    ('MENSUAL',   'Mensual'),
+    ('MENSUAL',   'Mensual (tarifa fija)'),
+    ('SECA',      'Maquinaria Seca (por hora)'),
     ('SEMANAL',   'Semanal'),
     ('QUINCENAL', 'Quincenal'),
 ]
@@ -157,6 +161,46 @@ class RegistroDiario(models.Model):
         return (self.cuadrilla.costo_hora() * self.horas).quantize(Decimal('0.01'))
 
 
+class Liquidacion(models.Model):
+    """Agrupa los partes diarios de una máquina en un período mensual."""
+    ESTADOS = [('ABIERTA', 'Abierta'), ('CERRADA', 'Cerrada')]
+
+    proyecto   = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='liquidaciones_maq')
+    maquinaria = models.ForeignKey(Maquinaria, on_delete=models.CASCADE, related_name='liquidaciones')
+    numero     = models.PositiveIntegerField()
+    periodo    = models.DateField()
+    estado     = models.CharField(max_length=10, choices=ESTADOS, default='ABIERTA')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Liquidación'
+        verbose_name_plural = 'Liquidaciones'
+        ordering            = ['-periodo', 'maquinaria__codigo']
+        unique_together     = [['maquinaria', 'numero']]
+
+    def __str__(self):
+        return f'LIQ-{self.numero:03d} — {self.maquinaria.codigo} ({self.periodo_display()})'
+
+    def periodo_display(self):
+        meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+        return f'{meses[self.periodo.month - 1]} {self.periodo.year}'
+
+    def total_horas(self):
+        from django.db.models import Sum
+        return self.partes.aggregate(t=Sum('horas'))['t'] or Decimal('0')
+
+    def total_combustible(self):
+        from django.db.models import Sum
+        return self.partes.filter(combustible__isnull=False).aggregate(t=Sum('combustible'))['t'] or Decimal('0')
+
+    def monto_a_pagar(self):
+        maq = self.maquinaria
+        if maq.modalidad_costo == 'MENSUAL':
+            return Decimal(str(maq.costo))
+        return (self.total_horas() * maq.costo_hora).quantize(Decimal('0.01'))
+
+
 class RegistroMaquinaria(models.Model):
     proyecto    = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='registros_maquinaria')
     fecha       = models.DateField()
@@ -170,6 +214,15 @@ class RegistroMaquinaria(models.Model):
         verbose_name='Insumo presupuesto',
     )
     maquinaria  = models.ForeignKey(Maquinaria, null=True, blank=True, on_delete=models.SET_NULL)
+    liquidacion = models.ForeignKey(
+        Liquidacion, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='partes',
+        verbose_name='Liquidación',
+    )
+
+    # Parte diario
+    numero_parte = models.PositiveIntegerField('N° de parte', null=True, blank=True)
+    combustible  = models.DecimalField('Combustible (gal)', max_digits=8, decimal_places=2, null=True, blank=True)
 
     # Identificación
     codigo      = models.CharField(max_length=30, blank=True)
@@ -219,6 +272,12 @@ class RegistroMaquinaria(models.Model):
             diff = dt_s - dt_e
             if diff.total_seconds() > 0:
                 self.horas = Decimal(str(round(diff.total_seconds() / 3600, 2)))
+        if not self.numero_parte and self.maquinaria_id:
+            qs = RegistroMaquinaria.objects.filter(maquinaria_id=self.maquinaria_id)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            ultimo = qs.order_by('-numero_parte').values_list('numero_parte', flat=True).first() or 0
+            self.numero_parte = ultimo + 1
         super().save(*args, **kwargs)
 
     def costo_maquinaria(self):

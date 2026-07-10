@@ -92,7 +92,7 @@
         {% for m in maquinas_sin_uso %}
         <tr>
           <td class="fw-semibold" style="font-size:.85rem">{{ m.nombre }}</td>
-          <td class="text-muted" style="font-size:.82rem">{{ m.get_tipo_display }}</td>
+          <td class="text-muted" style="font-size:.82rem">{{ m.get_tipo_equipo_display }}</td>
           <td class="text-muted" style="font-size:.82rem">{{ m.placa|default:"—" }}</td>
           <td class="text-end">
             <a href="{% url 'maquinaria:maq_detalle_maquinaria' proyecto.pk m.pk %}"

@@ -39,9 +39,7 @@
     <a href="{% url 'proyectos:lista' %}" class="sb-link {% block nav_proyectos %}{% endblock %}">
       <i class="bi bi-folder2-open"></i> Proyectos
     </a>
-    <a href="{% url 'configuracion:empresa' %}" class="sb-link {% block nav_config_empresa %}{% endblock %}">
-      <i class="bi bi-building"></i> Empresa
-    </a>
+    {# Empresa desactivada temporalmente #}
     <a href="{% url 'configuracion:equipo' %}" class="sb-link {% block nav_config_equipo %}{% endblock %}">
       <i class="bi bi-people-fill"></i> Usuarios &amp; Roles
     </a>
@@ -69,6 +67,7 @@
       </a>
     </div>
 
+    {% if permisos.puede_ver_presupuesto or permisos.puede_editar_presupuesto %}
     <div class="sb-module-row">
       <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}"
          class="sb-link {% block nav_presupuesto %}{% endblock %}">
@@ -110,12 +109,16 @@
       </a>
       {% endif %}
     </div>
+    {% endif %}
 
+    {% if permisos.puede_crear_requerimientos or permisos.puede_aprobar_requerimientos %}
     <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
        class="sb-link {% block nav_req %}{% endblock %}">
       <i class="bi bi-file-earmark-text"></i> Requerimientos
     </a>
+    {% endif %}
 
+    {% if permisos.puede_ver_almacen or permisos.puede_gestionar_entradas or permisos.puede_gestionar_salidas %}
     <div class="sb-module-row">
       <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
          class="sb-link {% block nav_almacen %}{% endblock %}">
@@ -134,16 +137,22 @@
          class="sb-link sb-sublink {% block nav_consumo %}{% endblock %}">
         <i class="bi bi-graph-up-arrow"></i> Consumo
       </a>
+      {% if permisos.puede_gestionar_entradas %}
       <a href="{% url 'almacen:entrada_lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_entradas %}{% endblock %}">
         <i class="bi bi-arrow-down-circle"></i> Entradas
       </a>
+      {% endif %}
+      {% if permisos.puede_gestionar_salidas %}
       <a href="{% url 'almacen:salida_lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_salidas %}{% endblock %}">
         <i class="bi bi-arrow-up-circle"></i> Salidas
       </a>
+      {% endif %}
     </div>
+    {% endif %}
 
+    {% if permisos.puede_ver_maquinaria or permisos.puede_gestionar_maquinaria %}
     <a href="{% url 'maquinaria:registro_lista' proyecto_activo.pk %}"
        class="sb-link {% block nav_reg_cuadrilla %}{% endblock %}">
       <i class="bi bi-people-fill"></i> Cuadrilla
@@ -153,11 +162,14 @@
        class="sb-link {% block nav_maquinaria %}{% endblock %}">
       <i class="bi bi-truck"></i> Maquinaria
     </a>
+    {% endif %}
 
+    {% if permisos.puede_crear_proyectos or permisos.puede_administrar_usuarios %}
     <a href="{% url 'proyectos:personal' proyecto_activo.pk %}"
        class="sb-link {% block nav_personal %}{% endblock %}">
       <i class="bi bi-person-badge"></i> Personal
     </a>
+    {% endif %}
   </div>
 
   <div class="sb-section">
@@ -177,44 +189,44 @@
          class="sb-link sb-sublink {% block nav_log_dashboard %}{% endblock %}">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
-      {% if permisos.revisar_reqs_log or permisos.es_superadmin %}
+      {% if permisos.puede_revisar_reqs_log or permisos.es_superadmin %}
       <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_log_req %}{% endblock %}">
         <i class="bi bi-file-earmark-text"></i> Requerimientos
         {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
       </a>
       {% endif %}
-      {% if permisos.gestionar_inventarios_log or permisos.es_superadmin %}
+      {% if permisos.puede_gestionar_inventarios_log or permisos.es_superadmin %}
       <a href="{% url 'logistica:inventarios' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_log_inventarios %}{% endblock %}">
         <i class="bi bi-archive"></i> Inventarios
       </a>
       {% endif %}
-      {% if permisos.gestionar_almacen_log or permisos.es_superadmin %}
+      {% if permisos.puede_gestionar_almacen_log or permisos.es_superadmin %}
       <a href="{% url 'logistica:almacen_log' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_log_almacen %}{% endblock %}">
         <i class="bi bi-box-seam"></i> Almacén
       </a>
       {% endif %}
-      {% if permisos.gestionar_ctrl_maq_log or permisos.es_superadmin %}
+      {% if permisos.puede_gestionar_ctrl_maq_log or permisos.es_superadmin %}
       <a href="{% url 'logistica:control_maquinaria' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_log_ctrl_maq %}{% endblock %}">
         <i class="bi bi-gear-wide-connected"></i> Control Maq. y Equipos
       </a>
       {% endif %}
-      {% if permisos.gestionar_abastecimiento or permisos.es_superadmin %}
+      {% if permisos.puede_gestionar_abastecimiento or permisos.es_superadmin %}
       <a href="{% url 'logistica:abastecimiento' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_log_abastecimiento %}{% endblock %}">
         <i class="bi bi-cart-check"></i> Abastecimiento
       </a>
       {% endif %}
-      {% if permisos.gestionar_cotizaciones_log or permisos.es_superadmin %}
+      {% if permisos.puede_gestionar_cotizaciones_log or permisos.es_superadmin %}
       <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_cot %}{% endblock %}">
         <i class="bi bi-tags"></i> Cotizaciones
       </a>
       {% endif %}
-      {% if permisos.gestionar_logistica or permisos.es_superadmin %}
+      {% if permisos.puede_gestionar_logistica or permisos.es_superadmin %}
       <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_log_guias %}{% endblock %}">
         <i class="bi bi-file-earmark-arrow-right"></i> Guías de Remisión

@@ -5,11 +5,11 @@ from django.db.models import Sum, Count
 from apps.proyectos.models import Proyecto
 from .models import (
     TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla,
-    RegistroDiario, RegistroMaquinaria,
+    RegistroDiario, RegistroMaquinaria, Liquidacion,
 )
 from .forms import (
     TipoPersonalForm, MaquinariaForm, CuadrillaForm,
-    IntegranteCuadrillaForm, RegistroDiarioForm, RegistroMaquinariaForm,
+    IntegranteCuadrillaForm, RegistroDiarioForm, RegistroMaquinariaForm, ParteForm,
 )
 
 
@@ -268,37 +268,154 @@ def maq_registro_lista(request, proyecto_id):
 
 
 def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
-    """Historial de una máquina en el proyecto + form inline para agregar turno."""
+    """Ficha de una máquina: lista de liquidaciones + registros sin liquidación."""
     proyecto   = get_object_or_404(Proyecto, pk=proyecto_id)
     maquinaria = get_object_or_404(Maquinaria, pk=maq_pk)
-    registros  = (RegistroMaquinaria.objects
-                  .filter(proyecto=proyecto, maquinaria=maquinaria)
-                  .select_related('partida', 'insumo')
-                  .order_by('-fecha', '-created_at'))
-    total_hm   = registros.aggregate(t=Sum('horas'))['t'] or 0
 
-    form = RegistroMaquinariaForm(
-        proyecto=proyecto,
-        maquinaria=maquinaria,
-        data=request.POST or None,
-        initial={'fecha': __import__('datetime').date.today()},
-    )
-    if request.method == 'POST' and form.is_valid():
-        reg = form.save(commit=False)
-        reg.proyecto   = proyecto
-        reg.maquinaria = maquinaria
-        reg.nombre     = maquinaria.nombre
-        reg.placa      = maquinaria.placa
-        reg.save()
-        messages.success(request, 'Turno registrado.')
-        return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq_pk)
+    # Crear nueva liquidación (POST desde modal)
+    if request.method == 'POST' and request.POST.get('accion') == 'nueva_liq':
+        periodo_str = request.POST.get('periodo', '')
+        try:
+            import datetime as dt_mod
+            year, month = map(int, periodo_str.split('-'))
+            periodo = dt_mod.date(year, month, 1)
+        except (ValueError, TypeError, AttributeError):
+            messages.error(request, 'Período inválido.')
+            return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq_pk)
+        if Liquidacion.objects.filter(maquinaria=maquinaria, periodo=periodo).exists():
+            messages.warning(request, 'Ya existe una liquidación para ese período.')
+            return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq_pk)
+        ultimo = (Liquidacion.objects.filter(maquinaria=maquinaria)
+                  .order_by('-numero').values_list('numero', flat=True).first() or 0)
+        liq = Liquidacion.objects.create(
+            proyecto=proyecto, maquinaria=maquinaria,
+            numero=ultimo + 1, periodo=periodo,
+        )
+        messages.success(request, f'Liquidación {liq} creada.')
+        return redirect('maquinaria:liquidacion_detalle', pk=liq.pk)
 
+    liquidaciones = (Liquidacion.objects
+                     .filter(proyecto=proyecto, maquinaria=maquinaria)
+                     .annotate(total_hm=Sum('partes__horas'), n_partes=Count('partes'))
+                     .order_by('-periodo'))
+    sin_liq = (RegistroMaquinaria.objects
+               .filter(proyecto=proyecto, maquinaria=maquinaria, liquidacion__isnull=True)
+               .select_related('partida', 'insumo')
+               .order_by('-fecha'))
+    total_hm = (RegistroMaquinaria.objects
+                .filter(proyecto=proyecto, maquinaria=maquinaria)
+                .aggregate(t=Sum('horas'))['t'] or 0)
+
+    import datetime
     return render(request, 'maquinaria/maq_maquinaria_detalle.html', {
-        'proyecto':   proyecto,
-        'maquinaria': maquinaria,
-        'registros':  registros,
-        'total_hm':   total_hm,
-        'form':       form,
+        'proyecto':     proyecto,
+        'maquinaria':   maquinaria,
+        'liquidaciones': liquidaciones,
+        'sin_liq':      sin_liq,
+        'total_hm':     total_hm,
+        'hoy':          datetime.date.today().strftime('%Y-%m'),
+    })
+
+
+def liquidacion_detalle(request, pk):
+    """Parte diario de una liquidación — imprimible A4 landscape."""
+    import datetime
+    from apps.configuracion.models import ConfigEmpresa
+    liq       = get_object_or_404(Liquidacion, pk=pk)
+    proyecto  = liq.proyecto
+    maquinaria = liq.maquinaria
+
+    if request.method == 'POST' and liq.estado == 'ABIERTA':
+        form = ParteForm(proyecto=proyecto, maquinaria=maquinaria, data=request.POST)
+        if form.is_valid():
+            reg             = form.save(commit=False)
+            reg.proyecto    = proyecto
+            reg.maquinaria  = maquinaria
+            reg.liquidacion = liq
+            reg.nombre      = maquinaria.nombre
+            reg.placa       = maquinaria.placa
+            reg.propietario = maquinaria.propietario
+            if not reg.operador:
+                reg.operador = maquinaria.operador
+            reg.save()
+            messages.success(request, f'Parte N°{reg.numero_parte} registrado.')
+            return redirect('maquinaria:liquidacion_detalle', pk=pk)
+    else:
+        form = ParteForm(
+            proyecto=proyecto, maquinaria=maquinaria,
+            initial={'fecha': datetime.date.today()},
+        )
+
+    partes = liq.partes.select_related('insumo', 'partida').order_by('fecha', 'created_at')
+    return render(request, 'maquinaria/liquidacion_detalle.html', {
+        'liq':              liq,
+        'proyecto':         proyecto,
+        'maquinaria':       maquinaria,
+        'partes':           partes,
+        'form':             form,
+        'total_horas':      liq.total_horas(),
+        'total_combustible': liq.total_combustible(),
+        'monto_a_pagar':    liq.monto_a_pagar(),
+        'config':           ConfigEmpresa.get(),
+    })
+
+
+def liquidacion_cerrar(request, pk):
+    """Cierra una liquidación (no se pueden agregar más partes)."""
+    liq = get_object_or_404(Liquidacion, pk=pk)
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+        if accion == 'cerrar' and liq.estado == 'ABIERTA':
+            liq.estado = 'CERRADA'
+            liq.save(update_fields=['estado'])
+            messages.success(request, f'{liq} cerrada.')
+        elif accion == 'reabrir' and liq.estado == 'CERRADA':
+            liq.estado = 'ABIERTA'
+            liq.save(update_fields=['estado'])
+            messages.success(request, f'{liq} reabierta.')
+    return redirect('maquinaria:liquidacion_detalle', pk=pk)
+
+
+def resumen_mensual(request, proyecto_id):
+    """Resumen de todas las liquidaciones de un período — imprimible A4."""
+    import datetime
+    from apps.configuracion.models import ConfigEmpresa
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+
+    mes_str = request.GET.get('mes', datetime.date.today().strftime('%Y-%m'))
+    try:
+        year, month = map(int, mes_str.split('-'))
+        periodo = datetime.date(year, month, 1)
+    except (ValueError, TypeError):
+        periodo = datetime.date.today().replace(day=1)
+        mes_str = periodo.strftime('%Y-%m')
+
+    liquidaciones = (Liquidacion.objects
+                     .filter(proyecto=proyecto, periodo=periodo)
+                     .select_related('maquinaria')
+                     .prefetch_related('partes')
+                     .order_by('maquinaria__codigo'))
+
+    items = []
+    total_monto = 0
+    for idx, liq in enumerate(liquidaciones, 1):
+        monto = liq.monto_a_pagar()
+        total_monto += monto
+        items.append({
+            'idx':        idx,
+            'liq':        liq,
+            'maquinaria': liq.maquinaria,
+            'total_horas': liq.total_horas(),
+            'monto':      monto,
+        })
+
+    return render(request, 'maquinaria/resumen_mensual.html', {
+        'proyecto':     proyecto,
+        'items':        items,
+        'periodo':      periodo,
+        'mes_str':      mes_str,
+        'total_monto':  total_monto,
+        'config':       ConfigEmpresa.get(),
     })
 
 

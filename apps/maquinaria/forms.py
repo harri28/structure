@@ -1,5 +1,5 @@
 from django import forms
-from .models import TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla, RegistroDiario, RegistroMaquinaria
+from .models import TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla, RegistroDiario, RegistroMaquinaria, Liquidacion
 
 
 class TipoPersonalForm(forms.ModelForm):
@@ -152,3 +152,48 @@ class RegistroMaquinariaForm(forms.ModelForm):
         self.fields['insumo'].empty_label  = '— Sin insumo —'
         self.fields['hora_entrada'].required = False
         self.fields['hora_salida'].required  = False
+
+
+class ParteForm(forms.ModelForm):
+    """Formulario simplificado para registrar un parte diario dentro de una liquidación."""
+    class Meta:
+        model  = RegistroMaquinaria
+        fields = ['fecha', 'hora_entrada', 'hora_salida', 'horas', 'combustible', 'insumo', 'partida', 'observacion']
+        widgets = {
+            'fecha':        forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date'}),
+            'hora_entrada': forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}),
+            'hora_salida':  forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}),
+            'horas':        forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.5', 'min': '0'}),
+            'combustible':  forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0', 'placeholder': 'gal'}),
+            'insumo':       forms.Select(attrs={'class': 'form-select form-select-sm'}),
+            'partida':      forms.Select(attrs={'class': 'form-select form-select-sm'}),
+            'observacion':  forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Opcional'}),
+        }
+
+    def __init__(self, proyecto=None, maquinaria=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.db.models import Count
+        from apps.presupuesto.models import Partida, InsumoPresupuesto
+        self.fields['hora_entrada'].required = False
+        self.fields['hora_salida'].required  = False
+        self.fields['horas'].required        = False
+        self.fields['combustible'].required  = False
+        self.fields['insumo'].required       = False
+        self.fields['insumo'].empty_label    = '— Sin insumo —'
+        self.fields['partida'].required      = False
+        self.fields['partida'].empty_label   = '— Sin partida —'
+        if proyecto:
+            self.fields['partida'].queryset = (
+                Partida.objects
+                .annotate(n_hijos=Count('hijos'))
+                .filter(presupuesto__proyecto=proyecto, n_hijos=0)
+                .order_by('orden')
+            )
+            self.fields['insumo'].queryset = (
+                InsumoPresupuesto.objects
+                .filter(presupuesto__proyecto=proyecto)
+                .order_by('codigo')
+            )
+        else:
+            self.fields['insumo'].queryset  = InsumoPresupuesto.objects.none()
+            self.fields['partida'].queryset = Partida.objects.none()

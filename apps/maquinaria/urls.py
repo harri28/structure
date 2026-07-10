@@ -42,6 +42,11 @@ urlpatterns = [
     path('maquinaria-reg/<int:pk>/editar/',                              views.maq_registro_editar,     name='maq_registro_editar'),
     path('maquinaria-reg/<int:pk>/eliminar/',                            views.maq_registro_eliminar,   name='maq_registro_eliminar'),
 
+    # Liquidaciones
+    path('liquidacion/<int:pk>/',          views.liquidacion_detalle, name='liquidacion_detalle'),
+    path('liquidacion/<int:pk>/cerrar/',   views.liquidacion_cerrar,  name='liquidacion_cerrar'),
+
     # Resumen HH / HM por partida
-    path('proyecto/<int:proyecto_id>/resumen/',           views.resumen, name='resumen'),
+    path('proyecto/<int:proyecto_id>/resumen/',         views.resumen,          name='resumen'),
+    path('proyecto/<int:proyecto_id>/resumen-mensual/', views.resumen_mensual,  name='resumen_mensual'),
 ]

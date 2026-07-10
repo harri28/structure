@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+{% block title %}Parte Diario — {{ liq }}{% endblock %}
+{% block nav_maquinaria %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:dashboard' proyecto.pk %}">Maquinaria</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}">Equipos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_detalle_maquinaria' proyecto.pk maquinaria.pk %}">{{ maquinaria.codigo }}</a></li>
+<li class="breadcrumb-item active">LIQ-{{ liq.numero|stringformat:"03d" }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Print A4 Landscape ─────────────────────────────────── */
+@media print {
+  @page { size: A4 landscape; margin: 1cm; }
+  .no-print { display: none !important; }
+  .sidebar, .topbar, .breadcrumb-nav, .page-header,
+  .sidebar-overlay { display: none !important; }
+  .main-content { margin-left: 0 !important; padding: 0 !important; }
+  .print-area { display: block !important; }
+  body { background: white !important; }
+  .card { border: none !important; box-shadow: none !important; }
+  table { font-size: 9pt !important; }
+  .print-header { display: block !important; }
+}
+
+.print-header { display: none; }
+
+/* ── Tabla de partes ─────────────────────────────────────── */
+.tabla-parte th {
+  background: #1e3a5f;
+  color: #fff;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: .4rem .5rem;
+  white-space: nowrap;
+}
+.tabla-parte td {
+  font-size: .82rem;
+  padding: .3rem .5rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+.tabla-parte tbody tr:hover { background: #f8fafc; }
+.tabla-parte tfoot td {
+  background: #f0f9ff;
+  font-weight: 700;
+  font-size: .82rem;
+  border-top: 2px solid #2563eb;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center no-print">
+  <div>
+    <a href="{% url 'maquinaria:maq_detalle_maquinaria' proyecto.pk maquinaria.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> {{ maquinaria.codigo }}
+    </a>
+    <h4><i class="bi bi-file-earmark-text me-2"></i>Parte Diario — LIQ-{{ liq.numero|stringformat:"03d" }}</h4>
+    <div class="text-muted" style="font-size:.84rem">{{ maquinaria.nombre }} &nbsp;·&nbsp; {{ liq.periodo_display }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-printer me-1"></i>Imprimir
+    </button>
+    <form method="post" action="{% url 'maquinaria:liquidacion_cerrar' liq.pk %}">
+      {% csrf_token %}
+      {% if liq.estado == 'ABIERTA' %}
+      <button type="submit" name="accion" value="cerrar"
+              class="btn btn-outline-warning btn-sm"
+              onclick="return confirm('¿Cerrar esta liquidación? No se podrán agregar más partes.')">
+        <i class="bi bi-lock me-1"></i>Cerrar
+      </button>
+      {% else %}
+      <button type="submit" name="accion" value="reabrir" class="btn btn-outline-success btn-sm">
+        <i class="bi bi-unlock me-1"></i>Reabrir
+      </button>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2 no-print" style="font-size:.84rem">
+  {{ msg }}<button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{# ── Encabezado imprimible ──────────────────────────────── #}
+<div class="print-header mb-3">
+  <div style="text-align:center;margin-bottom:.5rem">
+    <div style="font-size:13pt;font-weight:800;text-transform:uppercase">{{ config.razon_social }}</div>
+    <div style="font-size:9pt">{{ proyecto.nombre }}</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem;font-size:8.5pt;border:1px solid #ccc;padding:.4rem .6rem">
+    <div><strong>Máquina:</strong> {{ maquinaria.nombre }}</div>
+    <div><strong>Código:</strong> {{ maquinaria.codigo }}</div>
+    <div><strong>Placa:</strong> {{ maquinaria.placa|default:"—" }}</div>
+    <div><strong>Propietario:</strong> {{ maquinaria.propietario|default:"—" }}</div>
+    <div><strong>Operador:</strong> {{ maquinaria.operador|default:"—" }}</div>
+    <div><strong>Período:</strong> {{ liq.periodo_display }}</div>
+    <div><strong>Modalidad:</strong> {{ maquinaria.get_modalidad_costo_display|default:"—" }}</div>
+    <div><strong>Tarifa:</strong> S/ {{ maquinaria.costo|floatformat:2 }}{% if maquinaria.modalidad_costo == 'SECA' %}/hr{% endif %}</div>
+    <div><strong>Liquidación N°:</strong> {{ liq.numero|stringformat:"03d" }}</div>
+  </div>
+</div>
+
+{# ── Layout: formulario + tabla ─────────────────────────── #}
+<div class="row g-3">
+
+  {# Formulario agregar parte (solo si abierta) #}
+  {% if liq.estado == 'ABIERTA' %}
+  <div class="col-lg-3 no-print">
+    <div class="card">
+      <div class="card-header py-2 px-3" style="background:#f8fafc;font-size:.83rem;font-weight:700">
+        <i class="bi bi-plus-circle me-1" style="color:#2563eb"></i>Agregar parte
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold" style="font-size:.79rem">Fecha *</label>
+            <input type="date" name="{{ form.fecha.html_name }}"
+                   value="{{ form.fecha.value|date:'Y-m-d'|default:'' }}"
+                   class="form-control form-control-sm{% if form.fecha.errors %} is-invalid{% endif %}">
+            {% for e in form.fecha.errors %}<div class="invalid-feedback" style="font-size:.75rem">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="row g-1 mb-2">
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.79rem">H. Inicial</label>
+              <input type="time" name="{{ form.hora_entrada.html_name }}"
+                     value="{{ form.hora_entrada.value|default:'' }}"
+                     class="form-control form-control-sm" id="p_entrada">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.79rem">H. Final</label>
+              <input type="time" name="{{ form.hora_salida.html_name }}"
+                     value="{{ form.hora_salida.value|default:'' }}"
+                     class="form-control form-control-sm" id="p_salida">
+            </div>
+          </div>
+
+          <div id="p-preview" class="mb-1" style="display:none;font-size:.76rem;color:#2563eb;font-weight:600">
+            <i class="bi bi-clock me-1"></i><span id="p-preview-txt"></span> horas
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold" style="font-size:.79rem">Horas (si no hay entrada/salida)</label>
+            <input type="number" name="{{ form.horas.html_name }}"
+                   value="{{ form.horas.value|default:'0' }}"
+                   step="0.5" min="0" class="form-control form-control-sm" id="p_horas">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold" style="font-size:.79rem">Petróleo (gal)</label>
+            <input type="number" name="{{ form.combustible.html_name }}"
+                   value="{{ form.combustible.value|default:'' }}"
+                   step="0.01" min="0" class="form-control form-control-sm"
+                   placeholder="Opcional">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold" style="font-size:.79rem">Insumo presupuesto</label>
+            <select name="{{ form.insumo.html_name }}" class="form-select form-select-sm">
+              <option value="">— Sin insumo —</option>
+              {% for val, lbl in form.insumo.field.choices %}{% if val %}
+              <option value="{{ val }}" {% if form.insumo.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ lbl }}</option>
+              {% endif %}{% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.79rem">Observación</label>
+            <input type="text" name="{{ form.observacion.html_name }}"
+                   value="{{ form.observacion.value|default:'' }}"
+                   class="form-control form-control-sm" placeholder="Ej: Movilización de personal">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-check-lg me-1"></i>Guardar parte
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Tabla de partes #}
+  <div class="{% if liq.estado == 'ABIERTA' %}col-lg-9{% else %}col-12{% endif %}">
+
+    {# Info resumida visible en pantalla (no imprimible) #}
+    <div class="row g-2 mb-3 no-print">
+      <div class="col-6 col-sm-3">
+        <div class="card text-center py-2">
+          <div style="font-size:.72rem;color:#9ca3af;text-transform:uppercase">Total HM</div>
+          <div class="fw-bold" style="font-size:1.3rem;color:#2563eb">{{ total_horas|floatformat:2 }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="card text-center py-2">
+          <div style="font-size:.72rem;color:#9ca3af;text-transform:uppercase">Petróleo</div>
+          <div class="fw-bold" style="font-size:1.3rem">{{ total_combustible|floatformat:2 }} <span style="font-size:.75rem;font-weight:400">gal</span></div>
+        </div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="card text-center py-2">
+          <div style="font-size:.72rem;color:#9ca3af;text-transform:uppercase">Partes</div>
+          <div class="fw-bold" style="font-size:1.3rem">{{ partes|length }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="card text-center py-2">
+          <div style="font-size:.72rem;color:#9ca3af;text-transform:uppercase">Monto</div>
+          <div class="fw-bold" style="font-size:1.1rem;color:#15803d">S/ {{ monto_a_pagar|floatformat:2 }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body p-0">
+        {% if partes %}
+        <div class="table-responsive">
+          <table class="tabla-parte w-100">
+            <thead>
+              <tr>
+                <th class="text-center" style="width:40px">N°</th>
+                <th>Fecha</th>
+                <th class="text-center" style="width:70px">N° Parte</th>
+                <th class="text-center">H. Inicial</th>
+                <th class="text-center">H. Final</th>
+                <th class="text-center" style="width:80px">Petróleo</th>
+                <th class="text-center" style="width:80px">Total HM</th>
+                <th>Observaciones</th>
+                <th class="no-print" style="width:60px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in partes %}
+              <tr>
+                <td class="text-center text-muted" style="font-size:.78rem">{{ forloop.counter }}</td>
+                <td style="white-space:nowrap">{{ r.fecha|date:"d/m/Y" }}</td>
+                <td class="text-center">
+                  {% if r.numero_parte %}
+                  <code style="font-size:.78rem">{{ r.numero_parte }}</code>
+                  {% else %}—{% endif %}
+                </td>
+                <td class="text-center">{{ r.hora_entrada|time:"H:i"|default:"—" }}</td>
+                <td class="text-center">{{ r.hora_salida|time:"H:i"|default:"—" }}</td>
+                <td class="text-center">
+                  {% if r.combustible %}{{ r.combustible|floatformat:2 }}{% else %}—{% endif %}
+                </td>
+                <td class="text-center fw-semibold" style="color:#2563eb">{{ r.horas|floatformat:2 }}</td>
+                <td style="color:#374151">{{ r.observacion|default:"—" }}</td>
+                <td class="text-end no-print">
+                  <div class="d-flex gap-1 justify-content-end">
+                    <a href="{% url 'maquinaria:maq_registro_editar' r.pk %}"
+                       class="btn-tbl" title="Editar"><i class="bi bi-pencil"></i></a>
+                    <form method="post" action="{% url 'maquinaria:maq_registro_eliminar' r.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn-tbl text-danger"
+                              onclick="return confirm('¿Eliminar este parte?')"
+                              title="Eliminar"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" class="text-end" style="padding:.4rem .5rem">TOTALES</td>
+                <td class="text-center">{{ total_combustible|floatformat:2 }} gal</td>
+                <td class="text-center" style="color:#2563eb">{{ total_horas|floatformat:2 }} HM</td>
+                <td colspan="2" class="text-end" style="color:#15803d">
+                  Monto: S/ {{ monto_a_pagar|floatformat:2 }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted no-print">
+          <i class="bi bi-calendar-x d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+          <div style="font-size:.85rem">Sin partes registrados aún.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const pe = document.getElementById('p_entrada');
+const ps = document.getElementById('p_salida');
+const ph = document.getElementById('p_horas');
+const prev = document.getElementById('p-preview');
+const prevTxt = document.getElementById('p-preview-txt');
+if (pe && ps) {
+  function calcP() {
+    if (!pe.value || !ps.value) { prev.style.display = 'none'; return; }
+    const [he, me] = pe.value.split(':').map(Number);
+    const [hs, ms] = ps.value.split(':').map(Number);
+    const diff = (hs * 60 + ms) - (he * 60 + me);
+    if (diff <= 0) { prev.style.display = 'none'; return; }
+    const h = (diff / 60).toFixed(2);
+    prevTxt.textContent = h;
+    prev.style.display = 'block';
+    if (ph) ph.value = h;
+  }
+  pe.addEventListener('change', calcP);
+  ps.addEventListener('change', calcP);
+}
+</script>
+{% endblock %}
