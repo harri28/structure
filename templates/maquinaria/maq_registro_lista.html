@@ -1,76 +1,121 @@
 {% extends 'base.html' %}
-{% block title %}Registro de Maquinaria{% endblock %}
+{% block title %}Maquinaria — {{ proyecto.nombre }}{% endblock %}
 {% block nav_maquinaria %}active{% endblock %}
+
 {% block breadcrumb %}
-<li class="breadcrumb-item active">Maquinaria</li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:dashboard' proyecto.pk %}">Maquinaria</a></li>
+<li class="breadcrumb-item active">Equipos</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
-    <a href="{% url 'maquinaria:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Maquinaria</a>
-    <h4><i class="bi bi-truck me-2"></i>Registro de Maquinaria</h4>
-    <div class="text-muted">Total acumulado: <strong>{{ total_hm }} HM</strong></div>
+    <a href="{% url 'maquinaria:dashboard' proyecto.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Maquinaria
+    </a>
+    <h4><i class="bi bi-truck me-2"></i>Equipos y Maquinaria</h4>
+    <div class="text-muted" style="font-size:.84rem">
+      Total acumulado: <strong>{{ total_hm }} HM</strong>
+    </div>
   </div>
-  <a href="{% url 'maquinaria:maq_registro_crear' proyecto.pk %}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Nuevo Registro
+  <a href="{% url 'maquinaria:maq_registro_crear' proyecto.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo turno
   </a>
 </div>
 
-<div class="card">
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" style="font-size:.84rem">
+  {{ msg }}<button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if maquinas_usadas %}
+<h6 class="text-muted mb-2" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em">Con registros en este proyecto</h6>
+<div class="row g-3 mb-4">
+  {% for m in maquinas_usadas %}
+  <div class="col-md-4 col-sm-6">
+    <a href="{% url 'maquinaria:maq_detalle_maquinaria' proyecto.pk m.pk %}"
+       style="text-decoration:none">
+      <div class="card h-100" style="transition:box-shadow .15s;cursor:pointer"
+           onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'"
+           onmouseleave="this.style.boxShadow=''">
+        <div class="card-body">
+          <div class="d-flex align-items-start gap-2 mb-2">
+            <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="bi bi-truck" style="color:#2563eb;font-size:1rem"></i>
+            </div>
+            <div>
+              <div class="fw-semibold" style="font-size:.9rem;color:#111827">{{ m.nombre }}</div>
+              {% if m.placa %}
+              <div style="font-size:.75rem;color:#6b7280">{{ m.placa }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="d-flex gap-3 mt-2">
+            <div>
+              <div style="font-size:.72rem;color:#9ca3af;text-transform:uppercase">HM acumuladas</div>
+              <div class="fw-bold" style="font-size:1.05rem;color:#2563eb">{{ m.total_hm|floatformat:1 }}</div>
+            </div>
+            <div>
+              <div style="font-size:.72rem;color:#9ca3af;text-transform:uppercase">Turnos</div>
+              <div class="fw-bold" style="font-size:1.05rem">{{ m.n_registros }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer py-1 px-3" style="background:transparent;border-top:1px solid #f3f4f6;font-size:.75rem;color:#6b7280">
+          Ver registros <i class="bi bi-chevron-right" style="font-size:.7rem"></i>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if maquinas_sin_uso %}
+<h6 class="text-muted mb-2" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em">Sin registros aún</h6>
+<div class="card mb-3">
   <div class="card-body p-0">
     <table class="table-modern">
       <thead>
         <tr>
-          <th>COD</th>
-          <th>Nombre / Equipo</th>
+          <th>Equipo</th>
+          <th>Tipo</th>
           <th>Placa</th>
-          <th>Costo</th>
-          <th>Modalidad</th>
-          <th>Operador</th>
-          <th>Llegada</th>
-          <th>Salida</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-      {% for r in registros %}
-      <tr style="cursor:pointer" onclick="window.location='{% url 'maquinaria:maq_registro_detalle' r.pk %}'">
-        <td>
-          <span class="fw-semibold" style="font-size:.82rem">{{ r.codigo|default:"—" }}</span>
-        </td>
-        <td>
-          <div class="fw-semibold">{% if r.nombre %}{{ r.nombre }}{% elif r.maquinaria %}{{ r.maquinaria.nombre }}{% else %}—{% endif %}</div>
-          <small class="text-muted">{{ r.get_tipo_equipo_display|default:"—" }}</small>
-        </td>
-        <td class="text-muted">{% if r.placa %}{{ r.placa }}{% elif r.maquinaria %}{{ r.maquinaria.placa }}{% else %}—{% endif %}</td>
-        <td>
-          {% if r.costo %}
-          <span class="fw-semibold">S/ {{ r.costo|floatformat:2 }}</span>
-          {% if r.modalidad_costo %}<br><small class="text-muted">{{ r.get_modalidad_costo_display }}</small>{% endif %}
-          {% else %}—{% endif %}
-        </td>
-        <td class="text-muted">{{ r.get_modalidad_display|default:"—" }}</td>
-        <td class="text-muted">{{ r.operador|default:"—" }}</td>
-        <td class="text-muted" style="font-size:.82rem">
-          {{ r.fecha_llegada|date:"d/m/Y"|default:"—" }}
-        </td>
-        <td class="text-muted" style="font-size:.82rem">
-          {{ r.fecha_salida|date:"d/m/Y"|default:"—" }}
-        </td>
-        <td class="d-flex gap-1" onclick="event.stopPropagation()">
-          <a href="{% url 'maquinaria:maq_registro_editar' r.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
-          <form method="post" action="{% url 'maquinaria:maq_registro_eliminar' r.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn-tbl text-danger" onclick="return confirm('¿Eliminar este registro?')"><i class="bi bi-trash"></i></button>
-          </form>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="9" class="text-center text-muted py-4">Sin registros</td></tr>
-      {% endfor %}
+        {% for m in maquinas_sin_uso %}
+        <tr>
+          <td class="fw-semibold" style="font-size:.85rem">{{ m.nombre }}</td>
+          <td class="text-muted" style="font-size:.82rem">{{ m.get_tipo_display }}</td>
+          <td class="text-muted" style="font-size:.82rem">{{ m.placa|default:"—" }}</td>
+          <td class="text-end">
+            <a href="{% url 'maquinaria:maq_detalle_maquinaria' proyecto.pk m.pk %}"
+               class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size:.75rem">
+              <i class="bi bi-plus-lg me-1"></i>Registrar turno
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+{% endif %}
+
+{% if not maquinas_usadas and not maquinas_sin_uso %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-truck d-block mb-3" style="font-size:2.5rem;opacity:.3"></i>
+  <div class="fw-semibold mb-1">Sin maquinaria registrada</div>
+  <div style="font-size:.82rem">Primero crea una máquina en el catálogo.</div>
+  <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary btn-sm mt-3">
+    <i class="bi bi-plus-lg me-1"></i>Crear maquinaria
+  </a>
+</div>
+{% endif %}
 {% endblock %}

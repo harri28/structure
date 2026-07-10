@@ -59,7 +59,7 @@ def crear(request, proyecto_id):
     siguiente = _siguiente_numero(proyecto)
     siguiente_global = _siguiente_numero_global()
     if request.method == 'POST':
-        form = RequerimientoForm(request.POST)
+        form = RequerimientoForm(request.POST, proyecto=proyecto)
         formset = DetalleRequerimientoFormSet(request.POST, prefix='detalles')
         accion = request.POST.get('accion', 'borrador')
         if form.is_valid() and formset.is_valid():
@@ -87,7 +87,7 @@ def crear(request, proyecto_id):
                 messages.success(request, f'Requerimiento REQ-{req.numero} guardado como borrador.')
             return redirect('requerimientos:detalle', pk=req.pk)
     else:
-        form = RequerimientoForm(initial={
+        form = RequerimientoForm(proyecto=proyecto, initial={
             'numero': siguiente,
             'obra': proyecto.nombre,
             'solicitante': proyecto.responsable,
@@ -107,7 +107,7 @@ def editar(request, pk):
     proyecto = req.proyecto
     empresa  = ConfigEmpresa.get()
     if request.method == 'POST':
-        form = RequerimientoForm(request.POST, instance=req)
+        form = RequerimientoForm(request.POST, instance=req, proyecto=proyecto)
         formset = DetalleRequerimientoFormSet(request.POST, instance=req, prefix='detalles')
         accion = request.POST.get('accion', '')
         if form.is_valid() and formset.is_valid():
@@ -129,7 +129,7 @@ def editar(request, pk):
             messages.success(request, 'Requerimiento actualizado.')
             return redirect('requerimientos:detalle', pk=req.pk)
     else:
-        form = RequerimientoForm(instance=req)
+        form = RequerimientoForm(instance=req, proyecto=proyecto)
         formset = DetalleRequerimientoFormSet(instance=req, prefix='detalles')
     return render(request, 'requerimientos/form.html', {
         'form': form, 'formset': formset, 'proyecto': proyecto,

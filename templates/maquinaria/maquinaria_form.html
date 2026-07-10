@@ -1,52 +1,128 @@
 {% extends 'base.html' %}
 {% block title %}{{ titulo }}{% endblock %}
 {% block nav_maq_catalogo %}active{% endblock %}
+
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{% url 'maquinaria:maquinaria_lista' %}">Maquinaria</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maquinaria_lista' %}">Catálogo</a></li>
 <li class="breadcrumb-item active">{{ titulo }}</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <a href="{% url 'maquinaria:maquinaria_lista' %}" class="btn-back"><i class="bi bi-chevron-left"></i> Maquinaria</a>
-  <h4><i class="bi bi-truck me-2"></i>{{ titulo }}</h4>
+  <div>
+    <a href="{% url 'maquinaria:maquinaria_lista' %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Catálogo
+    </a>
+    <h4><i class="bi bi-truck me-2"></i>{{ titulo }}</h4>
+  </div>
 </div>
 
-<div class="card" style="max-width:560px">
+<div class="card" style="max-width:700px">
   <div class="card-body">
-    <form method="post">
+    <form method="post" novalidate>
       {% csrf_token %}
+
+      {# ── Identificación ── #}
+      <h6 class="fw-semibold mb-3" style="color:#374151;font-size:.82rem;
+          text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:.4rem">
+        Identificación
+      </h6>
       <div class="row g-3 mb-3">
-        <div class="col-sm-4">
-          <label class="form-label fw-semibold">Código</label>
+        <div class="col-sm-3">
+          <label class="form-label fw-semibold" style="font-size:.83rem">COD</label>
           {{ form.codigo }}
         </div>
-        <div class="col-sm-8">
-          <label class="form-label fw-semibold">Nombre</label>
+        <div class="col-sm-9">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Nombre <span class="text-danger">*</span></label>
           {{ form.nombre }}
+          {% for e in form.nombre.errors %}<div class="text-danger mt-1" style="font-size:.8rem">{{ e }}</div>{% endfor %}
         </div>
       </div>
-      <div class="row g-3 mb-3">
+      <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Tipo de equipo</label>
+          {{ form.tipo_equipo }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Marca</label>
+          {{ form.marca }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Modelo</label>
+          {{ form.modelo }}
+        </div>
+      </div>
+      <div class="mb-4" style="max-width:200px">
+        <label class="form-label fw-semibold" style="font-size:.83rem">Placa</label>
+        {{ form.placa }}
+      </div>
+
+      {# ── Contrato / Costo ── #}
+      <h6 class="fw-semibold mb-3" style="color:#374151;font-size:.82rem;
+          text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:.4rem">
+        Contrato
+      </h6>
+      <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Costo (S/.)</label>
+          {{ form.costo }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Modalidad</label>
+          {{ form.modalidad_costo }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Costo / hora (S/.)</label>
+          {{ form.costo_hora }}
+        </div>
+      </div>
+
+      {# ── Personal ── #}
+      <h6 class="fw-semibold mb-3" style="color:#374151;font-size:.82rem;
+          text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:.4rem">
+        Personal
+      </h6>
+      <div class="row g-3 mb-4">
         <div class="col-sm-6">
-          <label class="form-label fw-semibold">Tipo</label>
-          {{ form.tipo }}
+          <label class="form-label fw-semibold" style="font-size:.83rem">Propietario</label>
+          {{ form.propietario }}
         </div>
         <div class="col-sm-6">
-          <label class="form-label fw-semibold">Placa</label>
-          {{ form.placa }}
+          <label class="form-label fw-semibold" style="font-size:.83rem">Operador</label>
+          {{ form.operador }}
         </div>
       </div>
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Costo por hora (S/.)</label>
-        {{ form.costo_hora }}
+
+      {# ── Fechas de obra ── #}
+      <h6 class="fw-semibold mb-3" style="color:#374151;font-size:.82rem;
+          text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:.4rem">
+        Fechas en obra
+      </h6>
+      <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Fecha de llegada</label>
+          {{ form.fecha_llegada }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Reinicio de trabajo</label>
+          {{ form.fecha_reinicio }}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Salida de obra</label>
+          {{ form.fecha_salida_obra }}
+        </div>
       </div>
+
       <div class="mb-4 form-check">
         {{ form.activo }}
-        <label class="form-check-label">Activo</label>
+        <label class="form-check-label" style="font-size:.85rem">Activo</label>
       </div>
+
       <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Guardar</button>
-        <a href="{% url 'maquinaria:maquinaria_lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+        <a href="{% url 'maquinaria:maquinaria_lista' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
       </div>
     </form>
   </div>

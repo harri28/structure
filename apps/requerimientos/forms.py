@@ -15,10 +15,15 @@ class RequerimientoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        proyecto = kwargs.pop('proyecto', None)
         super().__init__(*args, **kwargs)
         if not self.data.get('fecha') and not (self.instance.pk and self.instance.fecha):
             self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
-        users = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
+        if proyecto is not None:
+            user_ids = proyecto.miembros.values_list('usuario_id', flat=True)
+            users = User.objects.filter(pk__in=user_ids, is_active=True).order_by('first_name', 'last_name', 'username')
+        else:
+            users = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
         choices = [('', '— Seleccionar solicitante —')]
         for u in users:
             nombre = u.get_full_name() or u.username
@@ -52,6 +57,19 @@ class DetalleRequerimientoForm(forms.ModelForm):
     def clean_cantidad_requerida(self):
         val = self.cleaned_data.get('cantidad_requerida')
         return val if val is not None else 0
+
+    def clean(self):
+        data = super().clean()
+        if self.cleaned_data.get('DELETE'):
+            return data
+        cantidad = data.get('cantidad') or 0
+        cant_req = data.get('cantidad_requerida') or 0
+        if cantidad and cant_req > cantidad:
+            self.add_error(
+                'cantidad_requerida',
+                f'No puede superar la cantidad presupuestada ({cantidad}).',
+            )
+        return data
 
 
 DetalleRequerimientoFormSet = inlineformset_factory(

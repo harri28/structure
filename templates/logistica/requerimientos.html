@@ -1,7 +1,6 @@
 ﻿{% extends 'base.html' %}
 {% block title %}Requerimientos recibidos — {{ proyecto.codigo }}{% endblock %}
 {% block nav_log_req %}active{% endblock %}
-{% block submodule_chips %}{% include 'logistica/_logistica_nav.html' with active_tab='req' %}{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
@@ -46,7 +45,7 @@
         {% for r in requerimientos %}
         <tr>
           <td>
-            <a href="{% url 'requerimientos:detalle' r.pk %}" class="fw-semibold text-decoration-none">
+            <a href="{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}" class="fw-semibold text-decoration-none">
               REQ-{{ r.numero }}
             </a>
           </td>
@@ -56,8 +55,8 @@
           <td>
             <span class="badge rounded-1
               {% if r.estado == 'ENVIADO' %}bg-primary
+              {% elif r.estado == 'EN_REVISION' %}bg-warning text-dark
               {% elif r.estado == 'ATENDIDO' %}bg-success
-              {% elif r.estado == 'PENDIENTE' %}bg-warning text-dark
               {% elif r.estado == 'ANULADO' %}bg-danger
               {% elif r.estado == 'APROBADO' %}bg-info
               {% else %}bg-secondary{% endif %}">
@@ -66,7 +65,7 @@
           </td>
           <td class="text-muted" style="font-size:.82rem">{{ r.observaciones|default:"—"|truncatechars:60 }}</td>
           <td class="d-flex gap-1 align-items-center">
-            <a href="{% url 'requerimientos:detalle' r.pk %}" class="btn-tbl" title="Ver detalle">
+            <a href="{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}" class="btn-tbl" title="Ver detalle">
               <i class="bi bi-eye"></i>
             </a>
             {% if r.estado == 'ENVIADO' %}

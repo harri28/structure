@@ -75,8 +75,20 @@ def maquinaria_lista(request):
     return render(request, 'maquinaria/maquinaria_lista.html', {'maquinas': maquinas})
 
 
+def _siguiente_codigo_maq():
+    existentes = Maquinaria.objects.filter(codigo__startswith='M').values_list('codigo', flat=True)
+    nums = []
+    for c in existentes:
+        try:
+            nums.append(int(c[1:]))
+        except (ValueError, IndexError):
+            pass
+    return f'M{max(nums, default=0) + 1:03d}'
+
+
 def maquinaria_crear(request):
-    form = MaquinariaForm(request.POST or None)
+    initial = {'codigo': _siguiente_codigo_maq()}
+    form    = MaquinariaForm(request.POST or None, initial=initial)
     if form.is_valid():
         form.save()
         messages.success(request, 'Equipo/maquinaria creado.')
@@ -229,46 +241,90 @@ def registro_eliminar(request, pk):
 
 # ── Registros Maquinaria ──────────────────────────────────────────────
 
-def _siguiente_codigo_maquinaria():
-    existentes = RegistroMaquinaria.objects.filter(
-        codigo__startswith='MA'
-    ).values_list('codigo', flat=True)
-    nums = []
-    for c in existentes:
-        try:
-            nums.append(int(c[2:]))
-        except ValueError:
-            pass
-    return f'MA{max(nums, default=0) + 1:02d}'
-
-
 def maq_registro_lista(request, proyecto_id):
-    proyecto  = get_object_or_404(Proyecto, pk=proyecto_id)
-    registros = (RegistroMaquinaria.objects
-                 .filter(proyecto=proyecto)
-                 .select_related('maquinaria', 'partida'))
-    total_hm  = registros.aggregate(t=Sum('horas'))['t'] or 0
+    """Lista de máquinas usadas en el proyecto, agrupadas con total HM."""
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    # Máquinas del catálogo que tienen al menos un registro en este proyecto
+    maquinas_usadas = (
+        Maquinaria.objects
+        .filter(registromaquinaria__proyecto=proyecto)
+        .annotate(
+            total_hm=Sum('registromaquinaria__horas'),
+            n_registros=Count('registromaquinaria'),
+        )
+        .order_by('nombre')
+    )
+    # Máquinas del catálogo sin registros aún (para poder registrar)
+    ids_usadas = maquinas_usadas.values_list('pk', flat=True)
+    maquinas_sin_uso = Maquinaria.objects.filter(activo=True).exclude(pk__in=ids_usadas).order_by('nombre')
+
+    total_hm = RegistroMaquinaria.objects.filter(proyecto=proyecto).aggregate(t=Sum('horas'))['t'] or 0
     return render(request, 'maquinaria/maq_registro_lista.html', {
-        'proyecto':  proyecto,
-        'registros': registros,
-        'total_hm':  total_hm,
+        'proyecto':        proyecto,
+        'maquinas_usadas': maquinas_usadas,
+        'maquinas_sin_uso': maquinas_sin_uso,
+        'total_hm':        total_hm,
+    })
+
+
+def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
+    """Historial de una máquina en el proyecto + form inline para agregar turno."""
+    proyecto   = get_object_or_404(Proyecto, pk=proyecto_id)
+    maquinaria = get_object_or_404(Maquinaria, pk=maq_pk)
+    registros  = (RegistroMaquinaria.objects
+                  .filter(proyecto=proyecto, maquinaria=maquinaria)
+                  .select_related('partida', 'insumo')
+                  .order_by('-fecha', '-created_at'))
+    total_hm   = registros.aggregate(t=Sum('horas'))['t'] or 0
+
+    form = RegistroMaquinariaForm(
+        proyecto=proyecto,
+        maquinaria=maquinaria,
+        data=request.POST or None,
+        initial={'fecha': __import__('datetime').date.today()},
+    )
+    if request.method == 'POST' and form.is_valid():
+        reg = form.save(commit=False)
+        reg.proyecto   = proyecto
+        reg.maquinaria = maquinaria
+        reg.nombre     = maquinaria.nombre
+        reg.placa      = maquinaria.placa
+        reg.save()
+        messages.success(request, 'Turno registrado.')
+        return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq_pk)
+
+    return render(request, 'maquinaria/maq_maquinaria_detalle.html', {
+        'proyecto':   proyecto,
+        'maquinaria': maquinaria,
+        'registros':  registros,
+        'total_hm':   total_hm,
+        'form':       form,
     })
 
 
 def maq_registro_crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    initial  = {'codigo': _siguiente_codigo_maquinaria()}
-    form     = RegistroMaquinariaForm(proyecto=proyecto, data=request.POST or None, initial=initial)
+    form     = RegistroMaquinariaForm(
+        proyecto=proyecto,
+        data=request.POST or None,
+        initial={'fecha': __import__('datetime').date.today()},
+    )
     if form.is_valid():
         reg = form.save(commit=False)
         reg.proyecto = proyecto
+        maq = form.cleaned_data.get('maquinaria')
+        if maq:
+            reg.nombre = maq.nombre
+            reg.placa  = maq.placa
         reg.save()
         messages.success(request, 'Registro guardado.')
+        if maq:
+            return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq.pk)
         return redirect('maquinaria:maq_registro_lista', proyecto_id=proyecto_id)
     return render(request, 'maquinaria/maq_registro_form.html', {
-        'form':    form,
+        'form':     form,
         'proyecto': proyecto,
-        'titulo':  'Nuevo Registro de Maquinaria',
+        'titulo':   'Nuevo Registro de Maquinaria',
     })
 
 
@@ -286,20 +342,27 @@ def maq_registro_editar(request, pk):
     if form.is_valid():
         form.save()
         messages.success(request, 'Registro actualizado.')
+        if registro.maquinaria_id:
+            return redirect('maquinaria:maq_detalle_maquinaria',
+                            proyecto_id=registro.proyecto_id, maq_pk=registro.maquinaria_id)
         return redirect('maquinaria:maq_registro_lista', proyecto_id=registro.proyecto_id)
     return render(request, 'maquinaria/maq_registro_form.html', {
-        'form':    form,
+        'form':     form,
         'proyecto': registro.proyecto,
-        'titulo':  'Editar Registro de Maquinaria',
+        'titulo':   'Editar Registro de Maquinaria',
+        'registro': registro,
     })
 
 
 def maq_registro_eliminar(request, pk):
     registro    = get_object_or_404(RegistroMaquinaria, pk=pk)
     proyecto_id = registro.proyecto_id
+    maq_pk      = registro.maquinaria_id
     if request.method == 'POST':
         registro.delete()
         messages.success(request, 'Registro eliminado.')
+    if maq_pk:
+        return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq_pk)
     return redirect('maquinaria:maq_registro_lista', proyecto_id=proyecto_id)
 
 

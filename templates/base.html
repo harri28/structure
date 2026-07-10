@@ -26,20 +26,51 @@
     </div>
   </div>
 
-  <!-- General -->
+  {% if user.is_superuser or permisos.es_superadmin %}
+  <!-- ── Vista Superadmin ───────────────────────────────────────── -->
   <div class="sb-section">
-    <div class="sb-label">General</div>
-    <a href="{% url 'proyectos:dashboard' %}" class="sb-link {% block nav_dashboard %}{% endblock %}">
+    <div class="sb-label">Panel de Control</div>
+    <a href="{% url 'panel_dashboard' %}" class="sb-link {% block nav_dashboard %}{% endblock %}">
       <i class="bi bi-grid-1x2"></i> Inicio
+    </a>
+    <a href="{% url 'configuracion:perfil' %}" class="sb-link {% block nav_perfil %}{% endblock %}">
+      <i class="bi bi-person-circle"></i> Perfil
+    </a>
+    <a href="{% url 'proyectos:lista' %}" class="sb-link {% block nav_proyectos %}{% endblock %}">
+      <i class="bi bi-folder2-open"></i> Proyectos
+    </a>
+    <a href="{% url 'configuracion:empresa' %}" class="sb-link {% block nav_config_empresa %}{% endblock %}">
+      <i class="bi bi-building"></i> Empresa
+    </a>
+    <a href="{% url 'configuracion:equipo' %}" class="sb-link {% block nav_config_equipo %}{% endblock %}">
+      <i class="bi bi-people-fill"></i> Usuarios &amp; Roles
+    </a>
+    <a href="{% url 'configuracion:unidad_lista' %}" class="sb-link {% block nav_unidades %}{% endblock %}">
+      <i class="bi bi-rulers"></i> Unidades de Medida
     </a>
   </div>
 
-  <!-- Proyecto activo -->
+  {% else %}
+  <!-- ── Vista Usuario de Proyecto ─────────────────────────────── -->
+  <div class="sb-section">
+    <a href="{% if proyecto_activo %}{% url 'proyecto_dashboard' pk=proyecto_activo.pk %}{% else %}{% url 'proyectos:dashboard' %}{% endif %}"
+       class="sb-link {% block nav_dashboard_user %}{% endblock %}">
+      <i class="bi bi-grid-1x2"></i> Dashboard
+    </a>
+  </div>
   {% if proyecto_activo %}
   <div class="sb-section">
-    <div class="sb-label">{{ proyecto_activo.codigo }}</div>
+    <div class="sb-label d-flex justify-content-between align-items-center" style="padding-right:.25rem">
+      <span>{{ proyecto_activo.codigo }}</span>
+      <a href="{% url 'proyectos:salir' %}" title="Salir del proyecto"
+         style="color:var(--text-light);opacity:.55;font-size:.8rem;line-height:1;text-decoration:none"
+         onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.55'">
+        <i class="bi bi-box-arrow-left"></i>
+      </a>
+    </div>
+
     <div class="sb-module-row">
-      <a href="{% if proyecto_activo.presupuesto %}{% url 'presupuesto:detalle' proyecto_activo.presupuesto.pk %}{% else %}{% url 'presupuesto:lista' proyecto_activo.pk %}{% endif %}"
+      <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}"
          class="sb-link {% block nav_presupuesto %}{% endblock %}">
         <i class="bi bi-table"></i> Presupuesto
       </a>
@@ -50,7 +81,7 @@
     <div class="collapse" id="nav-presupuesto">
       <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_pres_resumen %}{% endblock %}">
-        <i class="bi bi-bar-chart-line"></i> Resumen
+        <i class="bi bi-bar-chart-line"></i> Actividad
       </a>
       {% if proyecto_activo.presupuesto %}
       <a href="{% url 'presupuesto:detalle' proyecto_activo.presupuesto.pk %}"
@@ -71,22 +102,20 @@
       </a>
       <a href="{% url 'presupuesto:importar' proyecto_activo.presupuesto.pk %}"
          class="sb-link sb-sublink {% block nav_pres_importar %}{% endblock %}">
-        <i class="bi bi-upload"></i> Importar S10
+        <i class="bi bi-upload"></i> Importar
       </a>
       {% else %}
-      <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}"
-         class="sb-link sb-sublink">
+      <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}" class="sb-link sb-sublink">
         <i class="bi bi-upload"></i> Importar presupuesto
       </a>
       {% endif %}
     </div>
-    <!-- Requerimientos independiente -->
+
     <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
        class="sb-link {% block nav_req %}{% endblock %}">
       <i class="bi bi-file-earmark-text"></i> Requerimientos
     </a>
 
-    <!-- Almacén colapsable -->
     <div class="sb-module-row">
       <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
          class="sb-link {% block nav_almacen %}{% endblock %}">
@@ -115,7 +144,24 @@
       </a>
     </div>
 
-    <!-- Logística colapsable -->
+    <a href="{% url 'maquinaria:registro_lista' proyecto_activo.pk %}"
+       class="sb-link {% block nav_reg_cuadrilla %}{% endblock %}">
+      <i class="bi bi-people-fill"></i> Cuadrilla
+    </a>
+
+    <a href="{% url 'maquinaria:maq_registro_lista' proyecto_activo.pk %}"
+       class="sb-link {% block nav_maquinaria %}{% endblock %}">
+      <i class="bi bi-truck"></i> Maquinaria
+    </a>
+
+    <a href="{% url 'proyectos:personal' proyecto_activo.pk %}"
+       class="sb-link {% block nav_personal %}{% endblock %}">
+      <i class="bi bi-person-badge"></i> Personal
+    </a>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Logística</div>
     <div class="sb-module-row">
       <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}"
          class="sb-link {% block nav_logistica %}{% endblock %}">
@@ -161,71 +207,81 @@
         <i class="bi bi-file-earmark-arrow-right"></i> Guías de Remisión
       </a>
     </div>
+  </div>
 
-    <a href="{% url 'maquinaria:registro_lista' proyecto_activo.pk %}"
-       class="sb-link {% block nav_reg_cuadrilla %}{% endblock %}">
-      <i class="bi bi-people-fill"></i> Cuadrilla
-    </a>
+  {% if permisos.puede_editar_catalogo or permisos.puede_ver_maquinaria or permisos.puede_gestionar_maquinaria or permisos.puede_administrar_usuarios or permisos.puede_administrar_roles or permisos.puede_configurar_empresa %}
+  <div class="sb-section">
+    <div class="sb-label">Administración</div>
 
-    <a href="{% url 'maquinaria:maq_registro_lista' proyecto_activo.pk %}"
-       class="sb-link {% block nav_maquinaria %}{% endblock %}">
-      <i class="bi bi-truck"></i> Maquinaria
+    {% if permisos.puede_editar_catalogo %}
+    <a href="{% url 'catalogo:lista' %}" class="sb-link {% block nav_catalogo %}{% endblock %}">
+      <i class="bi bi-grid"></i> Catálogo
     </a>
+    {% endif %}
+
+    {% if permisos.puede_ver_maquinaria or permisos.puede_gestionar_maquinaria %}
+    <a href="{% url 'maquinaria:cuadrilla_lista' %}" class="sb-link {% block nav_cuadrillas_admin %}{% endblock %}">
+      <i class="bi bi-people"></i> Cuadrillas
+    </a>
+    {% endif %}
+
+    {% if permisos.puede_administrar_usuarios %}
+    <a href="{% url 'registro:lista' %}" class="sb-link {% block nav_actividad %}{% endblock %}">
+      <i class="bi bi-activity"></i> Actividad
+    </a>
+    {% endif %}
+
+    {% if permisos.puede_configurar_empresa or permisos.puede_administrar_usuarios or permisos.puede_administrar_roles %}
+    <div class="sb-module-row">
+      <a href="{% url 'configuracion:hub' %}" class="sb-link {% block nav_config_hub %}{% endblock %}">
+        <i class="bi bi-gear"></i> Configuración
+      </a>
+      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-config-admin" aria-expanded="false">
+        <i class="bi bi-chevron-right sb-arrow"></i>
+      </button>
+    </div>
+    <div class="collapse" id="nav-config-admin">
+      {% if permisos.puede_configurar_empresa %}
+      <a href="{% url 'configuracion:empresa' %}" class="sb-link sb-sublink">
+        <i class="bi bi-building"></i> Empresa
+      </a>
+      <a href="{% url 'configuracion:sunat' %}" class="sb-link sb-sublink">
+        <i class="bi bi-receipt"></i> SUNAT
+      </a>
+      <a href="{% url 'configuracion:unidad_lista' %}" class="sb-link sb-sublink">
+        <i class="bi bi-rulers"></i> Unidades de Medida
+      </a>
+      {% endif %}
+      {% if permisos.puede_administrar_usuarios or permisos.puede_administrar_roles %}
+      <a href="{% url 'configuracion:equipo' %}" class="sb-link sb-sublink">
+        <i class="bi bi-people-fill"></i> Usuarios &amp; Roles
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
 
   </div>
+  {% endif %}
+
   {% else %}
   <div class="sb-section">
     <div class="sb-label">Proyecto</div>
-    <a href="{% url 'proyectos:lista' %}"
+    <a href="{% url 'proyectos:dashboard' %}"
        style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;
               font-size:.78rem;color:var(--text-light);text-decoration:none">
-      <i class="bi bi-exclamation-circle"></i> Sin proyecto activo
+      <i class="bi bi-folder2-open"></i> Seleccionar proyecto
     </a>
   </div>
   {% endif %}
 
-  <!-- Administración -->
+  <!-- Perfil (usuarios normales) -->
   <div class="sb-section">
-    <div class="sb-label">Administración</div>
-<a href="{% url 'catalogo:lista' %}" class="sb-link {% block nav_catalogo %}{% endblock %}">
-      <i class="bi bi-database"></i> Catálogo
+    <a href="{% url 'configuracion:perfil' %}" class="sb-link {% block nav_perfil_user %}{% endblock %}">
+      <i class="bi bi-person-circle"></i> Perfil
     </a>
-    <a href="{% url 'maquinaria:cuadrilla_lista' %}" class="sb-link {% block nav_cuadrillas %}{% endblock %}">
-      <i class="bi bi-people"></i> Cuadrillas
-    </a>
-    <a href="{% url 'registro:lista' %}" class="sb-link {% block nav_registro %}{% endblock %}">
-      <i class="bi bi-journal-text"></i> Actividad
-    </a>
-
-    <!-- Configuración colapsable -->
-    <div class="sb-module-row">
-      <a href="{% url 'configuracion:hub' %}"
-         class="sb-link {% block nav_configuracion %}{% endblock %}">
-        <i class="bi bi-gear"></i> Configuración
-      </a>
-      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-configuracion" aria-expanded="false">
-        <i class="bi bi-chevron-right sb-arrow"></i>
-      </button>
-    </div>
-    <div class="collapse" id="nav-configuracion">
-      <a href="{% url 'configuracion:hub' %}"
-         class="sb-link sb-sublink {% block nav_config_hub %}{% endblock %}">
-        <i class="bi bi-grid-3x3-gap"></i> Resumen
-      </a>
-      <a href="{% url 'configuracion:empresa' %}"
-         class="sb-link sb-sublink {% block nav_config_empresa %}{% endblock %}">
-        <i class="bi bi-building"></i> Empresa
-      </a>
-      <a href="{% url 'configuracion:equipo' %}"
-         class="sb-link sb-sublink {% block nav_config_equipo %}{% endblock %}">
-        <i class="bi bi-people-fill"></i> Usuarios & Roles
-      </a>
-      <a href="{% url 'configuracion:parametros' %}"
-         class="sb-link sb-sublink {% block nav_config_params %}{% endblock %}">
-        <i class="bi bi-sliders"></i> Parámetros
-      </a>
-    </div>
   </div>
+
+  {% endif %}{# fin superadmin/usuario #}
 
   <div class="sb-footer">
     S&amp;S v1.0 &nbsp;·&nbsp; {% now "Y" %}
@@ -279,8 +335,12 @@
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:.5rem;padding:.3rem .75rem;
-                border-radius:8px;background:#f8fafc;border:1px solid #e5e7eb;font-size:.82rem">
+    <a href="{% url 'configuracion:perfil' %}"
+       style="display:flex;align-items:center;gap:.5rem;padding:.3rem .75rem;
+              border-radius:8px;background:#f8fafc;border:1px solid #e5e7eb;font-size:.82rem;
+              text-decoration:none;color:inherit;transition:background .15s"
+       onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#f8fafc'"
+       title="Mi perfil">
       <div style="width:26px;height:26px;border-radius:50%;background:#2563eb;
                   display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <i class="bi bi-person-fill" style="color:#fff;font-size:.75rem"></i>
@@ -288,7 +348,7 @@
       <span style="font-weight:600;color:#374151;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
         {{ user.get_full_name|default:user.username }}
       </span>
-    </div>
+    </a>
     <form method="post" action="{% url 'logout' %}" style="margin:0">
       {% csrf_token %}
       <button type="submit" class="btn-topbar" title="Cerrar sesión" style="color:#dc2626">

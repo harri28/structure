@@ -17,16 +17,18 @@
   <tbody id="formset-container">
     {% for form in formset %}
     <tr class="formset-row {% if form.instance.pk %}existing-row{% endif %}" data-index="{{ forloop.counter0 }}">
-      <td class="text-center fw-semibold text-muted item-num">{{ forloop.counter }}</td>
+      <td class="text-center fw-semibold text-muted item-num" style="font-size:.78rem">
+        {% if form.instance.insumo_id %}{{ form.instance.insumo.codigo }}{% else %}—{% endif %}
+      </td>
       <td>
         <div class="prod-wrap" style="position:relative">
           <input type="text" class="form-control form-control-sm prod-search"
                  placeholder="Buscar material..."
                  autocomplete="off"
-                 value="{% if form.instance.insumo_id %}{{ form.instance.insumo.codigo }} — {{ form.instance.insumo.descripcion }}{% elif form.instance.descripcion %}{{ form.instance.descripcion }}{% endif %}">
+                 value="{% if form.instance.insumo_id %}{{ form.instance.insumo.descripcion }}{% elif form.instance.descripcion %}{{ form.instance.descripcion }}{% endif %}">
           {{ form.insumo }}
           {{ form.descripcion }}
-          <div class="prod-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;
+          <div class="prod-dropdown" style="display:none;position:fixed;z-index:9999;
                background:#fff;border:1px solid #dee2e6;border-radius:4px;
                max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
         </div>
@@ -34,7 +36,7 @@
       <td>
         <input type="number" step="0.0001" name="{{ form.cantidad.html_name }}"
                value="{{ form.cantidad.value|default:'' }}"
-               class="form-control form-control-sm">
+               class="form-control form-control-sm cantidad-pres">
       </td>
       <td>
         <input type="text" name="{{ form.unidad.html_name }}"
@@ -50,7 +52,8 @@
       <td>
         <input type="number" step="0.0001" name="{{ form.cantidad_requerida.html_name }}"
                value="{{ form.cantidad_requerida.value|default:'' }}"
-               class="form-control form-control-sm">
+               class="form-control form-control-sm cant-req">
+        <div class="cant-req-error" style="display:none;font-size:.72rem;color:#dc2626;margin-top:2px"></div>
       </td>
       <td>
         <input type="text" name="{{ form.justificacion.html_name }}"
@@ -71,6 +74,16 @@
 </table>
 </div>
 
+<div id="sugerencia-banner" style="display:none;margin-top:.75rem;padding:.6rem 1rem;
+     border-radius:6px;font-size:.82rem;display:none;align-items:center;gap:.75rem;
+     background:#eff6ff;border:1px solid #bfdbfe">
+  <i class="bi bi-info-circle-fill" style="color:#2563eb;font-size:1rem;flex-shrink:0"></i>
+  <span id="sugerencia-texto" style="flex:1"></span>
+  <a id="sugerencia-link" href="#" class="btn btn-sm btn-primary py-0 px-2" style="font-size:.78rem;white-space:nowrap"></a>
+  <button type="button" onclick="document.getElementById('sugerencia-banner').style.display='none'"
+          style="background:none;border:none;color:#6b7280;cursor:pointer;padding:0;font-size:1rem;line-height:1">&times;</button>
+</div>
+
 <button type="button" class="btn-add-row mt-2 w-100" id="add-row">
   <i class="bi bi-plus-lg me-1"></i>Agregar ítem
 </button>
@@ -81,11 +94,35 @@
   const API_STOCK = '/almacen/api/insumo/';
   let activeDropdown = null;
 
+  const PROYECTO_ID = '{{ proyecto.pk }}';
+  const HM_UNITS = ['hm', 'h/m'];
+  const HH_UNITS = ['hh', 'h/h'];
+
+  function mostrarSugerencia(tipo, desc) {
+    const banner = document.getElementById('sugerencia-banner');
+    const texto  = document.getElementById('sugerencia-texto');
+    const link   = document.getElementById('sugerencia-link');
+    if (tipo === 'hm') {
+      texto.textContent = 'Este insumo usa Horas Máquina. ¿Deseas registrar horas de maquinaria para "' + desc + '"?';
+      link.textContent  = 'Ir a Maquinaria →';
+      link.href = '/maquinaria/proyecto/' + PROYECTO_ID + '/maquinaria/nuevo/';
+    } else {
+      texto.textContent = 'Este insumo usa Horas Hombre. ¿Deseas registrar horas de cuadrilla para "' + desc + '"?';
+      link.textContent  = 'Ir a Cuadrilla →';
+      link.href = '/maquinaria/proyecto/' + PROYECTO_ID + '/registros/nuevo/';
+    }
+    banner.style.display = 'flex';
+  }
+
+  function detectarUnidadEspecial(unidad, desc) {
+    const u = unidad.toLowerCase().trim();
+    if (HM_UNITS.includes(u)) mostrarSugerencia('hm', desc);
+    else if (HH_UNITS.includes(u)) mostrarSugerencia('hh', desc);
+    else document.getElementById('sugerencia-banner').style.display = 'none';
+  }
+
   function actualizarItems() {
-    document.querySelectorAll('#formset-container .formset-row:not([style*="display:none"])').forEach(function(row, i) {
-      const n = row.querySelector('.item-num');
-      if (n) n.textContent = i + 1;
-    });
+    // No renumera — el código lo asigna el insumo seleccionado
   }
 
   function cargarStock(insumoId, stockInput) {
@@ -96,12 +133,15 @@
       .catch(() => { stockInput.value = '—'; });
   }
 
-  function buscar(input) {
-    const q = input.value.trim();
+  function buscar(input, q) {
+    if (q === undefined) q = input.value.trim();
     const wrap = input.closest('.prod-wrap');
     const dropdown = wrap.querySelector('.prod-dropdown');
-    if (q.length < 2) { dropdown.style.display = 'none'; return; }
-    fetch(API_PROD + '?q=' + encodeURIComponent(q))
+    const rect = input.getBoundingClientRect();
+    dropdown.style.top  = rect.bottom + 'px';
+    dropdown.style.left = rect.left + 'px';
+    dropdown.style.width = rect.width + 'px';
+    fetch(API_PROD + (q ? '?q=' + encodeURIComponent(q) : ''))
       .then(r => r.json())
       .then(data => {
         if (!data.length) {
@@ -109,8 +149,10 @@
         } else {
           dropdown.innerHTML = data.map(p =>
             `<div class="prod-opt" data-id="${p.id}" data-unidad="${p.unidad}"
+                  data-codigo="${p.codigo}"
                   data-desc="${p.descripcion.replace(/"/g,'&quot;')}"
-                  data-label="${p.codigo} — ${p.descripcion.replace(/"/g,'&quot;')}"
+                  data-cantidad="${p.cantidad}"
+                  data-label="${p.descripcion.replace(/"/g,'&quot;')}"
                   style="padding:6px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.8rem">
                <strong style="color:var(--amber-dark)">${p.codigo}</strong>
                <span style="color:#374151"> ${p.descripcion}</span>
@@ -119,7 +161,8 @@
         }
         dropdown.style.display = 'block';
         activeDropdown = dropdown;
-      });
+      })
+      .catch(() => {});
   }
 
   document.addEventListener('click', function(e) {
@@ -134,8 +177,13 @@
       if (descInput) descInput.value = opt.dataset.desc;
       const undInp = row ? row.querySelector('.insumo-unidad') : null;
       if (undInp) undInp.value = opt.dataset.unidad;
+      detectarUnidadEspecial(opt.dataset.unidad || '', opt.dataset.desc || opt.dataset.label || '');
+      const cantPres = row ? row.querySelector('.cantidad-pres') : null;
+      if (cantPres) cantPres.value = parseFloat(opt.dataset.cantidad || 0).toFixed(4);
       const stockInp = row ? row.querySelector('.stock-display') : null;
       if (stockInp) cargarStock(opt.dataset.id, stockInp);
+      const itemNum = row ? row.querySelector('.item-num') : null;
+      if (itemNum) itemNum.textContent = opt.dataset.codigo;
       opt.closest('.prod-dropdown').style.display = 'none';
       return;
     }
@@ -145,11 +193,24 @@
     }
   });
 
+  // Mostrar lista al enfocar el input
+  document.addEventListener('focus', function(e) {
+    if (!e.target.classList.contains('prod-search')) return;
+    buscar(e.target, e.target.value.trim());
+  }, true);
+
   let timer;
   document.addEventListener('input', function(e) {
     if (!e.target.classList.contains('prod-search')) return;
     clearTimeout(timer);
-    timer = setTimeout(() => buscar(e.target), 280);
+    const q = e.target.value.trim();
+    if (!q) {
+      const wrap = e.target.closest('.prod-wrap');
+      const dropdown = wrap?.querySelector('.prod-dropdown');
+      if (dropdown) dropdown.style.display = 'none';
+      return;
+    }
+    timer = setTimeout(() => buscar(e.target, q), 280);
   });
 
   document.addEventListener('change', function(e) {
@@ -160,8 +221,47 @@
       if (insumoInput) insumoInput.value = '';
       const descInput = wrap.querySelector('input[name$="-descripcion"]');
       if (descInput) descInput.value = '';
+      const cantPresClr = row ? row.querySelector('.cantidad-pres') : null;
+      if (cantPresClr) cantPresClr.value = '';
       const stockInp = row ? row.querySelector('.stock-display') : null;
       if (stockInp) stockInp.value = '—';
+      const itemNum = row ? row.querySelector('.item-num') : null;
+      if (itemNum) itemNum.textContent = '—';
+    }
+  });
+
+  // Validar que cant. requerida no supere la cantidad presupuestada
+  function validarCantReq(input) {
+    const row = input.closest('.formset-row');
+    const cantPres = row ? row.querySelector('.cantidad-pres') : null;
+    const errDiv   = input.closest('td')?.querySelector('.cant-req-error');
+    const max      = cantPres ? parseFloat(cantPres.value) : NaN;
+    const val      = parseFloat(input.value);
+    if (!errDiv) return true;
+    if (!isNaN(max) && max > 0 && !isNaN(val) && val > max) {
+      input.classList.add('is-invalid');
+      errDiv.textContent = 'No puede superar lo presupuestado (' + max.toLocaleString('es-PE', {maximumFractionDigits: 4}) + ')';
+      errDiv.style.display = 'block';
+      return false;
+    }
+    input.classList.remove('is-invalid');
+    errDiv.style.display = 'none';
+    return true;
+  }
+
+  document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('cant-req')) validarCantReq(e.target);
+  });
+
+  // Bloquear envío si alguna fila tiene cant. requerida inválida
+  document.querySelector('form')?.addEventListener('submit', function(ev) {
+    let ok = true;
+    document.querySelectorAll('.cant-req').forEach(function(inp) {
+      if (!validarCantReq(inp)) ok = false;
+    });
+    if (!ok) {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
     }
   });
 

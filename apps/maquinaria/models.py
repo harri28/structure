@@ -54,17 +54,34 @@ class TipoPersonal(models.Model):
 
 
 class Maquinaria(models.Model):
-    codigo     = models.CharField(max_length=30, unique=True)
-    nombre     = models.CharField(max_length=200)
-    tipo       = models.CharField(max_length=20, choices=TIPOS_MAQUINARIA, default='EQUIPO')
-    costo_hora = models.DecimalField(max_digits=12, decimal_places=4, default=0)
-    placa      = models.CharField(max_length=20, blank=True)
-    activo     = models.BooleanField(default=True)
+    # Identificación
+    codigo      = models.CharField(max_length=30, unique=True)
+    nombre      = models.CharField(max_length=200)
+    tipo_equipo = models.CharField('Tipo de equipo', max_length=20, choices=TIPOS_EQUIPO, blank=True)
+    marca       = models.CharField('Marca', max_length=100, blank=True)
+    modelo      = models.CharField('Modelo', max_length=100, blank=True)
+    placa       = models.CharField('Placa', max_length=20, blank=True)
+
+    # Contrato
+    costo          = models.DecimalField('Costo', max_digits=14, decimal_places=2, default=0)
+    modalidad_costo = models.CharField('Modalidad', max_length=15, choices=MODALIDADES_COSTO, blank=True)
+    costo_hora     = models.DecimalField('Costo por hora', max_digits=12, decimal_places=4, default=0)
+
+    # Personal
+    propietario = models.CharField('Propietario', max_length=200, blank=True)
+    operador    = models.CharField('Operador', max_length=200, blank=True)
+
+    # Fechas de obra
+    fecha_llegada       = models.DateField('Fecha de llegada', null=True, blank=True)
+    fecha_reinicio      = models.DateField('Fecha de reinicio de trabajo', null=True, blank=True)
+    fecha_salida_obra   = models.DateField('Fecha de salida de obra', null=True, blank=True)
+
+    activo = models.BooleanField(default=True)
 
     class Meta:
         verbose_name        = 'Maquinaria'
         verbose_name_plural = 'Maquinaria'
-        ordering            = ['nombre']
+        ordering            = ['codigo']
 
     def __str__(self):
         return f'{self.codigo} — {self.nombre}'
@@ -147,6 +164,11 @@ class RegistroMaquinaria(models.Model):
         'presupuesto.Partida', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='registros_maquinaria'
     )
+    insumo      = models.ForeignKey(
+        'presupuesto.InsumoPresupuesto', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='registros_maquinaria',
+        verbose_name='Insumo presupuesto',
+    )
     maquinaria  = models.ForeignKey(Maquinaria, null=True, blank=True, on_delete=models.SET_NULL)
 
     # Identificación
@@ -166,6 +188,10 @@ class RegistroMaquinaria(models.Model):
     propietario = models.CharField(max_length=200, blank=True)
     operador    = models.CharField(max_length=200, blank=True)
 
+    # Turno — hora entrada / salida
+    hora_entrada = models.TimeField('Hora entrada', null=True, blank=True)
+    hora_salida  = models.TimeField('Hora salida',  null=True, blank=True)
+
     # Actividad
     horas       = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     observacion = models.TextField(blank=True)
@@ -184,6 +210,16 @@ class RegistroMaquinaria(models.Model):
 
     def __str__(self):
         return f'{self.fecha} — {self.nombre or (self.maquinaria or "")}'
+
+    def save(self, *args, **kwargs):
+        if self.hora_entrada and self.hora_salida:
+            from datetime import datetime, date as date_
+            dt_e = datetime.combine(date_.today(), self.hora_entrada)
+            dt_s = datetime.combine(date_.today(), self.hora_salida)
+            diff = dt_s - dt_e
+            if diff.total_seconds() > 0:
+                self.horas = Decimal(str(round(diff.total_seconds() / 3600, 2)))
+        super().save(*args, **kwargs)
 
     def costo_maquinaria(self):
         if self.maquinaria:

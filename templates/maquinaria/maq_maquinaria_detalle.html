@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% block title %}{{ maquinaria.nombre }}{% endblock %}
+{% block nav_maquinaria %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:dashboard' proyecto.pk %}">Maquinaria</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}">Equipos</a></li>
+<li class="breadcrumb-item active">{{ maquinaria.nombre }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Equipos
+    </a>
+    <h4><i class="bi bi-truck me-2"></i>{{ maquinaria.nombre }}</h4>
+    <div class="text-muted" style="font-size:.84rem">
+      {% if maquinaria.placa %}Placa: <strong>{{ maquinaria.placa }}</strong> &nbsp;·&nbsp;{% endif %}
+      Total: <strong>{{ total_hm|floatformat:2 }} HM</strong>
+    </div>
+  </div>
+  <a href="{% url 'maquinaria:maquinaria_editar' maquinaria.pk %}"
+     class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-pencil me-1"></i>Editar máquina
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" style="font-size:.84rem">
+  {{ msg }}<button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="row g-4">
+
+  {# ── Formulario agregar turno ─────────────────────────────── #}
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header py-2 px-3" style="background:#f8fafc;border-bottom:1px solid #e5e7eb">
+        <span class="fw-semibold" style="font-size:.88rem">
+          <i class="bi bi-plus-circle me-1" style="color:#2563eb"></i>Registrar turno
+        </span>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem">Fecha <span class="text-danger">*</span></label>
+            <input type="date" name="{{ form.fecha.html_name }}"
+                   value="{{ form.fecha.value|date:'Y-m-d'|default:'' }}"
+                   class="form-control form-control-sm{% if form.fecha.errors %} is-invalid{% endif %}">
+            {% for e in form.fecha.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.83rem">Hora entrada</label>
+              <input type="time" name="{{ form.hora_entrada.html_name }}"
+                     value="{{ form.hora_entrada.value|default:'' }}"
+                     class="form-control form-control-sm" id="id_hora_entrada">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.83rem">Hora salida</label>
+              <input type="time" name="{{ form.hora_salida.html_name }}"
+                     value="{{ form.hora_salida.value|default:'' }}"
+                     class="form-control form-control-sm" id="id_hora_salida">
+            </div>
+          </div>
+          <div id="horas-preview" class="mb-2" style="display:none;font-size:.8rem;color:#2563eb;font-weight:600">
+            <i class="bi bi-clock me-1"></i><span id="horas-preview-txt"></span> horas
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem">Conductor / Operador</label>
+            <input type="text" name="{{ form.operador.html_name }}"
+                   value="{{ form.operador.value|default:'' }}"
+                   class="form-control form-control-sm" placeholder="Nombre completo">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem">Insumo presupuesto</label>
+            <select name="{{ form.insumo.html_name }}" class="form-select form-select-sm">
+              <option value="">— Sin insumo —</option>
+              {% for val, lbl in form.insumo.field.choices %}
+              {% if val %}
+              <option value="{{ val }}" {% if form.insumo.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ lbl }}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem">Partida</label>
+            <select name="{{ form.partida.html_name }}" class="form-select form-select-sm">
+              <option value="">— Sin partida —</option>
+              {% for val, lbl in form.partida.field.choices %}
+              {% if val %}
+              <option value="{{ val }}" {% if form.partida.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ lbl }}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem">Observación</label>
+            <textarea name="{{ form.observacion.html_name }}"
+                      class="form-control form-control-sm" rows="2"
+                      placeholder="Opcional">{{ form.observacion.value|default:'' }}</textarea>
+          </div>
+
+          {# Campo maquinaria oculto — ya fijada #}
+          <input type="hidden" name="{{ form.maquinaria.html_name }}" value="{{ maquinaria.pk }}">
+
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-check-lg me-1"></i>Guardar turno
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Historial de turnos ──────────────────────────────────── #}
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center"
+           style="background:#f8fafc;border-bottom:1px solid #e5e7eb">
+        <span class="fw-semibold" style="font-size:.88rem">
+          <i class="bi bi-clock-history me-1"></i>Historial de turnos
+        </span>
+        <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.72rem">
+          {{ registros|length }} turno{{ registros|length|pluralize:"s" }}
+        </span>
+      </div>
+      <div class="card-body p-0">
+        {% if registros %}
+        <div class="table-responsive">
+          <table class="table-modern">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Entrada</th>
+                <th>Salida</th>
+                <th class="text-end">HM</th>
+                <th>Operador</th>
+                <th>Insumo</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in registros %}
+              <tr>
+                <td style="font-size:.83rem">{{ r.fecha|date:"d/m/Y" }}</td>
+                <td style="font-size:.83rem">{{ r.hora_entrada|time:"H:i"|default:"—" }}</td>
+                <td style="font-size:.83rem">{{ r.hora_salida|time:"H:i"|default:"—" }}</td>
+                <td class="text-end fw-semibold" style="color:#2563eb;font-size:.85rem">
+                  {{ r.horas|floatformat:2 }}
+                </td>
+                <td style="font-size:.82rem;color:#374151">{{ r.operador|default:"—" }}</td>
+                <td style="font-size:.78rem;color:#6b7280">
+                  {% if r.insumo %}{{ r.insumo.codigo }} — {{ r.insumo.descripcion|truncatechars:30 }}{% else %}—{% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="d-flex gap-1 justify-content-end">
+                    <a href="{% url 'maquinaria:maq_registro_editar' r.pk %}"
+                       class="btn-tbl" title="Editar"><i class="bi bi-pencil"></i></a>
+                    <form method="post" action="{% url 'maquinaria:maq_registro_eliminar' r.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn-tbl text-danger"
+                              onclick="return confirm('¿Eliminar este turno?')"
+                              title="Eliminar"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr style="background:#f8fafc;font-weight:600">
+                <td colspan="3" class="text-end" style="font-size:.82rem">Total HM:</td>
+                <td class="text-end" style="color:#2563eb">{{ total_hm|floatformat:2 }}</td>
+                <td colspan="3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-clock d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+          <div style="font-size:.85rem">Sin turnos registrados aún.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const entrada = document.getElementById('id_hora_entrada');
+const salida  = document.getElementById('id_hora_salida');
+const preview = document.getElementById('horas-preview');
+const previewTxt = document.getElementById('horas-preview-txt');
+
+function calcularHoras() {
+  if (!entrada.value || !salida.value) { preview.style.display = 'none'; return; }
+  const [he, me] = entrada.value.split(':').map(Number);
+  const [hs, ms] = salida.value.split(':').map(Number);
+  const diff = (hs * 60 + ms) - (he * 60 + me);
+  if (diff <= 0) { preview.style.display = 'none'; return; }
+  previewTxt.textContent = (diff / 60).toFixed(2);
+  preview.style.display = 'block';
+}
+entrada.addEventListener('change', calcularHoras);
+salida.addEventListener('change', calcularHoras);
+</script>
+{% endblock %}

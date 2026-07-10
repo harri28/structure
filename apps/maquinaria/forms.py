@@ -17,15 +17,35 @@ class TipoPersonalForm(forms.ModelForm):
 class MaquinariaForm(forms.ModelForm):
     class Meta:
         model  = Maquinaria
-        fields = ['codigo', 'nombre', 'tipo', 'costo_hora', 'placa', 'activo']
+        fields = [
+            'codigo', 'nombre', 'tipo_equipo', 'marca', 'modelo', 'placa',
+            'costo', 'modalidad_costo', 'costo_hora',
+            'propietario', 'operador',
+            'fecha_llegada', 'fecha_reinicio', 'fecha_salida_obra',
+            'activo',
+        ]
         widgets = {
-            'codigo':     forms.TextInput(attrs={'class': 'form-control'}),
-            'nombre':     forms.TextInput(attrs={'class': 'form-control'}),
-            'tipo':       forms.Select(attrs={'class': 'form-select'}),
-            'costo_hora': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
-            'placa':      forms.TextInput(attrs={'class': 'form-control'}),
-            'activo':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'codigo':          forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'style': 'background:#f8f9fa'}),
+            'nombre':          forms.TextInput(attrs={'class': 'form-control'}),
+            'tipo_equipo':     forms.Select(attrs={'class': 'form-select'}),
+            'marca':           forms.TextInput(attrs={'class': 'form-control'}),
+            'modelo':          forms.TextInput(attrs={'class': 'form-control'}),
+            'placa':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: ABC-123'}),
+            'costo':           forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'modalidad_costo': forms.Select(attrs={'class': 'form-select'}),
+            'costo_hora':      forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'min': '0'}),
+            'propietario':     forms.TextInput(attrs={'class': 'form-control'}),
+            'operador':        forms.TextInput(attrs={'class': 'form-control'}),
+            'fecha_llegada':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_reinicio':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_salida_obra': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'activo':          forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for f in ['tipo_equipo', 'modalidad_costo']:
+            self.fields[f].required = False
 
 
 class CuadrillaForm(forms.ModelForm):
@@ -89,38 +109,29 @@ class RegistroMaquinariaForm(forms.ModelForm):
     class Meta:
         model  = RegistroMaquinaria
         fields = [
-            'codigo', 'nombre', 'tipo_equipo', 'marca', 'modelo', 'placa',
-            'costo', 'modalidad_costo', 'modalidad',
-            'propietario', 'operador',
-            'fecha_llegada', 'fecha_reinicio', 'fecha_salida',
-            'fecha', 'partida', 'maquinaria', 'horas', 'observacion',
+            'maquinaria', 'fecha', 'hora_entrada', 'hora_salida',
+            'operador', 'insumo', 'partida', 'observacion',
         ]
         widgets = {
-            'codigo':          forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'style': 'background:#f8f9fa'}),
-            'nombre':          forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Camioneta Toyota ABC123'}),
-            'tipo_equipo':     forms.Select(attrs={'class': 'form-select'}),
-            'marca':           forms.TextInput(attrs={'class': 'form-control'}),
-            'modelo':          forms.TextInput(attrs={'class': 'form-control'}),
-            'placa':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: ABC-123'}),
-            'costo':           forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
-            'modalidad_costo': forms.Select(attrs={'class': 'form-select'}),
-            'modalidad':       forms.Select(attrs={'class': 'form-select'}),
-            'propietario':     forms.TextInput(attrs={'class': 'form-control'}),
-            'operador':        forms.TextInput(attrs={'class': 'form-control'}),
-            'fecha_llegada':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_reinicio':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_salida':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha':           forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'partida':         forms.Select(attrs={'class': 'form-select'}),
-            'maquinaria':      forms.Select(attrs={'class': 'form-select'}),
-            'horas':           forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'min': '0'}),
-            'observacion':     forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'maquinaria':   forms.Select(attrs={'class': 'form-select'}),
+            'fecha':        forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'hora_entrada': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'hora_salida':  forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'operador':     forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del operador / conductor'}),
+            'insumo':       forms.Select(attrs={'class': 'form-select'}),
+            'partida':      forms.Select(attrs={'class': 'form-select'}),
+            'observacion':  forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
-    def __init__(self, proyecto=None, *args, **kwargs):
+    def __init__(self, proyecto=None, maquinaria=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from django.db.models import Count
-        from apps.presupuesto.models import Partida
+        from apps.presupuesto.models import Partida, InsumoPresupuesto
+        self.fields['maquinaria'].queryset    = Maquinaria.objects.filter(activo=True)
+        self.fields['maquinaria'].empty_label = '— Seleccionar máquina —'
+        if maquinaria:
+            self.fields['maquinaria'].initial  = maquinaria
+            self.fields['maquinaria'].required = True
         if proyecto:
             self.fields['partida'].queryset = (
                 Partida.objects
@@ -128,10 +139,16 @@ class RegistroMaquinariaForm(forms.ModelForm):
                 .filter(presupuesto__proyecto=proyecto, n_hijos=0)
                 .order_by('orden')
             )
+            self.fields['insumo'].queryset = (
+                InsumoPresupuesto.objects
+                .filter(presupuesto__proyecto=proyecto)
+                .order_by('codigo')
+            )
+        else:
+            self.fields['insumo'].queryset = InsumoPresupuesto.objects.none()
         self.fields['partida'].required    = False
         self.fields['partida'].empty_label = '— Sin partida —'
-        self.fields['maquinaria'].required  = False
-        self.fields['maquinaria'].empty_label = '— Sin enlace a catálogo —'
-        self.fields['maquinaria'].queryset = Maquinaria.objects.filter(activo=True)
-        for f in ['tipo_equipo', 'modalidad_costo', 'modalidad']:
-            self.fields[f].required = False
+        self.fields['insumo'].required     = False
+        self.fields['insumo'].empty_label  = '— Sin insumo —'
+        self.fields['hora_entrada'].required = False
+        self.fields['hora_salida'].required  = False

@@ -17,6 +17,12 @@ def dashboard(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
     qs = GuiaRemision.objects.filter(proyecto=proyecto)
     recientes = qs.select_related('transportista').order_by('-creado_en')[:8]
+
+    from apps.requerimientos.models import Requerimiento
+    reqs_nuevos = Requerimiento.objects.filter(
+        proyecto=proyecto, estado='ENVIADO'
+    ).order_by('-created_at')
+
     return render(request, 'logistica/dashboard.html', {
         'proyecto':    proyecto,
         'total':       qs.count(),
@@ -24,6 +30,8 @@ def dashboard(request, proyecto_id):
         'en_transito': qs.filter(estado='EN_TRANSITO').count(),
         'entregadas':  qs.filter(estado='ENTREGADO').count(),
         'recientes':   recientes,
+        'reqs_nuevos': reqs_nuevos,
+        'reqs_n':      reqs_nuevos.count(),
     })
 
 
@@ -198,6 +206,21 @@ def requerimientos_log(request, proyecto_id):
         'estados':     ESTADOS_REQ,
         'estado_sel':  estado_sel,
         'enviados':    Requerimiento.objects.filter(proyecto=proyecto, estado='ENVIADO').count(),
+    })
+
+
+def req_detalle_log(request, proyecto_id, pk):
+    from apps.requerimientos.models import Requerimiento
+    proyecto = _get_proyecto(proyecto_id)
+    req = get_object_or_404(Requerimiento, pk=pk, proyecto=proyecto)
+    if req.estado == 'ENVIADO':
+        req.estado = 'EN_REVISION'
+        req.save(update_fields=['estado'])
+        log(request, 'EDITAR', 'Logística',
+            f'REQ-{req.numero} marcado En revisión por {request.user.get_full_name() or request.user.username}')
+    return render(request, 'logistica/req_detalle.html', {
+        'proyecto': proyecto,
+        'req':      req,
     })
 
 

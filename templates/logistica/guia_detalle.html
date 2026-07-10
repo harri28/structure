@@ -1,7 +1,6 @@
 ﻿{% extends 'base.html' %}
 {% block title %}Guía {{ guia.numero }}{% endblock %}
 {% block nav_log_guias %}active{% endblock %}
-{% block submodule_chips %}{% include 'logistica/_logistica_nav.html' with active_tab='guias' %}{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>

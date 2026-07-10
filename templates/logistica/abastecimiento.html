@@ -1,7 +1,6 @@
 ﻿{% extends 'base.html' %}
 {% block title %}Abastecimiento — {{ proyecto.codigo }}{% endblock %}
 {% block nav_log_abastecimiento %}active{% endblock %}
-{% block submodule_chips %}{% include 'logistica/_logistica_nav.html' with active_tab='abastecimiento' %}{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>

@@ -15,6 +15,7 @@ TIPOS_MATERIAL = [
 ESTADOS_REQ = [
     ('BORRADOR', 'Borrador'),
     ('ENVIADO', 'Enviado a Logística'),
+    ('EN_REVISION', 'En revisión'),
     ('APROBADO', 'Aprobado'),
     ('ATENDIDO', 'Atendido'),
     ('PARCIAL', 'Atendido Parcial'),

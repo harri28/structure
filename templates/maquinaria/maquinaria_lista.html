@@ -1,49 +1,99 @@
 {% extends 'base.html' %}
 {% block title %}Catálogo de Maquinaria{% endblock %}
 {% block nav_maq_catalogo %}active{% endblock %}
+
 {% block breadcrumb %}
-<li class="breadcrumb-item active">Maquinaria</li>
+<li class="breadcrumb-item active">Catálogo de Maquinaria</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
     <h4><i class="bi bi-truck me-2"></i>Catálogo de Maquinaria</h4>
-    <div class="text-muted">Equipos y vehículos con costo por hora</div>
+    <div class="text-muted" style="font-size:.84rem">{{ maquinas|length }} equipo{{ maquinas|length|pluralize:"s" }} registrado{{ maquinas|length|pluralize:"s" }}</div>
   </div>
-  <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Nuevo
+  <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nueva maquinaria
   </a>
 </div>
 
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" style="font-size:.84rem">
+  {{ msg }}<button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
 <div class="card">
   <div class="card-body p-0">
-    <table class="table-modern">
-      <thead>
-        <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Placa</th><th class="text-end">Costo / hora</th><th>Estado</th><th></th></tr>
-      </thead>
-      <tbody>
-      {% for m in maquinas %}
-      <tr>
-        <td class="fw-semibold">{{ m.codigo }}</td>
-        <td>{{ m.nombre }}</td>
-        <td><span class="badge bg-secondary">{{ m.get_tipo_display }}</span></td>
-        <td class="text-muted">{{ m.placa|default:"—" }}</td>
-        <td class="text-end">S/. {{ m.costo_hora|miles }}</td>
-        <td>
-          {% if m.activo %}<span class="badge bg-success">Activo</span>
-          {% else %}<span class="badge bg-secondary">Inactivo</span>{% endif %}
-        </td>
-        <td class="d-flex gap-1">
-          <a href="{% url 'maquinaria:maquinaria_editar' m.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
-          <a href="{% url 'maquinaria:maquinaria_eliminar' m.pk %}" class="btn-tbl text-danger"><i class="bi bi-trash"></i></a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="7" class="text-center text-muted py-4">Sin maquinaria registrada</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table-modern" style="min-width:900px">
+        <thead>
+          <tr>
+            <th style="width:80px">COD</th>
+            <th style="min-width:180px">Nombre</th>
+            <th style="width:130px">Equipo</th>
+            <th style="width:90px">Marca</th>
+            <th style="width:90px">Placa</th>
+            <th style="width:110px" class="text-end">Costo</th>
+            <th style="width:100px">Modalidad</th>
+            <th style="min-width:130px">Propietario</th>
+            <th style="min-width:130px">Operador</th>
+            <th style="width:95px">Llegada</th>
+            <th style="width:95px">Salida obra</th>
+            <th style="width:70px" class="text-center">Estado</th>
+            <th style="width:70px"></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for m in maquinas %}
+        <tr>
+          <td>
+            <span class="fw-bold" style="font-size:.82rem;color:#2563eb">{{ m.codigo }}</span>
+          </td>
+          <td>
+            <div class="fw-semibold" style="font-size:.85rem">{{ m.nombre }}</div>
+            {% if m.modelo %}<div style="font-size:.75rem;color:#9ca3af">{{ m.modelo }}</div>{% endif %}
+          </td>
+          <td style="font-size:.82rem">{{ m.get_tipo_equipo_display|default:"—" }}</td>
+          <td style="font-size:.82rem;color:#6b7280">{{ m.marca|default:"—" }}</td>
+          <td style="font-size:.82rem;color:#6b7280">{{ m.placa|default:"—" }}</td>
+          <td class="text-end" style="font-size:.83rem">
+            {% if m.costo %}
+            <span class="fw-semibold">S/ {{ m.costo|miles }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#6b7280">{{ m.get_modalidad_costo_display|default:"—" }}</td>
+          <td style="font-size:.82rem">{{ m.propietario|default:"—" }}</td>
+          <td style="font-size:.82rem">{{ m.operador|default:"—" }}</td>
+          <td style="font-size:.78rem;color:#6b7280">{{ m.fecha_llegada|date:"d/m/Y"|default:"—" }}</td>
+          <td style="font-size:.78rem;color:#6b7280">{{ m.fecha_salida_obra|date:"d/m/Y"|default:"—" }}</td>
+          <td class="text-center">
+            {% if m.activo %}
+            <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.68rem">Activo</span>
+            {% else %}
+            <span class="badge bg-secondary" style="font-size:.68rem">Inactivo</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'maquinaria:maquinaria_editar' m.pk %}" class="btn-tbl" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="13" class="text-center text-muted py-5">
+            <i class="bi bi-truck d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+            Sin maquinaria registrada.
+            <a href="{% url 'maquinaria:maquinaria_crear' %}">Crear la primera</a>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endblock %}
