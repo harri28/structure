@@ -83,8 +83,14 @@ GRUPOS_PERMISOS = [
         ('puede_gestionar_maquinaria', 'Crear y editar registros de maquinaria y cuadrilla'),
     ]),
     ('Logística', [
-        ('puede_ver_logistica',      'Ver guías de remisión y transportistas'),
-        ('puede_gestionar_logistica','Crear y gestionar guías de remisión'),
+        ('puede_ver_logistica',             'Ver el módulo de Logística'),
+        ('puede_revisar_reqs_log',          'Revisar y aprobar requerimientos recibidos'),
+        ('puede_gestionar_inventarios_log', 'Gestionar inventarios'),
+        ('puede_gestionar_almacen_log',     'Gestionar almacén de Logística'),
+        ('puede_gestionar_ctrl_maq_log',    'Control de maquinaria y equipos'),
+        ('puede_gestionar_abastecimiento',  'Gestionar abastecimiento'),
+        ('puede_gestionar_cotizaciones_log','Gestionar cotizaciones en Logística'),
+        ('puede_gestionar_logistica',       'Crear y gestionar guías de remisión'),
     ]),
     ('Administración', [
         ('puede_administrar_usuarios', 'Gestionar usuarios del sistema'),
@@ -129,8 +135,14 @@ class Rol(models.Model):
     puede_gestionar_maquinaria = models.BooleanField(default=False)
 
     # Logística
-    puede_ver_logistica       = models.BooleanField(default=True)
-    puede_gestionar_logistica = models.BooleanField(default=False)
+    puede_ver_logistica              = models.BooleanField(default=True)
+    puede_revisar_reqs_log           = models.BooleanField(default=False)
+    puede_gestionar_inventarios_log  = models.BooleanField(default=False)
+    puede_gestionar_almacen_log      = models.BooleanField(default=False)
+    puede_gestionar_ctrl_maq_log     = models.BooleanField(default=False)
+    puede_gestionar_abastecimiento   = models.BooleanField(default=False)
+    puede_gestionar_cotizaciones_log = models.BooleanField(default=False)
+    puede_gestionar_logistica        = models.BooleanField(default=False)
 
     # Administración
     puede_administrar_usuarios = models.BooleanField(default=False)
