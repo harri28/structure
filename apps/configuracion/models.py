@@ -155,28 +155,54 @@ class Rol(models.Model):
         return sum(1 for campo in TODOS_LOS_PERMISOS if getattr(self, campo, False))
 
 
-class ParametroSistema(models.Model):
-    """Parámetros por defecto del sistema (singleton pk=1)."""
-    gg_pct_default       = models.DecimalField('GG % por defecto',       max_digits=5, decimal_places=2, default=10.00)
-    utilidad_pct_default = models.DecimalField('Utilidad % por defecto', max_digits=5, decimal_places=2, default=5.00)
-    igv_pct_default      = models.DecimalField('IGV % por defecto',      max_digits=5, decimal_places=2, default=18.00)
-    dias_vigencia_cot    = models.IntegerField('Días vigencia cotización', default=30)
-    updated_at           = models.DateTimeField(auto_now=True)
+class UnidadMedida(models.Model):
+    """Catálogo de unidades de medida estandarizadas."""
+    codigo      = models.CharField('Código', max_length=20, unique=True)
+    nombre      = models.CharField('Nombre', max_length=100)
+    descripcion = models.CharField('Descripción', max_length=200, blank=True)
+    aliases     = models.TextField(
+        'Aliases',
+        blank=True,
+        help_text='Variantes separadas por coma que se normalizan a este código al importar. Ej: hh, hora hombre, horas hombre',
+    )
+    activo      = models.BooleanField('Activa', default=True)
 
     class Meta:
-        verbose_name = 'Parámetros del Sistema'
+        verbose_name        = 'Unidad de Medida'
+        verbose_name_plural = 'Unidades de Medida'
+        ordering            = ['codigo']
 
-    @classmethod
-    def get(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj
+    def __str__(self):
+        return f'{self.codigo} — {self.nombre}'
+
+
+
+class CargoManoObra(models.Model):
+    """Cargos de mano de obra y sus variantes para normalizar archivos importados."""
+    codigo    = models.CharField('Código', max_length=10, unique=True)
+    nombre    = models.CharField('Nombre oficial', max_length=100)
+    variantes = models.TextField(
+        'Variantes',
+        blank=True,
+        help_text='Palabras clave separadas por coma que identifican este cargo en archivos importados.',
+    )
+    orden     = models.PositiveSmallIntegerField('Orden', default=0)
+    activo    = models.BooleanField('Activo', default=True)
+
+    class Meta:
+        verbose_name        = 'Cargo de Mano de Obra'
+        verbose_name_plural = 'Cargos de Mano de Obra'
+        ordering            = ['orden', 'codigo']
+
+    def __str__(self):
+        return f'{self.codigo} — {self.nombre}'
 
 
 class PerfilUsuario(models.Model):
-    usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
-    rol     = models.ForeignKey(
-        Rol, null=True, blank=True, on_delete=models.SET_NULL, related_name='usuarios'
-    )
+    usuario  = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    rol      = models.ForeignKey(Rol, null=True, blank=True, on_delete=models.SET_NULL, related_name='usuarios')
+    cargo    = models.CharField('Cargo', max_length=100, blank=True)
+    telefono = models.CharField('Teléfono', max_length=20, blank=True)
 
     class Meta:
         verbose_name = 'Perfil de Usuario'

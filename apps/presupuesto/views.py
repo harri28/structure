@@ -14,7 +14,7 @@ from .models import (
     Modificacion, PartidaModificacion,
     TIPOS_RECURSO, TIPOS_MODIFICACION, ESTADOS_MODIFICACION,
 )
-from .importador import importar_presupuesto_excel, importar_insumos_excel, importar_automatico
+from .importador import importar_presupuesto_excel, importar_insumos_excel, importar_automatico, detectar_tipo_excel
 from .pdf_parser import importar_pdf, PYMUPDF_OK
 from . import ml as ml_engine
 from apps.registro.utils import log, notificar
@@ -97,20 +97,20 @@ def detalle(request, pk):
 def insumos(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     tipo_sel = request.GET.get('tipo', '')
-    qs = presupuesto.insumos.all()
-    if tipo_sel:
-        qs = qs.filter(tipo=tipo_sel)
+    qs_all = presupuesto.insumos.all()
+    qs = qs_all.filter(tipo=tipo_sel) if tipo_sel else qs_all
     return render(request, 'presupuesto/insumos.html', {
-        'presupuesto': presupuesto,
-        'proyecto':    presupuesto.proyecto,
-        'insumos':     qs,
-        'tipos':       TIPOS_RECURSO,
-        'tipo_sel':    tipo_sel,
+        'presupuesto':   presupuesto,
+        'proyecto':      presupuesto.proyecto,
+        'insumos':       qs,
+        'insumos_total': qs_all.count(),
+        'tipos':         TIPOS_RECURSO,
+        'tipo_sel':      tipo_sel,
         'totales': {
-            'mano_obra':    presupuesto.insumos.filter(tipo='MANO_OBRA'),
-            'materiales':   presupuesto.insumos.filter(tipo='MATERIAL'),
-            'equipos':      presupuesto.insumos.filter(tipo='EQUIPO'),
-            'subcontratos': presupuesto.insumos.filter(tipo='SUBCONTRATO'),
+            'mano_obra':    qs_all.filter(tipo='MANO_OBRA'),
+            'materiales':   qs_all.filter(tipo='MATERIAL'),
+            'equipos':      qs_all.filter(tipo='EQUIPO'),
+            'subcontratos': qs_all.filter(tipo='SUBCONTRATO'),
         }
     })
 
@@ -154,14 +154,33 @@ def importar(request, pk):
                     return redirect('presupuesto:detalle', pk=presupuesto.pk)
 
             elif tipo == 'insumos':
-                total = importar_insumos_excel(archivo, presupuesto)
-                presupuesto.nombre = os.path.splitext(archivo.name)[0]
-                presupuesto.archivo_origen = archivo.name
+                # Bloquear si ya existen insumos
+                if presupuesto.insumos.exists():
+                    messages.error(request,
+                        'Ya hay insumos importados. Elimínalos primero antes de volver a importar.')
+                    return redirect('presupuesto:importar', pk=pk)
+
+                # Advertencia si el archivo parece ser un presupuesto (no bloquea)
+                tipo_detectado = detectar_tipo_excel(archivo)
+                if tipo_detectado != 'insumos':
+                    messages.warning(request,
+                        f'Aviso: el archivo "{archivo.name}" no fue reconocido como Lista de Insumos '
+                        f'(no se detectaron categorías MANO DE OBRA / MATERIALES / EQUIPO). '
+                        f'Se importó de todas formas — revisa que los datos sean correctos.')
+
+                total, unidades_desc = importar_insumos_excel(archivo, presupuesto)
+                presupuesto.nombre            = os.path.splitext(archivo.name)[0]
+                presupuesto.archivo_origen    = archivo.name
                 presupuesto.fecha_importacion = timezone.now()
                 presupuesto.save()
                 log(request, 'IMPORTAR', 'Presupuesto',
                     f'{total} insumos importados en {presupuesto.proyecto.codigo} desde {archivo.name}')
                 messages.success(request, f'{total} insumos importados correctamente.')
+                if unidades_desc:
+                    lista = ', '.join(f'"{u}"' for u in unidades_desc)
+                    messages.warning(request,
+                        f'Se encontraron {len(unidades_desc)} abreviatura(s) de unidad no reconocidas: {lista}. '
+                        f'Agrégalas en Configuración → Unidades de Medida para normalizarlas en futuros imports.')
                 return redirect('presupuesto:insumos', pk=presupuesto.pk)
 
             elif tipo == 'pdf':
@@ -180,7 +199,20 @@ def importar(request, pk):
                     'avisos':      avisos,
                 })
 
-            else:
+            else:  # presupuesto
+                # Bloquear si ya existen partidas
+                if presupuesto.partidas.exists():
+                    messages.error(request,
+                        'Ya hay partidas importadas. Elimínalas primero antes de volver a importar.')
+                    return redirect('presupuesto:importar', pk=pk)
+
+                # Advertencia si el archivo parece ser insumos (no bloquea)
+                tipo_detectado = detectar_tipo_excel(archivo)
+                if tipo_detectado != 'presupuesto':
+                    messages.warning(request,
+                        f'Aviso: el archivo "{archivo.name}" fue reconocido como Lista de Insumos, '
+                        f'no como Presupuesto. Se importó de todas formas — revisa que los datos sean correctos.')
+
                 total, info = importar_presupuesto_excel(archivo, presupuesto)
                 presupuesto.nombre            = os.path.splitext(archivo.name)[0]
                 presupuesto.archivo_origen    = archivo.name

@@ -7,7 +7,6 @@ urlpatterns = [
     path('',                                  views.hub,                   name='hub'),
     path('empresa/',                          views.empresa,               name='empresa'),
     path('sunat/',                            views.sunat,                 name='sunat'),
-    path('parametros/',                       views.parametros,            name='parametros'),
     path('equipo/',                           views.equipo,                name='equipo'),
     # Roles
     path('roles/',                            views.roles,                 name='roles'),
@@ -21,4 +20,16 @@ urlpatterns = [
     path('usuarios/<int:pk>/password/',       views.usuario_password,      name='usuario_password'),
     path('usuarios/<int:pk>/eliminar/',       views.usuario_eliminar,      name='usuario_eliminar'),
     path('usuarios/<int:pk>/toggle/',         views.usuario_toggle,        name='usuario_toggle'),
+    path('perfil/',                           views.perfil,                name='perfil'),
+    # Unidades de Medida
+    path('unidades/',                               views.unidad_lista,                  name='unidad_lista'),
+    path('unidades/nueva/',                         views.unidad_crear,                  name='unidad_crear'),
+    path('unidades/<int:pk>/editar/',               views.unidad_editar,                 name='unidad_editar'),
+    path('unidades/<int:pk>/eliminar/',             views.unidad_eliminar,               name='unidad_eliminar'),
+    path('unidades/cargar-defaults/',               views.unidad_cargar_defaults,        name='unidad_cargar_defaults'),
+    # Cargos de Mano de Obra
+    path('cargos/',                                views.cargo_lista,                   name='cargo_lista'),
+    path('cargos/nuevo/',                          views.cargo_crear,                   name='cargo_crear'),
+    path('cargos/<int:pk>/editar/',                views.cargo_editar,                  name='cargo_editar'),
+    path('cargos/cargar-defaults/',                views.cargo_cargar_defaults,         name='cargo_cargar_defaults'),
 ]

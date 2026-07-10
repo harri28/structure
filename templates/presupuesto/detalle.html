@@ -8,16 +8,6 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center">
-  <div>
-    <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Presupuesto</a>
-    <h4 class="d-flex align-items-center gap-2">
-      <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7rem;font-weight:700">Contractual</span>
-      {{ presupuesto.nombre }}
-    </h4>
-  </div>
-</div>
-
 <!-- ── Nav ─────────────────────────────────────────────────────────── -->
 {% include 'presupuesto/_pres_nav.html' with active_tab='partidas' %}
 

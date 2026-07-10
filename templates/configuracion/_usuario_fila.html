@@ -1,0 +1,61 @@
+<tr>
+  <td>
+    <div class="d-flex align-items-center gap-2">
+      <div style="width:30px;height:30px;border-radius:50%;background:#eff6ff;
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi bi-person-fill" style="color:#2563eb;font-size:.78rem"></i>
+      </div>
+      <span class="fw-semibold">{{ u.username }}</span>
+      {% if u.pk == request.user.pk %}
+      <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.65rem">Tú</span>
+      {% endif %}
+      {% if u.is_superuser %}
+      <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.65rem">Superadmin</span>
+      {% endif %}
+    </div>
+  </td>
+  <td>{{ u.get_full_name|default:"—" }}</td>
+  <td class="text-muted">{{ u.email|default:"—" }}</td>
+  <td>
+    {% if u.perfil.rol %}
+    <span style="font-size:.72rem;padding:.2em .55em;border-radius:4px;
+                 background:#eff6ff;color:#1d4ed8;font-weight:600">
+      {{ u.perfil.rol.nombre }}
+    </span>
+    {% else %}
+    <span class="text-muted" style="font-size:.78rem">—</span>
+    {% endif %}
+  </td>
+  <td>
+    {% if u.is_active %}
+    <span class="badge bg-success">Activo</span>
+    {% else %}
+    <span class="badge bg-danger">Inactivo</span>
+    {% endif %}
+  </td>
+  <td class="text-muted" style="font-size:.8rem">
+    {% if u.last_login %}{{ u.last_login|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1">
+      <a href="{% url 'configuracion:usuario_editar' u.pk %}" class="btn-tbl" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <a href="{% url 'configuracion:usuario_password' u.pk %}" class="btn-tbl" title="Cambiar contraseña">
+        <i class="bi bi-key"></i>
+      </a>
+      {% if u.pk != request.user.pk %}
+      <form method="post" action="{% url 'configuracion:usuario_toggle' u.pk %}" style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="btn-tbl {% if u.is_active %}danger{% endif %}"
+                title="{% if u.is_active %}Desactivar{% else %}Activar{% endif %}">
+          <i class="bi bi-{% if u.is_active %}person-x{% else %}person-check{% endif %}"></i>
+        </button>
+      </form>
+      <a href="{% url 'configuracion:usuario_eliminar' u.pk %}" class="btn-tbl danger" title="Eliminar">
+        <i class="bi bi-trash"></i>
+      </a>
+      {% endif %}
+    </div>
+  </td>
+</tr>

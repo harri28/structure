@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar Unidad{% endblock %}
+{% block nav_configuracion %}active{% endblock %}
+{% block nav_unidades %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:hub' %}">Configuración</a></li>
+<li class="breadcrumb-item"><a href="{% url 'configuracion:unidad_lista' %}">Unidades de Medida</a></li>
+<li class="breadcrumb-item active">Eliminar</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+  <div class="col-lg-5">
+    <div class="card border-danger">
+      <div class="card-header text-danger fw-semibold">
+        <i class="bi bi-exclamation-triangle me-2"></i>Confirmar eliminación
+      </div>
+      <div class="card-body">
+        <p>¿Eliminar la unidad de medida <strong>{{ unidad.codigo }} — {{ unidad.nombre }}</strong>?</p>
+        <p class="text-muted" style="font-size:.84rem">
+          Esta acción no se puede deshacer. Si la unidad está siendo usada en documentos existentes,
+          esos registros conservarán el texto tal como fue guardado.
+        </p>
+        <div class="d-flex gap-2 mt-3">
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm">
+              <i class="bi bi-trash me-1"></i>Sí, eliminar
+            </button>
+          </form>
+          <a href="{% url 'configuracion:unidad_lista' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

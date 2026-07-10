@@ -12,19 +12,19 @@ ESTADOS_PROYECTO = [
 
 
 class Proyecto(models.Model):
-    codigo = models.CharField(max_length=30, unique=True)
-    nombre = models.CharField(max_length=300)
-    cliente = models.CharField(max_length=200, blank=True)
-    ubicacion = models.CharField(max_length=300, blank=True)
-    responsable = models.CharField(max_length=150, blank=True)
-    fecha_inicio = models.DateField(null=True, blank=True)
-    fecha_fin    = models.DateField(null=True, blank=True)
-    plazo_dias   = models.PositiveIntegerField(null=True, blank=True)
-    estado       = models.CharField(max_length=20, choices=ESTADOS_PROYECTO, default='FORMULACION')
-    descripcion = models.TextField(blank=True)
-    activo = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    codigo            = models.CharField(max_length=30, unique=True)
+    nombre            = models.CharField(max_length=300)
+    empresa_ejecutora = models.CharField(max_length=200, blank=True)
+    cliente           = models.CharField(max_length=200, blank=True)
+    ubicacion         = models.CharField(max_length=300, blank=True)
+    responsable       = models.CharField(max_length=150, blank=True)
+    fecha_inicio      = models.DateField(null=True, blank=True)
+    fecha_fin         = models.DateField(null=True, blank=True)
+    plazo_dias        = models.PositiveIntegerField(null=True, blank=True)
+    estado            = models.CharField(max_length=20, choices=ESTADOS_PROYECTO, default='FORMULACION')
+    descripcion       = models.TextField(blank=True)
+    created_at        = models.DateTimeField(auto_now_add=True)
+    updated_at        = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Proyecto'
@@ -33,11 +33,6 @@ class Proyecto(models.Model):
 
     def __str__(self):
         return f'{self.codigo} - {self.nombre}'
-
-    def save(self, *args, **kwargs):
-        if self.activo:
-            Proyecto.objects.exclude(pk=self.pk).update(activo=False)
-        super().save(*args, **kwargs)
 
 
 class ProyectoMiembro(models.Model):

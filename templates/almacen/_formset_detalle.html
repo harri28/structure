@@ -69,7 +69,7 @@
     const q = input.value.trim();
     const wrap = input.closest('.prod-wrap');
     const dropdown = wrap.querySelector('.prod-dropdown');
-    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+    if (q.length < 1) { dropdown.style.display = 'none'; return; }
     fetch(API_URL + '?q=' + encodeURIComponent(q))
       .then(r => r.json())
       .then(data => {

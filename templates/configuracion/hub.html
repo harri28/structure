@@ -118,23 +118,6 @@
     </a>
   </div>
 
-  <div class="col-md-6 col-lg-4">
-    <a href="{% url 'configuracion:parametros' %}" class="cfg-card">
-      <div class="d-flex align-items-center gap-3">
-        <div class="cfg-icon" style="background:#f0fdf4">
-          <i class="bi bi-sliders" style="color:#16a34a"></i>
-        </div>
-        <div>
-          <div class="cfg-title">Parámetros del Sistema</div>
-          <div class="cfg-desc">Porcentajes por defecto para nuevos presupuestos y vigencia de cotizaciones</div>
-        </div>
-      </div>
-      <div class="cfg-meta">
-        <i class="bi bi-info-circle me-1"></i>
-        GG {{ params.gg_pct_default }}% · Utilidad {{ params.utilidad_pct_default }}% · IGV {{ params.igv_pct_default }}%
-      </div>
-    </a>
-  </div>
 
   <div class="col-md-6 col-lg-4">
     <a href="{% url 'configuracion:sunat' %}" class="cfg-card">
@@ -222,6 +205,24 @@
       </div>
       <div class="cfg-meta">
         <i class="bi bi-arrow-right me-1"></i>Gestionar catálogo
+      </div>
+    </a>
+  </div>
+
+  <div class="col-md-6 col-lg-4">
+    <a href="{% url 'configuracion:unidad_lista' %}" class="cfg-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="cfg-icon" style="background:#f0f9ff">
+          <i class="bi bi-rulers" style="color:#0284c7"></i>
+        </div>
+        <div>
+          <div class="cfg-title">Unidades de Medida</div>
+          <div class="cfg-desc">Catálogo estandarizado de unidades: HH, m2, kg, glb y más</div>
+        </div>
+      </div>
+      <div class="cfg-meta">
+        <i class="bi bi-rulers me-1"></i>
+        {% if n_unidades %}{{ n_unidades }} unidad{{ n_unidades|pluralize:"es" }} activa{{ n_unidades|pluralize:"s" }}{% else %}Sin unidades — cargar por defecto{% endif %}
       </div>
     </a>
   </div>

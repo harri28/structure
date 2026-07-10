@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}Unidades de Medida{% endblock %}
+{% block nav_configuracion %}active{% endblock %}
+{% block nav_unidades %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:hub' %}">Configuración</a></li>
+<li class="breadcrumb-item active">Unidades de Medida</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'configuracion:hub' %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Configuración
+    </a>
+    <h4><i class="bi bi-rulers me-2" style="color:#0284c7"></i>Unidades de Medida</h4>
+  </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert" style="font-size:.84rem">
+  {{ msg }} <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <span class="chip-seccion chip-activo">
+    <i class="bi bi-rulers me-1"></i>Materiales
+  </span>
+  <a href="{% url 'configuracion:cargo_lista' %}" class="chip-seccion">
+    <i class="bi bi-person-badge me-1"></i>Mano de Obra
+  </a>
+  <div class="ms-auto">
+    <a href="{% url 'configuracion:unidad_crear' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nueva Unidad
+    </a>
+  </div>
+</div>
+
+<div class="mb-3">
+  <div class="input-group" style="max-width:320px">
+    <span class="input-group-text" style="background:transparent">
+      <i class="bi bi-search" style="font-size:.85rem;color:#6b7280"></i>
+    </span>
+    <input type="text" id="buscador-unidades" class="form-control"
+           placeholder="Buscar por unidad, nombre o variante…" autocomplete="off"
+           style="font-size:.85rem">
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if unidades %}
+    <div class="table-responsive">
+      <table class="table-modern">
+        <thead>
+          <tr>
+            <th style="width:130px">Unidad de Medida</th>
+            <th>Nombre completo</th>
+            <th>Variantes de importación</th>
+            <th>Descripción</th>
+            <th style="width:90px" class="text-center">Estado</th>
+            <th style="width:100px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in unidades %}
+          <tr>
+            <td>
+              <code style="font-size:.85rem;font-weight:700;color:#0284c7">{{ u.codigo }}</code>
+            </td>
+            <td style="font-size:.85rem">{{ u.nombre }}</td>
+            <td style="font-size:.78rem;color:var(--text-muted)">{{ u.aliases|default:"—" }}</td>
+            <td style="font-size:.8rem;color:var(--text-muted)">{{ u.descripcion|default:"—" }}</td>
+            <td class="text-center">
+              {% if u.activo %}
+              <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.7rem">Activa</span>
+              {% else %}
+              <span class="badge bg-secondary" style="font-size:.7rem">Inactiva</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'configuracion:unidad_editar' u.pk %}"
+                 class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.75rem">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-rulers d-block mb-3" style="font-size:2.5rem;opacity:.3"></i>
+      <div class="fw-semibold mb-1">Sin unidades registradas</div>
+      <div style="font-size:.82rem">Crea una nueva unidad con el botón Nueva Unidad.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if unidades %}
+<div class="text-muted mt-2" style="font-size:.75rem">
+  <span id="conteo-visible">{{ unidades|length }}</span> de {{ unidades|length }} unidad{{ unidades|length|pluralize:"es" }}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const buscador = document.getElementById('buscador-unidades');
+if (buscador) {
+  buscador.addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    const filas = document.querySelectorAll('table tbody tr');
+    let visibles = 0;
+    filas.forEach(fila => {
+      const texto = fila.textContent.toLowerCase();
+      const mostrar = !q || texto.includes(q);
+      fila.style.display = mostrar ? '' : 'none';
+      if (mostrar) visibles++;
+    });
+    const conteo = document.getElementById('conteo-visible');
+    if (conteo) conteo.textContent = visibles;
+  });
+  buscador.focus();
+}
+</script>
+{% endblock %}

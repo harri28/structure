@@ -10,7 +10,7 @@
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
     <h4><i class="bi bi-folder2-open me-2 text-primary"></i>Proyectos</h4>
-    <div class="text-muted">Administración de proyectos — solo uno puede estar activo</div>
+    <div class="text-muted">Administración de proyectos del sistema</div>
   </div>
   <a href="{% url 'proyectos:crear' %}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus-lg me-1"></i>Nuevo Proyecto
@@ -25,6 +25,7 @@
           <th>Estado</th>
           <th>Código</th>
           <th>Nombre</th>
+          <th>Empresa Ejecutora</th>
           <th>Cliente</th>
           <th>Responsable</th>
           <th>Inicio</th>
@@ -33,51 +34,33 @@
       </thead>
       <tbody>
         {% for p in proyectos %}
-        <tr>
+        <tr style="cursor:pointer" onclick="window.location='{% url 'proyectos:detalle' p.pk %}'">
           <td>
-            {% if p.activo %}
-            <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;
-                         padding:.2em .65em;border-radius:4px;background:#dcfce7;color:#15803d;font-weight:700">
-              <i class="bi bi-check-circle-fill"></i> Activo
+            <span class="badge {% if p.estado == 'EJECUCION' %}bg-success{% elif p.estado == 'TERMINADO' %}bg-primary{% elif p.estado == 'PAUSADO' %}bg-warning text-dark{% else %}bg-secondary{% endif %}"
+                  style="font-size:.7rem">
+              {{ p.get_estado_display }}
             </span>
-            {% else %}
-            <span class="badge bg-secondary">{{ p.get_estado_display }}</span>
-            {% endif %}
           </td>
           <td><code>{{ p.codigo }}</code></td>
           <td class="fw-semibold">{{ p.nombre }}</td>
+          <td class="text-muted" style="font-size:.83rem">{{ p.empresa_ejecutora|default:"—" }}</td>
           <td class="text-muted" style="font-size:.83rem">{{ p.cliente|default:"—" }}</td>
           <td class="text-muted" style="font-size:.83rem">{{ p.responsable|default:"—" }}</td>
           <td class="text-muted" style="font-size:.83rem">{{ p.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
-          <td>
+          <td onclick="event.stopPropagation()">
             <div class="d-flex gap-1 justify-content-end">
-              {% if not p.activo %}
-              <form method="post" action="{% url 'proyectos:activar' p.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="btn-tbl"
-                        title="Activar este proyecto"
-                        onclick="return confirm('¿Activar el proyecto {{ p.codigo }}? Se desactivará el actual.')">
-                  <i class="bi bi-toggle-off me-1"></i>Activar
-                </button>
-              </form>
-              {% endif %}
-              <a href="{% url 'proyectos:detalle' p.pk %}" class="btn-tbl" title="Ver descripción">
-                <i class="bi bi-eye"></i>
-              </a>
               <a href="{% url 'proyectos:editar' p.pk %}" class="btn-tbl" title="Editar">
                 <i class="bi bi-pencil"></i>
               </a>
-              {% if not p.activo %}
               <a href="{% url 'proyectos:eliminar' p.pk %}" class="btn-tbl danger" title="Eliminar">
                 <i class="bi bi-trash"></i>
               </a>
-              {% endif %}
             </div>
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="7" class="text-center py-5 text-muted">
+          <td colspan="8" class="text-center py-5 text-muted">
             No hay proyectos registrados.
             <a href="{% url 'proyectos:crear' %}" class="d-block mt-2">Crear primer proyecto →</a>
           </td>

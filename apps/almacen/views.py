@@ -564,7 +564,8 @@ def api_req_detalles(request, pk):
 
 
 def api_insumo_stock(request, insumo_id):
-    proyecto = Proyecto.objects.filter(activo=True).first()
+    pid = request.session.get('proyecto_id')
+    proyecto = Proyecto.objects.filter(pk=pid).first() if pid else None
     if not proyecto:
         return JsonResponse({'stock': 0})
     entrada = DetalleEntrada.objects.filter(
@@ -578,14 +579,15 @@ def api_insumo_stock(request, insumo_id):
 
 def api_productos(request):
     q = request.GET.get('q', '')
-    proyecto_activo = Proyecto.objects.filter(activo=True).first()
+    pid = request.session.get('proyecto_id')
+    proyecto_activo = Proyecto.objects.filter(pk=pid).first() if pid else None
     if not proyecto_activo or not hasattr(proyecto_activo, 'presupuesto'):
         return JsonResponse([], safe=False)
     qs = proyecto_activo.presupuesto.insumos.all()
     if q:
         qs = qs.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
     data = [
-        {'id': p.pk, 'codigo': p.codigo, 'descripcion': p.descripcion, 'unidad': p.unidad}
+        {'id': p.pk, 'codigo': p.codigo, 'descripcion': p.descripcion, 'unidad': p.unidad, 'cantidad': str(p.cantidad)}
         for p in qs[:50]
     ]
     return JsonResponse(data, safe=False)

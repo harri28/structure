@@ -70,8 +70,14 @@
 </div>
 
 <!-- Equipo del proyecto -->
-<div class="text-muted mb-2" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em">
-  Equipo del Proyecto
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em">
+    Equipo del Proyecto
+  </div>
+  <a href="{% url 'configuracion:usuario_crear' %}?proyecto={{ proyecto.pk }}"
+     class="btn btn-primary btn-sm">
+    <i class="bi bi-person-plus me-1"></i>Nuevo Usuario
+  </a>
 </div>
 <div class="card">
   <div class="card-body p-0">

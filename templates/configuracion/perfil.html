@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Mi Perfil{% endblock %}
+{% block nav_perfil %}active{% endblock %}
+{% block nav_perfil_user %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Mi Perfil</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="page-header">
+      <h4><i class="bi bi-person-circle me-2"></i>Mi Perfil</h4>
+      <div class="text-muted">Datos personales y de contacto</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Información del usuario</div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+
+            <!-- Nombre + Apellido -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Nombre</label>
+              <input type="text" name="first_name" class="form-control"
+                     value="{{ user.first_name }}" placeholder="Nombre">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Apellido</label>
+              <input type="text" name="last_name" class="form-control"
+                     value="{{ user.last_name }}" placeholder="Apellido">
+            </div>
+
+            <!-- Usuario (solo lectura) -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Usuario</label>
+              <input type="text" class="form-control" value="{{ user.username }}"
+                     readonly style="background:#f8f9fa">
+            </div>
+
+            <!-- Correo -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Correo electrónico</label>
+              <input type="email" name="email" class="form-control"
+                     value="{{ user.email }}" placeholder="correo@ejemplo.com">
+            </div>
+
+            <!-- Cargo -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Cargo</label>
+              <input type="text" name="cargo" class="form-control"
+                     value="{{ perfil.cargo }}" placeholder="Ej. Ing. Residente">
+            </div>
+
+            <!-- Teléfono -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Teléfono</label>
+              <input type="text" name="telefono" class="form-control"
+                     value="{{ perfil.telefono }}" placeholder="Ej. 999 888 777">
+            </div>
+
+            {% if perfil.rol %}
+            <!-- Rol (solo lectura) -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Rol</label>
+              <input type="text" class="form-control" value="{{ perfil.rol.nombre }}"
+                     readonly style="background:#f8f9fa">
+            </div>
+            {% endif %}
+
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i>Guardar cambios
+            </button>
+            <a href="{% url 'proyectos:dashboard' %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

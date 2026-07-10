@@ -2,7 +2,7 @@
   <li class="nav-item">
     <a class="nav-link {% if active_tab == 'resumen' %}active{% endif %}"
        href="{% url 'presupuesto:lista' proyecto.pk %}">
-      <i class="bi bi-bar-chart-line me-1"></i>Resumen
+      <i class="bi bi-bar-chart-line me-1"></i>Actividad
     </a>
   </li>
   <li class="nav-item">
@@ -44,7 +44,7 @@
     {% else %}
     <a class="nav-link disabled">
     {% endif %}
-      <i class="bi bi-upload me-1"></i>Importar S10
+      <i class="bi bi-upload me-1"></i>Importar
     </a>
   </li>
 </ul>

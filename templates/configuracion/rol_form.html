@@ -63,6 +63,18 @@
               {{ grupo }}
             </div>
             {% for campo, label in campos %}
+            {% if campo == 'es_superadmin' and superadmin_existe and not es_este_superadmin %}
+            <label style="display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;border-radius:6px;
+                          opacity:.5;margin-bottom:.1rem" title="Ya existe un rol Superadmin en el sistema">
+              <input type="checkbox" name="{{ campo }}" value="1" class="perm-check"
+                     style="width:15px;height:15px;flex-shrink:0;accent-color:#2563eb"
+                     disabled>
+              <span style="font-size:.83rem">{{ label }}</span>
+              <span style="font-size:.73rem;color:#dc2626;margin-left:.25rem">
+                <i class="bi bi-lock-fill"></i> Ya existe un Superadmin
+              </span>
+            </label>
+            {% else %}
             <label style="display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;border-radius:6px;
                           cursor:pointer;margin-bottom:.1rem;transition:background .08s"
                    onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
@@ -71,6 +83,7 @@
                      {% if campo in permisos_checked %}checked{% endif %}>
               <span style="font-size:.83rem">{{ label }}</span>
             </label>
+            {% endif %}
             {% endfor %}
           </div>
           {% endfor %}

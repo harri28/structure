@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Panel de Control{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Panel de Control</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4><i class="bi bi-grid-1x2 me-2 text-primary"></i>Panel de Control</h4>
+    <div class="text-muted" style="font-size:.83rem">Resumen general del sistema</div>
+  </div>
+  <a href="{% url 'proyectos:crear' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo Proyecto
+  </a>
+</div>
+
+<!-- KPIs del sistema -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'proyectos:lista' %}" class="text-decoration-none">
+      <div class="card h-100" style="border-left:4px solid #2563eb;cursor:pointer">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+                Proyectos
+              </div>
+              <div style="font-size:2rem;font-weight:800;color:#2563eb;line-height:1.1;margin-top:.2rem">
+                {{ proyectos|length }}
+              </div>
+              <div style="font-size:.72rem;color:#9ca3af;margin-top:.1rem">registrados en el sistema</div>
+            </div>
+            <div style="width:42px;height:42px;border-radius:10px;background:#eff6ff;
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="bi bi-folder2-open" style="color:#2563eb;font-size:1.1rem"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card h-100" style="border-left:4px solid #16a34a">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+              En Ejecución
+            </div>
+            <div style="font-size:2rem;font-weight:800;color:#16a34a;line-height:1.1;margin-top:.2rem">
+              {{ activos }}
+            </div>
+            <div style="font-size:.72rem;color:#9ca3af;margin-top:.1rem">proyectos activos</div>
+          </div>
+          <div style="width:42px;height:42px;border-radius:10px;background:#f0fdf4;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-play-circle" style="color:#16a34a;font-size:1.1rem"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'configuracion:equipo' %}" class="text-decoration-none">
+      <div class="card h-100" style="border-left:4px solid #7c3aed;cursor:pointer">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+                Usuarios
+              </div>
+              <div style="font-size:2rem;font-weight:800;color:#7c3aed;line-height:1.1;margin-top:.2rem">
+                {{ total_usuarios }}
+              </div>
+              <div style="font-size:.72rem;color:#9ca3af;margin-top:.1rem">registrados en el sistema</div>
+            </div>
+            <div style="width:42px;height:42px;border-radius:10px;background:#f5f3ff;
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="bi bi-people-fill" style="color:#7c3aed;font-size:1.1rem"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'configuracion:empresa' %}" class="text-decoration-none">
+      <div class="card h-100" style="border-left:4px solid #f59e0b;cursor:pointer">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+                Configuración
+              </div>
+              <div style="font-size:1rem;font-weight:700;color:#374151;margin-top:.4rem">Empresa &amp; Roles</div>
+              <div style="font-size:.72rem;color:#9ca3af;margin-top:.1rem">parámetros del sistema</div>
+            </div>
+            <div style="width:42px;height:42px;border-radius:10px;background:#fffbeb;
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="bi bi-gear-fill" style="color:#f59e0b;font-size:1.1rem"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Lista de proyectos -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center py-2">
+    <span style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#374151">
+      <i class="bi bi-folder2-open me-2 text-primary"></i>Proyectos
+    </span>
+    <a href="{% url 'proyectos:lista' %}" style="font-size:.75rem;color:#2563eb">
+      Ver todos →
+    </a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Estado</th>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Cliente</th>
+          <th>Responsable</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in proyectos %}
+        <tr style="cursor:pointer" onclick="window.location='{% url 'proyecto_dashboard' pk=p.pk %}'">
+          <td>
+            <span class="badge {% if p.estado == 'EJECUCION' %}bg-success{% elif p.estado == 'TERMINADO' %}bg-primary{% elif p.estado == 'PAUSADO' %}bg-warning text-dark{% else %}bg-secondary{% endif %}"
+                  style="font-size:.7rem">
+              {{ p.get_estado_display }}
+            </span>
+          </td>
+          <td><code>{{ p.codigo }}</code></td>
+          <td class="fw-semibold">{{ p.nombre }}</td>
+          <td class="text-muted" style="font-size:.83rem">{{ p.cliente|default:"—" }}</td>
+          <td class="text-muted" style="font-size:.83rem">{{ p.responsable|default:"—" }}</td>
+          <td onclick="event.stopPropagation()">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'proyecto_dashboard' pk=p.pk %}" class="btn-tbl" title="Ver dashboard">
+                <i class="bi bi-speedometer2"></i>
+              </a>
+              <a href="{% url 'proyectos:detalle' p.pk %}" class="btn-tbl" title="Administrar">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-5 text-muted">
+            No hay proyectos registrados.
+            <a href="{% url 'proyectos:crear' %}" class="d-block mt-2">Crear primer proyecto →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

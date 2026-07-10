@@ -12,9 +12,6 @@
 
 {% block content %}
 <div class="page-header">
-  <a href="{% url 'presupuesto:detalle' contractual.pk %}" class="btn-back">
-    <i class="bi bi-chevron-left"></i> {{ contractual.nombre }}
-  </a>
   <h4>
     {% if tipo == 'ADICIONAL' %}
       <i class="bi bi-plus-circle me-2 text-success"></i>Nuevo Presupuesto Adicional
@@ -34,7 +31,7 @@
     <h6 class="mt-3 text-muted">El presupuesto contractual no tiene partidas</h6>
     <p class="text-muted small">Importe las partidas primero desde S10.</p>
     <a href="{% url 'presupuesto:importar' contractual.pk %}" class="btn btn-primary btn-sm mt-1">
-      <i class="bi bi-upload me-1"></i>Importar S10
+      <i class="bi bi-upload me-1"></i>Importar
     </a>
   </div>
 </div>

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Personal — {{ proyecto.codigo }}{% endblock %}
+{% block nav_personal %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'proyectos:dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item active">Personal</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4><i class="bi bi-people-fill me-2"></i>Personal del Proyecto</h4>
+    <div class="text-muted">{{ proyecto.codigo }} — {{ proyecto.nombre }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Nombre completo</th>
+          <th>Rol</th>
+          <th>Agregado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in miembros %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:32px;height:32px;border-radius:50%;background:#eff6ff;
+                          display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="bi bi-person-fill" style="color:#2563eb;font-size:.8rem"></i>
+              </div>
+              <span class="fw-semibold">{{ m.usuario.username }}</span>
+            </div>
+          </td>
+          <td>{{ m.usuario.get_full_name|default:"—" }}</td>
+          <td>
+            {% if m.usuario.perfil.rol %}
+            <span style="font-size:.72rem;padding:.25em .6em;border-radius:4px;
+                         background:#eff6ff;color:#1d4ed8;font-weight:600">
+              {{ m.usuario.perfil.rol.nombre }}
+            </span>
+            {% else %}
+            <span class="text-muted" style="font-size:.78rem">Sin rol</span>
+            {% endif %}
+          </td>
+          <td class="text-muted" style="font-size:.82rem">{{ m.agregado|date:"d/m/Y" }}</td>
+          <td>
+            <form method="post" action="{% url 'proyectos:miembro_quitar' proyecto.pk m.usuario.pk %}"
+                  style="display:inline"
+                  onsubmit="return confirm('¿Remover a {{ m.usuario.username }} del proyecto?')">
+              {% csrf_token %}
+              <button type="submit" class="btn-tbl danger" title="Remover">
+                <i class="bi bi-person-x"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center py-5 text-muted">
+            <i class="bi bi-people" style="font-size:2rem;opacity:.25;display:block;margin-bottom:.5rem"></i>
+            No hay personal asignado a este proyecto.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if usuarios_disponibles %}
+  <div class="card-footer" style="background:#f9fafb;border-top:1px solid #f3f4f6">
+    <form method="post" action="{% url 'proyectos:miembro_agregar' proyecto.pk %}"
+          class="d-flex gap-2 align-items-center flex-wrap">
+      {% csrf_token %}
+      <select name="usuario_id" class="form-control" style="max-width:280px;font-size:.83rem">
+        <option value="">— Seleccionar usuario —</option>
+        {% for u in usuarios_disponibles %}
+        <option value="{{ u.pk }}">
+          {{ u.get_full_name|default:u.username }}{% if u.get_full_name %} ({{ u.username }}){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-person-plus me-1"></i>Agregar al proyecto
+      </button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -7,93 +7,53 @@
 <li class="breadcrumb-item active">Insumos</li>
 {% endblock %}
 
-{% block submodule_chips %}
-{% include 'presupuesto/_pres_nav.html' with active_tab='insumos' %}
-{% endblock %}
-
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center">
-  <div>
-    <a href="{% url 'presupuesto:detalle' presupuesto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> {{ presupuesto.nombre }}</a>
-    <h4>Lista de Insumos</h4>
-    <div class="text-muted">Materiales, mano de obra, equipos y subcontratos del presupuesto</div>
-  </div>
-  <a href="{% url 'presupuesto:importar' presupuesto.pk %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-upload me-1"></i>Re-importar
+{% include 'presupuesto/_pres_nav.html' with active_tab='insumos' %}
+
+<!-- Filtros de tipo -->
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3 mt-3">
+  <a href="{% url 'presupuesto:insumos' presupuesto.pk %}"
+     class="req-chip{% if not tipo_sel %} active{% endif %}"
+     style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
+    Todos
+    <span class="ms-1" style="font-size:.75rem;opacity:.75">({{ insumos_total }})</span>
   </a>
+  <a href="?tipo=MANO_OBRA"
+     class="req-chip{% if tipo_sel == 'MANO_OBRA' %} active{% endif %}"
+     style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
+    <i class="bi bi-person-arms-up me-1"></i>Mano de Obra
+    <span class="ms-1" style="font-size:.75rem;opacity:.75">({{ totales.mano_obra.count }})</span>
+  </a>
+  <a href="?tipo=MATERIAL"
+     class="req-chip{% if tipo_sel == 'MATERIAL' %} active{% endif %}"
+     style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
+    <i class="bi bi-box-seam me-1"></i>Materiales
+    <span class="ms-1" style="font-size:.75rem;opacity:.75">({{ totales.materiales.count }})</span>
+  </a>
+  <a href="?tipo=EQUIPO"
+     class="req-chip{% if tipo_sel == 'EQUIPO' %} active{% endif %}"
+     style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
+    <i class="bi bi-gear me-1"></i>Equipos
+    <span class="ms-1" style="font-size:.75rem;opacity:.75">({{ totales.equipos.count }})</span>
+  </a>
+  <a href="?tipo=SUBCONTRATO"
+     class="req-chip{% if tipo_sel == 'SUBCONTRATO' %} active{% endif %}"
+     style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
+    <i class="bi bi-building me-1"></i>Subcontratos
+    <span class="ms-1" style="font-size:.75rem;opacity:.75">({{ totales.subcontratos.count }})</span>
+  </a>
+  <span class="ms-auto text-muted" style="font-size:.78rem">{{ insumos.count }} insumos</span>
 </div>
 
-<!-- Totales por tipo -->
-<div class="row g-3 mb-4">
-  <div class="col-sm-6 col-lg-3">
-    <div class="card stat-card">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon" style="background:#fef3c7">
-          <i class="bi bi-person-arms-up" style="color:var(--amber-dark)"></i>
-        </div>
-        <div>
-          <div class="stat-val">{{ totales.mano_obra.count }}</div>
-          <div class="stat-label">Mano de Obra</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-sm-6 col-lg-3">
-    <div class="card stat-card" style="border-top-color:var(--blue)">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon" style="background:#dbeafe">
-          <i class="bi bi-box-seam" style="color:var(--blue)"></i>
-        </div>
-        <div>
-          <div class="stat-val">{{ totales.materiales.count }}</div>
-          <div class="stat-label">Materiales</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-sm-6 col-lg-3">
-    <div class="card stat-card" style="border-top-color:var(--green)">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon" style="background:#d1fae5">
-          <i class="bi bi-gear" style="color:var(--green)"></i>
-        </div>
-        <div>
-          <div class="stat-val">{{ totales.equipos.count }}</div>
-          <div class="stat-label">Equipos</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-sm-6 col-lg-3">
-    <div class="card stat-card" style="border-top-color:var(--purple)">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon" style="background:#ede9fe">
-          <i class="bi bi-building" style="color:var(--purple)"></i>
-        </div>
-        <div>
-          <div class="stat-val">{{ totales.subcontratos.count }}</div>
-          <div class="stat-label">Subcontratos</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Filtro -->
-<div class="card mb-3">
-  <div class="card-body py-2">
-    <form method="get" class="d-flex gap-2 align-items-center">
-      <select name="tipo" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
-        <option value="">Todos los tipos</option>
-        {% for val, label in tipos %}
-        <option value="{{ val }}" {% if tipo_sel == val %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-      {% if tipo_sel %}
-      <a href="{% url 'presupuesto:insumos' presupuesto.pk %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
-      {% endif %}
-      <span class="text-muted ms-auto" style="font-size:.78rem">{{ insumos.count }} insumos</span>
-    </form>
+<!-- Buscador -->
+<div class="mb-3">
+  <div class="input-group" style="max-width:380px">
+    <span class="input-group-text" style="background:transparent">
+      <i class="bi bi-search" style="font-size:.85rem;color:#6b7280"></i>
+    </span>
+    <input type="text" id="buscador-insumos" class="form-control"
+           placeholder="Buscar por descripción, código o unidad…"
+           autocomplete="off" style="font-size:.85rem">
   </div>
 </div>
 
@@ -143,4 +103,18 @@
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const buscador = document.getElementById('buscador-insumos');
+if (buscador) {
+  buscador.addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    document.querySelectorAll('table tbody tr').forEach(fila => {
+      fila.style.display = (!q || fila.textContent.toLowerCase().includes(q)) ? '' : 'none';
+    });
+  });
+}
+</script>
 {% endblock %}

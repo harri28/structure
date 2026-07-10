@@ -8,12 +8,16 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
 from django.contrib.auth import views as auth_views
+from apps.proyectos import views as pv
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/',  auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('', lambda request: redirect('proyectos:dashboard'), name='home'),
+    # URLs limpias para dashboards
+    path('panel/dashboard/',              pv.panel_dashboard,    name='panel_dashboard'),
+    path('proyecto/<int:pk>/dashboard/',  pv.proyecto_dashboard, name='proyecto_dashboard'),
     path('proyectos/', include('apps.proyectos.urls', namespace='proyectos')),
     path('presupuesto/', include('apps.presupuesto.urls', namespace='presupuesto')),
     path('almacen/', include('apps.almacen.urls', namespace='almacen')),

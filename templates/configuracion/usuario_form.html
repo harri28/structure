@@ -12,8 +12,22 @@
 
 <div class="row justify-content-center">
   <div class="col-lg-7">
+
+    {% if accion == 'crear' and proyecto_destino %}
+    <div class="alert alert-info d-flex align-items-center gap-2 mb-3" style="font-size:.85rem">
+      <i class="bi bi-folder-fill" style="font-size:1rem;flex-shrink:0"></i>
+      <span>
+        Este usuario será asignado automáticamente al proyecto
+        <strong>{{ proyecto_destino.codigo }} — {{ proyecto_destino.nombre }}</strong>.
+      </span>
+    </div>
+    {% endif %}
+
     <form method="post">
       {% csrf_token %}
+      {% if proyecto_destino %}
+      <input type="hidden" name="proyecto_pk" value="{{ proyecto_destino.pk }}">
+      {% endif %}
 
       <!-- Datos personales -->
       <div class="card mb-3">

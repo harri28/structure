@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_configuracion %}active{% endblock %}
+{% block nav_unidades %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:hub' %}">Configuración</a></li>
+<li class="breadcrumb-item"><a href="{% url 'configuracion:cargo_lista' %}">Mano de Obra</a></li>
+<li class="breadcrumb-item active">{{ accion|capfirst }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'configuracion:cargo_lista' %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Mano de Obra
+    </a>
+    <h4><i class="bi bi-person-badge me-2" style="color:#0284c7"></i>{{ titulo }}</h4>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Código <span class="text-danger">*</span>
+            </label>
+            <div style="position:relative;max-width:120px">
+              <input type="text" name="codigo" id="input-codigo"
+                     class="form-control{% if error.codigo %} is-invalid{% endif %}"
+                     value="{{ form_codigo }}" placeholder="Ej: 1, 2, 3, 4"
+                     maxlength="10" autocomplete="off">
+              <div id="codigo-sugerencias"
+                   style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:1050;
+                          background:#fff;border:1px solid #d1d5db;
+                          border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:200px;overflow-y:auto">
+              </div>
+            </div>
+            {% if error.codigo %}
+            <div class="text-danger mt-1" style="font-size:.84rem">{{ error.codigo }}</div>
+            {% endif %}
+            <div id="codigo-alerta" class="mt-2" style="display:none"></div>
+            <div class="form-text mt-1">
+              Número de orden que usa el sistema: 1 = CAPATAZ, 2 = OPERARIO, 3 = OFICIAL, 4 = PEÓN.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Nombre oficial <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="nombre"
+                   class="form-control{% if error.nombre %} is-invalid{% endif %}"
+                   value="{{ form_nombre }}" placeholder="Ej: CAPATAZ, OPERARIO, OFICIAL, PEÓN"
+                   style="text-transform:uppercase">
+            {% if error.nombre %}
+            <div class="invalid-feedback">{{ error.nombre }}</div>
+            {% endif %}
+            <div class="form-text">Nombre estándar según normativa (se guarda en mayúsculas).</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Variantes de importación</label>
+            <textarea name="variantes" class="form-control" rows="3"
+                      placeholder="Ej: capataz, maestro, maestro de obra, capataz de obra">{{ form_variantes }}</textarea>
+            <div class="form-text">
+              Palabras clave separadas por coma que identifican este cargo en archivos Excel importados.
+              La búsqueda es por contenido: si el archivo dice "Maestro de cuadrilla" y "maestro" está en las variantes, se asigna este código.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Orden de visualización</label>
+            <input type="number" name="orden" class="form-control"
+                   value="{{ form_orden|default:'0' }}" min="0" style="width:100px">
+          </div>
+
+          <div class="mb-4">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="activo" value="1" id="chk_activo"
+                     {% if form_activo == '1' or form_activo == True %}checked{% endif %}>
+              <label class="form-check-label" for="chk_activo">Cargo activo</label>
+            </div>
+            <div class="form-text">Los cargos inactivos no se usan en la normalización de importaciones.</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" id="btn-submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg me-1"></i>
+              {% if accion == 'crear' %}Crear Cargo{% else %}Guardar Cambios{% endif %}
+            </button>
+            <a href="{% url 'configuracion:cargo_lista' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ cargos_existentes|json_script:"cargos-data" }}
+<script>
+const CARGOS = JSON.parse(document.getElementById('cargos-data').textContent);
+const inputCodigo  = document.getElementById('input-codigo');
+const sugerencias  = document.getElementById('codigo-sugerencias');
+const alerta       = document.getElementById('codigo-alerta');
+const btnSubmit    = document.getElementById('btn-submit');
+
+{% if accion == 'editar' %}
+const CODIGO_ACTUAL = "{{ form_codigo }}";
+{% else %}
+const CODIGO_ACTUAL = null;
+{% endif %}
+
+function mostrarAlerta(cargo) {
+  alerta.innerHTML = `
+    <div class="d-flex align-items-start gap-2 p-2 rounded"
+         style="background:#fef3c7;border:1px solid #fcd34d;font-size:.82rem">
+      <i class="bi bi-exclamation-triangle-fill text-warning mt-1" style="flex-shrink:0"></i>
+      <div>
+        Código <strong>${cargo.codigo}</strong> — ${cargo.nombre} ya existe en el sistema.
+        <a href="{% url 'configuracion:cargo_lista' %}" class="ms-1" style="font-size:.78rem">Ver cargos →</a>
+      </div>
+    </div>`;
+  alerta.style.display = 'block';
+  btnSubmit.disabled = true;
+}
+
+function ocultarAlerta() {
+  alerta.style.display = 'none';
+  btnSubmit.disabled = false;
+}
+
+function renderSugerencias(query) {
+  if (!query) { sugerencias.style.display = 'none'; return; }
+  const matches = CARGOS.filter(c =>
+    c.codigo.toLowerCase().includes(query.toLowerCase()) ||
+    c.nombre.toLowerCase().includes(query.toLowerCase())
+  );
+  if (!matches.length) { sugerencias.style.display = 'none'; return; }
+  sugerencias.innerHTML = matches.map(c => `
+    <div class="sugerencia-item px-3 py-2"
+         style="cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--border)"
+         data-codigo="${c.codigo}" data-nombre="${c.nombre}">
+      <span style="font-weight:700;color:#0284c7">${c.codigo}</span>
+      <span class="text-muted ms-2">${c.nombre}</span>
+    </div>`).join('');
+  sugerencias.style.display = 'block';
+  sugerencias.querySelectorAll('.sugerencia-item').forEach(el => {
+    el.addEventListener('mouseenter', () => el.style.background = '#f0f9ff');
+    el.addEventListener('mouseleave', () => el.style.background = '#fff');
+    el.addEventListener('click', () => {
+      inputCodigo.value = el.dataset.codigo;
+      sugerencias.style.display = 'none';
+      verificarExistencia(el.dataset.codigo);
+    });
+  });
+}
+
+function verificarExistencia(valor) {
+  if (!valor) { ocultarAlerta(); return; }
+  const encontrado = CARGOS.find(c => c.codigo.toLowerCase() === valor.toLowerCase());
+  if (encontrado && encontrado.codigo !== CODIGO_ACTUAL) {
+    mostrarAlerta(encontrado);
+  } else {
+    ocultarAlerta();
+  }
+}
+
+inputCodigo.addEventListener('input', function() {
+  renderSugerencias(this.value);
+  verificarExistencia(this.value);
+});
+
+inputCodigo.addEventListener('blur', () => {
+  setTimeout(() => { sugerencias.style.display = 'none'; }, 150);
+});
+</script>
+{% endblock %}
