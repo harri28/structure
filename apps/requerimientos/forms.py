@@ -75,5 +75,5 @@ class DetalleRequerimientoForm(forms.ModelForm):
 DetalleRequerimientoFormSet = inlineformset_factory(
     Requerimiento, DetalleRequerimiento,
     form=DetalleRequerimientoForm,
-    extra=3, can_delete=True,
+    extra=1, can_delete=True,
 )

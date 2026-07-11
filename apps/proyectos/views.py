@@ -287,3 +287,142 @@ def miembro_quitar(request, pk, usuario_id):
         ProyectoMiembro.objects.filter(proyecto=proyecto, usuario_id=usuario_id).delete()
         messages.success(request, 'Miembro removido del proyecto.')
     return redirect('proyectos:personal', pk=pk)
+
+
+def proyecto_restablecer(request, pk):
+    if not _es_admin(request.user):
+        return redirect('proyectos:lista')
+
+    proyecto = get_object_or_404(Proyecto, pk=pk)
+
+    from apps.requerimientos.models import Requerimiento
+    from apps.almacen.models import Entrada, Salida, Cotizacion, OrdenCompra
+    from apps.logistica.models import GuiaRemision
+    from apps.maquinaria.models import RegistroDiario, RegistroMaquinaria, Liquidacion
+    from apps.presupuesto.models import Presupuesto, Partida
+    from apps.registro.models import Notificacion, RegistroAccion
+
+    def _count(qs):
+        try:
+            return qs.count()
+        except Exception:
+            return 0
+
+    modulos = {
+        'presupuesto': {
+            'nombre': 'Presupuesto',
+            'icono': 'bi-table',
+            'color': '#6366f1',
+            'descripcion': 'Partidas, insumos, ACU y modificaciones',
+            'count': _count(Partida.objects.filter(presupuesto__proyecto=proyecto)),
+        },
+        'requerimientos': {
+            'nombre': 'Requerimientos',
+            'icono': 'bi-file-earmark-text',
+            'color': '#f59e0b',
+            'descripcion': 'Requerimientos y sus detalles',
+            'count': _count(Requerimiento.objects.filter(proyecto=proyecto)),
+        },
+        'cotizaciones': {
+            'nombre': 'Cotizaciones y OC',
+            'icono': 'bi-tags',
+            'color': '#10b981',
+            'descripcion': 'Cotizaciones y órdenes de compra',
+            'count': _count(Cotizacion.objects.filter(proyecto=proyecto)) + _count(OrdenCompra.objects.filter(proyecto=proyecto)),
+        },
+        'almacen': {
+            'nombre': 'Almacén',
+            'icono': 'bi-box-seam',
+            'color': '#3b82f6',
+            'descripcion': 'Entradas y salidas de materiales',
+            'count': _count(Entrada.objects.filter(proyecto=proyecto)) + _count(Salida.objects.filter(proyecto=proyecto)),
+        },
+        'guias': {
+            'nombre': 'Guías de Remisión',
+            'icono': 'bi-file-earmark-arrow-right',
+            'color': '#8b5cf6',
+            'descripcion': 'Guías de remisión generadas',
+            'count': _count(GuiaRemision.objects.filter(proyecto=proyecto)),
+        },
+        'maquinaria': {
+            'nombre': 'Maquinaria',
+            'icono': 'bi-truck',
+            'color': '#ec4899',
+            'descripcion': 'Registros diarios de maquinaria y cuadrilla',
+            'count': _count(RegistroDiario.objects.filter(proyecto=proyecto)) + _count(RegistroMaquinaria.objects.filter(proyecto=proyecto)),
+        },
+        'notificaciones': {
+            'nombre': 'Notificaciones',
+            'icono': 'bi-bell',
+            'color': '#f97316',
+            'descripcion': 'Todas las notificaciones del sistema',
+            'count': _count(Notificacion.objects.all()),
+        },
+        'actividad': {
+            'nombre': 'Actividad',
+            'icono': 'bi-activity',
+            'color': '#64748b',
+            'descripcion': 'Historial de acciones registradas',
+            'count': _count(RegistroAccion.objects.all()),
+        },
+    }
+
+    if request.method == 'POST':
+        confirmacion = request.POST.get('confirmacion', '').strip()
+        if confirmacion != proyecto.codigo:
+            messages.error(request, f'El código ingresado no coincide. Debes escribir exactamente: {proyecto.codigo}')
+            return render(request, 'proyectos/restablecer.html', {'proyecto': proyecto, 'modulos': modulos})
+
+        seleccionados = request.POST.getlist('modulos')
+        if not seleccionados:
+            messages.warning(request, 'No seleccionaste ningún módulo.')
+            return render(request, 'proyectos/restablecer.html', {'proyecto': proyecto, 'modulos': modulos})
+
+        eliminados = []
+
+        if 'presupuesto' in seleccionados:
+            try:
+                proyecto.presupuesto.delete()
+                eliminados.append('Presupuesto')
+            except Presupuesto.DoesNotExist:
+                pass
+
+        if 'requerimientos' in seleccionados:
+            Requerimiento.objects.filter(proyecto=proyecto).delete()
+            eliminados.append('Requerimientos')
+
+        if 'cotizaciones' in seleccionados:
+            Cotizacion.objects.filter(proyecto=proyecto).delete()
+            OrdenCompra.objects.filter(proyecto=proyecto).delete()
+            eliminados.append('Cotizaciones y OC')
+
+        if 'almacen' in seleccionados:
+            Entrada.objects.filter(proyecto=proyecto).delete()
+            Salida.objects.filter(proyecto=proyecto).delete()
+            eliminados.append('Almacén')
+
+        if 'guias' in seleccionados:
+            GuiaRemision.objects.filter(proyecto=proyecto).delete()
+            eliminados.append('Guías de Remisión')
+
+        if 'maquinaria' in seleccionados:
+            RegistroDiario.objects.filter(proyecto=proyecto).delete()
+            RegistroMaquinaria.objects.filter(proyecto=proyecto).delete()
+            Liquidacion.objects.filter(proyecto=proyecto).delete()
+            eliminados.append('Maquinaria')
+
+        if 'notificaciones' in seleccionados:
+            Notificacion.objects.all().delete()
+            eliminados.append('Notificaciones')
+
+        if 'actividad' in seleccionados:
+            RegistroAccion.objects.all().delete()
+            eliminados.append('Actividad')
+
+        messages.success(request, f'Restablecido: {", ".join(eliminados)}.')
+        return redirect('proyectos:detalle', pk=pk)
+
+    return render(request, 'proyectos/restablecer.html', {
+        'proyecto': proyecto,
+        'modulos':  modulos,
+    })

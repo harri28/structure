@@ -23,6 +23,9 @@
     <span class="badge fs-6 {% if proyecto.estado == 'EJECUCION' %}bg-success{% elif proyecto.estado == 'TERMINADO' %}bg-primary{% elif proyecto.estado == 'PAUSADO' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
       {{ proyecto.get_estado_display }}
     </span>
+    <a href="{% url 'proyectos:restablecer' proyecto.pk %}" class="btn btn-outline-warning btn-sm" title="Restablecer datos del proyecto">
+      <i class="bi bi-arrow-counterclockwise me-1"></i>Restablecer
+    </a>
     <a href="{% url 'proyectos:editar' proyecto.pk %}" class="btn-tbl">
       <i class="bi bi-pencil"></i> Editar datos
     </a>

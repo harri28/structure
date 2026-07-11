@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from apps.proyectos.models import Proyecto
@@ -163,6 +164,55 @@ def aprobar(request, pk):
         messages.success(request, f'Requerimiento REQ-{req.numero} aprobado.')
     next_url = request.POST.get('next', '')
     return redirect(next_url or 'requerimientos:detalle', pk=req.pk) if not next_url else redirect(next_url)
+
+
+def vs_atenciones(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL', 'ATENDIDO']
+    detalles = (DetalleRequerimiento.objects
+                .filter(requerimiento__proyecto=proyecto,
+                        requerimiento__estado__in=estados_incluidos)
+                .select_related('insumo', 'requerimiento'))
+
+    consolidado = {}
+    for det in detalles:
+        key = ('insumo', det.insumo_id) if det.insumo_id else ('desc', det.descripcion or det.codigo or '—')
+        if key not in consolidado:
+            if det.insumo:
+                codigo         = det.insumo.codigo or det.codigo or '—'
+                descripcion    = det.insumo.descripcion
+                unidad         = det.insumo.unidad or det.unidad
+                tipo           = det.insumo.get_tipo_display() if hasattr(det.insumo, 'get_tipo_display') else ''
+                presupuestado  = det.insumo.cantidad or Decimal('0')
+            else:
+                codigo         = det.codigo or '—'
+                descripcion    = det.descripcion
+                unidad         = det.unidad
+                tipo           = ''
+                presupuestado  = Decimal('0')
+            consolidado[key] = {
+                'codigo': codigo, 'descripcion': descripcion,
+                'unidad': unidad, 'tipo': tipo,
+                'presupuestado': presupuestado,
+                'solicitado': Decimal('0'), 'atendido': Decimal('0'),
+                'observaciones': '',
+            }
+        consolidado[key]['solicitado'] += det.cantidad_requerida or Decimal('0')
+        if det.requerimiento.estado in ['APROBADO', 'PARCIAL', 'ATENDIDO']:
+            consolidado[key]['atendido'] += det.cantidad_aprobada or Decimal('0')
+        if det.observacion:
+            consolidado[key]['observaciones'] = det.observacion
+
+    filas = []
+    for item in consolidado.values():
+        item['saldo'] = item['presupuestado'] - item['atendido']
+        filas.append(item)
+    filas.sort(key=lambda x: x['codigo'])
+
+    return render(request, 'requerimientos/vs_atenciones.html', {
+        'proyecto': proyecto,
+        'filas': filas,
+    })
 
 
 def eliminar(request, pk):

@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% block title %}{% if tipo_filtro == 'EQUIPO' %}Equipos{% elif tipo_filtro == 'MAQUINARIA' %}Maquinaria{% else %}Detección de Insumos{% endif %}{% endblock %}
+{% block nav_configuracion %}active{% endblock %}
+{% block nav_unidades %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:hub' %}">Configuración</a></li>
+<li class="breadcrumb-item active">
+  {% if tipo_filtro == 'EQUIPO' %}Equipos{% elif tipo_filtro == 'MAQUINARIA' %}Maquinaria{% else %}Detección de Insumos{% endif %}
+</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'configuracion:hub' %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Configuración
+    </a>
+    <h4>
+      {% if tipo_filtro == 'EQUIPO' %}
+        <i class="bi bi-tools me-2" style="color:#0284c7"></i>Equipos
+      {% elif tipo_filtro == 'MAQUINARIA' %}
+        <i class="bi bi-truck me-2" style="color:#0284c7"></i>Maquinaria
+      {% else %}
+        <i class="bi bi-diagram-3 me-2" style="color:#0284c7"></i>Detección de Insumos
+      {% endif %}
+    </h4>
+  </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert" style="font-size:.84rem">
+  {{ msg }} <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'configuracion:unidad_lista' %}" class="chip-seccion">
+    <i class="bi bi-rulers me-1"></i>Materiales
+  </a>
+  <a href="{% url 'configuracion:cargo_lista' %}" class="chip-seccion">
+    <i class="bi bi-person-badge me-1"></i>Mano de Obra
+  </a>
+  <a href="{% url 'configuracion:regla_lista' %}?tipo=EQUIPO"
+     class="chip-seccion {% if tipo_filtro == 'EQUIPO' %}chip-activo{% endif %}">
+    <i class="bi bi-tools me-1"></i>Equipos
+  </a>
+  <a href="{% url 'configuracion:regla_lista' %}?tipo=MAQUINARIA"
+     class="chip-seccion {% if tipo_filtro == 'MAQUINARIA' %}chip-activo{% endif %}">
+    <i class="bi bi-truck me-1"></i>Maquinaria
+  </a>
+  <a href="{% url 'configuracion:decimal_lista' %}" class="chip-seccion">
+    <i class="bi bi-123 me-1"></i>Decimal
+  </a>
+  <a href="{% url 'configuracion:regla_lista' %}"
+     class="chip-seccion {% if not tipo_filtro %}chip-activo{% endif %}">
+    <i class="bi bi-diagram-3 me-1"></i>Detección
+  </a>
+  <div class="ms-auto d-flex gap-2">
+    <form method="post" action="{% url 'configuracion:regla_cargar_defaults' %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-database-fill-down me-1"></i>Cargar por defecto
+      </button>
+    </form>
+    <a href="{% url 'configuracion:regla_crear' %}{% if tipo_filtro %}?tipo={{ tipo_filtro }}{% endif %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nueva Regla
+    </a>
+  </div>
+</div>
+
+<div class="alert alert-info py-2 mb-3" style="font-size:.82rem">
+  <i class="bi bi-info-circle me-1"></i>
+  Cuando el sistema importa un archivo de insumos, revisa la descripción de cada ítem contra estas palabras clave.
+  Si hay coincidencia, asigna el tipo automáticamente — sin importar qué sección venía en el archivo original.
+  La prioridad es: <strong>Mano de Obra</strong> (cargos) > <strong>estas reglas</strong> > encabezado del archivo > MATERIAL por defecto.
+</div>
+
+<div class="mb-3">
+  <div class="input-group" style="max-width:340px">
+    <span class="input-group-text" style="background:transparent">
+      <i class="bi bi-search" style="font-size:.85rem;color:#6b7280"></i>
+    </span>
+    <input type="text" id="buscador-reglas" class="form-control"
+           placeholder="Buscar por nombre, tipo o palabra clave…" autocomplete="off"
+           style="font-size:.85rem">
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if reglas %}
+    <div class="table-responsive">
+      <table class="table-modern">
+        <thead>
+          <tr>
+            <th style="width:130px">Tipo</th>
+            <th>Nombre de la regla</th>
+            <th>Palabras clave</th>
+            <th style="width:90px" class="text-center">Estado</th>
+            <th style="width:100px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reglas %}
+          <tr>
+            <td>
+              <span class="badge rounded-1
+                {% if r.tipo == 'EQUIPO' %}bg-warning text-dark
+                {% elif r.tipo == 'SUBCONTRATO' %}bg-info
+                {% elif r.tipo == 'MATERIAL' %}bg-success
+                {% else %}bg-secondary{% endif %}"
+                style="font-size:.72rem;font-weight:600">
+                {{ r.get_tipo_display }}
+              </span>
+            </td>
+            <td style="font-size:.85rem;font-weight:600">{{ r.nombre }}</td>
+            <td style="font-size:.76rem;color:var(--text-muted)">{{ r.palabras|default:"—" }}</td>
+            <td class="text-center">
+              {% if r.activo %}
+              <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.7rem">Activo</span>
+              {% else %}
+              <span class="badge bg-secondary" style="font-size:.7rem">Inactivo</span>
+              {% endif %}
+            </td>
+            <td class="text-end d-flex gap-1 justify-content-end">
+              <a href="{% url 'configuracion:regla_editar' r.pk %}"
+                 class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.75rem" title="Editar">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'configuracion:regla_eliminar' r.pk %}"
+                 class="btn btn-outline-danger btn-sm py-0 px-2" style="font-size:.75rem" title="Eliminar">
+                <i class="bi bi-trash"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-diagram-3 d-block mb-3" style="font-size:2.5rem;opacity:.3"></i>
+      <div class="fw-semibold mb-1">Sin reglas configuradas</div>
+      <div style="font-size:.82rem">Carga las reglas por defecto o crea una nueva.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if reglas %}
+<div class="text-muted mt-2" style="font-size:.75rem">
+  <span id="conteo-visible">{{ reglas|length }}</span> de {{ reglas|length }} regla{{ reglas|length|pluralize:"s" }}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const buscador = document.getElementById('buscador-reglas');
+if (buscador) {
+  buscador.addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    const filas = document.querySelectorAll('table tbody tr');
+    let visibles = 0;
+    filas.forEach(fila => {
+      const texto = fila.textContent.toLowerCase();
+      const mostrar = !q || texto.includes(q);
+      fila.style.display = mostrar ? '' : 'none';
+      if (mostrar) visibles++;
+    });
+    const conteo = document.getElementById('conteo-visible');
+    if (conteo) conteo.textContent = visibles;
+  });
+  buscador.focus();
+}
+</script>
+{% endblock %}

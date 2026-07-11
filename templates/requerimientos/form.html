@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}{{ titulo }}{% endblock %}
-{% block nav_req %}active{% endblock %}
+{% block nav_req_lista %}active{% endblock %}
+{% block nav_req_open %}show{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Requerimientos</a></li>
@@ -31,7 +32,7 @@
           <input type="text" class="form-control" value="{{ empresa.ruc }}" readonly>
         </div>
         <div class="col-md-4">
-          <label class="form-label fw-semibold">Fecha</label>
+          <label class="form-label fw-semibold">Fecha de Solicitud</label>
           <input type="date" name="fecha" value="{{ form.fecha.value|default:'' }}" class="form-control" required id="id_fecha_general">
         </div>
       </div>

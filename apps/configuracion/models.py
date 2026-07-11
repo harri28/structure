@@ -238,6 +238,34 @@ class CargoManoObra(models.Model):
         return f'{self.codigo} — {self.nombre}'
 
 
+class ReglaDeteccionInsumo(models.Model):
+    """Palabras clave para clasificar insumos importados por tipo (EQUIPO, SUBCONTRATO, etc.)."""
+    TIPO_CHOICES = [
+        ('EQUIPO',      'Equipo'),
+        ('MAQUINARIA',  'Maquinaria'),
+        ('SUBCONTRATO', 'Subcontrato'),
+        ('MATERIAL',    'Material'),
+        ('OTRO',        'Otro'),
+    ]
+    tipo     = models.CharField('Tipo de insumo', max_length=20, choices=TIPO_CHOICES)
+    nombre   = models.CharField('Nombre de la regla', max_length=100)
+    palabras = models.TextField(
+        'Palabras clave',
+        blank=True,
+        help_text='Palabras clave separadas por coma. Si alguna aparece en la descripción del insumo, se asigna este tipo.',
+    )
+    orden    = models.PositiveSmallIntegerField('Orden', default=0)
+    activo   = models.BooleanField('Activo', default=True)
+
+    class Meta:
+        verbose_name        = 'Regla de Detección de Insumo'
+        verbose_name_plural = 'Reglas de Detección de Insumos'
+        ordering            = ['tipo', 'orden', 'nombre']
+
+    def __str__(self):
+        return f'{self.get_tipo_display()} — {self.nombre}'
+
+
 class PerfilUsuario(models.Model):
     usuario  = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     rol      = models.ForeignKey(Rol, null=True, blank=True, on_delete=models.SET_NULL, related_name='usuarios')

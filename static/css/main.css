@@ -176,6 +176,7 @@ body.sb-collapsed #sidebar .collapse { display: none !important; }
 /* Sub-links */
 .sb-sublink { padding-left: 2.2rem; font-size: .8rem; }
 .sb-sublink .bi { font-size: .82rem; }
+.sb-sublink--deep { padding-left: 4.5rem; }
 
 /* Colapsable sidebar */
 .sb-collapsible {

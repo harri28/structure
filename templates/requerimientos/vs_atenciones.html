@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Requerimientos vs Atenciones — {{ proyecto.codigo }}{% endblock %}
+{% block nav_req_vs %}active{% endblock %}
+{% block nav_req_open %}show{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Requerimientos vs Atenciones</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4><i class="bi bi-bar-chart-steps me-2"></i>Requerimientos vs Atenciones</h4>
+    <div class="text-muted">Consolidado de materiales solicitados y atendidos por Logística</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if filas %}
+    <div style="overflow-x:auto">
+      <table class="table-modern" style="font-size:.82rem">
+        <thead style="background:#fefce8;color:#713f12">
+          <tr>
+            <th style="width:60px;text-align:center">Código</th>
+            <th style="min-width:260px">Material y/o Herramienta</th>
+            <th style="width:60px;text-align:center">Und</th>
+            <th style="width:90px;text-align:center">Clasificación</th>
+            <th style="width:100px;text-align:right">Presupuestado</th>
+            <th style="width:100px;text-align:right">Solicitado</th>
+            <th style="width:100px;text-align:right">Atendido</th>
+            <th style="width:100px;text-align:right">Saldo</th>
+            <th style="min-width:140px">Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in filas %}
+          <tr>
+            <td class="text-center fw-semibold" style="color:#92400e">{{ f.codigo }}</td>
+            <td style="font-weight:500">{{ f.descripcion }}</td>
+            <td class="text-center text-muted">{{ f.unidad }}</td>
+            <td class="text-center">
+              <span style="font-size:.75rem;color:#6b7280">
+                {{ f.tipo|default:"General" }}
+              </span>
+            </td>
+            <td class="text-end text-muted">{{ f.presupuestado|floatformat:2 }}</td>
+            <td class="text-end fw-semibold">{{ f.solicitado|floatformat:2 }}</td>
+            <td class="text-end" style="color:#15803d;font-weight:600">{{ f.atendido|floatformat:2 }}</td>
+            <td class="text-end fw-bold
+              {% if f.saldo < 0 %}text-danger{% elif f.saldo == 0 %}text-success{% else %}{% endif %}">
+              {{ f.saldo|floatformat:2 }}
+            </td>
+            <td class="text-muted" style="font-size:.78rem">{{ f.observaciones|default:"" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot style="background:#f9fafb">
+          <tr>
+            <td colspan="4" class="fw-bold text-end" style="font-size:.8rem;padding:.6rem 1rem">Total</td>
+            <td class="text-end fw-bold">
+              {% with total_sol=0 %}
+              {{ filas|length }}
+              {% endwith %}
+            </td>
+            <td></td><td></td><td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="px-3 py-2 text-muted" style="font-size:.74rem;border-top:1px solid #f3f4f6">
+      <i class="bi bi-info-circle me-1"></i>
+      Vista informativa. Atendido refleja cantidades aprobadas por Logística.
+      Saldo en rojo indica exceso de atención sobre lo solicitado.
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-bar-chart-steps d-block mb-3" style="font-size:2.5rem;opacity:.3"></i>
+      <div class="fw-semibold mb-1">Sin datos</div>
+      <div style="font-size:.82rem">No hay requerimientos enviados o aprobados en este proyecto.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -4,11 +4,12 @@ from apps.proyectos.models import Proyecto
 
 
 TIPOS_RECURSO = [
-    ('MATERIAL', 'Material'),
-    ('MANO_OBRA', 'Mano de Obra'),
-    ('EQUIPO', 'Equipo/Maquinaria'),
+    ('MATERIAL',    'Material'),
+    ('MANO_OBRA',   'Mano de Obra'),
+    ('EQUIPO',      'Equipo'),
+    ('MAQUINARIA',  'Maquinaria'),
     ('SUBCONTRATO', 'Subcontrato'),
-    ('OTRO', 'Otro'),
+    ('OTRO',        'Otro'),
 ]
 
 TIPOS_MODIFICACION = [

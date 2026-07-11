@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_configuracion %}active{% endblock %}
+{% block nav_unidades %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:hub' %}">Configuración</a></li>
+<li class="breadcrumb-item"><a href="{% url 'configuracion:regla_lista' %}">Detección de Insumos</a></li>
+<li class="breadcrumb-item active">{{ accion|capfirst }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'configuracion:regla_lista' %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Detección de Insumos
+    </a>
+    <h4><i class="bi bi-diagram-3 me-2" style="color:#0284c7"></i>{{ titulo }}</h4>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Tipo de insumo <span class="text-danger">*</span>
+            </label>
+            <select name="tipo" class="form-select{% if error.tipo %} is-invalid{% endif %}">
+              <option value="">— Seleccionar tipo —</option>
+              {% for val, label in tipo_choices %}
+              <option value="{{ val }}" {% if form_tipo == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if error.tipo %}
+            <div class="invalid-feedback">{{ error.tipo }}</div>
+            {% endif %}
+            <div class="form-text">Tipo que se asignará a los insumos que coincidan con las palabras clave.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Nombre de la regla <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="nombre"
+                   class="form-control{% if error.nombre %} is-invalid{% endif %}"
+                   value="{{ form_nombre }}"
+                   placeholder="Ej: Maquinaria pesada, Equipos de construcción">
+            {% if error.nombre %}
+            <div class="invalid-feedback">{{ error.nombre }}</div>
+            {% endif %}
+            <div class="form-text">Nombre descriptivo para identificar el grupo de palabras clave.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Palabras clave</label>
+            <textarea name="palabras" class="form-control" rows="4"
+                      placeholder="Ej: retroexcavadora, excavadora, volquete, tractor">{{ form_palabras }}</textarea>
+            <div class="form-text">
+              Palabras clave separadas por coma. Si alguna de ellas aparece en la descripción del insumo importado,
+              se asigna este tipo automáticamente. La búsqueda no distingue mayúsculas/minúsculas.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Orden de prioridad</label>
+            <input type="number" name="orden" class="form-control"
+                   value="{{ form_orden|default:'0' }}" min="0" style="width:100px">
+            <div class="form-text">Orden de evaluación dentro del mismo tipo. Menor número = mayor prioridad.</div>
+          </div>
+
+          <div class="mb-4">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="activo" value="1" id="chk_activo"
+                     {% if form_activo == '1' or form_activo == True %}checked{% endif %}>
+              <label class="form-check-label" for="chk_activo">Regla activa</label>
+            </div>
+            <div class="form-text">Las reglas inactivas no se aplican durante la importación.</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg me-1"></i>
+              {% if accion == 'crear' %}Crear Regla{% else %}Guardar Cambios{% endif %}
+            </button>
+            <a href="{% url 'configuracion:regla_lista' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

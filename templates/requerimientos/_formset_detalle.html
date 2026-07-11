@@ -6,7 +6,7 @@
     <tr>
       <th style="width:3rem;text-align:center">Ítem</th>
       <th style="min-width:220px">Descripción</th>
-      <th style="width:90px">Cantidad</th>
+      <th style="width:130px">Cantidad</th>
       <th style="width:80px">Unidad</th>
       <th style="width:90px">Stock</th>
       <th style="width:110px">Cant. Requerida</th>
@@ -35,13 +35,15 @@
       </td>
       <td>
         <input type="number" step="0.0001" name="{{ form.cantidad.html_name }}"
-               value="{{ form.cantidad.value|default:'' }}"
-               class="form-control form-control-sm cantidad-pres">
+               value="{{ form.cantidad.value|default:'0' }}"
+               class="form-control form-control-sm cantidad-pres"
+               readonly style="background:#f8f9fa;color:#6b7280">
       </td>
       <td>
         <input type="text" name="{{ form.unidad.html_name }}"
                value="{{ form.unidad.value|default:'' }}"
-               class="form-control form-control-sm insumo-unidad" placeholder="und">
+               class="form-control form-control-sm insumo-unidad" placeholder="und"
+               readonly style="background:#f8f9fa;color:#6b7280">
       </td>
       <td>
         <input type="text" class="form-control form-control-sm stock-display"
@@ -179,7 +181,7 @@
       if (undInp) undInp.value = opt.dataset.unidad;
       detectarUnidadEspecial(opt.dataset.unidad || '', opt.dataset.desc || opt.dataset.label || '');
       const cantPres = row ? row.querySelector('.cantidad-pres') : null;
-      if (cantPres) cantPres.value = parseFloat(opt.dataset.cantidad || 0).toFixed(4);
+      if (cantPres) cantPres.value = opt.dataset.cantidad;
       const stockInp = row ? row.querySelector('.stock-display') : null;
       if (stockInp) cargarStock(opt.dataset.id, stockInp);
       const itemNum = row ? row.querySelector('.item-num') : null;
@@ -253,8 +255,21 @@
     if (e.target.classList.contains('cant-req')) validarCantReq(e.target);
   });
 
-  // Bloquear envío si alguna fila tiene cant. requerida inválida
+  // Bloquear envío si alguna fila tiene cant. requerida inválida; marcar filas vacías como DELETE
   document.querySelector('form')?.addEventListener('submit', function(ev) {
+    // Marcar filas sin insumo ni descripción como DELETE para que Django las ignore
+    document.querySelectorAll('.formset-row').forEach(function(row) {
+      const insumoInput = row.querySelector('input[name$="-insumo"]');
+      const descInput   = row.querySelector('input[name$="-descripcion"]');
+      const searchInput = row.querySelector('.prod-search');
+      const isEmpty = (!insumoInput || !insumoInput.value.trim()) &&
+                      (!descInput   || !descInput.value.trim()) &&
+                      (!searchInput || !searchInput.value.trim());
+      if (isEmpty) {
+        const del = row.querySelector('input[type=checkbox][name$="-DELETE"]');
+        if (del) del.checked = true;
+      }
+    });
     let ok = true;
     document.querySelectorAll('.cant-req').forEach(function(inp) {
       if (!validarCantReq(inp)) ok = false;
@@ -269,7 +284,7 @@
   document.getElementById('formset-container').addEventListener('change', function(e) {
     if (e.target.type === 'checkbox' && e.target.name?.endsWith('-DELETE')) {
       const row = e.target.closest('.formset-row');
-      if (row) row.style.opacity = e.target.checked ? '0.35' : '1';
+      if (row) row.style.display = e.target.checked ? 'none' : '';
       actualizarItems();
     }
   });

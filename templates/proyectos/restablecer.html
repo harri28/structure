@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% block title %}Restablecer {{ proyecto.codigo }}{% endblock %}
+{% block nav_proyectos %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'proyectos:lista' %}">Proyectos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
+<li class="breadcrumb-item active">Restablecer</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'proyectos:detalle' proyecto.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> {{ proyecto.codigo }}
+    </a>
+    <h4 class="mt-1"><i class="bi bi-arrow-counterclockwise me-2" style="color:#dc2626"></i>Restablecer proyecto</h4>
+  </div>
+</div>
+
+<!-- Advertencia -->
+<div class="alert d-flex gap-3 align-items-start mb-4"
+     style="background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;border-radius:10px">
+  <i class="bi bi-exclamation-triangle-fill fs-4 mt-1 flex-shrink-0"></i>
+  <div>
+    <div class="fw-bold mb-1">Esta acción es irreversible</div>
+    <div style="font-size:.87rem">Los datos eliminados no se pueden recuperar. Selecciona solo los módulos que deseas vaciar y confirma con el código del proyecto.</div>
+  </div>
+</div>
+
+<form method="post" id="form-restablecer">
+{% csrf_token %}
+
+<!-- Módulos -->
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center" style="font-size:.82rem;font-weight:700;background:#f8fafc">
+    <span><i class="bi bi-grid-1x2 me-1"></i> Módulos a restablecer</span>
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-toggle-all" style="font-size:.75rem">
+      Seleccionar todos
+    </button>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for key, mod in modulos.items %}
+      <div class="col-md-6 col-lg-4">
+        <label class="d-flex align-items-start gap-3 p-3 rounded-3 border mod-card"
+               style="cursor:pointer;transition:border-color .15s,background .15s" data-key="{{ key }}">
+          <input type="checkbox" name="modulos" value="{{ key }}" class="mod-chk form-check-input mt-1 flex-shrink-0"
+                 style="width:1.1rem;height:1.1rem">
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <i class="bi {{ mod.icono }}" style="color:{{ mod.color }};font-size:1.1rem"></i>
+              <span class="fw-semibold" style="font-size:.9rem">{{ mod.nombre }}</span>
+              <span class="badge ms-auto" style="background:{{ mod.color }}20;color:{{ mod.color }};font-size:.72rem;font-weight:600">
+                {{ mod.count }} reg.
+              </span>
+            </div>
+            <div class="text-muted" style="font-size:.78rem">{{ mod.descripcion }}</div>
+          </div>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Confirmación -->
+<div class="card mb-4">
+  <div class="card-header" style="font-size:.82rem;font-weight:700;background:#f8fafc">
+    <i class="bi bi-shield-lock me-1"></i> Confirmación de seguridad
+  </div>
+  <div class="card-body">
+    <p style="font-size:.87rem">Para confirmar, escribe el código del proyecto: <strong>{{ proyecto.codigo }}</strong></p>
+    <input type="text" name="confirmacion" id="confirmacion" class="form-control"
+           placeholder="Escribe {{ proyecto.codigo }}" autocomplete="off" style="max-width:280px">
+  </div>
+</div>
+
+<!-- Botones -->
+<div class="d-flex gap-2">
+  <button type="button" class="btn btn-danger" id="btn-submit" disabled
+          onclick="document.getElementById('form-restablecer').submit()">
+    <i class="bi bi-arrow-counterclockwise me-1"></i>Restablecer seleccionados
+  </button>
+  <a href="{% url 'proyectos:detalle' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+</div>
+
+</form>
+
+<style>
+.mod-card:hover { border-color: #94a3b8; background: #f8fafc; }
+.mod-card.seleccionada { border-color: #dc2626 !important; background: #fef2f2; }
+</style>
+
+<script>
+const confirmInput = document.getElementById('confirmacion');
+const btnSubmit    = document.getElementById('btn-submit');
+const codigoEsperado = "{{ proyecto.codigo }}";
+const checkboxes   = document.querySelectorAll('.mod-chk');
+const btnToggle    = document.getElementById('btn-toggle-all');
+
+function actualizarBoton() {
+  const algunoMarcado = [...checkboxes].some(c => c.checked);
+  const confirmOk = confirmInput.value.trim() === codigoEsperado;
+  btnSubmit.disabled = !(algunoMarcado && confirmOk);
+}
+
+checkboxes.forEach(chk => {
+  chk.addEventListener('change', function() {
+    const card = this.closest('.mod-card');
+    card.classList.toggle('seleccionada', this.checked);
+    actualizarBoton();
+  });
+});
+
+confirmInput.addEventListener('input', actualizarBoton);
+
+let todosSeleccionados = false;
+btnToggle.addEventListener('click', function() {
+  todosSeleccionados = !todosSeleccionados;
+  checkboxes.forEach(chk => {
+    chk.checked = todosSeleccionados;
+    chk.closest('.mod-card').classList.toggle('seleccionada', todosSeleccionados);
+  });
+  this.textContent = todosSeleccionados ? 'Deseleccionar todos' : 'Seleccionar todos';
+  actualizarBoton();
+});
+</script>
+{% endblock %}

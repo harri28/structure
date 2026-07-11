@@ -36,6 +36,9 @@
   <a href="{% url 'configuracion:decimal_lista' %}" class="chip-seccion">
     <i class="bi bi-123 me-1"></i>Decimal
   </a>
+  <a href="{% url 'configuracion:regla_lista' %}" class="chip-seccion">
+    <i class="bi bi-diagram-3 me-1"></i>Detección
+  </a>
   <div class="ms-auto d-flex gap-2">
     <form method="post" action="{% url 'configuracion:cargo_cargar_defaults' %}" class="d-inline">
       {% csrf_token %}

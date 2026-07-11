@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Eliminar REQ-{{ obj.numero }}{% endblock %}
-{% block nav_req %}active{% endblock %}
+{% block nav_req_lista %}active{% endblock %}
+{% block nav_req_open %}show{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Requerimientos</a></li>

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Requerimientos — {{ proyecto.codigo }}{% endblock %}
-{% block nav_req %}active{% endblock %}
+{% block nav_req_lista %}active{% endblock %}
+{% block nav_req_open %}show{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item active">Requerimientos</li>
@@ -11,13 +12,6 @@
   <div>
     <h4><i class="bi bi-file-earmark-text me-2"></i>Requerimientos</h4>
     <div class="text-muted">Solicitudes de materiales del proyecto</div>
-    <div class="d-flex flex-wrap mt-2" style="border:1px solid #dee2e6;border-radius:4px;overflow:hidden;width:fit-content">
-      <a href="{% url 'requerimientos:lista' proyecto.pk %}" class="req-chip {% if not estado_sel %}active{% endif %}">Todos</a>
-      {% for val, label in estados %}
-      <a href="{% url 'requerimientos:lista' proyecto.pk %}?estado={{ val }}"
-         class="req-chip {% if estado_sel == val %}active{% endif %}">{{ label }}</a>
-      {% endfor %}
-    </div>
   </div>
   <a href="{% url 'requerimientos:crear' proyecto.pk %}" class="btn btn-primary">
     <i class="bi bi-plus-lg me-1"></i>Nuevo Requerimiento

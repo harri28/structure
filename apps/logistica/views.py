@@ -225,6 +225,18 @@ def requerimientos_log(request, proyecto_id):
     })
 
 
+def consolidados_log(request, proyecto_id):
+    from apps.requerimientos.models import Requerimiento
+    proyecto = _get_proyecto(proyecto_id)
+    requerimientos = (Requerimiento.objects
+                      .filter(proyecto=proyecto, estado__in=['APROBADO', 'PARCIAL'])
+                      .order_by('-fecha', '-numero'))
+    return render(request, 'logistica/req_consolidados.html', {
+        'proyecto':       proyecto,
+        'requerimientos': requerimientos,
+    })
+
+
 def _backfill_codigos(detalles, proyecto):
     """Rellena d.codigo desde el presupuesto cuando está vacío, y persiste el cambio."""
     from apps.requerimientos.models import DetalleRequerimiento
@@ -334,15 +346,6 @@ def req_revisar_log(request, proyecto_id, pk):
         cot_id = request.POST.get('cotizacion_sistema') or None
         pdf = request.FILES.get('cotizacion_pdf') or None
 
-        # Validar que haya cotización (sistema o PDF ya guardado)
-        tiene_cot = cot_id or pdf or req.cotizacion_pdf
-        if not tiene_cot:
-            messages.error(request, 'Debes adjuntar una cotización del sistema o un archivo PDF antes de aprobar.')
-            return render(request, 'logistica/req_revisar.html', {
-                'proyecto': proyecto, 'req': req,
-                'detalles': detalles, 'cotizaciones': cotizaciones,
-            })
-
         # Leer y validar cantidades aprobadas
         aprobaciones = {}
         errores = []
@@ -377,25 +380,14 @@ def req_revisar_log(request, proyecto_id, pk):
         if pdf:
             req.cotizacion_pdf = pdf
 
-        # Revertir descuentos previos si ya había una aprobación anterior
-        for det in detalles:
-            if det.cantidad_aprobada and det.insumo:
-                det.insumo.cantidad += det.cantidad_aprobada
-                det.insumo.save(update_fields=['cantidad'])
-
-        # Aplicar nuevas aprobaciones y descontar de insumos
+        # Guardar cantidades aprobadas por línea
         es_parcial = False
         for det in detalles:
             aprobada = aprobaciones[det.pk]
             det.cantidad_aprobada = aprobada
             det.save(update_fields=['cantidad_aprobada'])
-
             if aprobada < det.cantidad_requerida:
                 es_parcial = True
-
-            if det.insumo and aprobada > 0:
-                det.insumo.cantidad -= aprobada
-                det.insumo.save(update_fields=['cantidad'])
 
         req.estado = 'PARCIAL' if es_parcial else 'APROBADO'
         req.aprobacion_vista = False

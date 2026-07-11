@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS
+from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, ReglaDeteccionInsumo, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS
 
 
 # ── Hub ───────────────────────────────────────────────────────────
@@ -18,6 +18,7 @@ def hub(request):
         'n_roles':     Rol.objects.count(),
         'n_unidades':  UnidadMedida.objects.filter(activo=True).count(),
         'n_cargos':    CargoManoObra.objects.filter(activo=True).count(),
+        'n_reglas':    ReglaDeteccionInsumo.objects.filter(activo=True).count(),
     })
 
 
@@ -926,3 +927,155 @@ def cargo_cargar_defaults(request):
         else:
             messages.info(request, 'Los cargos por defecto ya estaban al día.')
     return redirect('configuracion:cargo_lista')
+
+
+# ── Reglas de Detección de Insumos ───────────────────────────────
+
+_REGLAS_DEFAULT = [
+    # (tipo, nombre, palabras, orden)
+    ('MAQUINARIA', 'Maquinaria pesada',
+     'retroexcavadora, excavadora, volquete, tractor, bulldozer, cargador frontal, motoniveladora, compactadora, rodillo, cisterna, grua',
+     1),
+    ('MAQUINARIA', 'Vehículos y transporte',
+     'camion, camioneta, furgon, vehiculo de transporte',
+     2),
+    ('EQUIPO', 'Equipos de construcción',
+     'mezcladora, vibrador, compresora, motobomba, andamio, winche, grupo electrogeno, generador, soldadora, herramientas manuales',
+     1),
+    ('EQUIPO', 'Equipos de medición y seguridad',
+     'nivel optico, estacion total, teodolito, nivel laser, equipo de seguridad',
+     2),
+    ('SUBCONTRATO', 'Servicios subcontratados',
+     'subcontrato, instalacion contratada, montaje, desmontaje, servicio de, suministro e instalacion',
+     1),
+    ('SUBCONTRATO', 'Servicios técnicos',
+     'topografia, laboratorio, ensayo, prueba hidraulica, certificacion, inspeccion',
+     2),
+]
+
+
+def regla_lista(request):
+    tipo_filtro = request.GET.get('tipo', '')
+    reglas = ReglaDeteccionInsumo.objects.all()
+    if tipo_filtro:
+        reglas = reglas.filter(tipo=tipo_filtro)
+    return render(request, 'configuracion/regla_lista.html', {
+        'reglas':       reglas,
+        'tipo_filtro':  tipo_filtro,
+        'tipo_choices': ReglaDeteccionInsumo.TIPO_CHOICES,
+    })
+
+
+def regla_crear(request):
+    error = {}
+    if request.method == 'POST':
+        tipo     = request.POST.get('tipo', '').strip()
+        nombre   = request.POST.get('nombre', '').strip()
+        palabras = request.POST.get('palabras', '').strip()
+        orden    = request.POST.get('orden', '0').strip()
+        activo   = request.POST.get('activo') == '1'
+
+        if not tipo:
+            error['tipo'] = 'El tipo es obligatorio.'
+        if not nombre:
+            error['nombre'] = 'El nombre es obligatorio.'
+
+        try:
+            orden_int = int(orden)
+        except (ValueError, TypeError):
+            orden_int = 0
+
+        if not error:
+            ReglaDeteccionInsumo.objects.create(
+                tipo=tipo, nombre=nombre, palabras=palabras,
+                orden=orden_int, activo=activo,
+            )
+            messages.success(request, f'Regla "{nombre}" creada.')
+            return redirect('configuracion:regla_lista')
+
+    tipo_inicial = request.POST.get('tipo', request.GET.get('tipo', ''))
+    return render(request, 'configuracion/regla_form.html', {
+        'titulo':         'Nueva Regla de Detección',
+        'accion':         'crear',
+        'error':          error,
+        'tipo_choices':   ReglaDeteccionInsumo.TIPO_CHOICES,
+        'form_tipo':      tipo_inicial,
+        'form_nombre':    request.POST.get('nombre', ''),
+        'form_palabras':  request.POST.get('palabras', ''),
+        'form_orden':     request.POST.get('orden', '0'),
+        'form_activo':    request.POST.get('activo', '1'),
+    })
+
+
+def regla_editar(request, pk):
+    regla = get_object_or_404(ReglaDeteccionInsumo, pk=pk)
+    error = {}
+    if request.method == 'POST':
+        tipo     = request.POST.get('tipo', '').strip()
+        nombre   = request.POST.get('nombre', '').strip()
+        palabras = request.POST.get('palabras', '').strip()
+        orden    = request.POST.get('orden', '0').strip()
+        activo   = request.POST.get('activo') == '1'
+
+        if not tipo:
+            error['tipo'] = 'El tipo es obligatorio.'
+        if not nombre:
+            error['nombre'] = 'El nombre es obligatorio.'
+
+        try:
+            orden_int = int(orden)
+        except (ValueError, TypeError):
+            orden_int = regla.orden
+
+        if not error:
+            regla.tipo     = tipo
+            regla.nombre   = nombre
+            regla.palabras = palabras
+            regla.orden    = orden_int
+            regla.activo   = activo
+            regla.save()
+            messages.success(request, f'Regla "{nombre}" actualizada.')
+            return redirect('configuracion:regla_lista')
+
+    return render(request, 'configuracion/regla_form.html', {
+        'titulo':         f'Editar — {regla.nombre}',
+        'accion':         'editar',
+        'regla':          regla,
+        'error':          error,
+        'tipo_choices':   ReglaDeteccionInsumo.TIPO_CHOICES,
+        'form_tipo':      request.POST.get('tipo', regla.tipo),
+        'form_nombre':    request.POST.get('nombre', regla.nombre),
+        'form_palabras':  request.POST.get('palabras', regla.palabras),
+        'form_orden':     request.POST.get('orden', str(regla.orden)),
+        'form_activo':    '1' if (request.POST.get('activo', '1') == '1' if request.method == 'POST' else regla.activo) else '0',
+    })
+
+
+def regla_eliminar(request, pk):
+    regla = get_object_or_404(ReglaDeteccionInsumo, pk=pk)
+    if request.method == 'POST':
+        nombre = regla.nombre
+        regla.delete()
+        messages.success(request, f'Regla "{nombre}" eliminada.')
+        return redirect('configuracion:regla_lista')
+    return render(request, 'configuracion/regla_confirmar_eliminar.html', {'regla': regla})
+
+
+def regla_cargar_defaults(request):
+    if request.method == 'POST':
+        creadas = 0
+        for tipo, nombre, palabras, orden in _REGLAS_DEFAULT:
+            obj, created = ReglaDeteccionInsumo.objects.get_or_create(
+                tipo=tipo, nombre=nombre,
+                defaults={'palabras': palabras, 'orden': orden},
+            )
+            if created:
+                creadas += 1
+            elif not obj.palabras:
+                obj.palabras = palabras
+                obj.save(update_fields=['palabras'])
+        if creadas:
+            messages.success(request, f'{creadas} regla(s) por defecto cargadas.')
+        else:
+            messages.info(request, 'Las reglas por defecto ya estaban al día.')
+    return redirect('configuracion:regla_lista')

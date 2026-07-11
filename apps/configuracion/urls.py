@@ -38,4 +38,10 @@ urlpatterns = [
     path('cargos/nuevo/',                          views.cargo_crear,                   name='cargo_crear'),
     path('cargos/<int:pk>/editar/',                views.cargo_editar,                  name='cargo_editar'),
     path('cargos/cargar-defaults/',                views.cargo_cargar_defaults,         name='cargo_cargar_defaults'),
+    # Reglas de Detección de Insumos
+    path('reglas/',                                views.regla_lista,                   name='regla_lista'),
+    path('reglas/nueva/',                          views.regla_crear,                   name='regla_crear'),
+    path('reglas/<int:pk>/editar/',                views.regla_editar,                  name='regla_editar'),
+    path('reglas/<int:pk>/eliminar/',              views.regla_eliminar,                name='regla_eliminar'),
+    path('reglas/cargar-defaults/',                views.regla_cargar_defaults,         name='regla_cargar_defaults'),
 ]

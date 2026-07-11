@@ -33,6 +33,12 @@
   <a href="{% url 'configuracion:cargo_lista' %}" class="chip-seccion">
     <i class="bi bi-person-badge me-1"></i>Mano de Obra
   </a>
+  <a href="{% url 'configuracion:regla_lista' %}?tipo=EQUIPO" class="chip-seccion">
+    <i class="bi bi-tools me-1"></i>Equipos
+  </a>
+  <a href="{% url 'configuracion:regla_lista' %}?tipo=MAQUINARIA" class="chip-seccion">
+    <i class="bi bi-truck me-1"></i>Maquinaria
+  </a>
   <a href="{% url 'configuracion:decimal_lista' %}" class="chip-seccion">
     <i class="bi bi-123 me-1"></i>Decimal
   </a>

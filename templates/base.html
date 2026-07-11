@@ -114,10 +114,25 @@
     {% endif %}
 
     {% if permisos.puede_crear_requerimientos or permisos.puede_aprobar_requerimientos %}
-    <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
-       class="sb-link {% block nav_req %}{% endblock %}">
-      <i class="bi bi-file-earmark-text"></i> Requerimientos
-    </a>
+    <div class="sb-module-row">
+      <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
+         class="sb-link {% block nav_req %}{% endblock %}">
+        <i class="bi bi-file-earmark-text"></i> Requerimientos
+      </a>
+      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-reqs" aria-expanded="false">
+        <i class="bi bi-chevron-right sb-arrow"></i>
+      </button>
+    </div>
+    <div class="collapse {% block nav_req_open %}{% endblock %}" id="nav-reqs">
+      <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_req_lista %}{% endblock %}">
+        <i class="bi bi-list-ul"></i> Requerimiento
+      </a>
+      <a href="{% url 'requerimientos:vs_atenciones' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_req_vs %}{% endblock %}">
+        <i class="bi bi-bar-chart-steps"></i> Req vs Atenciones
+      </a>
+    </div>
     {% endif %}
 
     {% if permisos.puede_ver_almacen or permisos.puede_gestionar_entradas or permisos.puede_gestionar_salidas %}
@@ -192,11 +207,28 @@
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
       {% if permisos.puede_revisar_reqs_log or permisos.es_superadmin %}
-      <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_log_req %}{% endblock %}">
-        <i class="bi bi-file-earmark-text"></i> Requerimientos
-        {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
-      </a>
+      <div class="sb-module-row">
+        <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_req_logistica %}{% endblock %}">
+          <i class="bi bi-file-earmark-text"></i> Requerimientos
+          {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
+        </a>
+        <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-log-reqs" aria-expanded="false">
+          <i class="bi bi-chevron-right sb-arrow"></i>
+        </button>
+      </div>
+      <div class="collapse {% block nav_log_reqs_open %}{% endblock %}" id="nav-log-reqs">
+        <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_req_logistica_lista %}{% endblock %}"
+           style="padding-left:3.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          <i class="bi bi-list-ul"></i> Requerimientos recibidos
+        </a>
+        <a href="{% url 'logistica:consolidados_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_consolidados_log %}{% endblock %}"
+           style="padding-left:3.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          <i class="bi bi-layer-forward"></i> R. Consolidados
+        </a>
+      </div>
       {% endif %}
       {% if permisos.puede_gestionar_cotizaciones_log or permisos.es_superadmin %}
       <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
@@ -207,7 +239,7 @@
       {% if permisos.puede_gestionar_logistica or permisos.es_superadmin %}
       <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_log_guias %}{% endblock %}">
-        <i class="bi bi-file-earmark-arrow-right"></i> Guías de Remisión
+        <i class="bi bi-send"></i> Guías de Remisión
       </a>
       {% endif %}
       {% if permisos.puede_gestionar_inventarios_log or permisos.es_superadmin %}

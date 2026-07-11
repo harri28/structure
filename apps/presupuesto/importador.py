@@ -283,7 +283,8 @@ TIPO_MAP = {
     'MATERIAL':      'MATERIAL',
     'EQUIPO':        'EQUIPO',
     'EQUIPOS':       'EQUIPO',
-    'MAQUINARIA':    'EQUIPO',
+    'MAQUINARIA':    'MAQUINARIA',
+    'MAQUINARIAS':   'MAQUINARIA',
     'SUB-CONTRATOS': 'SUBCONTRATO',
     'SUBCONTRATOS':  'SUBCONTRATO',
     'SUBCONTRATO':   'SUBCONTRATO',
@@ -392,6 +393,33 @@ def _codigo_cargo(descripcion, mapa_cargos=None):
     return None
 
 
+def _cargar_mapa_reglas():
+    """Lee ReglaDeteccionInsumo de DB y construye dict {palabra_lower: tipo}."""
+    try:
+        from apps.configuracion.models import ReglaDeteccionInsumo
+        mapa = {}
+        for regla in ReglaDeteccionInsumo.objects.filter(activo=True).order_by('orden'):
+            if regla.palabras:
+                for p in regla.palabras.split(','):
+                    p = p.strip().lower()
+                    if p:
+                        mapa.setdefault(p, regla.tipo)
+        return mapa
+    except Exception:
+        return {}
+
+
+def _tipo_por_regla(descripcion, mapa_reglas):
+    """Devuelve el tipo si la descripción contiene alguna palabra clave de las reglas, o None."""
+    if not mapa_reglas:
+        return None
+    desc = descripcion.lower()
+    for palabra, tipo in mapa_reglas.items():
+        if palabra in desc:
+            return tipo
+    return None
+
+
 def importar_insumos_excel(archivo, presupuesto):
     """
     Lee el archivo de insumos detectando las columnas automáticamente por cabecera.
@@ -415,6 +443,7 @@ def importar_insumos_excel(archivo, presupuesto):
     cols = _detectar_columnas_insumos(raw_rows)
     mapa_unidades = _cargar_mapa_unidades()
     mapa_cargos   = _cargar_mapa_cargos()
+    mapa_reglas   = _cargar_mapa_reglas()
     n_cargos_db   = len({v for v in mapa_cargos.values()}) if mapa_cargos else 4
 
     presupuesto.insumos.all().delete()
@@ -468,11 +497,20 @@ def importar_insumos_excel(archivo, presupuesto):
             if total_val and precio:
                 cant = (total_val / precio).quantize(Decimal('0.0001')) if precio else Decimal('0')
 
-        if tipo_actual not in grupos:
-            grupos[tipo_actual] = []
-            tipo_orden.append(tipo_actual)
+        # Detección automática de tipo por descripción (prioridad: cargo > regla > sección del archivo)
+        tipo_item = tipo_actual
+        if _codigo_cargo(str(desc).strip(), mapa_cargos) is not None:
+            tipo_item = 'MANO_OBRA'
+        elif mapa_reglas:
+            tipo_detectado = _tipo_por_regla(str(desc).strip(), mapa_reglas)
+            if tipo_detectado:
+                tipo_item = tipo_detectado
 
-        grupos[tipo_actual].append({
+        if tipo_item not in grupos:
+            grupos[tipo_item] = []
+            tipo_orden.append(tipo_item)
+
+        grupos[tipo_item].append({
             'desc':     str(desc).strip(),
             'und_raw':  und_raw,
             'und':      und,

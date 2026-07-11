@@ -21,7 +21,8 @@ urlpatterns = [
     path('transportistas/<int:pk>/',  views.transportista_editar, name='transportista_editar'),
 
     # Requerimientos recibidos
-    path('proyecto/<int:proyecto_id>/requerimientos/',                       views.requerimientos_log, name='requerimientos_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/',                       views.requerimientos_log,  name='requerimientos_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/consolidados/',          views.consolidados_log,    name='consolidados_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/',              views.req_detalle_log,    name='req_detalle_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/revisar/',      views.req_revisar_log,    name='req_revisar_log'),
 
