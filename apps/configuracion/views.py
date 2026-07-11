@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, ReglaDeteccionInsumo, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS
+from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, ReglaDeteccionInsumo, Reporte, ImagenReporte, MODULOS_REPORTE, ESTADOS_REPORTE, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS
 
 
 # ── Hub ───────────────────────────────────────────────────────────
@@ -1079,3 +1079,95 @@ def regla_cargar_defaults(request):
         else:
             messages.info(request, 'Las reglas por defecto ya estaban al día.')
     return redirect('configuracion:regla_lista')
+
+
+# ── Reportes ──────────────────────────────────────────────────────
+
+def reporte_lista(request):
+    qs = Reporte.objects.all()
+    modulo_sel = request.GET.get('modulo', '')
+    estado_sel = request.GET.get('estado', '')
+    if modulo_sel:
+        qs = qs.filter(modulo=modulo_sel)
+    if estado_sel:
+        qs = qs.filter(estado=estado_sel)
+    return render(request, 'configuracion/reporte_lista.html', {
+        'reportes':   qs,
+        'modulos':    MODULOS_REPORTE,
+        'estados':    ESTADOS_REPORTE,
+        'modulo_sel': modulo_sel,
+        'estado_sel': estado_sel,
+    })
+
+
+def reporte_crear(request):
+    error = None
+    if request.method == 'POST':
+        modulo      = request.POST.get('modulo', '').strip()
+        titulo      = request.POST.get('titulo', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        imagenes    = request.FILES.getlist('imagenes')
+        if not titulo:
+            error = 'El título es obligatorio.'
+        else:
+            reporte = Reporte.objects.create(modulo=modulo, titulo=titulo, descripcion=descripcion)
+            for img in imagenes:
+                ImagenReporte.objects.create(reporte=reporte, imagen=img)
+            messages.success(request, 'Reporte creado.')
+            return redirect('configuracion:reporte_detalle', pk=reporte.pk)
+    return render(request, 'configuracion/reporte_form.html', {
+        'titulo':           'Nuevo Reporte',
+        'modulos':          MODULOS_REPORTE,
+        'error':            error,
+        'form_modulo':      request.POST.get('modulo', ''),
+        'form_titulo':      request.POST.get('titulo', ''),
+        'form_descripcion': request.POST.get('descripcion', ''),
+    })
+
+
+def reporte_detalle(request, pk):
+    reporte = get_object_or_404(Reporte, pk=pk)
+    if request.method == 'POST':
+        nuevo_estado = request.POST.get('estado', '')
+        if nuevo_estado in dict(ESTADOS_REPORTE):
+            reporte.estado = nuevo_estado
+            reporte.save(update_fields=['estado'])
+            messages.success(request, 'Estado actualizado.')
+        return redirect('configuracion:reporte_detalle', pk=pk)
+    return render(request, 'configuracion/reporte_detalle.html', {
+        'reporte': reporte,
+        'estados': ESTADOS_REPORTE,
+    })
+
+
+def reporte_editar(request, pk):
+    reporte = get_object_or_404(Reporte, pk=pk)
+    error = None
+    if request.method == 'POST':
+        modulo      = request.POST.get('modulo', '').strip()
+        titulo      = request.POST.get('titulo', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        imagenes    = request.FILES.getlist('imagenes')
+        eliminar_ids = request.POST.getlist('eliminar_imagen')
+        if not titulo:
+            error = 'El título es obligatorio.'
+        else:
+            reporte.modulo = modulo
+            reporte.titulo = titulo
+            reporte.descripcion = descripcion
+            reporte.save()
+            if eliminar_ids:
+                ImagenReporte.objects.filter(pk__in=eliminar_ids, reporte=reporte).delete()
+            for img in imagenes:
+                ImagenReporte.objects.create(reporte=reporte, imagen=img)
+            messages.success(request, 'Reporte actualizado.')
+            return redirect('configuracion:reporte_detalle', pk=pk)
+    return render(request, 'configuracion/reporte_form.html', {
+        'titulo':           f'Editar — {reporte.titulo}',
+        'reporte':          reporte,
+        'modulos':          MODULOS_REPORTE,
+        'error':            error,
+        'form_modulo':      request.POST.get('modulo', reporte.modulo),
+        'form_titulo':      request.POST.get('titulo', reporte.titulo),
+        'form_descripcion': request.POST.get('descripcion', reporte.descripcion),
+    })

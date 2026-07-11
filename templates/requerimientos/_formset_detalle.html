@@ -140,8 +140,8 @@
     const wrap = input.closest('.prod-wrap');
     const dropdown = wrap.querySelector('.prod-dropdown');
     const rect = input.getBoundingClientRect();
-    dropdown.style.top  = rect.bottom + 'px';
-    dropdown.style.left = rect.left + 'px';
+    dropdown.style.top   = rect.bottom + 'px';
+    dropdown.style.left  = rect.left + 'px';
     dropdown.style.width = rect.width + 'px';
     fetch(API_PROD + (q ? '?q=' + encodeURIComponent(q) : ''))
       .then(r => r.json())

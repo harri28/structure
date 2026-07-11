@@ -44,4 +44,9 @@ urlpatterns = [
     path('reglas/<int:pk>/editar/',                views.regla_editar,                  name='regla_editar'),
     path('reglas/<int:pk>/eliminar/',              views.regla_eliminar,                name='regla_eliminar'),
     path('reglas/cargar-defaults/',                views.regla_cargar_defaults,         name='regla_cargar_defaults'),
+    # Reportes
+    path('reportes/',                              views.reporte_lista,                 name='reporte_lista'),
+    path('reportes/nuevo/',                        views.reporte_crear,                 name='reporte_crear'),
+    path('reportes/<int:pk>/',                     views.reporte_detalle,               name='reporte_detalle'),
+    path('reportes/<int:pk>/editar/',              views.reporte_editar,                name='reporte_editar'),
 ]

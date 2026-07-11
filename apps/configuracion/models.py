@@ -266,6 +266,48 @@ class ReglaDeteccionInsumo(models.Model):
         return f'{self.get_tipo_display()} — {self.nombre}'
 
 
+MODULOS_REPORTE = [
+    ('REQUERIMIENTOS', 'Requerimientos'),
+    ('LOGISTICA',      'Logística'),
+    ('PRESUPUESTO',    'Presupuesto'),
+    ('ALMACEN',        'Almacén'),
+    ('MAQUINARIA',     'Maquinaria'),
+    ('CONFIGURACION',  'Configuración'),
+    ('PROYECTOS',      'Proyectos'),
+    ('OTRO',           'Otro'),
+]
+
+ESTADOS_REPORTE = [
+    ('PENDIENTE',   'Pendiente'),
+    ('EN_REVISION', 'En revisión'),
+    ('RESUELTO',    'Resuelto'),
+]
+
+
+class Reporte(models.Model):
+    modulo      = models.CharField('Módulo', max_length=30, choices=MODULOS_REPORTE, default='OTRO')
+    titulo      = models.CharField('Título', max_length=200)
+    descripcion = models.TextField('Descripción', blank=True)
+    estado      = models.CharField('Estado', max_length=20, choices=ESTADOS_REPORTE, default='PENDIENTE')
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Reporte'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'[{self.get_modulo_display()}] {self.titulo}'
+
+
+class ImagenReporte(models.Model):
+    reporte = models.ForeignKey(Reporte, on_delete=models.CASCADE, related_name='imagenes')
+    imagen  = models.ImageField('Imagen', upload_to='reportes/')
+
+    def __str__(self):
+        return f'Imagen de {self.reporte}'
+
+
 class PerfilUsuario(models.Model):
     usuario  = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     rol      = models.ForeignKey(Rol, null=True, blank=True, on_delete=models.SET_NULL, related_name='usuarios')

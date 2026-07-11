@@ -46,6 +46,9 @@
     <a href="{% url 'configuracion:unidad_lista' %}" class="sb-link {% block nav_unidades %}{% endblock %}">
       <i class="bi bi-rulers"></i> Unidades de Medida
     </a>
+    <a href="{% url 'configuracion:reporte_lista' %}" class="sb-link {% block nav_reportes %}{% endblock %}">
+      <i class="bi bi-flag"></i> Reportes
+    </a>
   </div>
 
   {% else %}

@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Reportes{% endblock %}
+{% block nav_reportes %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Reportes</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4><i class="bi bi-flag me-2"></i>Reportes</h4>
+    <div class="text-muted">Registro de errores y mejoras del sistema</div>
+  </div>
+  <a href="{% url 'configuracion:reporte_crear' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo Reporte
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" style="font-size:.84rem">
+  {{ msg }} <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+  <a href="{% url 'configuracion:reporte_lista' %}"
+     class="chip-seccion {% if not modulo_sel and not estado_sel %}chip-activo{% endif %}">
+    Todos
+  </a>
+  {% for val, label in modulos %}
+  <a href="?modulo={{ val }}"
+     class="chip-seccion {% if modulo_sel == val %}chip-activo{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+
+  <div class="ms-auto">
+    <select class="form-select form-select-sm" style="min-width:140px"
+            onchange="location='?{% if modulo_sel %}modulo={{ modulo_sel }}&{% endif %}estado='+this.value">
+      <option value="">— Estado —</option>
+      {% for val, label in estados %}
+      <option value="{{ val }}" {% if estado_sel == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th style="width:130px">Módulo</th>
+          <th>Título</th>
+          <th style="width:120px;text-align:center">Estado</th>
+          <th style="width:110px">Fecha</th>
+          <th style="width:2rem"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reportes %}
+        <tr style="cursor:pointer" onclick="window.location='{% url 'configuracion:reporte_detalle' r.pk %}'">
+          <td>
+            <span class="badge rounded-1 bg-secondary" style="font-size:.72rem">{{ r.get_modulo_display }}</span>
+          </td>
+          <td class="fw-semibold" style="font-size:.85rem">
+            {{ r.titulo }}
+            {% if r.imagenes.exists %}
+            <i class="bi bi-image text-muted ms-1" style="font-size:.75rem" title="Tiene imágenes"></i>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <span class="badge rounded-1
+              {% if r.estado == 'PENDIENTE' %}bg-warning text-dark
+              {% elif r.estado == 'EN_REVISION' %}bg-info
+              {% else %}bg-success{% endif %}"
+              style="font-size:.72rem">
+              {{ r.get_estado_display }}
+            </span>
+          </td>
+          <td style="font-size:.78rem;color:#6b7280">{{ r.created_at|date:"d/m/Y" }}</td>
+          <td onclick="event.stopPropagation()">
+            <a href="{% url 'configuracion:reporte_editar' r.pk %}" class="btn-tbl" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center py-4 text-muted">Sin reportes registrados</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

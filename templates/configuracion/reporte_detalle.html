@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}{{ reporte.titulo }}{% endblock %}
+{% block nav_reportes %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'configuracion:reporte_lista' %}">Reportes</a></li>
+<li class="breadcrumb-item active">{{ reporte.titulo|truncatechars:40 }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start">
+  <div>
+    <a href="{% url 'configuracion:reporte_lista' %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Reportes
+    </a>
+    <h4 class="mt-1">{{ reporte.titulo }}</h4>
+    <div class="d-flex align-items-center gap-2 mt-1">
+      <span class="badge rounded-1 bg-secondary" style="font-size:.75rem">{{ reporte.get_modulo_display }}</span>
+      <span class="badge rounded-1
+        {% if reporte.estado == 'PENDIENTE' %}bg-warning text-dark
+        {% elif reporte.estado == 'EN_REVISION' %}bg-info
+        {% else %}bg-success{% endif %}"
+        style="font-size:.75rem">
+        {{ reporte.get_estado_display }}
+      </span>
+      <span class="text-muted" style="font-size:.78rem">{{ reporte.created_at|date:"d/m/Y H:i" }}</span>
+    </div>
+  </div>
+  <a href="{% url 'configuracion:reporte_editar' reporte.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-pencil me-1"></i>Editar
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" style="font-size:.84rem">
+  {{ msg }} <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if reporte.descripcion %}
+<div class="card mb-3">
+  <div class="card-header">Descripción</div>
+  <div class="card-body" style="white-space:pre-wrap;font-size:.88rem">{{ reporte.descripcion }}</div>
+</div>
+{% endif %}
+
+{% if reporte.imagenes.exists %}
+<div class="card mb-3">
+  <div class="card-header">Imágenes adjuntas</div>
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-3">
+      {% for img in reporte.imagenes.all %}
+      <a href="{{ img.imagen.url }}" target="_blank">
+        <img src="{{ img.imagen.url }}"
+             style="height:120px;width:160px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;transition:opacity .15s"
+             onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">Cambiar estado</div>
+  <div class="card-body">
+    <form method="post" class="d-flex gap-2 align-items-center">
+      {% csrf_token %}
+      <select name="estado" class="form-select form-select-sm" style="max-width:200px">
+        {% for val, label in estados %}
+        <option value="{{ val }}" {% if reporte.estado == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-sm btn-primary">
+        <i class="bi bi-check-lg me-1"></i>Actualizar
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
