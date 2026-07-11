@@ -197,7 +197,8 @@ def vs_atenciones(request, proyecto_id):
                 'solicitado': Decimal('0'), 'atendido': Decimal('0'),
                 'observaciones': '',
             }
-        consolidado[key]['solicitado'] += det.cantidad_requerida or Decimal('0')
+        if det.requerimiento.estado in ['ENVIADO', 'EN_REVISION']:
+            consolidado[key]['solicitado'] += det.cantidad_requerida or Decimal('0')
         if det.requerimiento.estado in ['APROBADO', 'PARCIAL', 'ATENDIDO']:
             consolidado[key]['atendido'] += det.cantidad_aprobada or Decimal('0')
         if det.observacion:
