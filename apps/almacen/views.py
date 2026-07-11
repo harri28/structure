@@ -697,7 +697,13 @@ def api_productos(request):
     if q:
         qs = qs.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
     data = [
-        {'id': p.pk, 'codigo': p.codigo, 'descripcion': p.descripcion, 'unidad': p.unidad, 'cantidad': str(p.cantidad)}
+        {
+            'id': p.pk, 'codigo': p.codigo, 'descripcion': p.descripcion,
+            'unidad': p.unidad,
+            'cantidad': str(p.cantidad),
+            'cantidad_restante': str(p.cantidad),
+            'cantidad_total': str(p.cantidad_total),
+        }
         for p in qs[:50]
     ]
     return JsonResponse(data, safe=False)

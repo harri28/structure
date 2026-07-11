@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.views.decorators.http import require_POST
@@ -380,7 +381,13 @@ def req_revisar_log(request, proyecto_id, pk):
         if pdf:
             req.cotizacion_pdf = pdf
 
-        # Guardar cantidades aprobadas por línea
+        # Revertir descuentos previos si ya había una aprobación anterior
+        for det in detalles:
+            if det.cantidad_aprobada and det.insumo:
+                det.insumo.cantidad += det.cantidad_aprobada
+                det.insumo.save(update_fields=['cantidad'])
+
+        # Descontar del contador de insumos y guardar cantidades aprobadas
         es_parcial = False
         for det in detalles:
             aprobada = aprobaciones[det.pk]
@@ -388,6 +395,9 @@ def req_revisar_log(request, proyecto_id, pk):
             det.save(update_fields=['cantidad_aprobada'])
             if aprobada < det.cantidad_requerida:
                 es_parcial = True
+            if det.insumo and aprobada > 0:
+                det.insumo.cantidad = max(Decimal('0'), det.insumo.cantidad - aprobada)
+                det.insumo.save(update_fields=['cantidad'])
 
         req.estado = 'PARCIAL' if es_parcial else 'APROBADO'
         req.aprobacion_vista = False

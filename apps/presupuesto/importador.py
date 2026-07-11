@@ -551,6 +551,7 @@ def importar_insumos_excel(archivo, presupuesto):
                     codigo=cod_asignado,
                     descripcion=it['desc'][:400],
                     unidad=_normalizar_unidad(it['und'], mapa_unidades)[:20],
+                    cantidad_total=it['cant'],
                     cantidad=it['cant'],
                     costo_unitario=it['precio'],
                     total=it['total'],

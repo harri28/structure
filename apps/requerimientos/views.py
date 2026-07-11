@@ -179,21 +179,21 @@ def vs_atenciones(request, proyecto_id):
         key = ('insumo', det.insumo_id) if det.insumo_id else ('desc', det.descripcion or det.codigo or '—')
         if key not in consolidado:
             if det.insumo:
-                codigo         = det.insumo.codigo or det.codigo or '—'
-                descripcion    = det.insumo.descripcion
-                unidad         = det.insumo.unidad or det.unidad
-                tipo           = det.insumo.get_tipo_display() if hasattr(det.insumo, 'get_tipo_display') else ''
-                presupuestado  = det.insumo.cantidad or Decimal('0')
+                codigo      = det.insumo.codigo or det.codigo or '—'
+                descripcion = det.insumo.descripcion
+                unidad      = det.insumo.unidad or det.unidad
+                tipo        = det.insumo.get_tipo_display() if hasattr(det.insumo, 'get_tipo_display') else ''
+                original = det.insumo.cantidad_total or Decimal('0')
             else:
-                codigo         = det.codigo or '—'
-                descripcion    = det.descripcion
-                unidad         = det.unidad
-                tipo           = ''
-                presupuestado  = Decimal('0')
+                codigo      = det.codigo or '—'
+                descripcion = det.descripcion
+                unidad      = det.unidad
+                tipo        = ''
+                original    = Decimal('0')
             consolidado[key] = {
                 'codigo': codigo, 'descripcion': descripcion,
                 'unidad': unidad, 'tipo': tipo,
-                'presupuestado': presupuestado,
+                'original': original,
                 'solicitado': Decimal('0'), 'atendido': Decimal('0'),
                 'observaciones': '',
             }
@@ -205,7 +205,8 @@ def vs_atenciones(request, proyecto_id):
 
     filas = []
     for item in consolidado.values():
-        item['saldo'] = item['presupuestado'] - item['atendido']
+        item['presupuestado'] = item['original']
+        item['saldo'] = item['original'] - item['atendido']
         filas.append(item)
     filas.sort(key=lambda x: x['codigo'])
 

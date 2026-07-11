@@ -295,7 +295,7 @@ def proyecto_restablecer(request, pk):
 
     proyecto = get_object_or_404(Proyecto, pk=pk)
 
-    from apps.requerimientos.models import Requerimiento
+    from apps.requerimientos.models import Requerimiento, DetalleRequerimiento
     from apps.almacen.models import Entrada, Salida, Cotizacion, OrdenCompra
     from apps.logistica.models import GuiaRemision
     from apps.maquinaria.models import RegistroDiario, RegistroMaquinaria, Liquidacion
@@ -336,6 +336,13 @@ def proyecto_restablecer(request, pk):
             'color': '#3b82f6',
             'descripcion': 'Entradas y salidas de materiales',
             'count': _count(Entrada.objects.filter(proyecto=proyecto)) + _count(Salida.objects.filter(proyecto=proyecto)),
+        },
+        'logistica': {
+            'nombre': 'Logística',
+            'icono': 'bi-clipboard-check',
+            'color': '#0ea5e9',
+            'descripcion': 'Aprobaciones, contadores de insumos y guías de remisión',
+            'count': _count(Requerimiento.objects.filter(proyecto=proyecto, estado__in=['APROBADO', 'PARCIAL', 'ATENDIDO'])),
         },
         'guias': {
             'nombre': 'Guías de Remisión',
@@ -400,6 +407,24 @@ def proyecto_restablecer(request, pk):
             Entrada.objects.filter(proyecto=proyecto).delete()
             Salida.objects.filter(proyecto=proyecto).delete()
             eliminados.append('Almacén')
+
+        if 'logistica' in seleccionados:
+            from apps.presupuesto.models import InsumoPresupuesto
+            # Restaurar contadores usando cantidad_total (fuente de verdad del presupuesto)
+            for ins in InsumoPresupuesto.objects.filter(presupuesto__proyecto=proyecto):
+                ins.cantidad = ins.cantidad_total
+                ins.save(update_fields=['cantidad'])
+            # Limpiar aprobaciones en todos los detalles del proyecto
+            DetalleRequerimiento.objects.filter(
+                requerimiento__proyecto=proyecto
+            ).update(cantidad_aprobada=None)
+            # Revertir estado de requerimientos aprobados/parciales/atendidos a ENVIADO
+            Requerimiento.objects.filter(
+                proyecto=proyecto, estado__in=['APROBADO', 'PARCIAL', 'ATENDIDO']
+            ).update(estado='ENVIADO', aprobacion_vista=False)
+            # Eliminar guías de remisión
+            GuiaRemision.objects.filter(proyecto=proyecto).delete()
+            eliminados.append('Logística')
 
         if 'guias' in seleccionados:
             GuiaRemision.objects.filter(proyecto=proyecto).delete()

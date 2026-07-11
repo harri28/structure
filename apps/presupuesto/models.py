@@ -166,6 +166,7 @@ class InsumoPresupuesto(models.Model):
     codigo = models.CharField(max_length=60, blank=True)
     descripcion = models.CharField(max_length=400)
     unidad = models.CharField(max_length=20, blank=True)
+    cantidad_total = models.DecimalField(max_digits=18, decimal_places=4, default=0)
     cantidad = models.DecimalField(max_digits=18, decimal_places=4, default=0)
     costo_unitario = models.DecimalField(max_digits=15, decimal_places=4, default=0)
     total = models.DecimalField(max_digits=15, decimal_places=2, default=0)

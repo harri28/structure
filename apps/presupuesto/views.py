@@ -2,6 +2,7 @@ import json
 import os
 from decimal import Decimal, InvalidOperation
 
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
@@ -45,8 +46,15 @@ def lista(request, proyecto_id):
         total_adicional   = sum(m.total_adicional() for m in mods_aprobadas)
         total_deductivo   = sum(m.total_deductivo() for m in mods_aprobadas)
         total_vigente     = total_contractual + total_adicional - total_deductivo
+        insumos_por_tipo  = {
+            row['tipo']: row['cnt']
+            for row in presupuesto.insumos.values('tipo').annotate(cnt=Count('pk'))
+        }
+        insumos_total     = sum(insumos_por_tipo.values())
     else:
         costo_directo = total_contractual = total_adicional = total_deductivo = total_vigente = 0
+        insumos_por_tipo = {}
+        insumos_total    = 0
 
     return render(request, 'presupuesto/lista.html', {
         'proyecto':          proyecto,
@@ -57,6 +65,8 @@ def lista(request, proyecto_id):
         'total_adicional':   total_adicional,
         'total_deductivo':   total_deductivo,
         'total_vigente':     total_vigente,
+        'insumos_total':     insumos_total,
+        'insumos_por_tipo':  insumos_por_tipo,
     })
 
 

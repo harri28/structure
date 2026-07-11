@@ -35,7 +35,7 @@
       </td>
       <td>
         <input type="number" step="0.0001" name="{{ form.cantidad.html_name }}"
-               value="{{ form.cantidad.value|default:'0' }}"
+               value="{{ form.cantidad.value|default:'' }}"
                class="form-control form-control-sm cantidad-pres"
                readonly style="background:#f8f9fa;color:#6b7280">
       </td>
@@ -154,6 +154,7 @@
                   data-codigo="${p.codigo}"
                   data-desc="${p.descripcion.replace(/"/g,'&quot;')}"
                   data-cantidad="${p.cantidad}"
+                  data-cantidad-restante="${p.cantidad_restante}"
                   data-label="${p.descripcion.replace(/"/g,'&quot;')}"
                   style="padding:6px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.8rem">
                <strong style="color:var(--amber-dark)">${p.codigo}</strong>
@@ -181,7 +182,10 @@
       if (undInp) undInp.value = opt.dataset.unidad;
       detectarUnidadEspecial(opt.dataset.unidad || '', opt.dataset.desc || opt.dataset.label || '');
       const cantPres = row ? row.querySelector('.cantidad-pres') : null;
-      if (cantPres) cantPres.value = opt.dataset.cantidad;
+      if (cantPres) {
+        cantPres.value = opt.dataset.cantidad;
+        cantPres.dataset.restante = opt.dataset.cantidadRestante;
+      }
       const stockInp = row ? row.querySelector('.stock-display') : null;
       if (stockInp) cargarStock(opt.dataset.id, stockInp);
       const itemNum = row ? row.querySelector('.item-num') : null;
@@ -237,7 +241,7 @@
     const row = input.closest('.formset-row');
     const cantPres = row ? row.querySelector('.cantidad-pres') : null;
     const errDiv   = input.closest('td')?.querySelector('.cant-req-error');
-    const max      = cantPres ? parseFloat(cantPres.value) : NaN;
+    const max      = cantPres ? parseFloat(cantPres.dataset.restante ?? cantPres.value) : NaN;
     const val      = parseFloat(input.value);
     if (!errDiv) return true;
     if (!isNaN(max) && max > 0 && !isNaN(val) && val > max) {
