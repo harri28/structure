@@ -58,7 +58,7 @@
               {% elif r.estado == 'APROBADO' %}bg-info
               {% elif r.estado == 'PARCIAL' %}bg-warning text-dark
               {% else %}bg-secondary{% endif %}">
-              {{ r.get_estado_display }}
+              {% if r.estado == 'ENVIADO' %}Nuevo{% else %}{{ r.get_estado_display }}{% endif %}
             </span>
           </td>
           <td class="text-muted" style="font-size:.82rem">{{ r.observaciones|default:"—"|truncatechars:60 }}</td>

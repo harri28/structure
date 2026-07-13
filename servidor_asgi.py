@@ -48,6 +48,6 @@ if __name__ == '__main__':
         'config.asgi:application',
         host='0.0.0.0',
         port=PORT,
-        workers=2,
+        workers=1,
         log_level='info',
     )

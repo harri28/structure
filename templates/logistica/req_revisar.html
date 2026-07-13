@@ -17,12 +17,6 @@
     </a>
     <h4><i class="bi bi-clipboard2-check me-2" style="color:#d97706"></i>Revisión de requerimiento</h4>
   </div>
-  <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk req.pk %}">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-tags me-1"></i>Generar Cotización
-    </button>
-  </form>
 </div>
 
 <form method="post" enctype="multipart/form-data" id="form-revision">
@@ -108,59 +102,6 @@
   </div>
 </div>
 
-<!-- Cotización -->
-<div class="card mb-4">
-  <div class="card-header" style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
-    <i class="bi bi-tags me-2 text-primary"></i>Cotización requerida
-    <span class="text-danger ms-1">*</span>
-    <span class="fw-normal text-muted ms-2" style="font-size:.75rem;text-transform:none">(al menos una opción)</span>
-  </div>
-  <div class="card-body">
-    <div class="row g-4">
-
-      <!-- Opción A: Cotización del sistema -->
-      <div class="col-md-6">
-        <label class="form-label fw-semibold" style="font-size:.82rem">
-          <i class="bi bi-card-list me-1"></i>Cotización del sistema
-        </label>
-        <select name="cotizacion_sistema" class="form-select form-select-sm" id="sel-cot-sistema">
-          <option value="">— Seleccionar cotización —</option>
-          {% for c in cotizaciones %}
-          <option value="{{ c.pk }}"
-            {% if req.cotizacion_sistema_id == c.pk %}selected{% endif %}>
-            COT-{{ c.numero }} | {{ c.proveedor }} — {{ c.fecha|date:"d/m/Y" }}
-            ({{ c.get_estado_display }})
-          </option>
-          {% endfor %}
-        </select>
-        {% if not cotizaciones %}
-        <div class="text-muted mt-1" style="font-size:.75rem">No hay cotizaciones registradas en este proyecto.</div>
-        {% endif %}
-      </div>
-
-      <!-- Opción B: PDF externo -->
-      <div class="col-md-6">
-        <label class="form-label fw-semibold" style="font-size:.82rem">
-          <i class="bi bi-file-earmark-pdf me-1"></i>Subir cotización PDF
-        </label>
-        {% if req.cotizacion_pdf %}
-        <div class="mb-2">
-          <a href="{{ req.cotizacion_pdf.url }}" target="_blank" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-file-earmark-pdf me-1"></i>Ver PDF actual
-          </a>
-          <span class="text-muted ms-2" style="font-size:.75rem">Subir nuevo reemplazará el actual</span>
-        </div>
-        {% endif %}
-        <input type="file" name="cotizacion_pdf" class="form-control form-control-sm" accept=".pdf" id="inp-pdf">
-      </div>
-
-    </div>
-    <div id="error-cot" class="alert alert-danger mt-3 py-2 d-none" style="font-size:.82rem">
-      <i class="bi bi-exclamation-triangle me-1"></i>
-      Debes seleccionar una cotización del sistema o subir un archivo PDF.
-    </div>
-  </div>
-</div>
 
 <!-- Acciones -->
 <div class="d-flex gap-2 justify-content-end">
@@ -212,20 +153,6 @@
         tieneError = true;
       }
     });
-
-    // Validar cotización
-    var selSistema = document.getElementById('sel-cot-sistema').value;
-    var inpPdf     = document.getElementById('inp-pdf');
-    var tienePdf   = inpPdf && inpPdf.files && inpPdf.files.length > 0;
-    var yaHayPdf   = {{ req.cotizacion_pdf|yesno:"true,false" }};
-    var errCot     = document.getElementById('error-cot');
-
-    if (!selSistema && !tienePdf && !yaHayPdf) {
-      errCot.classList.remove('d-none');
-      tieneError = true;
-    } else {
-      errCot.classList.add('d-none');
-    }
 
     if (tieneError) e.preventDefault();
   });

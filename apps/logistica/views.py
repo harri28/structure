@@ -324,7 +324,6 @@ def _crear_guia_desde_req(req, proyecto, detalles, aprobaciones):
 def req_revisar_log(request, proyecto_id, pk):
     from decimal import Decimal, InvalidOperation
     from apps.requerimientos.models import Requerimiento
-    from apps.almacen.models import Cotizacion
 
     proyecto = _get_proyecto(proyecto_id)
     req = get_object_or_404(Requerimiento, pk=pk, proyecto=proyecto)
@@ -339,14 +338,10 @@ def req_revisar_log(request, proyecto_id, pk):
         req.estado = 'EN_REVISION'
         req.save(update_fields=['estado'])
 
-    cotizaciones = Cotizacion.objects.filter(proyecto=proyecto).order_by('-fecha')
     detalles = list(req.detalles.select_related('insumo').all())
     _backfill_codigos(detalles, proyecto)
 
     if request.method == 'POST':
-        cot_id = request.POST.get('cotizacion_sistema') or None
-        pdf = request.FILES.get('cotizacion_pdf') or None
-
         # Leer y validar cantidades aprobadas
         aprobaciones = {}
         errores = []
@@ -372,14 +367,8 @@ def req_revisar_log(request, proyecto_id, pk):
                 messages.error(request, e)
             return render(request, 'logistica/req_revisar.html', {
                 'proyecto': proyecto, 'req': req,
-                'detalles': detalles, 'cotizaciones': cotizaciones,
+                'detalles': detalles,
             })
-
-        # Guardar cotización
-        if cot_id:
-            req.cotizacion_sistema_id = int(cot_id)
-        if pdf:
-            req.cotizacion_pdf = pdf
 
         # Revertir descuentos previos si ya había una aprobación anterior
         for det in detalles:
@@ -425,10 +414,9 @@ def req_revisar_log(request, proyecto_id, pk):
         return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
 
     return render(request, 'logistica/req_revisar.html', {
-        'proyecto':     proyecto,
-        'req':          req,
-        'detalles':     detalles,
-        'cotizaciones': cotizaciones,
+        'proyecto': proyecto,
+        'req':      req,
+        'detalles': detalles,
     })
 
 

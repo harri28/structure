@@ -41,11 +41,15 @@ BORRADOR → ENVIADO → EN_REVISION → APROBADO / PARCIAL → ATENDIDO
 | `ATENDIDO` | Materiales físicamente entregados |
 | `ANULADO` | Cancelado |
 
-### Formulario de Requerimiento — columna CANTIDAD
+### Formulario de Requerimiento — columnas clave
 
-La columna **CANTIDAD** (readonly) muestra `InsumoPresupuesto.cantidad` (el contador restante), no la original. Esto permite al solicitante saber cuánto queda disponible para pedir.
+| Columna | Fuente | Descripción |
+|---------|--------|-------------|
+| **CANTIDAD** | `InsumoPresupuesto.cantidad_total` | Cantidad original del presupuesto. Solo informativa, nunca cambia. No se resta ni suma. |
+| **STOCK EN OBRA** | `InsumoPresupuesto.cantidad` | Contador restante disponible. Se descuenta cada vez que logística aprueba un requerimiento. |
+| **CANT. REQUERIDA** | Ingresada por el usuario | No puede superar el valor de STOCK EN OBRA. |
 
-La columna **CANT. REQUERIDA** no puede superar el valor de CANTIDAD.
+**Regla:** La columna CANTIDAD es solo referencia presupuestada. El límite real para pedir es STOCK EN OBRA.
 
 ---
 
