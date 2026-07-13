@@ -192,6 +192,7 @@
     {% endif %}
   </div>
 
+  {% if permisos.puede_ver_logistica %}
   <div class="sb-section">
     <div class="sb-label">Logística</div>
     <div class="sb-module-row">
@@ -271,6 +272,7 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}{# puede_ver_logistica #}
 
   {% if permisos.puede_editar_catalogo or permisos.puede_ver_maquinaria or permisos.puede_gestionar_maquinaria or permisos.puede_administrar_usuarios or permisos.puede_administrar_roles or permisos.puede_configurar_empresa %}
   <div class="sb-section">
@@ -605,6 +607,39 @@ document.querySelectorAll('#sidebar .collapse').forEach(function (col) {
       panel.style.display = 'none';
     }
   });
+})();
+
+// ── SSE: badge de notificaciones en tiempo real ───────────────────
+(function () {
+  if (!window.EventSource) return;
+  var badge = document.getElementById('notif-badge');
+
+  function setBadge(n) {
+    var b = document.getElementById('notif-badge');
+    if (n <= 0) { if (b) b.remove(); return; }
+    if (!b) {
+      b = document.createElement('span');
+      b.className = 'notif-badge'; b.id = 'notif-badge';
+      var btn = document.getElementById('notif-btn');
+      if (btn) btn.appendChild(b);
+    }
+    b.textContent = n > 99 ? '99+' : n;
+  }
+
+  function connect() {
+    var es = new EventSource('{% url "registro:notif_stream" %}');
+    es.onmessage = function (e) {
+      try {
+        var data = JSON.parse(e.data);
+        if (typeof data.no_leidas === 'number') setBadge(data.no_leidas);
+      } catch (_) {}
+    };
+    es.onerror = function () {
+      es.close();
+      setTimeout(connect, 15000);
+    };
+  }
+  connect();
 })();
 
 // ── Sidebar toggle (desktop: colapsar / mobile: slide) ───────────

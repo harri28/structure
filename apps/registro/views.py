@@ -1,7 +1,9 @@
+import asyncio
+import json
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.http import require_POST
 from .models import RegistroAccion, Notificacion, ACCIONES, MODULOS
 
@@ -79,3 +81,39 @@ def notif_leer_todas(request):
     """Marca todas las notificaciones del usuario como leídas."""
     Notificacion.objects.filter(usuario=request.user, leida=False).update(leida=True)
     return JsonResponse({'ok': True, 'no_leidas': 0})
+
+
+async def notif_stream(request):
+    """SSE: empuja conteo de no leídas al cliente en tiempo real."""
+    from asgiref.sync import sync_to_async
+
+    user = request.user
+    if not user.is_authenticated:
+        return StreamingHttpResponse(status=401)
+
+    @sync_to_async
+    def get_count():
+        return Notificacion.objects.filter(usuario=user, leida=False).count()
+
+    async def stream():
+        last = -1
+        ticks = 0
+        while True:
+            try:
+                count = await get_count()
+                if count != last:
+                    last = count
+                    yield f'data: {json.dumps({"no_leidas": count})}\n\n'
+                ticks += 1
+                if ticks % 3 == 0:
+                    yield ': ping\n\n'
+                await asyncio.sleep(10)
+            except (asyncio.CancelledError, GeneratorExit):
+                break
+            except Exception:
+                break
+
+    response = StreamingHttpResponse(stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
