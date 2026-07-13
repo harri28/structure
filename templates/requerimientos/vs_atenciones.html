@@ -57,13 +57,9 @@
         </tbody>
         <tfoot style="background:#f9fafb">
           <tr>
-            <td colspan="4" class="fw-bold text-end" style="font-size:.8rem;padding:.6rem 1rem">Total</td>
-            <td class="text-end fw-bold">
-              {% with total_sol=0 %}
-              {{ filas|length }}
-              {% endwith %}
-            </td>
-            <td></td><td></td><td></td>
+            <td></td>
+            <td class="fw-bold" style="font-size:.8rem;padding:.6rem 1rem">Total — {{ filas|length }} insumo{{ filas|length|pluralize }}</td>
+            <td colspan="7"></td>
           </tr>
         </tfoot>
       </table>
