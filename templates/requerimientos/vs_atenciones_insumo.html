@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Historial — {{ insumo.descripcion }}{% endblock %}
+{% block nav_req_vs %}active{% endblock %}
+{% block nav_req_open %}show{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'requerimientos:vs_atenciones' proyecto.pk %}">Req vs Atenciones</a></li>
+<li class="breadcrumb-item active">{{ insumo.codigo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'requerimientos:vs_atenciones' proyecto.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Req vs Atenciones
+    </a>
+    <h4><i class="bi bi-clock-history me-2" style="color:#2563eb"></i>Historial de requerimientos</h4>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-2" style="font-size:.85rem">
+      <div class="col-sm-2">
+        <div class="text-muted" style="font-size:.72rem;text-transform:uppercase">Código</div>
+        <div class="fw-bold" style="color:#92400e">{{ insumo.codigo }}</div>
+      </div>
+      <div class="col-sm-5">
+        <div class="text-muted" style="font-size:.72rem;text-transform:uppercase">Descripción</div>
+        <div class="fw-semibold">{{ insumo.descripcion }}</div>
+      </div>
+      <div class="col-sm-2">
+        <div class="text-muted" style="font-size:.72rem;text-transform:uppercase">Unidad</div>
+        <div>{{ insumo.unidad }}</div>
+      </div>
+      <div class="col-sm-3">
+        <div class="text-muted" style="font-size:.72rem;text-transform:uppercase">Presupuestado</div>
+        <div class="fw-bold">{{ insumo.cantidad_total|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
+    <i class="bi bi-list-ul me-2 text-primary"></i>Requerimientos que incluyeron este insumo
+  </div>
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>N° REQ</th>
+          <th>Fecha</th>
+          <th>Solicitante</th>
+          <th>Estado</th>
+          <th class="text-end">Cant. Solicitada</th>
+          <th class="text-end">Cant. Aprobada</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in detalles %}
+        <tr style="cursor:pointer" onclick="window.location='{% url 'requerimientos:detalle' d.requerimiento.pk %}'">
+          <td class="fw-semibold" style="color:#2563eb">REQ-{{ d.requerimiento.numero }}</td>
+          <td style="font-size:.83rem">{{ d.requerimiento.fecha|date:"d/m/Y" }}</td>
+          <td style="font-size:.83rem">{{ d.requerimiento.solicitante|default:"—" }}</td>
+          <td>
+            <span class="badge rounded-1
+              {% if d.requerimiento.estado == 'ENVIADO' %}bg-primary
+              {% elif d.requerimiento.estado == 'EN_REVISION' %}bg-warning text-dark
+              {% elif d.requerimiento.estado == 'APROBADO' %}bg-info
+              {% elif d.requerimiento.estado == 'PARCIAL' %}bg-warning text-dark
+              {% elif d.requerimiento.estado == 'ATENDIDO' %}bg-success
+              {% elif d.requerimiento.estado == 'ANULADO' %}bg-danger
+              {% else %}bg-secondary{% endif %}">
+              {{ d.requerimiento.get_estado_display }}
+            </span>
+          </td>
+          <td class="text-end fw-semibold">{{ d.cantidad_requerida|floatformat:2 }}</td>
+          <td class="text-end" style="color:#15803d;font-weight:600">
+            {% if d.cantidad_aprobada %}{{ d.cantidad_aprobada|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

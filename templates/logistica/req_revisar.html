@@ -19,8 +19,9 @@
   </div>
 </div>
 
-<form method="post" enctype="multipart/form-data" id="form-revision">
+<form method="post" id="form-revision">
 {% csrf_token %}
+<input type="hidden" name="nuevo_count" id="nuevo-count" value="0">
 
 <!-- Info general (readonly) -->
 <div class="card mb-3">
@@ -50,34 +51,32 @@
   </div>
 </div>
 
-<!-- Tabla de ítems con cantidad a aprobar -->
+<!-- Tabla de ítems -->
 <div class="card mb-3">
   <div class="card-header" style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
     <i class="bi bi-list-ul me-2 text-primary"></i>Cantidades a aprobar
   </div>
   <div class="card-body p-0">
-    <table class="table-modern">
+    <table class="table-modern" id="tabla-items">
       <thead>
         <tr>
           <th style="width:90px">Código</th>
           <th>Descripción</th>
           <th style="width:70px">Und</th>
           <th style="width:120px" class="text-end">Cant. requerida</th>
-          <th style="width:160px" class="text-center">Cant. a aprobar</th>
-          <th>Justificación</th>
+          <th style="width:150px" class="text-center">Cant. a aprobar</th>
+          <th style="width:44px"></th>
         </tr>
       </thead>
       <tbody>
         {% for d in detalles %}{% if d.descripcion or d.insumo %}
-        <tr id="fila-{{ d.pk }}">
-          <td><code style="font-size:.78rem">{% if d.codigo %}{{ d.codigo }}{% elif d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</code></td>
-          <td style="font-size:.83rem">
+        <tr id="fila-{{ d.pk }}" class="item-row">
+          <td><code style="font-size:.78rem" id="cod-{{ d.pk }}">{% if d.codigo %}{{ d.codigo }}{% elif d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</code></td>
+          <td style="font-size:.83rem" id="desc-cell-{{ d.pk }}">
             {% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}
           </td>
           <td style="font-size:.82rem;color:#6b7280">{{ d.unidad|default:"—" }}</td>
-          <td class="text-end fw-semibold" style="font-size:.83rem">
-            {{ d.cantidad_requerida|floatformat:4 }}
-          </td>
+          <td class="text-end fw-semibold" style="font-size:.83rem">{{ d.cantidad_requerida|floatformat:4 }}</td>
           <td class="text-center">
             <input type="number"
                    name="aprobada_{{ d.pk }}"
@@ -85,14 +84,19 @@
                    class="form-control form-control-sm text-end cant-aprobada"
                    style="max-width:130px;margin:0 auto"
                    value="{{ d.cantidad_requerida|unlocalize }}"
-                   min="0"
-                   max="{{ d.cantidad_requerida|unlocalize }}"
-                   step="0.0001"
-                   data-max="{{ d.cantidad_requerida|unlocalize }}"
-                   required>
+                   min="0" max="{{ d.cantidad_requerida|unlocalize }}" step="0.0001"
+                   data-max="{{ d.cantidad_requerida|unlocalize }}" required>
             <div class="invalid-feedback text-start" style="font-size:.72rem"></div>
           </td>
-          <td style="font-size:.78rem;color:#6b7280">{{ d.justificacion|default:"—" }}</td>
+          <td class="text-center">
+            <button type="button" class="btn btn-link p-0 btn-eliminar"
+                    style="color:#dc2626;font-size:1rem;line-height:1"
+                    data-pk="{{ d.pk }}"
+                    data-desc="{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}ítem{% endif %}"
+                    title="Eliminar ítem">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </td>
         </tr>
         {% endif %}{% empty %}
         <tr><td colspan="6" class="text-center py-4 text-muted">Sin ítems</td></tr>
@@ -102,25 +106,297 @@
   </div>
 </div>
 
+<!-- Agregar insumo -->
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center"
+       style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
+    <span><i class="bi bi-plus-circle me-2 text-success"></i>Agregar / Cambiar insumo</span>
+    <button type="button" class="btn btn-success btn-sm" id="btn-agregar-fila">
+      <i class="bi bi-plus-lg me-1"></i>Agregar insumo
+    </button>
+  </div>
+  <div class="card-body p-0" id="card-nuevos-body">
+    <table class="table table-sm mb-0" id="tabla-nuevos" style="display:none">
+      <thead style="background:#f8fafc">
+        <tr>
+          <th>Descripción</th>
+          <th style="width:70px">Und</th>
+          <th style="width:130px">Cantidad</th>
+          <th style="width:200px">Justificación</th>
+          <th style="width:40px"></th>
+        </tr>
+      </thead>
+      <tbody id="nuevos-tbody"></tbody>
+    </table>
+    <div id="nuevos-placeholder" class="text-center text-muted py-3" style="font-size:.82rem">
+      Haz clic en "Agregar insumo" para reemplazar o añadir un material.
+    </div>
+  </div>
+</div>
+
+<!-- Historial de cambios -->
+{% if historial %}
+<div class="card mb-3">
+  <div class="card-header" style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
+    <i class="bi bi-clock-history me-2 text-secondary"></i>Historial de cambios logística
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead style="background:#f8fafc">
+        <tr>
+          <th style="width:90px">Fecha</th>
+          <th style="width:80px">Acción</th>
+          <th>Insumo</th>
+          <th style="width:80px" class="text-end">Cantidad</th>
+          <th>Justificación</th>
+          <th style="width:100px">Usuario</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in historial %}
+        <tr>
+          <td style="font-size:.78rem;color:#6b7280">{{ h.fecha|date:"d/m/Y H:i" }}</td>
+          <td>
+            {% if h.accion == 'ELIMINAR' %}
+            <span class="badge bg-danger" style="font-size:.72rem">Eliminó</span>
+            {% else %}
+            <span class="badge bg-success" style="font-size:.72rem">Agregó</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.82rem">{{ h.descripcion }}</td>
+          <td class="text-end" style="font-size:.82rem">{{ h.cantidad|floatformat:2 }} {{ h.unidad }}</td>
+          <td style="font-size:.78rem;color:#6b7280">{{ h.justificacion|default:"—" }}</td>
+          <td style="font-size:.78rem">{{ h.usuario.get_full_name|default:h.usuario.username|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 
 <!-- Acciones -->
 <div class="d-flex gap-2 justify-content-end">
-  <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="btn btn-outline-secondary">
-    Cancelar
-  </a>
+  <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
   <button type="submit" class="btn btn-success" id="btn-aprobar">
     <i class="bi bi-check-lg me-1"></i>Aprobar requerimiento
   </button>
 </div>
-
 </form>
+
+<!-- Modal eliminar -->
+<div class="modal fade" id="modal-eliminar" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" style="font-size:.9rem">Eliminar ítem</h6>
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-elim-desc" class="text-muted mb-2" style="font-size:.83rem"></p>
+        <label class="form-label fw-semibold" style="font-size:.8rem">Justificación *</label>
+        <textarea id="modal-elim-justif" class="form-control form-control-sm" rows="3"
+                  placeholder="¿Por qué se elimina este ítem?"></textarea>
+        <div id="modal-elim-error" class="text-danger mt-1" style="font-size:.75rem;display:none">
+          La justificación es obligatoria.
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger btn-sm" id="modal-elim-ok">
+          <i class="bi bi-trash3 me-1"></i>Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function () {
-  var inputs = document.querySelectorAll('.cant-aprobada');
+  var API = '/almacen/api/productos/';
+  var nuevoIdx = 0;
 
+  // ── Eliminar ítem ────────────────────────────────────────────────
+  var modalEl   = document.getElementById('modal-eliminar');
+  var modal     = new bootstrap.Modal(modalEl);
+  var pendingPk = null;
+
+  document.querySelectorAll('.btn-eliminar').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      pendingPk = btn.dataset.pk;
+      document.getElementById('modal-elim-desc').textContent = btn.dataset.desc;
+      document.getElementById('modal-elim-justif').value     = '';
+      document.getElementById('modal-elim-error').style.display = 'none';
+      modal.show();
+    });
+  });
+
+  document.getElementById('modal-elim-ok').addEventListener('click', function () {
+    var justif = document.getElementById('modal-elim-justif').value.trim();
+    if (!justif) {
+      document.getElementById('modal-elim-error').style.display = 'block';
+      return;
+    }
+    modal.hide();
+
+    // Marcar fila visualmente
+    var fila = document.getElementById('fila-' + pendingPk);
+    fila.style.opacity  = '.4';
+    fila.style.textDecoration = 'line-through';
+    fila.querySelector('.cant-aprobada').disabled = true;
+    fila.querySelector('.btn-eliminar').innerHTML =
+      '<i class="bi bi-arrow-counterclockwise" title="Restaurar"></i>';
+    fila.querySelector('.btn-eliminar').style.color = '#2563eb';
+    fila.querySelector('.btn-eliminar').onclick = function () { restaurar(pendingPk); };
+
+    // Inputs ocultos
+    var form = document.getElementById('form-revision');
+    var hElim = document.createElement('input');
+    hElim.type = 'hidden'; hElim.name = 'eliminar_' + pendingPk; hElim.value = '1';
+    hElim.id   = 'h-elim-' + pendingPk;
+    form.appendChild(hElim);
+
+    var hJust = document.createElement('input');
+    hJust.type = 'hidden'; hJust.name = 'justif_eliminar_' + pendingPk; hJust.value = justif;
+    hJust.id   = 'h-justif-' + pendingPk;
+    form.appendChild(hJust);
+  });
+
+  function restaurar(pk) {
+    var fila = document.getElementById('fila-' + pk);
+    fila.style.opacity = '';
+    fila.style.textDecoration = '';
+    fila.querySelector('.cant-aprobada').disabled = false;
+    var btnElim = fila.querySelector('.btn-eliminar');
+    btnElim.innerHTML = '<i class="bi bi-trash3"></i>';
+    btnElim.style.color = '#dc2626';
+    btnElim.onclick = null;
+    btnElim.addEventListener('click', function () {
+      pendingPk = pk;
+      document.getElementById('modal-elim-desc').textContent = btnElim.dataset.desc;
+      document.getElementById('modal-elim-justif').value     = '';
+      document.getElementById('modal-elim-error').style.display = 'none';
+      modal.show();
+    });
+    var e1 = document.getElementById('h-elim-'  + pk);
+    var e2 = document.getElementById('h-justif-' + pk);
+    if (e1) e1.remove();
+    if (e2) e2.remove();
+  }
+
+  // ── Agregar insumo ───────────────────────────────────────────────
+  document.getElementById('btn-agregar-fila').addEventListener('click', function () {
+    document.getElementById('tabla-nuevos').style.display = '';
+    document.getElementById('nuevos-placeholder').style.display = 'none';
+    agregarFilaNueva();
+  });
+
+  // Dropdown compartido (position:fixed, fuera de la tabla)
+  var sharedDrop = document.createElement('div');
+  sharedDrop.style.cssText = 'display:none;position:fixed;z-index:99999;background:#fff;' +
+    'border:1px solid #dee2e6;border-radius:4px;max-height:200px;overflow-y:auto;' +
+    'box-shadow:0 4px 12px rgba(0,0,0,.15)';
+  document.body.appendChild(sharedDrop);
+  var activeSearch = null;
+
+  function agregarFilaNueva() {
+    var n     = nuevoIdx++;
+    var tbody = document.getElementById('nuevos-tbody');
+    var tr    = document.createElement('tr');
+    tr.id     = 'nuevo-row-' + n;
+    tr.innerHTML =
+      '<td style="min-width:220px">' +
+        '<input type="text" class="form-control form-control-sm nuevo-search" placeholder="Buscar insumo..." autocomplete="off" data-idx="' + n + '">' +
+        '<input type="hidden" name="nuevo_' + n + '_insumo" id="n' + n + '-insumo">' +
+        '<input type="hidden" name="nuevo_' + n + '_desc"   id="n' + n + '-desc">' +
+        '<input type="hidden" name="nuevo_' + n + '_unidad" id="n' + n + '-unidad">' +
+      '</td>' +
+      '<td><input type="text" class="form-control form-control-sm" id="n' + n + '-unidad-disp" placeholder="und" readonly style="background:#f8f9fa;color:#6b7280"></td>' +
+      '<td><input type="number" name="nuevo_' + n + '_cantidad" step="0.0001" min="0.0001" class="form-control form-control-sm" placeholder="0.00" required></td>' +
+      '<td><input type="text" name="nuevo_' + n + '_justif" class="form-control form-control-sm" placeholder="Justificación..."></td>' +
+      '<td class="text-center">' +
+        '<button type="button" class="btn btn-link p-0" style="color:#dc2626" onclick="this.closest(\'tr\').remove();actualizarCount()">' +
+          '<i class="bi bi-x-lg"></i>' +
+        '</button>' +
+      '</td>';
+    tbody.appendChild(tr);
+    actualizarCount();
+    iniciarBusqueda(tr.querySelector('.nuevo-search'));
+  }
+
+  function actualizarCount() {
+    document.getElementById('nuevo-count').value =
+      document.querySelectorAll('#nuevos-tbody tr').length;
+  }
+  window.actualizarCount = actualizarCount;
+
+  function iniciarBusqueda(inp) {
+    var n = inp.dataset.idx;
+
+    inp.addEventListener('focus', function () { activeSearch = inp; });
+
+    inp.addEventListener('input', function () {
+      var q = inp.value.trim();
+      if (!q) { sharedDrop.style.display = 'none'; return; }
+      activeSearch = inp;
+      fetch(API + '?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (activeSearch !== inp) return;
+          var rect = inp.getBoundingClientRect();
+          sharedDrop.style.top   = rect.bottom + window.scrollY + 'px';
+          sharedDrop.style.left  = rect.left + 'px';
+          sharedDrop.style.width = rect.width + 'px';
+          if (!data.length) {
+            sharedDrop.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:.8rem">Sin resultados</div>';
+          } else {
+            sharedDrop.innerHTML = data.map(function (p) {
+              return '<div class="nuevo-opt" data-id="' + p.id +
+                '" data-desc="' + p.descripcion.replace(/"/g,'&quot;') +
+                '" data-unidad="' + (p.unidad||'') + '" data-idx="' + n + '"' +
+                ' style="padding:6px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.8rem">' +
+                '<strong style="color:#d97706">' + p.codigo + '</strong> ' + p.descripcion +
+                '</div>';
+            }).join('');
+          }
+          sharedDrop.style.display = 'block';
+        });
+    });
+  }
+
+  sharedDrop.addEventListener('click', function (e) {
+    var opt = e.target.closest('.nuevo-opt');
+    if (!opt) return;
+    var idx = opt.dataset.idx;
+    var searchInp = document.querySelector('.nuevo-search[data-idx="' + idx + '"]');
+    if (searchInp) searchInp.value = opt.dataset.desc;
+    document.getElementById('n' + idx + '-insumo').value      = opt.dataset.id;
+    document.getElementById('n' + idx + '-desc').value        = opt.dataset.desc;
+    document.getElementById('n' + idx + '-unidad').value      = opt.dataset.unidad;
+    document.getElementById('n' + idx + '-unidad-disp').value = opt.dataset.unidad;
+    sharedDrop.style.display = 'none';
+    activeSearch = null;
+  });
+
+  sharedDrop.addEventListener('mouseover', function (e) {
+    var opt = e.target.closest('.nuevo-opt');
+    if (opt) opt.style.background = '#eff6ff';
+  });
+  sharedDrop.addEventListener('mouseout', function (e) {
+    var opt = e.target.closest('.nuevo-opt');
+    if (opt) opt.style.background = '';
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!sharedDrop.contains(e.target) && e.target !== activeSearch) {
+      sharedDrop.style.display = 'none';
+    }
+  });
+
+  // ── Validación cantidades originales ─────────────────────────────
+  var inputs = document.querySelectorAll('.cant-aprobada');
   inputs.forEach(function (inp) {
     inp.addEventListener('input', function () {
       var max = parseFloat(this.dataset.max);
@@ -141,9 +417,8 @@
 
   document.getElementById('form-revision').addEventListener('submit', function (e) {
     var tieneError = false;
-
-    // Validar cantidades
     inputs.forEach(function (inp) {
+      if (inp.disabled) return;
       var max = parseFloat(inp.dataset.max);
       var val = parseFloat(inp.value);
       var fb  = inp.nextElementSibling;
@@ -153,7 +428,15 @@
         tieneError = true;
       }
     });
-
+    // Validar que nuevos tengan insumo seleccionado
+    document.querySelectorAll('#nuevos-tbody tr').forEach(function (row) {
+      var hInsumo = row.querySelector('input[id$="-insumo"]');
+      var search  = row.querySelector('.nuevo-search');
+      if (search && !hInsumo.value) {
+        search.classList.add('is-invalid');
+        tieneError = true;
+      }
+    });
     if (tieneError) e.preventDefault();
   });
 })();

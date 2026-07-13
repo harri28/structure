@@ -148,6 +148,23 @@ def editar(request, pk):
     })
 
 
+def enviar(request, pk):
+    from django.views.decorators.http import require_POST
+    req = get_object_or_404(Requerimiento, pk=pk)
+    if request.method == 'POST' and req.estado == 'BORRADOR':
+        req.estado = 'ENVIADO'
+        req.save(update_fields=['estado'])
+        log(request, 'EDITAR', 'Requerimientos',
+            f'REQ-{req.numero} enviado a Logística por {request.user.get_full_name() or request.user.username}')
+        notificar(
+            f'Nuevo requerimiento REQ-{req.numero}',
+            mensaje=f'Enviado por {request.user.get_full_name() or request.user.username} — {req.proyecto.codigo}. Pendiente en Logística.',
+            tipo='info',
+        )
+        messages.success(request, f'REQ-{req.numero} enviado a Logística.')
+    return redirect('requerimientos:detalle', pk=req.pk)
+
+
 def aprobar(request, pk):
     from django.views.decorators.http import require_POST
     req = get_object_or_404(Requerimiento, pk=pk)
@@ -183,7 +200,7 @@ def vs_atenciones(request, proyecto_id):
                 descripcion = det.insumo.descripcion
                 unidad      = det.insumo.unidad or det.unidad
                 tipo        = det.insumo.get_tipo_display() if hasattr(det.insumo, 'get_tipo_display') else ''
-                original = det.insumo.cantidad_total or Decimal('0')
+                original    = det.insumo.cantidad_total or Decimal('0')
             else:
                 codigo      = det.codigo or '—'
                 descripcion = det.descripcion
@@ -196,10 +213,11 @@ def vs_atenciones(request, proyecto_id):
                 'original': original,
                 'solicitado': Decimal('0'), 'atendido': Decimal('0'),
                 'observaciones': '',
+                'insumo_id': det.insumo_id,
             }
-        if det.requerimiento.estado in ['ENVIADO', 'EN_REVISION']:
-            consolidado[key]['solicitado'] += det.cantidad_requerida or Decimal('0')
         if det.requerimiento.estado in ['APROBADO', 'PARCIAL', 'ATENDIDO']:
+            consolidado[key]['solicitado'] += det.cantidad_aprobada or Decimal('0')
+        if det.requerimiento.estado == 'ATENDIDO':
             consolidado[key]['atendido'] += det.cantidad_aprobada or Decimal('0')
         if det.observacion:
             consolidado[key]['observaciones'] = det.observacion
@@ -214,6 +232,27 @@ def vs_atenciones(request, proyecto_id):
     return render(request, 'requerimientos/vs_atenciones.html', {
         'proyecto': proyecto,
         'filas': filas,
+    })
+
+
+def vs_atenciones_insumo(request, proyecto_id, insumo_id):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL', 'ATENDIDO']
+    detalles = (DetalleRequerimiento.objects
+                .filter(insumo_id=insumo_id,
+                        requerimiento__proyecto=proyecto,
+                        requerimiento__estado__in=estados_incluidos)
+                .select_related('requerimiento', 'insumo')
+                .order_by('requerimiento__fecha', 'requerimiento__numero'))
+    if not detalles.exists():
+        from django.http import Http404
+        raise Http404
+    primer = detalles.first()
+    insumo = primer.insumo
+    return render(request, 'requerimientos/vs_atenciones_insumo.html', {
+        'proyecto': proyecto,
+        'insumo':   insumo,
+        'detalles': detalles,
     })
 
 

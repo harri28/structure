@@ -18,6 +18,7 @@
 
 <form method="post">
 {% csrf_token %}
+{% if not guia %}<input type="hidden" name="selected_guia_pk" id="selected-guia-pk" value="">{% endif %}
 <div class="row g-3">
 
   <!-- Datos de la guía -->
@@ -28,10 +29,16 @@
       </div>
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-sm-4">
+          <div class="col-sm-4" style="position:relative">
             <label class="form-label">N° Guía *</label>
             {{ form.numero }}
             {% if form.numero.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.numero.errors.0 }}</div>{% endif %}
+            {% if not guia %}
+            <div id="guia-dropdown" style="display:none;position:absolute;left:0;right:0;z-index:9999;
+                 background:#fff;border:1px solid #dee2e6;border-radius:6px;
+                 max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);top:100%">
+            </div>
+            {% endif %}
           </div>
           <div class="col-sm-4">
             <label class="form-label">Fecha Emisión *</label>
@@ -91,31 +98,34 @@
     </div>
   </div>
 
+{{ formset.management_form }}
   <!-- Bienes a trasladar -->
-  <div class="col-12">
+  <div class="col-12" id="card-bienes" {% if not guia %}style="display:none"{% endif %}>
     <div class="card">
       <div class="card-header" style="font-size:.82rem;font-weight:700;background:#f8fafc">
         <i class="bi bi-boxes me-1"></i> Bienes a Trasladar
       </div>
       <div class="card-body p-0">
-        {{ formset.management_form }}
-        <table class="table table-sm mb-0">
+        <table class="table table-sm mb-0" id="tabla-bienes">
           <thead style="background:#f8fafc">
             <tr>
-              <th style="width:55%">Descripción</th>
+              <th>Descripción</th>
               <th style="width:12%">Unidad</th>
               <th style="width:15%" class="text-end">Cantidad</th>
             </tr>
           </thead>
-          <tbody id="formset-body">
-            {% for f in formset %}
-            <tr class="formset-row{% if f.instance.pk and f.initial.DELETE %} d-none{% endif %}">
-              <td>{{ f.descripcion }}{{ f.id }}</td>
-              <td>{{ f.unidad }}</td>
-              <td>{{ f.cantidad }}</td>
-              <td style="display:none">{{ f.DELETE }}</td>
-            </tr>
-            {% endfor %}
+          <tbody>
+            {% if guia %}
+              {% for d in guia.detalles.all %}
+              <tr>
+                <td style="font-size:.83rem">{{ d.descripcion }}</td>
+                <td style="font-size:.82rem;color:#6b7280">{{ d.unidad }}</td>
+                <td class="text-end fw-semibold" style="font-size:.83rem">{{ d.cantidad }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:.82rem">Sin bienes registrados</td></tr>
+              {% endfor %}
+            {% endif %}
           </tbody>
         </table>
       </div>
@@ -136,11 +146,104 @@
   <div class="col-12 d-flex gap-2">
     <button type="submit" class="btn btn-primary">
       <i class="bi bi-check-lg me-1"></i>
-      {% if guia %}Guardar cambios{% else %}Crear Guía{% endif %}
+      {% if guia %}Guardar cambios{% else %}Guardar y generar guía{% endif %}
     </button>
     <a href="{% url 'logistica:guia_lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
   </div>
 
 </div>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+{% if not guia %}
+<script>
+(function () {
+  var inp      = document.getElementById('{{ form.numero.id_for_label }}');
+  var dropdown = document.getElementById('guia-dropdown');
+  if (!inp || !dropdown) return;
+
+  var API = '{% url "logistica:guias_pendientes_api" proyecto.pk %}';
+  var guias = [];
+
+  function render(lista) {
+    if (!lista.length) {
+      dropdown.innerHTML = '<div style="padding:10px 14px;font-size:.8rem;color:#9ca3af">No hay guías pendientes</div>';
+    } else {
+      dropdown.innerHTML = lista.map(function (g) {
+        return '<div class="guia-opt" data-pk="' + g.pk + '" data-numero="' + g.numero + '"' +
+          ' style="padding:8px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.82rem">' +
+          '<strong style="color:#2563eb">' + g.numero + '</strong>' +
+          '<span style="color:#6b7280;margin-left:.5rem">' + (g.destino || '') + '</span>' +
+          '</div>';
+      }).join('');
+    }
+    dropdown.style.display = 'block';
+  }
+
+  fetch(API)
+    .then(function (r) { return r.json(); })
+    .then(function (d) { guias = d.guias || []; });
+
+  inp.addEventListener('focus', function () {
+    var q = inp.value.trim().toLowerCase();
+    var filtradas = q ? guias.filter(function (g) { return g.numero.toLowerCase().includes(q); }) : guias;
+    render(filtradas);
+  });
+
+  inp.addEventListener('input', function () {
+    var q = inp.value.trim().toLowerCase();
+    var filtradas = q ? guias.filter(function (g) { return g.numero.toLowerCase().includes(q); }) : guias;
+    if (filtradas.length || !q) render(filtradas);
+    else dropdown.style.display = 'none';
+  });
+
+  dropdown.addEventListener('click', function (e) {
+    var opt = e.target.closest('.guia-opt');
+    if (!opt) return;
+    var pk     = opt.dataset.pk;
+    var numero = opt.dataset.numero;
+    inp.value  = numero;
+    dropdown.style.display = 'none';
+
+    // Guardar pk para que el view actualice la guía existente
+    document.getElementById('selected-guia-pk').value = pk;
+
+    // Cargar bienes
+    fetch('/logistica/guia/' + pk + '/bienes/')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var tbody = document.querySelector('#tabla-bienes tbody');
+        if (!d.bienes.length) {
+          tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3" style="font-size:.82rem">Sin bienes registrados</td></tr>';
+        } else {
+          tbody.innerHTML = d.bienes.map(function (b) {
+            return '<tr>' +
+              '<td style="font-size:.83rem">' + b.descripcion + '</td>' +
+              '<td style="font-size:.82rem;color:#6b7280">' + (b.unidad || '—') + '</td>' +
+              '<td class="text-end fw-semibold" style="font-size:.83rem">' + parseFloat(b.cantidad) + '</td>' +
+              '</tr>';
+          }).join('');
+        }
+        document.getElementById('card-bienes').style.display = '';
+      });
+  });
+
+  dropdown.addEventListener('mouseover', function (e) {
+    var opt = e.target.closest('.guia-opt');
+    if (opt) opt.style.background = '#eff6ff';
+  });
+  dropdown.addEventListener('mouseout', function (e) {
+    var opt = e.target.closest('.guia-opt');
+    if (opt) opt.style.background = '';
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!inp.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

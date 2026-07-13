@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Guía de Remisión {{ guia.numero }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      color: #000;
+      background: #fff;
+    }
+
+    .pagina {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 18mm 18mm 18mm 18mm;
+      background: #fff;
+    }
+
+    /* ── Cabecera ── */
+    .cabecera {
+      display: flex;
+      align-items: stretch;
+      border: 1.5px solid #000;
+      margin-bottom: 10px;
+    }
+    .cab-logo {
+      width: 52mm;
+      border-right: 1.5px solid #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 10px;
+      gap: 6px;
+    }
+    .cab-logo img {
+      max-height: 44px;
+      max-width: 100%;
+      object-fit: contain;
+    }
+    .cab-logo .empresa-nombre {
+      font-size: 10px;
+      font-weight: bold;
+      text-align: center;
+      text-transform: uppercase;
+      line-height: 1.4;
+    }
+    .cab-logo .empresa-ruc {
+      font-size: 9px;
+      text-align: center;
+    }
+    .cab-titulo {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 12px;
+      text-align: center;
+      border-right: 1.5px solid #000;
+    }
+    .cab-titulo h1 {
+      font-size: 15px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .cab-titulo .subtitulo {
+      font-size: 10px;
+      margin-top: 5px;
+      color: #333;
+    }
+    .cab-numero {
+      width: 50mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 10px;
+      text-align: center;
+    }
+    .cab-numero .label { font-size: 8.5px; color: #555; text-transform: uppercase; }
+    .cab-numero .numero {
+      font-size: 16px;
+      font-weight: bold;
+      color: #000;
+      margin-top: 4px;
+      letter-spacing: .5px;
+    }
+    .cab-numero .fecha { font-size: 9px; margin-top: 6px; }
+
+    /* ── Secciones ── */
+    .seccion {
+      border: 1px solid #000;
+      margin-bottom: 10px;
+    }
+    .seccion-header {
+      background: #222;
+      color: #fff;
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 5px 10px;
+    }
+    .seccion-body {
+      padding: 12px 10px;
+    }
+    .fila-datos {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .fila-datos:last-child { margin-bottom: 0; }
+    .dato {
+      display: flex;
+      flex-direction: column;
+      min-width: 60px;
+    }
+    .dato label {
+      font-size: 8px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      margin-bottom: 3px;
+    }
+    .dato span {
+      font-size: 11px;
+      font-weight: 600;
+      border-bottom: 1px solid #ccc;
+      min-width: 60px;
+      padding-bottom: 3px;
+    }
+    .dato.wide { flex: 1; min-width: 120px; }
+
+    /* ── Tabla de bienes ── */
+    table.bienes {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0;
+    }
+    table.bienes thead tr {
+      background: #222;
+      color: #fff;
+    }
+    table.bienes th {
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      padding: 7px 10px;
+      letter-spacing: .3px;
+    }
+    table.bienes td {
+      font-size: 11px;
+      padding: 8px 10px;
+      border-bottom: 1px solid #ddd;
+      vertical-align: top;
+    }
+    table.bienes tr:nth-child(even) td { background: #f9f9f9; }
+    table.bienes .num { text-align: right; }
+    table.bienes .center { text-align: center; }
+
+    /* ── Firmas ── */
+    .firmas {
+      display: flex;
+      gap: 14mm;
+      margin-top: 22mm;
+      justify-content: space-around;
+    }
+    .firma {
+      flex: 1;
+      text-align: center;
+    }
+    .firma .linea {
+      border-top: 1px solid #000;
+      margin-bottom: 6px;
+    }
+    .firma .nombre {
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .firma .cargo {
+      font-size: 9px;
+      color: #555;
+      margin-top: 2px;
+    }
+
+    /* ── Footer ── */
+    .pie {
+      margin-top: 8mm;
+      font-size: 7.5px;
+      color: #777;
+      text-align: center;
+      border-top: 1px solid #ccc;
+      padding-top: 4px;
+    }
+
+    /* ── Print ── */
+    @media print {
+      body { background: #fff; }
+      .pagina { margin: 0; padding: 12mm 14mm; width: 100%; }
+      .no-print { display: none !important; }
+    }
+
+    /* ── Botón de impresión (solo pantalla) ── */
+    .btn-imprimir {
+      display: block;
+      width: 210mm;
+      margin: 8px auto;
+      padding: 8px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-imprimir:hover { background: #1d4ed8; }
+    @media print { .btn-imprimir { display: none; } }
+  </style>
+</head>
+<body>
+
+<button class="btn-imprimir no-print" onclick="window.print()">
+  🖨 Imprimir / Guardar PDF
+</button>
+
+<div class="pagina">
+
+  <!-- Cabecera -->
+  <div class="cabecera">
+    <div class="cab-logo">
+      {% if empresa.logo %}
+      <img src="{{ empresa.logo.url }}" alt="Logo">
+      {% endif %}
+      <div class="empresa-nombre">{{ empresa.razon_social }}</div>
+      {% if empresa.ruc %}<div class="empresa-ruc">RUC: {{ empresa.ruc }}</div>{% endif %}
+    </div>
+    <div class="cab-titulo">
+      <h1>Guía de Remisión</h1>
+      <div class="subtitulo">{{ guia.get_motivo_display }}</div>
+      {% if empresa.direccion %}<div style="font-size:8px;color:#555;margin-top:4px">{{ empresa.direccion }}</div>{% endif %}
+    </div>
+    <div class="cab-numero">
+      <div class="label">N° Guía</div>
+      <div class="numero">{{ guia.numero }}</div>
+      <div class="fecha">Emisión: {{ guia.fecha_emision|date:"d/m/Y" }}</div>
+      <div class="fecha">Traslado: {{ guia.fecha_traslado|date:"d/m/Y" }}</div>
+    </div>
+  </div>
+
+  <!-- Traslado -->
+  <div class="seccion">
+    <div class="seccion-header">Datos del Traslado</div>
+    <div class="seccion-body">
+      <div class="fila-datos">
+        <div class="dato wide">
+          <label>Punto de Partida (Origen)</label>
+          <span>{{ guia.origen }}</span>
+        </div>
+        <div class="dato wide">
+          <label>Punto de Llegada (Destino)</label>
+          <span>{{ guia.destino }}</span>
+        </div>
+      </div>
+      {% if guia.observaciones %}
+      <div class="fila-datos">
+        <div class="dato wide">
+          <label>Observaciones</label>
+          <span style="font-weight:normal">{{ guia.observaciones }}</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Transporte -->
+  <div class="seccion">
+    <div class="seccion-header">Datos del Transporte</div>
+    <div class="seccion-body">
+      <div class="fila-datos">
+        <div class="dato wide">
+          <label>Transportista</label>
+          <span>{{ guia.transportista.razon_social|default:"—" }}</span>
+        </div>
+        <div class="dato">
+          <label>Placa</label>
+          <span>{{ guia.placa|default:"—" }}</span>
+        </div>
+        <div class="dato wide">
+          <label>Conductor</label>
+          <span>{{ guia.conductor|default:"—" }}</span>
+        </div>
+        <div class="dato">
+          <label>N° Licencia</label>
+          <span>{{ guia.licencia|default:"—" }}</span>
+        </div>
+        {% if guia.peso_kg %}
+        <div class="dato">
+          <label>Peso Bruto (kg)</label>
+          <span>{{ guia.peso_kg }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Bienes -->
+  <div class="seccion">
+    <div class="seccion-header">Bienes Trasladados</div>
+    <table class="bienes">
+      <thead>
+        <tr>
+          <th class="center" style="width:30px">#</th>
+          <th>Descripción</th>
+          <th class="center" style="width:55px">Unidad</th>
+          <th class="num" style="width:65px">Cantidad</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in guia.detalles.all %}
+        <tr>
+          <td class="center" style="color:#777">{{ forloop.counter }}</td>
+          <td>{{ d.descripcion }}</td>
+          <td class="center" style="color:#555">{{ d.unidad }}</td>
+          <td class="num" style="font-weight:600">{{ d.cantidad }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center;padding:10px;color:#999">Sin bienes registrados</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Firmas -->
+  <div class="firmas">
+    <div class="firma">
+      <div style="height:26mm"></div>
+      <div class="linea"></div>
+      <div class="nombre">Despachado por</div>
+      <div class="cargo">Firma y sello</div>
+    </div>
+    <div class="firma">
+      <div style="height:26mm"></div>
+      <div class="linea"></div>
+      <div class="nombre">Transportista</div>
+      <div class="cargo">{{ guia.conductor|default:"Firma y sello" }}</div>
+    </div>
+    <div class="firma">
+      <div style="height:26mm"></div>
+      <div class="linea"></div>
+      <div class="nombre">Recibido por</div>
+      <div class="cargo">Firma y DNI</div>
+    </div>
+  </div>
+
+  <!-- Pie -->
+  <div class="pie">
+    Guía {{ guia.numero }} — {{ empresa.razon_social }}{% if empresa.ruc %} · RUC {{ empresa.ruc }}{% endif %} · Emitida el {{ guia.fecha_emision|date:"d/m/Y" }}
+  </div>
+
+</div>
+
+</body>
+</html>

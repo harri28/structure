@@ -121,6 +121,49 @@
   {% endif %}
 </div>
 
+<!-- Historial de cambios logística -->
+{% with historial=req.historial_revision.all %}
+{% if historial %}
+<div class="card mb-3">
+  <div class="card-header" style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
+    <i class="bi bi-clock-history me-2 text-secondary"></i>Cambios realizados por Logística
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead style="background:#f8fafc">
+        <tr>
+          <th style="width:90px">Fecha</th>
+          <th style="width:80px">Acción</th>
+          <th>Insumo</th>
+          <th style="width:90px" class="text-end">Cantidad</th>
+          <th>Justificación</th>
+          <th style="width:100px">Usuario</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in historial %}
+        <tr>
+          <td style="font-size:.78rem;color:#6b7280">{{ h.fecha|date:"d/m/Y H:i" }}</td>
+          <td>
+            {% if h.accion == 'ELIMINAR' %}
+            <span class="badge bg-danger" style="font-size:.72rem">Eliminó</span>
+            {% else %}
+            <span class="badge bg-success" style="font-size:.72rem">Agregó</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.82rem">{{ h.descripcion }}</td>
+          <td class="text-end" style="font-size:.82rem">{{ h.cantidad|floatformat:2 }} {{ h.unidad }}</td>
+          <td style="font-size:.78rem;color:#6b7280">{{ h.justificacion|default:"—" }}</td>
+          <td style="font-size:.78rem">{{ h.usuario.get_full_name|default:h.usuario.username|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endwith %}
+
 <!-- Materiales solicitados -->
 <div class="card">
   <div class="card-header" style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">

@@ -50,6 +50,12 @@ class GuiaRemision(models.Model):
     peso_kg        = models.DecimalField('Peso bruto (kg)', max_digits=10, decimal_places=2, null=True, blank=True)
     observaciones  = models.TextField(blank=True)
     estado         = models.CharField(max_length=20, choices=ESTADOS_GUIA, default='PENDIENTE')
+    requerimiento  = models.ForeignKey(
+        'requerimientos.Requerimiento',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='guias_remision',
+    )
     creado_en      = models.DateTimeField(auto_now_add=True)
 
     class Meta:

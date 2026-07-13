@@ -8,9 +8,12 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/',              views.dashboard,   name='dashboard'),
 
     # Guías de Remisión
-    path('proyecto/<int:proyecto_id>/guias/',        views.guia_lista,  name='guia_lista'),
-    path('proyecto/<int:proyecto_id>/guias/nueva/',  views.guia_crear,  name='guia_crear'),
-    path('guia/<int:pk>/',                           views.guia_detalle, name='guia_detalle'),
+    path('proyecto/<int:proyecto_id>/guias/',             views.guia_lista,          name='guia_lista'),
+    path('proyecto/<int:proyecto_id>/guias/nueva/',       views.guia_crear,          name='guia_crear'),
+    path('proyecto/<int:proyecto_id>/guias/pendientes/',  views.guias_pendientes_api, name='guias_pendientes_api'),
+    path('guia/<int:pk>/',                           views.guia_detalle,   name='guia_detalle'),
+    path('guia/<int:pk>/bienes/',                    views.guia_bienes_api, name='guia_bienes_api'),
+    path('guia/<int:pk>/imprimir/',                  views.guia_imprimir,   name='guia_imprimir'),
     path('guia/<int:pk>/editar/',                    views.guia_editar,  name='guia_editar'),
     path('guia/<int:pk>/estado/',                    views.guia_estado,  name='guia_estado'),
     path('guia/<int:pk>/eliminar/',                  views.guia_eliminar,name='guia_eliminar'),

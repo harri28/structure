@@ -173,6 +173,25 @@
     if (opt) {
       const wrap   = opt.closest('.prod-wrap');
       const row    = wrap.closest('.formset-row');
+
+      // Verificar si el insumo ya está en otra fila
+      const idSeleccionado = opt.dataset.id;
+      const duplicado = Array.from(document.querySelectorAll('input[name$="-insumo"]')).some(function(inp) {
+        return inp.value === idSeleccionado && inp.closest('.formset-row') !== row;
+      });
+      if (duplicado) {
+        const searchInp = wrap.querySelector('.prod-search');
+        searchInp.value = '';
+        searchInp.classList.add('is-invalid');
+        searchInp.placeholder = '⚠ Insumo ya agregado en otra fila';
+        setTimeout(function() {
+          searchInp.classList.remove('is-invalid');
+          searchInp.placeholder = 'Buscar material...';
+        }, 2500);
+        opt.closest('.prod-dropdown').style.display = 'none';
+        return;
+      }
+
       wrap.querySelector('.prod-search').value = opt.dataset.label;
       const insumoInput = wrap.querySelector('input[name$="-insumo"]');
       if (insumoInput) insumoInput.value = opt.dataset.id;

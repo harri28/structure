@@ -64,8 +64,35 @@ class DetalleRequerimiento(models.Model):
     unidad = models.CharField(max_length=20, blank=True)
     cantidad_requerida = models.DecimalField(max_digits=15, decimal_places=4, default=0)
     cantidad_aprobada = models.DecimalField(max_digits=15, decimal_places=4, null=True, blank=True)
+    insumo_sustituto = models.ForeignKey(
+        InsumoPresupuesto, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='detalles_sustituto',
+        verbose_name='Insumo sustituto',
+    )
     justificacion = models.CharField(max_length=400, blank=True)
     observacion = models.CharField(max_length=300, blank=True)
 
     def __str__(self):
         return f'{self.descripcion or (self.insumo.descripcion if self.insumo else "—")} x {self.cantidad}'
+
+
+class HistorialRevisionReq(models.Model):
+    ACCIONES = [
+        ('ELIMINAR', 'Ítem eliminado'),
+        ('AGREGAR',  'Ítem agregado'),
+    ]
+    requerimiento = models.ForeignKey(Requerimiento, on_delete=models.CASCADE, related_name='historial_revision')
+    accion        = models.CharField(max_length=10, choices=ACCIONES)
+    insumo        = models.ForeignKey(InsumoPresupuesto, null=True, blank=True, on_delete=models.SET_NULL)
+    descripcion   = models.CharField(max_length=400)
+    unidad        = models.CharField(max_length=20, blank=True)
+    cantidad      = models.DecimalField(max_digits=15, decimal_places=4)
+    justificacion = models.TextField(blank=True)
+    usuario       = models.ForeignKey('auth.User', null=True, on_delete=models.SET_NULL)
+    fecha         = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ['-fecha']
+        verbose_name        = 'Historial de revisión'
+        verbose_name_plural = 'Historial de revisiones'

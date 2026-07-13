@@ -68,43 +68,68 @@ def guia_lista(request, proyecto_id):
     })
 
 
+def _registrar_entrada_almacen(guia, proyecto):
+    """Crea el registro de Entrada en Almacén a partir de la guía."""
+    from apps.almacen.models import Entrada, DetalleEntrada
+    entrada = Entrada.objects.create(
+        proyecto=proyecto,
+        guia=guia,
+        numero_guia=guia.numero,
+        fecha=guia.fecha_traslado,
+        proveedor=guia.transportista.razon_social if guia.transportista else '',
+        descripcion=guia.get_motivo_display(),
+        observaciones=guia.observaciones,
+    )
+    for det in guia.detalles.all():
+        DetalleEntrada.objects.create(
+            entrada=entrada,
+            descripcion=det.descripcion,
+            cantidad=det.cantidad,
+            unidad=det.unidad,
+        )
+
+
 def guia_crear(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
     if request.method == 'POST':
-        form    = GuiaRemisionForm(request.POST)
-        formset = DetalleGuiaFormSet(request.POST)
-        if form.is_valid() and formset.is_valid():
-            guia          = form.save(commit=False)
-            guia.proyecto = proyecto
-            guia.save()
-            formset.instance = guia
-            formset.save()
+        selected_pk = request.POST.get('selected_guia_pk', '').strip()
 
-            # Auto-crear Entrada en Almacén
-            from apps.almacen.models import Entrada, DetalleEntrada
-            entrada = Entrada.objects.create(
-                proyecto=proyecto,
-                guia=guia,
-                numero_guia=guia.numero,
-                fecha=guia.fecha_traslado,
-                proveedor=guia.transportista.razon_social if guia.transportista else '',
-                descripcion=guia.get_motivo_display(),
-                observaciones=guia.observaciones,
-            )
-            for det in guia.detalles.all():
-                DetalleEntrada.objects.create(
-                    entrada=entrada,
-                    descripcion=det.descripcion,
-                    cantidad=det.cantidad,
-                    unidad=det.unidad,
-                )
-
-            log(request, 'CREAR', 'Logística', f'Guía {guia.numero} creada en {proyecto.codigo}')
-            notificar(f'Nueva guía de remisión {guia.numero}',
-                      mensaje=f'{proyecto.codigo} — {guia.get_motivo_display()}. Entrada generada en Almacén.',
-                      tipo='info')
-            messages.success(request, f'Guía {guia.numero} creada. Entrada generada en Almacén.')
-            return redirect('logistica:guia_detalle', pk=guia.pk)
+        if selected_pk:
+            # Despachar una guía PENDIENTE existente (generada al aprobar req)
+            guia_existente = get_object_or_404(GuiaRemision, pk=selected_pk, proyecto=proyecto, estado='PENDIENTE')
+            form = GuiaRemisionForm(request.POST, instance=guia_existente)
+            if form.is_valid():
+                guia = form.save(commit=False)
+                guia.estado = 'EN_TRANSITO'
+                guia.save()
+                _despachar_req(guia)
+                _registrar_entrada_almacen(guia, proyecto)
+                log(request, 'CREAR', 'Logística', f'Guía {guia.numero} despachada en {proyecto.codigo}')
+                notificar(f'Guía {guia.numero} despachada',
+                          mensaje=f'{proyecto.codigo} — {guia.get_motivo_display()}. Entrada generada en Almacén.',
+                          tipo='info')
+                messages.success(request, f'Guía {guia.numero} generada. Requerimiento marcado como atendido.')
+                return redirect('logistica:guia_detalle', pk=guia.pk)
+            else:
+                formset = DetalleGuiaFormSet(request.POST)
+        else:
+            # Crear nueva guía desde cero
+            form    = GuiaRemisionForm(request.POST)
+            formset = DetalleGuiaFormSet(request.POST)
+            if form.is_valid() and formset.is_valid():
+                guia          = form.save(commit=False)
+                guia.proyecto = proyecto
+                guia.estado   = 'EN_TRANSITO'
+                guia.save()
+                formset.instance = guia
+                formset.save()
+                _registrar_entrada_almacen(guia, proyecto)
+                log(request, 'CREAR', 'Logística', f'Guía {guia.numero} creada en {proyecto.codigo}')
+                notificar(f'Nueva guía de remisión {guia.numero}',
+                          mensaje=f'{proyecto.codigo} — {guia.get_motivo_display()}. Entrada generada en Almacén.',
+                          tipo='info')
+                messages.success(request, f'Guía {guia.numero} creada. Entrada generada en Almacén.')
+                return redirect('logistica:guia_detalle', pk=guia.pk)
     else:
         form    = GuiaRemisionForm()
         formset = DetalleGuiaFormSet()
@@ -277,8 +302,8 @@ def req_detalle_log(request, proyecto_id, pk):
     })
 
 
-def _crear_guia_desde_req(req, proyecto, detalles, aprobaciones):
-    """Crea una GuiaRemision automática con los ítems aprobados del requerimiento."""
+def _crear_guia_desde_req(req, proyecto):
+    """Crea una GuiaRemision automática (PENDIENTE) con los ítems aprobados del requerimiento."""
     import datetime
     from .models import GuiaRemision, DetalleGuia
     from decimal import Decimal
@@ -308,22 +333,36 @@ def _crear_guia_desde_req(req, proyecto, detalles, aprobaciones):
         origen='Almacén',
         destino=req.sector_obra or req.obra or proyecto.nombre,
         observaciones=f'Generada automáticamente desde REQ-{req.numero}',
+        requerimiento=req,
     )
 
-    for det in detalles:
-        aprobada = aprobaciones.get(det.pk, Decimal('0'))
-        if aprobada > 0:
+    for det in req.detalles.select_related('insumo').all():
+        if det.cantidad_aprobada and det.cantidad_aprobada > 0:
             DetalleGuia.objects.create(
                 guia=guia,
                 descripcion=det.descripcion or (det.insumo.descripcion if det.insumo else '—'),
                 unidad=det.unidad or '',
-                cantidad=aprobada,
+                cantidad=det.cantidad_aprobada,
             )
+
+
+def _despachar_req(guia):
+    """Al generar guía (EN_TRANSITO): marca req como ATENDIDO y descuenta insumos."""
+    if not guia.requerimiento_id:
+        return
+    req = guia.requerimiento
+    for det in req.detalles.select_related('insumo').all():
+        if det.cantidad_aprobada and det.insumo:
+            det.insumo.cantidad = max(Decimal('0'), det.insumo.cantidad - det.cantidad_aprobada)
+            det.insumo.save(update_fields=['cantidad'])
+    req.estado = 'ATENDIDO'
+    req.save(update_fields=['estado'])
 
 
 def req_revisar_log(request, proyecto_id, pk):
     from decimal import Decimal, InvalidOperation
-    from apps.requerimientos.models import Requerimiento
+    from apps.requerimientos.models import Requerimiento, HistorialRevisionReq
+    from apps.presupuesto.models import InsumoPresupuesto as _Ins
 
     proyecto = _get_proyecto(proyecto_id)
     req = get_object_or_404(Requerimiento, pk=pk, proyecto=proyecto)
@@ -333,7 +372,6 @@ def req_revisar_log(request, proyecto_id, pk):
         messages.error(request, 'Este requerimiento no puede editarse en su estado actual.')
         return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
 
-    # Marcar como EN_REVISION si venía de ENVIADO
     if req.estado == 'ENVIADO':
         req.estado = 'EN_REVISION'
         req.save(update_fields=['estado'])
@@ -342,41 +380,66 @@ def req_revisar_log(request, proyecto_id, pk):
     _backfill_codigos(detalles, proyecto)
 
     if request.method == 'POST':
-        # Leer y validar cantidades aprobadas
-        aprobaciones = {}
         errores = []
-        for det in detalles:
-            raw = request.POST.get(f'aprobada_{det.pk}', '').strip()
-            try:
-                aprobada = Decimal(raw) if raw else Decimal('0')
-            except InvalidOperation:
-                aprobada = Decimal('0')
 
-            if aprobada < 0:
-                errores.append(f'Ítem "{det.descripcion or det.pk}": la cantidad no puede ser negativa.')
-            elif aprobada > det.cantidad_requerida:
-                errores.append(
-                    f'Ítem "{det.descripcion or det.pk}": '
-                    f'cantidad aprobada ({aprobada}) supera la requerida ({det.cantidad_requerida}).'
-                )
+        # ── Procesar ítems existentes ────────────────────────────────
+        aprobaciones = {}
+        eliminados   = {}   # det.pk → justificacion
+
+        for det in detalles:
+            if request.POST.get(f'eliminar_{det.pk}'):
+                aprobaciones[det.pk] = Decimal('0')
+                eliminados[det.pk]   = request.POST.get(f'justif_eliminar_{det.pk}', '').strip()
             else:
-                aprobaciones[det.pk] = aprobada
+                raw = request.POST.get(f'aprobada_{det.pk}', '').strip()
+                try:
+                    aprobada = Decimal(raw) if raw else Decimal('0')
+                except InvalidOperation:
+                    aprobada = Decimal('0')
+                if aprobada < 0:
+                    errores.append(f'Ítem "{det.descripcion or det.pk}": cantidad negativa.')
+                elif aprobada > det.cantidad_requerida:
+                    errores.append(
+                        f'Ítem "{det.descripcion or det.pk}": '
+                        f'cantidad ({aprobada}) supera la requerida ({det.cantidad_requerida}).'
+                    )
+                else:
+                    aprobaciones[det.pk] = aprobada
+
+        # ── Validar nuevos ítems ─────────────────────────────────────
+        nuevo_count = int(request.POST.get('nuevo_count', '0') or 0)
+        nuevos = []
+        for n in range(nuevo_count):
+            ins_pk   = request.POST.get(f'nuevo_{n}_insumo', '').strip()
+            cant_str = request.POST.get(f'nuevo_{n}_cantidad', '').strip()
+            desc     = request.POST.get(f'nuevo_{n}_desc', '').strip()
+            unidad   = request.POST.get(f'nuevo_{n}_unidad', '').strip()
+            justif   = request.POST.get(f'nuevo_{n}_justif', '').strip()
+            if not ins_pk or not cant_str:
+                continue
+            try:
+                insumo = _Ins.objects.get(pk=int(ins_pk))
+                cant   = Decimal(cant_str)
+                if cant <= 0:
+                    errores.append(f'Ítem nuevo "{desc}": la cantidad debe ser mayor a 0.')
+                else:
+                    nuevos.append({'insumo': insumo, 'cantidad': cant,
+                                   'desc': desc or insumo.descripcion,
+                                   'unidad': unidad or insumo.unidad or '',
+                                   'justif': justif})
+            except (ValueError, _Ins.DoesNotExist, InvalidOperation):
+                errores.append(f'Ítem nuevo "{desc}": insumo o cantidad inválidos.')
 
         if errores:
             for e in errores:
                 messages.error(request, e)
+            historial = req.historial_revision.select_related('insumo', 'usuario').all()
             return render(request, 'logistica/req_revisar.html', {
                 'proyecto': proyecto, 'req': req,
-                'detalles': detalles,
+                'detalles': detalles, 'historial': historial,
             })
 
-        # Revertir descuentos previos si ya había una aprobación anterior
-        for det in detalles:
-            if det.cantidad_aprobada and det.insumo:
-                det.insumo.cantidad += det.cantidad_aprobada
-                det.insumo.save(update_fields=['cantidad'])
-
-        # Descontar del contador de insumos y guardar cantidades aprobadas
+        # ── Guardar aprobaciones y registrar eliminaciones ───────────
         es_parcial = False
         for det in detalles:
             aprobada = aprobaciones[det.pk]
@@ -384,40 +447,103 @@ def req_revisar_log(request, proyecto_id, pk):
             det.save(update_fields=['cantidad_aprobada'])
             if aprobada < det.cantidad_requerida:
                 es_parcial = True
-            if det.insumo and aprobada > 0:
-                det.insumo.cantidad = max(Decimal('0'), det.insumo.cantidad - aprobada)
-                det.insumo.save(update_fields=['cantidad'])
+            if det.pk in eliminados:
+                HistorialRevisionReq.objects.create(
+                    requerimiento=req,
+                    accion='ELIMINAR',
+                    insumo=det.insumo,
+                    descripcion=det.descripcion or (det.insumo.descripcion if det.insumo else '—'),
+                    unidad=det.unidad or '',
+                    cantidad=det.cantidad_requerida,
+                    justificacion=eliminados[det.pk],
+                    usuario=request.user,
+                )
 
+        # ── Crear nuevos ítems ───────────────────────────────────────
+        from apps.requerimientos.models import DetalleRequerimiento as _Det
+        for n in nuevos:
+            _Det.objects.create(
+                requerimiento=req,
+                insumo=n['insumo'],
+                codigo=n['insumo'].codigo or '',
+                descripcion=n['desc'],
+                unidad=n['unidad'],
+                cantidad=n['cantidad'],
+                cantidad_requerida=n['cantidad'],
+                cantidad_aprobada=n['cantidad'],
+            )
+            HistorialRevisionReq.objects.create(
+                requerimiento=req,
+                accion='AGREGAR',
+                insumo=n['insumo'],
+                descripcion=n['desc'],
+                unidad=n['unidad'],
+                cantidad=n['cantidad'],
+                justificacion=n['justif'],
+                usuario=request.user,
+            )
+
+        # ── Estado del requerimiento ─────────────────────────────────
+        if nuevos and not es_parcial:
+            pass  # nuevos siempre tienen aprobada == requerida, no cambia es_parcial
         req.estado = 'PARCIAL' if es_parcial else 'APROBADO'
         req.aprobacion_vista = False
         req.save()
 
+        # Eliminar guías PENDIENTE previas antes de crear la nueva
+        GuiaRemision.objects.filter(requerimiento=req, estado='PENDIENTE').delete()
+        _crear_guia_desde_req(req, proyecto)
+
         tipo_estado = 'aprobado parcialmente' if es_parcial else 'aprobado'
-
-        # Auto-crear Guía de Remisión con los ítems aprobados
-        _crear_guia_desde_req(req, proyecto, detalles, aprobaciones)
-
         log(request, 'EDITAR', 'Logística',
             f'REQ-{req.numero} {tipo_estado} por {request.user.get_full_name() or request.user.username}')
-        notificar(
-            f'REQ-{req.numero} {tipo_estado}',
-            mensaje=f'{proyecto.codigo} — revisado por Logística.',
-            tipo='warning' if es_parcial else 'success',
-        )
-        # Notificación específica para Almacén
-        notificar(
-            f'Despacho REQ-{req.numero} listo para recibir',
-            mensaje=f'{proyecto.codigo} — Los materiales aprobados han sido registrados en Guías de Remisión. Prepárate para recibirlos en almacén.',
-            tipo='info',
-        )
+        notificar(f'REQ-{req.numero} {tipo_estado}',
+                  mensaje=f'{proyecto.codigo} — revisado por Logística.',
+                  tipo='warning' if es_parcial else 'success')
+        notificar('Despacho listo para recibir',
+                  mensaje=f'{proyecto.codigo} — Guía de Remisión REQ-{req.numero} generada.',
+                  tipo='info')
         messages.success(request, f'REQ-{req.numero} {tipo_estado} correctamente. Guía de Remisión generada.')
         return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
 
+    historial = req.historial_revision.select_related('insumo', 'usuario').all()
     return render(request, 'logistica/req_revisar.html', {
         'proyecto': proyecto,
         'req':      req,
         'detalles': detalles,
+        'historial': historial,
     })
+
+
+def guia_imprimir(request, pk):
+    from apps.configuracion.models import ConfigEmpresa
+    guia = get_object_or_404(
+        GuiaRemision.objects.select_related('proyecto', 'transportista')
+                             .prefetch_related('detalles'),
+        pk=pk,
+    )
+    return render(request, 'logistica/guia_imprimir.html', {
+        'guia':     guia,
+        'proyecto': guia.proyecto,
+        'empresa':  ConfigEmpresa.get(),
+    })
+
+
+def guia_bienes_api(request, pk):
+    from django.http import JsonResponse
+    guia = get_object_or_404(GuiaRemision, pk=pk)
+    bienes = list(guia.detalles.values('descripcion', 'unidad', 'cantidad'))
+    return JsonResponse({'bienes': bienes})
+
+
+def guias_pendientes_api(request, proyecto_id):
+    from django.http import JsonResponse
+    proyecto = _get_proyecto(proyecto_id)
+    qs = (GuiaRemision.objects
+          .filter(proyecto=proyecto, estado='PENDIENTE')
+          .order_by('-creado_en')
+          .values('pk', 'numero', 'origen', 'destino'))
+    return JsonResponse({'guias': list(qs)})
 
 
 def inventarios(request, proyecto_id):

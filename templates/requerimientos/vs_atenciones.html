@@ -35,9 +35,9 @@
         </thead>
         <tbody>
           {% for f in filas %}
-          <tr>
+          <tr {% if f.insumo_id %}style="cursor:pointer" onclick="window.location='{% url 'requerimientos:vs_atenciones_insumo' proyecto.pk f.insumo_id %}'"{% endif %}>
             <td class="text-center fw-semibold" style="color:#92400e">{{ f.codigo }}</td>
-            <td style="font-weight:500">{{ f.descripcion }}</td>
+            <td style="font-weight:500">{{ f.descripcion }}{% if f.insumo_id %} <i class="bi bi-chevron-right" style="font-size:.7rem;color:#9ca3af"></i>{% endif %}</td>
             <td class="text-center text-muted">{{ f.unidad }}</td>
             <td class="text-center">
               <span style="font-size:.75rem;color:#6b7280">
@@ -55,13 +55,6 @@
           </tr>
           {% endfor %}
         </tbody>
-        <tfoot style="background:#f9fafb">
-          <tr>
-            <td></td>
-            <td class="fw-bold" style="font-size:.8rem;padding:.6rem 1rem">Total</td>
-            <td colspan="7"></td>
-          </tr>
-        </tfoot>
       </table>
     </div>
     <div class="px-3 py-2 text-muted" style="font-size:.74rem;border-top:1px solid #f3f4f6">

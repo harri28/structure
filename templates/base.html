@@ -609,39 +609,6 @@ document.querySelectorAll('#sidebar .collapse').forEach(function (col) {
   });
 })();
 
-// ── SSE: badge de notificaciones en tiempo real ───────────────────
-(function () {
-  if (!window.EventSource) return;
-  var badge = document.getElementById('notif-badge');
-
-  function setBadge(n) {
-    var b = document.getElementById('notif-badge');
-    if (n <= 0) { if (b) b.remove(); return; }
-    if (!b) {
-      b = document.createElement('span');
-      b.className = 'notif-badge'; b.id = 'notif-badge';
-      var btn = document.getElementById('notif-btn');
-      if (btn) btn.appendChild(b);
-    }
-    b.textContent = n > 99 ? '99+' : n;
-  }
-
-  function connect() {
-    var es = new EventSource('{% url "registro:notif_stream" %}');
-    es.onmessage = function (e) {
-      try {
-        var data = JSON.parse(e.data);
-        if (typeof data.no_leidas === 'number') setBadge(data.no_leidas);
-      } catch (_) {}
-    };
-    es.onerror = function () {
-      es.close();
-      setTimeout(connect, 15000);
-    };
-  }
-  connect();
-})();
-
 // ── Sidebar toggle (desktop: colapsar / mobile: slide) ───────────
 (function () {
   var sidebar  = document.getElementById('sidebar');
