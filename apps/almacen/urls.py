@@ -7,6 +7,7 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/', views.dashboard, name='dashboard'),
     # Stock / Kardex / Consumo
     path('proyecto/<int:proyecto_id>/stock/', views.stock, name='stock'),
+    path('proyecto/<int:proyecto_id>/stock/api/', views.stock_api, name='stock_api'),
     path('proyecto/<int:proyecto_id>/consumo/', views.consumo, name='consumo'),
     path('proyecto/<int:proyecto_id>/stock/<int:insumo_id>/kardex/', views.kardex, name='kardex'),
     # Entradas

@@ -193,6 +193,7 @@ Each page template declares which sidebar link is "active" via `{% block nav_* %
 - **`miles` filter** (formats numbers as `200.669,58`) is registered as a builtin in `settings.py → TEMPLATES.OPTIONS.builtins`. No `{% load %}` needed.
 - **`get_item` filter** (`{{ dict|get_item:key }}`) lives in `apps/presupuesto/templatetags/pres_fmt.py`. Requires `{% load pres_fmt %}` — it is **not** a builtin.
 - All templates extend `templates/base.html`. Project-specific pages live in `templates/proyectos/`, `templates/presupuesto/`, etc.
+- **Formularios compactos**: cuando un form quede visualmente muy alto o los inputs se sienten demasiado grandes, aplicar la clase utility `.form-compact` sobre el `<form>` (definida en `static/css/main.css`). Reduce labels a ~11px uppercase, inputs a ~12.5px con padding menor, card-headers/body más apretados, y gutter entre filas. Aplicado hoy en `templates/logistica/guia_form.html` y `templates/almacen/entrada_form.html`. **No copiar CSS inline en otros templates** — reusar esta clase.
 
 ### Authentication
 `config/middleware.py → LoginRequiredMiddleware` redirects unauthenticated requests to `/login/`. Public path prefixes: `/login/`, `/admin/`, `/static/`, `/media/`.

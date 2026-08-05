@@ -53,12 +53,23 @@ def dashboard(request, proyecto_id):
 
 # ── Stock / Kardex ───────────────────────────────────────────────────────────
 
-@requiere('puede_ver_almacen')
-@proyecto_visible
-def stock(request, proyecto_id):
-    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    tipo_sel = request.GET.get('tipo', '')
+PAGE_SIZE_STOCK = 20
 
+
+STOCK_ORDER_MAP = {
+    # 'codigo' usa el int casteado (_codigo_int) porque el campo es CharField pero
+    # los valores son enteros amigables (1, 2, ... 100+). Ver REGLAS_NEGOCIO.md §15.
+    'codigo':        ('_codigo_int', 'codigo'),
+    'alpha':         ('descripcion', '_codigo_int'),
+    'cantidad_desc': ('-cantidad_total', '_codigo_int'),
+    'cantidad_asc':  ('cantidad_total', '_codigo_int'),
+}
+
+
+def _stock_query(proyecto, tipo_sel='', q='', order='codigo'):
+    """Devuelve (queryset ordenado, entradas_agg, salidas_agg) para el stock del proyecto."""
+    from django.db.models import Q, IntegerField
+    from django.db.models.functions import Cast
     entradas_agg = {
         r['insumo_id']: r['total']
         for r in DetalleEntrada.objects
@@ -73,31 +84,104 @@ def stock(request, proyecto_id):
         .values('insumo_id')
         .annotate(total=Sum('cantidad'))
     }
-
-    insumo_ids = set(entradas_agg) | set(salidas_agg)
-    insumo_ids.discard(None)
-    qs = InsumoPresupuesto.objects.filter(pk__in=insumo_ids)
+    try:
+        qs = proyecto.presupuesto.insumos.all()
+    except Exception:
+        qs = InsumoPresupuesto.objects.none()
     if tipo_sel:
         qs = qs.filter(tipo=tipo_sel)
+    if q:
+        qs = qs.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
+    # Cast del código a entero para poder ordenar 1, 2, 3, ..., 10, ... 100 en vez de
+    # 1, 10, 100, 2, ... (que es lo que da el orden lexicográfico sobre CharField).
+    qs = qs.annotate(_codigo_int=Cast('codigo', IntegerField()))
+    order_fields = STOCK_ORDER_MAP.get(order, STOCK_ORDER_MAP['codigo'])
+    qs = qs.order_by(*order_fields)
+    return qs, entradas_agg, salidas_agg
 
+
+def _build_items(qs, entradas_agg, salidas_agg):
     items = []
     for ins in qs:
         entrada = entradas_agg.get(ins.pk, Decimal('0'))
         salida  = salidas_agg.get(ins.pk, Decimal('0'))
         items.append({
             'insumo': ins,
+            'presupuestado': ins.cantidad_total or Decimal('0'),
             'total_entrada': entrada,
             'total_salida':  salida,
             'saldo': entrada - salida,
         })
-    items.sort(key=lambda x: x['insumo'].codigo or '')
+    return items
+
+
+@requiere('puede_ver_almacen')
+@proyecto_visible
+def stock(request, proyecto_id):
+    from django.core.paginator import Paginator
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    tipo_sel = request.GET.get('tipo', '')
+    q        = request.GET.get('q', '').strip()
+    order    = request.GET.get('order', 'codigo')
+
+    qs, entradas_agg, salidas_agg = _stock_query(proyecto, tipo_sel, q, order)
+    paginator = Paginator(qs, PAGE_SIZE_STOCK)
+    page_num  = request.GET.get('page') or 1
+    page      = paginator.get_page(page_num)
+    items     = _build_items(page.object_list, entradas_agg, salidas_agg)
 
     return render(request, 'almacen/stock.html', {
-        'proyecto': proyecto,
-        'items': items,
-        'tipos': TIPOS_RECURSO,
-        'tipo_sel': tipo_sel,
+        'proyecto':   proyecto,
+        'items':      items,
+        'tipos':      TIPOS_RECURSO,
+        'tipo_sel':   tipo_sel,
+        'q':          q,
+        'page':       page,
+        'total':      paginator.count,
+        'tiene_presupuesto': hasattr(proyecto, 'presupuesto') and proyecto.presupuesto is not None,
     })
+
+
+@requiere('puede_ver_almacen')
+@proyecto_visible
+def stock_api(request, proyecto_id):
+    """Endpoint JSON para búsqueda + paginación live del Stock."""
+    from django.core.paginator import Paginator
+    from django.http import JsonResponse
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    tipo_sel = request.GET.get('tipo', '')
+    q        = request.GET.get('q', '').strip()
+    order    = request.GET.get('order', 'codigo')
+
+    qs, entradas_agg, salidas_agg = _stock_query(proyecto, tipo_sel, q, order)
+    paginator = Paginator(qs, PAGE_SIZE_STOCK)
+    page_num  = request.GET.get('page') or 1
+    page      = paginator.get_page(page_num)
+    items     = _build_items(page.object_list, entradas_agg, salidas_agg)
+
+    data = {
+        'items': [
+            {
+                'pk':            item['insumo'].pk,
+                'codigo':        item['insumo'].codigo or '',
+                'descripcion':   item['insumo'].descripcion or '',
+                'tipo':          item['insumo'].get_tipo_display() or '',
+                'unidad':        item['insumo'].unidad or '',
+                'presupuestado': f"{item['presupuestado']:.2f}",
+                'total_entrada': f"{item['total_entrada']:.2f}",
+                'total_salida':  f"{item['total_salida']:.2f}",
+                'saldo':         f"{item['saldo']:.2f}",
+                'saldo_pos':     item['saldo'] > 0,
+            }
+            for item in items
+        ],
+        'page':        page.number,
+        'total_pages': paginator.num_pages,
+        'count':       paginator.count,
+        'has_prev':    page.has_previous(),
+        'has_next':    page.has_next(),
+    }
+    return JsonResponse(data)
 
 
 @requiere('puede_ver_almacen')

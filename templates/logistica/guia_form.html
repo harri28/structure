@@ -16,39 +16,7 @@
   <h4><i class="bi bi-send me-2" style="color:#2563eb"></i>{{ titulo }}</h4>
 </div>
 
-<style>
-  /* Compactación del form de Guía: ~25-30% más chico que default */
-  .guia-compact .form-label {
-    font-size: .7rem;
-    font-weight: 600;
-    margin-bottom: .18rem;
-    color: #4b5563;
-    text-transform: uppercase;
-    letter-spacing: .02em;
-  }
-  .guia-compact .form-control,
-  .guia-compact .form-select {
-    font-size: .78rem;
-    padding: .25rem .55rem;
-    min-height: unset;
-    height: auto;
-    line-height: 1.4;
-  }
-  .guia-compact textarea.form-control { min-height: 60px; }
-  .guia-compact .card-header {
-    font-size: .72rem !important;
-    padding: .45rem .75rem;
-  }
-  .guia-compact .card-body {
-    padding: .7rem;
-  }
-  .guia-compact .row.g-3 { --bs-gutter-x: .6rem; --bs-gutter-y: .6rem; }
-  .guia-compact table.table th,
-  .guia-compact table.table td { font-size: .76rem !important; padding: .35rem .5rem; }
-  .guia-compact .btn { font-size: .82rem; padding: .35rem .7rem; }
-</style>
-
-<form method="post" class="guia-compact">
+<form method="post" class="form-compact">
 {% csrf_token %}
 {% if not guia %}<input type="hidden" name="selected_guia_pk" id="selected-guia-pk" value="">{% endif %}
 <div class="row g-3">

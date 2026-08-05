@@ -550,3 +550,49 @@ base de RBAC y del flujo Opción B.
 en §12 (pantalla aparte, marcado en rojo, no genera `Modificacion` automática).
 La justificación obligatoria por ítem mencionada en §12 aún NO está enforced
 en el form de Ajuste — queda como refinamiento futuro.
+
+---
+
+## 15. Renumeración de códigos de insumo (S10 → enteros amigables)
+
+**Regla:** al importar un presupuesto desde S10 o Excel, el sistema **NO** conserva
+los códigos crudos que trae el archivo (que suelen ser identificadores largos e
+ilegibles tipo `10000201`, `1120939202`, `4567890123`). En su lugar reemplaza
+esos códigos por **enteros amigables secuenciales** empezando en 1 dentro de
+cada grupo — por ejemplo:
+
+- Materiales: `1, 2, 3, 4, ...`
+- Mano de obra: `1, 2, 3, ...`
+- Equipos: `1, 2, 3, ...`
+- Subpartidas: `1, 2, 3, ...`
+
+**Por qué:** la finalidad es que el usuario final (Almacenero, Admin de Obra,
+Logística) pueda referirse a un insumo por un número corto y memorable en vez
+de un identificador extraído del software original.
+
+**Consecuencia esperada — códigos duplicados entre grupos:** dado que la
+numeración es **por grupo** (cada grupo empieza en 1), es normal que el código
+`1` exista para un material (por ejemplo "Cemento Portland") **y también** para
+una máquina, mano de obra, etc. La UI actual **no diferencia** el grupo del
+insumo por el código, lo que puede resultar confuso — es un tema pendiente
+de arreglar (probablemente prefijando el grupo: `M-1`, `MO-1`, `E-1`, `SP-1`).
+
+**Impacto en la BD:** el campo `InsumoPresupuesto.codigo` es un `CharField`,
+pero los valores almacenados son enteros como texto (`"1"`, `"2"`, ..., `"100"`).
+Para ordenar numéricamente hace falta CAST a entero:
+
+```python
+from django.db.models import IntegerField
+from django.db.models.functions import Cast
+qs.annotate(_codigo_int=Cast('codigo', IntegerField())).order_by('_codigo_int')
+```
+
+Sin el CAST, PostgreSQL ordena lexicográficamente y da `1, 10, 100, 11, 2, 20, ...`
+(implementado en el sort del Stock de Almacén — `apps/almacen/views.py::STOCK_ORDER_MAP`).
+
+**Ubicación de la lógica de renumeración:** en el importador (`apps/presupuesto/importador.py`).
+
+**Pendientes conocidos (por resolver en otro ciclo):**
+- Diferenciar visualmente los códigos de distintos grupos (prefijo o badge).
+- Definir qué pasa si el usuario intenta buscar "1" en el buscador global —
+  ¿ambigüedad? ¿desambiguar por grupo?
