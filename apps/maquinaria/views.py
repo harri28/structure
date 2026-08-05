@@ -11,10 +11,13 @@ from .forms import (
     TipoPersonalForm, MaquinariaForm, CuadrillaForm,
     IntegranteCuadrillaForm, RegistroDiarioForm, RegistroMaquinariaForm, ParteForm,
 )
+from config.permisos import requiere, proyecto_visible
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
 def dashboard(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     registros_cuadrilla  = RegistroDiario.objects.filter(proyecto=proyecto).select_related('cuadrilla__integrantes', 'partida')
@@ -34,11 +37,13 @@ def dashboard(request, proyecto_id):
 
 # ── Tipos de Personal ─────────────────────────────────────────────────
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 def tipo_personal_lista(request):
     tipos = TipoPersonal.objects.all()
     return render(request, 'maquinaria/tipo_personal_lista.html', {'tipos': tipos})
 
 
+@requiere('puede_gestionar_maquinaria')
 def tipo_personal_crear(request):
     form = TipoPersonalForm(request.POST or None)
     if form.is_valid():
@@ -48,6 +53,7 @@ def tipo_personal_crear(request):
     return render(request, 'maquinaria/tipo_personal_form.html', {'form': form, 'titulo': 'Nuevo Tipo de Personal'})
 
 
+@requiere('puede_gestionar_maquinaria')
 def tipo_personal_editar(request, pk):
     obj  = get_object_or_404(TipoPersonal, pk=pk)
     form = TipoPersonalForm(request.POST or None, instance=obj)
@@ -58,6 +64,7 @@ def tipo_personal_editar(request, pk):
     return render(request, 'maquinaria/tipo_personal_form.html', {'form': form, 'titulo': 'Editar Tipo de Personal', 'obj': obj})
 
 
+@requiere('puede_gestionar_maquinaria')
 def tipo_personal_eliminar(request, pk):
     obj = get_object_or_404(TipoPersonal, pk=pk)
     if request.method == 'POST':
@@ -70,6 +77,7 @@ def tipo_personal_eliminar(request, pk):
 
 # ── Maquinaria ────────────────────────────────────────────────────────
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 def maquinaria_lista(request):
     maquinas = Maquinaria.objects.all()
     return render(request, 'maquinaria/maquinaria_lista.html', {'maquinas': maquinas})
@@ -86,6 +94,7 @@ def _siguiente_codigo_maq():
     return f'M{max(nums, default=0) + 1:03d}'
 
 
+@requiere('puede_gestionar_maquinaria')
 def maquinaria_crear(request):
     initial = {'codigo': _siguiente_codigo_maq()}
     form    = MaquinariaForm(request.POST or None, initial=initial)
@@ -96,6 +105,7 @@ def maquinaria_crear(request):
     return render(request, 'maquinaria/maquinaria_form.html', {'form': form, 'titulo': 'Nueva Maquinaria'})
 
 
+@requiere('puede_gestionar_maquinaria')
 def maquinaria_editar(request, pk):
     obj  = get_object_or_404(Maquinaria, pk=pk)
     form = MaquinariaForm(request.POST or None, instance=obj)
@@ -106,6 +116,7 @@ def maquinaria_editar(request, pk):
     return render(request, 'maquinaria/maquinaria_form.html', {'form': form, 'titulo': 'Editar Maquinaria', 'obj': obj})
 
 
+@requiere('puede_gestionar_maquinaria')
 def maquinaria_eliminar(request, pk):
     obj = get_object_or_404(Maquinaria, pk=pk)
     if request.method == 'POST':
@@ -118,11 +129,13 @@ def maquinaria_eliminar(request, pk):
 
 # ── Cuadrillas ────────────────────────────────────────────────────────
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 def cuadrilla_lista(request):
     cuadrillas = Cuadrilla.objects.prefetch_related('integrantes__tipo_personal').all()
     return render(request, 'maquinaria/cuadrilla_lista.html', {'cuadrillas': cuadrillas})
 
 
+@requiere('puede_gestionar_maquinaria')
 def cuadrilla_crear(request):
     form = CuadrillaForm(request.POST or None)
     if form.is_valid():
@@ -132,6 +145,7 @@ def cuadrilla_crear(request):
     return render(request, 'maquinaria/cuadrilla_form.html', {'form': form, 'titulo': 'Nueva Cuadrilla'})
 
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 def cuadrilla_detalle(request, pk):
     cuadrilla = get_object_or_404(Cuadrilla, pk=pk)
     form = IntegranteCuadrillaForm(cuadrilla=cuadrilla)
@@ -141,6 +155,7 @@ def cuadrilla_detalle(request, pk):
     })
 
 
+@requiere('puede_gestionar_maquinaria')
 def cuadrilla_editar(request, pk):
     obj  = get_object_or_404(Cuadrilla, pk=pk)
     form = CuadrillaForm(request.POST or None, instance=obj)
@@ -151,6 +166,7 @@ def cuadrilla_editar(request, pk):
     return render(request, 'maquinaria/cuadrilla_form.html', {'form': form, 'titulo': 'Editar Cuadrilla', 'obj': obj})
 
 
+@requiere('puede_gestionar_maquinaria')
 def cuadrilla_eliminar(request, pk):
     obj = get_object_or_404(Cuadrilla, pk=pk)
     if request.method == 'POST':
@@ -161,6 +177,7 @@ def cuadrilla_eliminar(request, pk):
         'cancel_url': 'maquinaria:cuadrilla_lista', 'cancel_args': []})
 
 
+@requiere('puede_gestionar_maquinaria')
 def integrante_agregar(request, pk):
     cuadrilla = get_object_or_404(Cuadrilla, pk=pk)
     if request.method == 'POST':
@@ -175,6 +192,7 @@ def integrante_agregar(request, pk):
     return redirect('maquinaria:cuadrilla_detalle', pk=pk)
 
 
+@requiere('puede_gestionar_maquinaria')
 def integrante_eliminar(request, pk):
     integrante = get_object_or_404(IntegranteCuadrilla, pk=pk)
     cuadrilla_pk = integrante.cuadrilla_id
@@ -186,6 +204,8 @@ def integrante_eliminar(request, pk):
 
 # ── Registros Diarios (Cuadrilla) ─────────────────────────────────────
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
 def registro_lista(request, proyecto_id):
     proyecto  = get_object_or_404(Proyecto, pk=proyecto_id)
     registros = (RegistroDiario.objects
@@ -200,6 +220,8 @@ def registro_lista(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_maquinaria')
+@proyecto_visible
 def registro_crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     form     = RegistroDiarioForm(proyecto=proyecto, data=request.POST or None)
@@ -216,6 +238,7 @@ def registro_crear(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_maquinaria')
 def registro_editar(request, pk):
     registro = get_object_or_404(RegistroDiario, pk=pk)
     form     = RegistroDiarioForm(proyecto=registro.proyecto, data=request.POST or None, instance=registro)
@@ -230,6 +253,7 @@ def registro_editar(request, pk):
     })
 
 
+@requiere('puede_gestionar_maquinaria')
 def registro_eliminar(request, pk):
     registro     = get_object_or_404(RegistroDiario, pk=pk)
     proyecto_id  = registro.proyecto_id
@@ -241,6 +265,8 @@ def registro_eliminar(request, pk):
 
 # ── Registros Maquinaria ──────────────────────────────────────────────
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
 def maq_registro_lista(request, proyecto_id):
     """Lista de máquinas usadas en el proyecto, agrupadas con total HM."""
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
@@ -267,6 +293,8 @@ def maq_registro_lista(request, proyecto_id):
     })
 
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
 def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
     """Ficha de una máquina: lista de liquidaciones + registros sin liquidación."""
     proyecto   = get_object_or_404(Proyecto, pk=proyecto_id)
@@ -317,6 +345,7 @@ def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
     })
 
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 def liquidacion_detalle(request, pk):
     """Parte diario de una liquidación — imprimible A4 landscape."""
     import datetime
@@ -360,6 +389,7 @@ def liquidacion_detalle(request, pk):
     })
 
 
+@requiere('puede_gestionar_maquinaria')
 def liquidacion_cerrar(request, pk):
     """Cierra una liquidación (no se pueden agregar más partes)."""
     liq = get_object_or_404(Liquidacion, pk=pk)
@@ -376,6 +406,8 @@ def liquidacion_cerrar(request, pk):
     return redirect('maquinaria:liquidacion_detalle', pk=pk)
 
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
 def resumen_mensual(request, proyecto_id):
     """Resumen de todas las liquidaciones de un período — imprimible A4."""
     import datetime
@@ -419,6 +451,8 @@ def resumen_mensual(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_maquinaria')
+@proyecto_visible
 def maq_registro_crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     form     = RegistroMaquinariaForm(
@@ -445,6 +479,7 @@ def maq_registro_crear(request, proyecto_id):
     })
 
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 def maq_registro_detalle(request, pk):
     registro = get_object_or_404(RegistroMaquinaria, pk=pk)
     return render(request, 'maquinaria/maq_registro_detalle.html', {
@@ -453,6 +488,7 @@ def maq_registro_detalle(request, pk):
     })
 
 
+@requiere('puede_gestionar_maquinaria')
 def maq_registro_editar(request, pk):
     registro = get_object_or_404(RegistroMaquinaria, pk=pk)
     form     = RegistroMaquinariaForm(proyecto=registro.proyecto, data=request.POST or None, instance=registro)
@@ -471,6 +507,7 @@ def maq_registro_editar(request, pk):
     })
 
 
+@requiere('puede_gestionar_maquinaria')
 def maq_registro_eliminar(request, pk):
     registro    = get_object_or_404(RegistroMaquinaria, pk=pk)
     proyecto_id = registro.proyecto_id
@@ -485,6 +522,8 @@ def maq_registro_eliminar(request, pk):
 
 # ── Resumen HH / HM por partida ───────────────────────────────────────
 
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
 def resumen(request, proyecto_id):
     from apps.presupuesto.models import Partida
     proyecto  = get_object_or_404(Proyecto, pk=proyecto_id)

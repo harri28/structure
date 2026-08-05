@@ -63,22 +63,13 @@
   </div>
   {% if proyecto_activo %}
   <div class="sb-section">
-    <div class="sb-label d-flex justify-content-between align-items-center" style="padding-right:.25rem">
-      <span>{{ proyecto_activo.codigo }}</span>
-      <a href="{% url 'proyectos:salir' %}" title="Salir del proyecto"
-         style="color:var(--text-light);opacity:.55;font-size:.8rem;line-height:1;text-decoration:none"
-         onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.55'">
-        <i class="bi bi-box-arrow-left"></i>
-      </a>
-    </div>
-
     {% if permisos.puede_ver_presupuesto or permisos.puede_editar_presupuesto %}
     <div class="sb-module-row">
       <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}"
          class="sb-link {% block nav_presupuesto %}{% endblock %}">
         <i class="bi bi-table"></i> Presupuesto
       </a>
-      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-presupuesto" aria-expanded="false">
+      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-presupuesto" aria-expanded="false" aria-label="Expandir Presupuesto">
         <i class="bi bi-chevron-right sb-arrow"></i>
       </button>
     </div>
@@ -116,20 +107,34 @@
     </div>
     {% endif %}
 
-    {% if permisos.puede_crear_requerimientos or permisos.puede_aprobar_requerimientos %}
-    <div class="sb-module-row">
-      <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
-         class="sb-link {% block nav_req %}{% endblock %}">
-        <i class="bi bi-file-earmark-text"></i> Requerimientos
-      </a>
-      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-reqs" aria-expanded="false">
-        <i class="bi bi-chevron-right sb-arrow"></i>
-      </button>
-    </div>
-    <div class="collapse {% block nav_req_open %}{% endblock %}" id="nav-reqs">
+    {# Almacenero — solo crea, no aprueba #}
+    {% if permisos.puede_crear_requerimientos and not permisos.puede_aprobar_requerimientos %}
+    <a href="{% url 'requerimientos:solicitar' proyecto_activo.pk %}"
+       class="sb-link {% block nav_solicitar %}{% endblock %}">
+      <i class="bi bi-cart-plus"></i> Solicitar material
+    </a>
+    <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
+       class="sb-link {% block nav_mis_solicitudes %}{% endblock %}">
+      <i class="bi bi-list-ul"></i> Mis solicitudes
+    </a>
+    {% endif %}
+
+    {# Administrador de Obra — crea, aprueba y recibe solicitudes del Almacenero #}
+    {% if permisos.puede_aprobar_requerimientos %}
+    <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
+       class="sb-link {% block nav_req %}{% endblock %}">
+      <i class="bi bi-file-earmark-text"></i> Requerimientos
+      {% if req_solicitados %}<span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;padding:.2em .45em">{{ req_solicitados }}</span>{% endif %}
+    </a>
+    <div id="nav-reqs">
       <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_req_lista %}{% endblock %}">
         <i class="bi bi-list-ul"></i> Requerimiento
+      </a>
+      <a href="{% url 'requerimientos:bandeja_entrada' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_bandeja %}{% endblock %}">
+        <i class="bi bi-inbox"></i> Bandeja de Entrada
+        {% if req_solicitados %}<span class="badge bg-warning text-dark ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_solicitados }}</span>{% endif %}
       </a>
       <a href="{% url 'requerimientos:vs_atenciones' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_req_vs %}{% endblock %}">
@@ -139,16 +144,11 @@
     {% endif %}
 
     {% if permisos.puede_ver_almacen or permisos.puede_gestionar_entradas or permisos.puede_gestionar_salidas %}
-    <div class="sb-module-row">
-      <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
-         class="sb-link {% block nav_almacen %}{% endblock %}">
-        <i class="bi bi-box-seam"></i> Almacén
-      </a>
-      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-almacen" aria-expanded="false">
-        <i class="bi bi-chevron-right sb-arrow"></i>
-      </button>
-    </div>
-    <div class="collapse" id="nav-almacen">
+    <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
+       class="sb-link {% block nav_almacen %}{% endblock %}">
+      <i class="bi bi-box-seam"></i> Almacén
+    </a>
+    <div id="nav-almacen">
       <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_stock %}{% endblock %}">
         <i class="bi bi-archive"></i> Stock
@@ -184,7 +184,7 @@
     </a>
     {% endif %}
 
-    {% if permisos.puede_crear_proyectos or permisos.puede_administrar_usuarios %}
+    {% if permisos.puede_gestionar_personal %}
     <a href="{% url 'proyectos:personal' proyecto_activo.pk %}"
        class="sb-link {% block nav_personal %}{% endblock %}">
       <i class="bi bi-person-badge"></i> Personal
@@ -193,88 +193,122 @@
   </div>
 
   {% if permisos.puede_ver_logistica %}
-  <div class="sb-section">
-    <div class="sb-label">Logística</div>
-    <div class="sb-module-row">
+    {% if rol_actual and rol_actual.nombre == 'Logística' %}
+    {# ── Layout PLANO agrupado: solo para el rol Logística ────────── #}
+    {% with vn=request.resolver_match.view_name %}
+    <div class="sb-section">
+      <div class="sb-label">Logística</div>
+      <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard Logística
+      </a>
+      {% if permisos.puede_revisar_reqs_log %}
+      <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:requerimientos_log' or vn == 'logistica:req_revisar_log' or vn == 'logistica:req_detalle_log' or vn == 'logistica:consolidados_log' or vn == 'logistica:historial_log' %}active{% endif %}">
+        <i class="bi bi-file-earmark-text"></i> Requerimientos
+        {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
+      </a>
+      {% endif %}
+      {% if permisos.puede_gestionar_cotizaciones_log %}
+      <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'almacen:cot_lista' or vn == 'almacen:cot_detalle' or vn == 'almacen:cot_editar' or vn == 'almacen:cot_imprimir' or vn == 'almacen:cot_crear' or vn == 'almacen:cot_rapida' %}active{% endif %}">
+        <i class="bi bi-tags"></i> Cotizaciones
+      </a>
+      {% endif %}
+      {% if permisos.puede_gestionar_logistica %}
+      <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:guia_lista' or vn == 'logistica:guia_crear' or vn == 'logistica:guia_detalle' or vn == 'logistica:guia_editar' %}active{% endif %}">
+        <i class="bi bi-send"></i> Guías de Remisión
+      </a>
+      {% endif %}
+    </div>
+
+    {% if permisos.puede_gestionar_almacen_log %}
+    <div class="sb-section">
+      <div class="sb-label">Almacén</div>
+      <a href="{% url 'logistica:almacen_log' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:almacen_log' %}active{% endif %}">
+        <i class="bi bi-box-seam"></i> Almacén
+      </a>
+    </div>
+    {% endif %}
+
+    {% if permisos.puede_gestionar_ctrl_maq_log %}
+    <div class="sb-section">
+      <div class="sb-label">Maquinaria</div>
+      <a href="{% url 'logistica:control_maquinaria' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:control_maquinaria' %}active{% endif %}">
+        <i class="bi bi-gear-wide-connected"></i> Control Maq. y Equipos
+      </a>
+    </div>
+    {% endif %}
+
+    <div class="sb-section">
+      <div class="sb-label">Configuración</div>
+      <a href="{% url 'configuracion:perfil' %}"
+         class="sb-link {% if vn == 'configuracion:perfil' %}active{% endif %}">
+        <i class="bi bi-person-circle"></i> Perfil
+      </a>
+    </div>
+    {% endwith %}
+    {% else %}
+    {# ── Layout ANIDADO: para otros roles con permiso logistica (superadmin, etc.) ── #}
+    <div class="sb-section">
+      <div class="sb-label">Logística</div>
       <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}"
          class="sb-link {% block nav_logistica %}{% endblock %}">
         <i class="bi bi-truck-front"></i> Logística
         {% if req_enviados %}<span class="badge bg-danger ms-1" style="font-size:.65rem;padding:.2em .45em">{{ req_enviados }}</span>{% endif %}
       </a>
-      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-logistica" aria-expanded="false">
-        <i class="bi bi-chevron-right sb-arrow"></i>
-      </button>
-    </div>
-    <div class="collapse" id="nav-logistica">
-      <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_log_dashboard %}{% endblock %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-      </a>
-      {% if permisos.puede_revisar_reqs_log or permisos.es_superadmin %}
-      <div class="sb-module-row">
+      <div id="nav-logistica">
+        <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_log_dashboard %}{% endblock %}">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+        {% if permisos.puede_revisar_reqs_log %}
         <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
            class="sb-link sb-sublink {% block nav_req_logistica %}{% endblock %}">
           <i class="bi bi-file-earmark-text"></i> Requerimientos
           {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
         </a>
-        <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-log-reqs" aria-expanded="false">
-          <i class="bi bi-chevron-right sb-arrow"></i>
-        </button>
-      </div>
-      <div class="collapse {% block nav_log_reqs_open %}{% endblock %}" id="nav-log-reqs">
-        <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
-           class="sb-link sb-sublink {% block nav_req_logistica_lista %}{% endblock %}"
-           style="padding-left:3.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          <i class="bi bi-list-ul"></i> Requerimientos recibidos
+        {% endif %}
+        {% if permisos.puede_gestionar_cotizaciones_log %}
+        <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_cot %}{% endblock %}">
+          <i class="bi bi-tags"></i> Cotizaciones
         </a>
-        <a href="{% url 'logistica:consolidados_log' proyecto_activo.pk %}"
-           class="sb-link sb-sublink {% block nav_consolidados_log %}{% endblock %}"
-           style="padding-left:3.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          <i class="bi bi-layer-forward"></i> R. Consolidados
+        {% endif %}
+        {% if permisos.puede_gestionar_logistica %}
+        <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_log_guias %}{% endblock %}">
+          <i class="bi bi-send"></i> Guías de Remisión
         </a>
+        {% endif %}
+        {% if permisos.puede_gestionar_almacen_log %}
+        <a href="{% url 'logistica:almacen_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_log_almacen %}{% endblock %}">
+          <i class="bi bi-box-seam"></i> Almacén
+        </a>
+        {% endif %}
+        {% if permisos.puede_gestionar_ctrl_maq_log %}
+        <a href="{% url 'logistica:control_maquinaria' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_log_ctrl_maq %}{% endblock %}">
+          <i class="bi bi-gear-wide-connected"></i> Control Maq. y Equipos
+        </a>
+        {% endif %}
       </div>
-      {% endif %}
-      {% if permisos.puede_gestionar_cotizaciones_log or permisos.es_superadmin %}
-      <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_cot %}{% endblock %}">
-        <i class="bi bi-tags"></i> Cotizaciones
-      </a>
-      {% endif %}
-      {% if permisos.puede_gestionar_logistica or permisos.es_superadmin %}
-      <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_log_guias %}{% endblock %}">
-        <i class="bi bi-send"></i> Guías de Remisión
-      </a>
-      {% endif %}
-      {% if permisos.puede_gestionar_inventarios_log or permisos.es_superadmin %}
-      <a href="{% url 'logistica:inventarios' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_log_inventarios %}{% endblock %}">
-        <i class="bi bi-archive"></i> Inventarios
-      </a>
-      {% endif %}
-      {% if permisos.puede_gestionar_almacen_log or permisos.es_superadmin %}
-      <a href="{% url 'logistica:almacen_log' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_log_almacen %}{% endblock %}">
-        <i class="bi bi-box-seam"></i> Almacén
-      </a>
-      {% endif %}
-      {% if permisos.puede_gestionar_ctrl_maq_log or permisos.es_superadmin %}
-      <a href="{% url 'logistica:control_maquinaria' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_log_ctrl_maq %}{% endblock %}">
-        <i class="bi bi-gear-wide-connected"></i> Control Maq. y Equipos
-      </a>
-      {% endif %}
-      {% if permisos.puede_gestionar_abastecimiento or permisos.es_superadmin %}
-      <a href="{% url 'logistica:abastecimiento' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_log_abastecimiento %}{% endblock %}">
-        <i class="bi bi-cart-check"></i> Abastecimiento
-      </a>
-      {% endif %}
     </div>
-  </div>
+    {% endif %}
   {% endif %}{# puede_ver_logistica #}
 
-  {% if permisos.puede_editar_catalogo or permisos.puede_ver_maquinaria or permisos.puede_gestionar_maquinaria or permisos.puede_administrar_usuarios or permisos.puede_administrar_roles or permisos.puede_configurar_empresa %}
+  {% comment %}
+    TODO: cuando exista el módulo `configuracion:proyecto` (REGLAS_NEGOCIO.md §13),
+    agregar `permisos.puede_configurar_proyecto` a este `if` y crear un link
+    separado abajo con `if permisos.puede_configurar_proyecto` apuntando al
+    nuevo módulo. Mientras tanto, "Configuración" solo la ve el Superadmin
+    (via los permisos `puede_configurar_empresa/usuarios/roles`).
+  {% endcomment %}
+  {% if permisos.puede_editar_catalogo or permisos.puede_ver_actividad or permisos.puede_administrar_usuarios or permisos.puede_administrar_roles or permisos.puede_configurar_empresa %}
   <div class="sb-section">
     <div class="sb-label">Administración</div>
 
@@ -284,28 +318,17 @@
     </a>
     {% endif %}
 
-    {% if permisos.puede_ver_maquinaria or permisos.puede_gestionar_maquinaria %}
-    <a href="{% url 'maquinaria:cuadrilla_lista' %}" class="sb-link {% block nav_cuadrillas_admin %}{% endblock %}">
-      <i class="bi bi-people"></i> Cuadrillas
-    </a>
-    {% endif %}
-
-    {% if permisos.puede_administrar_usuarios %}
+    {% if permisos.puede_ver_actividad %}
     <a href="{% url 'registro:lista' %}" class="sb-link {% block nav_actividad %}{% endblock %}">
       <i class="bi bi-activity"></i> Actividad
     </a>
     {% endif %}
 
     {% if permisos.puede_configurar_empresa or permisos.puede_administrar_usuarios or permisos.puede_administrar_roles %}
-    <div class="sb-module-row">
-      <a href="{% url 'configuracion:hub' %}" class="sb-link {% block nav_config_hub %}{% endblock %}">
-        <i class="bi bi-gear"></i> Configuración
-      </a>
-      <button class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-config-admin" aria-expanded="false">
-        <i class="bi bi-chevron-right sb-arrow"></i>
-      </button>
-    </div>
-    <div class="collapse" id="nav-config-admin">
+    <a href="{% url 'configuracion:hub' %}" class="sb-link {% block nav_config_hub %}{% endblock %}">
+      <i class="bi bi-gear"></i> Configuración
+    </a>
+    <div id="nav-config-admin">
       {% if permisos.puede_configurar_empresa %}
       <a href="{% url 'configuracion:empresa' %}" class="sb-link sb-sublink">
         <i class="bi bi-building"></i> Empresa
@@ -339,12 +362,15 @@
   </div>
   {% endif %}
 
+  {# Para el rol Logística, Perfil vive dentro del grupo "Configuración" del layout plano #}
+  {% if not rol_actual or rol_actual.nombre != 'Logística' %}
   <!-- Perfil (usuarios normales) -->
   <div class="sb-section">
     <a href="{% url 'configuracion:perfil' %}" class="sb-link {% block nav_perfil_user %}{% endblock %}">
       <i class="bi bi-person-circle"></i> Perfil
     </a>
   </div>
+  {% endif %}
 
   {% endif %}{# fin superadmin/usuario #}
 
@@ -366,12 +392,13 @@
   <span class="topbar-badge">
     <i class="bi bi-folder-fill me-1"></i>{{ proyecto_activo.codigo }} — {{ proyecto_activo.nombre }}
   </span>
+  {% if rol_actual %}
+  <span class="role-chip"><i class="bi bi-person-badge"></i>{{ rol_actual.nombre }}</span>
+  {% elif user.is_superuser %}
+  <span class="role-chip"><i class="bi bi-person-badge"></i>Superadmin</span>
   {% endif %}
-  <nav aria-label="breadcrumb" class="flex-grow-1">
-    <ol class="breadcrumb mb-0">
-      {% block breadcrumb %}<li class="breadcrumb-item active">Inicio</li>{% endblock %}
-    </ol>
-  </nav>
+  {% endif %}
+  <div class="flex-grow-1"></div>
   <div class="d-flex align-items-center gap-2" style="flex-shrink:0">
     {% if user.is_superuser %}
     <a href="/admin/" class="btn-topbar" target="_blank" title="Panel de administración">
@@ -460,14 +487,23 @@ document.querySelectorAll('table.table:not(.table-modern)').forEach(function (t)
   t.classList.remove('table', 'table-sm', 'table-hover', 'table-bordered', 'table-striped');
 });
 
-// ── Sidebar collapse: auto-abrir si hay link activo dentro ───────
-document.querySelectorAll('#sidebar .collapse').forEach(function (col) {
-  if (col.querySelector('.sb-link.active')) {
+// Sidebar collapse: solo Presupuesto es colapsable. Auto-abrir si hay sub-link activo.
+(function () {
+  var col = document.getElementById('nav-presupuesto');
+  if (col && col.classList.contains('collapse') && col.querySelector('.sb-link.active')) {
     col.classList.add('show');
-    var trigger = document.querySelector('[data-bs-target="#' + col.id + '"]');
+    var trigger = document.querySelector('[data-bs-target="#nav-presupuesto"]');
     if (trigger) trigger.setAttribute('aria-expanded', 'true');
   }
-});
+})();
+
+// Bloquear scroll del mouse en inputs numéricos (evita cambios accidentales al scrollear).
+document.addEventListener('wheel', function (e) {
+  var el = document.activeElement;
+  if (el && el.tagName === 'INPUT' && el.type === 'number' && el === e.target) {
+    el.blur();
+  }
+}, { passive: true });
 
 // ── Notificaciones ────────────────────────────────────────────────
 (function () {

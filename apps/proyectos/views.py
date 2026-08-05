@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from .models import Proyecto, ProyectoMiembro
 from .forms import ProyectoForm
+from config.permisos import tiene, requiere, proyecto_visible
 
 
 def _es_admin(user):
@@ -22,6 +23,20 @@ def _sin_dashboard(user):
         return not rol.puede_ver_dashboard
     except AttributeError:
         return False
+
+
+def _dashboard_del_rol(user, proyecto_id):
+    """Redirige al dashboard propio del rol del usuario.
+
+    Se usa como fallback cuando el usuario no tiene `puede_ver_dashboard` y por
+    tanto no puede ver el dashboard general del proyecto. Prueba en orden:
+    logística → almacén → perfil (último recurso, siempre accesible).
+    """
+    if tiene(user, 'puede_ver_logistica'):
+        return redirect('logistica:dashboard', proyecto_id=proyecto_id)
+    if tiene(user, 'puede_ver_almacen'):
+        return redirect('almacen:dashboard', proyecto_id=proyecto_id)
+    return redirect('configuracion:perfil')
 
 
 def panel_dashboard(request):
@@ -51,7 +66,7 @@ def proyecto_dashboard(request, pk):
     request.session['proyecto_id'] = proyecto.pk
 
     if _sin_dashboard(request.user):
-        return redirect('logistica:dashboard', proyecto_id=proyecto.pk)
+        return _dashboard_del_rol(request.user, proyecto.pk)
 
     from apps.requerimientos.models import Requerimiento
     from apps.almacen.models import Cotizacion, OrdenCompra, Entrada
@@ -131,7 +146,7 @@ def dashboard(request):
         try:
             Proyecto.objects.get(pk=pid)
             if _sin_dashboard(request.user):
-                return redirect('logistica:dashboard', proyecto_id=pid)
+                return _dashboard_del_rol(request.user, pid)
             return redirect('proyecto_dashboard', pk=pid)
         except Proyecto.DoesNotExist:
             del request.session['proyecto_id']
@@ -145,7 +160,7 @@ def dashboard(request):
         p = proyectos.first()
         request.session['proyecto_id'] = p.pk
         if _sin_dashboard(request.user):
-            return redirect('logistica:dashboard', proyecto_id=p.pk)
+            return _dashboard_del_rol(request.user, p.pk)
         return redirect('proyecto_dashboard', pk=p.pk)
 
     return render(request, 'proyectos/selector.html', {
@@ -173,6 +188,7 @@ def salir_proyecto(request):
     return redirect('proyectos:dashboard')
 
 
+@requiere('puede_crear_proyectos', 'puede_eliminar_proyectos')
 def lista(request):
     """Lista admin de todos los proyectos."""
     if not (request.user.is_superuser or (
@@ -185,6 +201,7 @@ def lista(request):
     return render(request, 'proyectos/lista.html', {'proyectos': proyectos})
 
 
+@requiere('puede_crear_proyectos', 'puede_eliminar_proyectos', 'puede_administrar_usuarios')
 def detalle(request, pk):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     miembros = proyecto.miembros.select_related('usuario__perfil__rol').all()
@@ -197,6 +214,7 @@ def detalle(request, pk):
     })
 
 
+@requiere('puede_gestionar_personal')
 def personal(request, pk):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     miembros = proyecto.miembros.select_related('usuario__perfil__rol').all()
@@ -220,6 +238,7 @@ def _siguiente_codigo_proyecto():
     return f'PRY-{max(nums, default=0) + 1:03d}'
 
 
+@requiere('puede_crear_proyectos')
 def crear(request):
     if not (request.user.is_superuser or (
         hasattr(request.user, 'perfil') and
@@ -238,6 +257,7 @@ def crear(request):
     return render(request, 'proyectos/form.html', {'form': form, 'titulo': 'Nuevo Proyecto'})
 
 
+@requiere('puede_crear_proyectos')
 def editar(request, pk):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     if request.method == 'POST':
@@ -251,6 +271,7 @@ def editar(request, pk):
     return render(request, 'proyectos/form.html', {'form': form, 'titulo': 'Datos Generales', 'proyecto': proyecto})
 
 
+@requiere('puede_eliminar_proyectos')
 def eliminar(request, pk):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     if request.method == 'POST':
@@ -267,6 +288,7 @@ def eliminar(request, pk):
 
 # ── Equipo del proyecto ───────────────────────────────────────────
 
+@requiere('puede_administrar_usuarios')
 def miembro_agregar(request, pk):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     if request.method == 'POST':
@@ -281,6 +303,7 @@ def miembro_agregar(request, pk):
     return redirect('proyectos:personal', pk=pk)
 
 
+@requiere('puede_administrar_usuarios')
 def miembro_quitar(request, pk, usuario_id):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     if request.method == 'POST':
@@ -289,6 +312,7 @@ def miembro_quitar(request, pk, usuario_id):
     return redirect('proyectos:personal', pk=pk)
 
 
+@requiere('puede_eliminar_proyectos')
 def proyecto_restablecer(request, pk):
     if not _es_admin(request.user):
         return redirect('proyectos:lista')

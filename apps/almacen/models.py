@@ -101,6 +101,12 @@ class DetalleSalida(models.Model):
 
 class Cotizacion(models.Model):
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='cotizaciones')
+    requerimiento_origen = models.ForeignKey(
+        'requerimientos.Requerimiento',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='cotizaciones_origen',
+    )
     numero = models.CharField(max_length=20)
     fecha = models.DateField()
     proveedor = models.CharField(max_length=200)

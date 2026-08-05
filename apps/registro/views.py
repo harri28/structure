@@ -6,8 +6,10 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.http import require_POST
 from .models import RegistroAccion, Notificacion, ACCIONES, MODULOS
+from config.permisos import requiere
 
 
+@requiere('puede_ver_actividad')
 def lista(request):
     qs = RegistroAccion.objects.select_related('usuario').all()
 

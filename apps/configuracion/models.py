@@ -59,9 +59,11 @@ class ConfigSunat(models.Model):
 
 GRUPOS_PERMISOS = [
     ('Proyectos', [
-        ('puede_ver_dashboard',      'Ver dashboard general del proyecto'),
-        ('puede_crear_proyectos',    'Crear y editar proyectos'),
-        ('puede_eliminar_proyectos', 'Eliminar proyectos'),
+        ('puede_ver_dashboard',       'Ver dashboard general del proyecto'),
+        ('puede_crear_proyectos',     'Crear y editar proyectos'),
+        ('puede_eliminar_proyectos',  'Eliminar proyectos'),
+        ('puede_gestionar_personal',  'Gestionar personal del proyecto (obreros, cuadrillas)'),
+        ('puede_configurar_proyecto', 'Configurar datos del proyecto (nombre, fechas, presupuesto)'),
     ]),
     ('Presupuesto', [
         ('puede_ver_presupuesto',    'Ver presupuesto y partidas'),
@@ -97,6 +99,7 @@ GRUPOS_PERMISOS = [
         ('puede_administrar_usuarios', 'Gestionar usuarios del sistema'),
         ('puede_administrar_roles',    'Gestionar roles y permisos'),
         ('puede_configurar_empresa',   'Configurar datos de la empresa'),
+        ('puede_ver_actividad',        'Ver el registro de actividad del sistema'),
     ]),
     ('Especiales', [
         ('acceso_todos_proyectos', 'Ver todos los proyectos sin ser miembro'),
@@ -112,9 +115,11 @@ class Rol(models.Model):
     descripcion = models.TextField(blank=True)
 
     # Proyectos
-    puede_ver_dashboard      = models.BooleanField(default=True)
-    puede_crear_proyectos    = models.BooleanField(default=False)
-    puede_eliminar_proyectos = models.BooleanField(default=False)
+    puede_ver_dashboard       = models.BooleanField(default=True)
+    puede_crear_proyectos     = models.BooleanField(default=False)
+    puede_eliminar_proyectos  = models.BooleanField(default=False)
+    puede_gestionar_personal  = models.BooleanField(default=False)
+    puede_configurar_proyecto = models.BooleanField(default=False)
 
     # Presupuesto
     puede_ver_presupuesto    = models.BooleanField(default=False)
@@ -150,6 +155,7 @@ class Rol(models.Model):
     puede_administrar_usuarios = models.BooleanField(default=False)
     puede_administrar_roles    = models.BooleanField(default=False)
     puede_configurar_empresa   = models.BooleanField(default=False)
+    puede_ver_actividad        = models.BooleanField(default=False)
 
     # Especiales
     acceso_todos_proyectos = models.BooleanField(default=False)

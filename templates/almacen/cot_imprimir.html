@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Solicitud de Cotización COT-{{ cot.numero }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      color: #000;
+      background: #f4f4f4;
+    }
+
+    .pagina {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 18mm;
+      background: #fff;
+      box-shadow: 0 0 6px rgba(0,0,0,.08);
+    }
+
+    /* ── Cabecera ── */
+    .cabecera {
+      display: flex;
+      align-items: stretch;
+      border: 1.5px solid #000;
+      margin-bottom: 10px;
+    }
+    .cab-logo {
+      width: 52mm;
+      border-right: 1.5px solid #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 10px;
+      gap: 6px;
+    }
+    .cab-logo img { max-height: 44px; max-width: 100%; object-fit: contain; }
+    .cab-logo .empresa-nombre {
+      font-size: 10px; font-weight: bold; text-align: center;
+      text-transform: uppercase; line-height: 1.4;
+    }
+    .cab-logo .empresa-ruc { font-size: 9px; text-align: center; }
+    .cab-titulo {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 14px 12px; text-align: center;
+      border-right: 1.5px solid #000;
+    }
+    .cab-titulo h1 {
+      font-size: 15px; font-weight: bold;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .cab-titulo .subtitulo { font-size: 10px; margin-top: 5px; color: #333; }
+    .cab-numero {
+      width: 52mm; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 14px 10px; text-align: center;
+    }
+    .cab-numero .label { font-size: 8.5px; color: #555; text-transform: uppercase; }
+    .cab-numero .numero {
+      font-size: 16px; font-weight: bold; color: #000;
+      margin-top: 4px; letter-spacing: .5px;
+    }
+    .cab-numero .origen { font-size: 9px; margin-top: 4px; color: #2563eb; font-weight: 600; }
+    .cab-numero .fecha { font-size: 9px; margin-top: 4px; }
+
+    /* ── Secciones ── */
+    .seccion { border: 1px solid #000; margin-bottom: 10px; }
+    .seccion-header {
+      background: #222; color: #fff;
+      font-size: 9px; font-weight: bold;
+      text-transform: uppercase; letter-spacing: .5px;
+      padding: 5px 10px;
+    }
+    .seccion-body { padding: 12px 10px; }
+    .fila-datos {
+      display: flex; gap: 16px; margin-bottom: 10px; flex-wrap: wrap;
+    }
+    .fila-datos:last-child { margin-bottom: 0; }
+    .dato { display: flex; flex-direction: column; min-width: 60px; }
+    .dato label {
+      font-size: 8px; color: #555; text-transform: uppercase;
+      letter-spacing: .3px; margin-bottom: 3px;
+    }
+    .dato span {
+      font-size: 11px; font-weight: 600;
+      border-bottom: 1px solid #ccc;
+      min-width: 60px; padding-bottom: 3px;
+    }
+    .dato.wide { flex: 1; min-width: 120px; }
+    .dato.mid  { flex: 1; min-width: 90px; }
+
+    /* Datos del Proveedor: sin subrayado fino, espaciado compacto */
+    .seccion-proveedor .seccion-body { padding: 8px 10px; }
+    .seccion-proveedor .fila-datos   { margin-bottom: 6px; }
+    .seccion-proveedor .dato label   { margin-bottom: 2px; }
+    .seccion-proveedor .dato span    { border-bottom: none; padding-bottom: 0; }
+
+    /* ── Tabla de ítems ── */
+    table.items {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table.items thead tr { background: #222; color: #fff; }
+    table.items th {
+      font-size: 9px; font-weight: bold; text-transform: uppercase;
+      padding: 7px 8px; letter-spacing: .3px;
+    }
+    table.items td {
+      font-size: 10.5px; padding: 6px 8px;
+      border-bottom: 1px solid #ddd; vertical-align: middle;
+    }
+    table.items tr:nth-child(even) td { background: #f9f9f9; }
+    table.items .num    { text-align: right; }
+    table.items .center { text-align: center; }
+    table.items .left   { text-align: left; }
+    table.items code    { font-family: 'Courier New', monospace; font-size: 10px; }
+    table.items input.cant {
+      width: 90%;
+      max-width: 22mm;
+      border: 1px solid #2563eb;
+      background: #eff6ff;
+      padding: 3px 6px;
+      font-size: 10.5px;
+      text-align: right;
+      font-family: Arial, sans-serif;
+      border-radius: 3px;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    table.items input.cant::-webkit-outer-spin-button,
+    table.items input.cant::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    table.items input.cant:focus { outline: 2px solid #2563eb; background: #fff; }
+    .col-precio { color: #999; font-style: italic; }
+
+    /* ── Firmas ── */
+    .firmas {
+      display: flex; gap: 14mm; margin-top: 22mm;
+      justify-content: space-around;
+    }
+    .firma { flex: 1; text-align: center; }
+    .firma .linea { border-top: 1px solid #000; margin-bottom: 6px; }
+    .firma .nombre { font-size: 10px; font-weight: bold; text-transform: uppercase; }
+    .firma .cargo { font-size: 9px; color: #555; margin-top: 2px; }
+
+    /* ── Footer ── */
+    .pie {
+      margin-top: 8mm; font-size: 7.5px; color: #777;
+      text-align: center; border-top: 1px solid #ccc; padding-top: 4px;
+    }
+
+    /* ── Barra de acciones (solo pantalla) ── */
+    .barra-acciones {
+      width: 210mm; margin: 8px auto;
+      display: flex; gap: 8px; justify-content: space-between; align-items: center;
+    }
+    .barra-acciones-derecha { display: flex; gap: 8px; }
+    .barra-acciones .msg {
+      font-size: 12px;
+      color: #059669;
+      font-weight: 600;
+    }
+    .barra-acciones .btn {
+      padding: 8px 16px; border: none; border-radius: 6px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-print { background: #2563eb; color: #fff; }
+    .btn-print:hover { background: #1d4ed8; }
+    .btn-save  { background: #059669; color: #fff; }
+    .btn-save:hover { background: #047857; }
+    .btn-back  { background: #e5e7eb; color: #111; }
+    .btn-back:hover { background: #d1d5db; }
+
+    .messages {
+      width: 210mm; margin: 8px auto 0; padding: 0;
+    }
+    .msg-box {
+      padding: 8px 14px; border-radius: 6px; font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .msg-success { background: #d1fae5; color: #065f46; }
+    .msg-error   { background: #fee2e2; color: #991b1b; }
+
+    /* ── Print ── */
+    @media print {
+      body { background: #fff; }
+      .pagina { margin: 0; padding: 12mm 14mm; width: 100%; box-shadow: none; }
+      .no-print { display: none !important; }
+      @page { size: A4; margin: 0; }
+      table.items input.cant {
+        border: none;
+        background: transparent;
+        padding: 0;
+        font-weight: 600;
+      }
+    }
+  </style>
+</head>
+<body>
+
+{% if messages %}
+<div class="messages no-print">
+  {% for m in messages %}
+  <div class="msg-box {% if m.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">{{ m }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<form method="post">
+{% csrf_token %}
+
+<div class="barra-acciones no-print">
+  <a href="{% if cot.requerimiento_origen_id %}{% url 'logistica:req_revisar_log' proyecto.pk cot.requerimiento_origen_id %}{% else %}{% url 'almacen:cot_detalle' cot.pk %}{% endif %}" class="btn btn-back">← Volver</a>
+  <div class="barra-acciones-derecha">
+    <button type="submit" class="btn btn-save">💾 Guardar cantidades</button>
+    <button type="button" class="btn btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+  </div>
+</div>
+
+<div class="pagina">
+
+  <!-- Cabecera -->
+  <div class="cabecera">
+    <div class="cab-logo">
+      {% if empresa.logo %}
+      <img src="{{ empresa.logo.url }}" alt="Logo">
+      {% endif %}
+      <div class="empresa-nombre">{{ empresa.razon_social|default:"—" }}</div>
+      {% if empresa.ruc %}<div class="empresa-ruc">RUC: {{ empresa.ruc }}</div>{% endif %}
+    </div>
+    <div class="cab-titulo">
+      <h1>Solicitud de Cotización</h1>
+      <div class="subtitulo">{{ proyecto.codigo }} — {{ proyecto.nombre }}</div>
+      {% if empresa.direccion %}<div style="font-size:8px;color:#555;margin-top:4px">{{ empresa.direccion }}</div>{% endif %}
+    </div>
+    <div class="cab-numero">
+      <div class="label">N° Cotización</div>
+      <div class="numero">COT-{{ cot.numero }}</div>
+      {% if cot.requerimiento_origen %}
+      <div class="origen">Origen: REQ-{{ cot.requerimiento_origen.numero }}</div>
+      {% endif %}
+      <div class="fecha">Fecha: {{ cot.fecha|date:"d/m/Y" }}</div>
+    </div>
+  </div>
+
+  <!-- Datos del proveedor -->
+  <div class="seccion seccion-proveedor">
+    <div class="seccion-header">Datos del Proveedor</div>
+    <div class="seccion-body">
+      <div class="fila-datos">
+        <div class="dato wide">
+          <label>Razón Social del proveedor</label>
+          <span>—</span>
+        </div>
+        <div class="dato mid">
+          <label>RUC</label>
+          <span>—</span>
+        </div>
+      </div>
+      <div class="fila-datos">
+        <div class="dato wide">
+          <label>Jr.</label>
+          <span>—</span>
+        </div>
+        <div class="dato mid">
+          <label>Condiciones de pago</label>
+          <span>—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ítems solicitados -->
+  <div class="seccion">
+    <div class="seccion-header">Materiales a Cotizar</div>
+    <table class="items">
+      <thead>
+        <tr>
+          <th style="width:20mm" class="left">Código</th>
+          <th class="left">Descripción</th>
+          <th style="width:14mm" class="center">Und</th>
+          <th style="width:24mm" class="center">Cantidad</th>
+          <th style="width:26mm" class="num">P.U. (S/.)</th>
+          <th style="width:26mm" class="num">Subtotal (S/.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in cot.detalles.all %}
+        <tr>
+          <td class="left">{% if d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</td>
+          <td class="left">{{ d.descripcion|default:d.insumo.descripcion }}</td>
+          <td class="center">{{ d.unidad|default:"—" }}</td>
+          <td class="center">
+            <input type="number" name="cantidad_{{ d.pk }}" class="cant"
+                   value="{{ d.cantidad|floatformat:2 }}" step="0.01" min="0">
+          </td>
+          <td class="num col-precio">—</td>
+          <td class="num col-precio">—</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="center" style="padding:14px;color:#777">Sin ítems.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Firmas -->
+  <div class="firmas">
+    <div class="firma">
+      <div class="linea"></div>
+      <div class="nombre">Solicitante</div>
+      <div class="cargo">Logística</div>
+    </div>
+    <div class="firma">
+      <div class="linea"></div>
+      <div class="nombre">Proveedor</div>
+      <div class="cargo">Sello y firma</div>
+    </div>
+  </div>
+
+  <div class="pie">
+    Solicitud de cotización generada por el sistema — {{ empresa.razon_social|default:"" }} — {{ cot.fecha|date:"d/m/Y" }}
+    {% if cot.requerimiento_origen %} · Origen: REQ-{{ cot.requerimiento_origen.numero }}{% endif %}
+  </div>
+
+</div>
+</form>
+
+</body>
+</html>

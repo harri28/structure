@@ -5,8 +5,10 @@ from django.db.models import Q
 from .models import Producto, CATEGORIAS
 from .forms import ProductoForm
 from .importador import importar_catalogo_excel
+from config.permisos import requiere
 
 
+@requiere('puede_editar_catalogo')
 def lista(request):
     categoria = request.GET.get('categoria', '')
     buscar = request.GET.get('q', '')
@@ -23,6 +25,7 @@ def lista(request):
     })
 
 
+@requiere('puede_editar_catalogo')
 def importar(request):
     if request.method == 'POST' and request.FILES.get('archivo'):
         archivo = request.FILES['archivo']
@@ -35,6 +38,7 @@ def importar(request):
     return render(request, 'catalogo/importar.html')
 
 
+@requiere('puede_editar_catalogo')
 def editar(request, pk):
     producto = get_object_or_404(Producto, pk=pk)
     if request.method == 'POST':
@@ -48,6 +52,7 @@ def editar(request, pk):
     return render(request, 'catalogo/form.html', {'form': form, 'producto': producto})
 
 
+@requiere('puede_editar_catalogo')
 def eliminar(request, pk):
     producto = get_object_or_404(Producto, pk=pk)
     if request.method == 'POST':
@@ -58,6 +63,7 @@ def eliminar(request, pk):
     return render(request, 'catalogo/confirmar_eliminar.html', {'producto': producto})
 
 
+@requiere('puede_editar_catalogo', 'puede_crear_requerimientos', 'puede_gestionar_entradas', 'puede_gestionar_salidas', 'puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log', 'puede_gestionar_oc')
 def api_buscar(request):
     q = request.GET.get('q', '')
     categoria = request.GET.get('categoria', '')

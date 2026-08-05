@@ -25,7 +25,9 @@
           <input type="text" class="form-control form-control-sm prod-search"
                  placeholder="Buscar material..."
                  autocomplete="off"
-                 value="{% if form.instance.insumo_id %}{{ form.instance.insumo.descripcion }}{% elif form.instance.descripcion %}{{ form.instance.descripcion }}{% endif %}">
+                 {% if form.instance.insumo_id %}readonly style="background:#f8f9fa;color:#6b7280"{% endif %}
+                 value="{% if form.instance.insumo_id %}{{ form.instance.insumo.descripcion }}{% elif form.instance.descripcion %}{{ form.instance.descripcion }}{% endif %}"
+                 title="{% if form.instance.insumo_id %}El material viene del presupuesto y no se puede editar. Elimina la fila para cambiarlo.{% endif %}">
           {{ form.insumo }}
           {{ form.descripcion }}
           <div class="prod-dropdown" style="display:none;position:fixed;z-index:9999;
@@ -192,7 +194,14 @@
         return;
       }
 
-      wrap.querySelector('.prod-search').value = opt.dataset.label;
+      const prodSearch = wrap.querySelector('.prod-search');
+      prodSearch.value = opt.dataset.label;
+      // Bloquear edición/borrado del material una vez seleccionado.
+      // Para cambiar el material, se debe eliminar la fila y agregar otra.
+      prodSearch.readOnly = true;
+      prodSearch.style.background = '#f8f9fa';
+      prodSearch.style.color = '#6b7280';
+      prodSearch.title = 'El material viene del presupuesto y no se puede editar. Elimina la fila para cambiarlo.';
       const insumoInput = wrap.querySelector('input[name$="-insumo"]');
       if (insumoInput) insumoInput.value = opt.dataset.id;
       const descInput = wrap.querySelector('input[name$="-descripcion"]');
@@ -218,9 +227,10 @@
     }
   });
 
-  // Mostrar lista al enfocar el input
+  // Mostrar lista al enfocar el input (solo si no está bloqueado)
   document.addEventListener('focus', function(e) {
     if (!e.target.classList.contains('prod-search')) return;
+    if (e.target.readOnly) return;
     buscar(e.target, e.target.value.trim());
   }, true);
 
@@ -328,7 +338,14 @@
     tpl.querySelectorAll('input[type=hidden][name$="-insumo"]').forEach(i => i.value = '');
     tpl.querySelectorAll('input[type=hidden][name$="-descripcion"]').forEach(i => i.value = '');
     tpl.querySelectorAll('.prod-dropdown').forEach(d => d.style.display = 'none');
-    tpl.querySelector('.prod-search').value = '';
+    const nuevoProdSearch = tpl.querySelector('.prod-search');
+    nuevoProdSearch.value = '';
+    // La fila nueva nace editable, aunque haya sido clonada de una fila bloqueada
+    nuevoProdSearch.readOnly = false;
+    nuevoProdSearch.style.background = '';
+    nuevoProdSearch.style.color = '';
+    nuevoProdSearch.style.cursor = '';
+    nuevoProdSearch.removeAttribute('title');
     tpl.querySelector('.stock-display').value = '—';
     tpl.style.opacity = '1';
     tbody.appendChild(tpl);

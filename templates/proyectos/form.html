@@ -41,20 +41,28 @@
               {{ form.empresa_ejecutora }}
             </div>
 
-            <!-- Cliente + Responsable -->
-            <div class="col-md-6">
+            <!-- Cliente + Responsable + Cargo del Responsable -->
+            <div class="col-md-4">
               <label class="form-label fw-semibold">Cliente</label>
               {{ form.cliente }}
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label fw-semibold">Responsable</label>
               {{ form.responsable }}
             </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Cargo del Responsable</label>
+              {{ form.cargo_responsable }}
+            </div>
 
-            <!-- Ubicación -->
-            <div class="col-12">
+            <!-- Ubicación + Sector -->
+            <div class="col-md-8">
               <label class="form-label fw-semibold">Ubicación</label>
               {{ form.ubicacion }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Sector</label>
+              {{ form.sector }}
             </div>
 
             <!-- Fecha Inicio · Fecha Fin · Plazo · Estado -->

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load l10n %}
 {% block title %}Revisar REQ-{{ req.numero }}{% endblock %}
-{% block nav_log_reqs_open %}show{% endblock %}
+{% block nav_req_logistica %}active{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
@@ -15,9 +15,31 @@
     <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="btn-back">
       <i class="bi bi-chevron-left"></i> Requerimientos
     </a>
-    <h4><i class="bi bi-clipboard2-check me-2" style="color:#d97706"></i>Revisión de requerimiento</h4>
+    <h4>
+      <i class="bi bi-clipboard2-check me-2" style="color:#d97706"></i>Revisión de requerimiento
+      <span class="badge ms-2 rounded-1
+        {% if req.estado == 'APROBADO' %}bg-info
+        {% elif req.estado == 'PARCIAL' %}bg-warning text-dark
+        {% elif req.estado == 'ANULADO' %}bg-danger
+        {% elif req.estado == 'ATENDIDO' %}bg-success
+        {% else %}bg-secondary{% endif %}"
+        style="font-size:.72rem">{{ req.get_estado_display }}</span>
+    </h4>
   </div>
 </div>
+
+{% if not editable %}
+<div class="alert alert-info d-flex align-items-center py-2 mb-3" style="font-size:.85rem">
+  <i class="bi bi-info-circle me-2"></i>
+  {% if req.estado == 'ANULADO' %}
+    Este requerimiento fue <strong>anulado</strong>. Podés recuperarlo para volver a revisarlo.
+  {% elif req.estado == 'ATENDIDO' %}
+    Este requerimiento ya fue <strong>atendido</strong>. Solo visualización.
+  {% else %}
+    Este requerimiento ya fue <strong>{{ req.get_estado_display|lower }}</strong>. Para modificarlo primero debés anularlo y luego recuperarlo.
+  {% endif %}
+</div>
+{% endif %}
 
 <form method="post" id="form-revision">
 {% csrf_token %}
@@ -48,6 +70,20 @@
         <div>{{ req.sector_obra|default:"—" }}</div>
       </div>
     </div>
+    {% with cots=req.cotizaciones_origen.all %}
+    {% if cots %}
+    <div class="mt-3 pt-2 border-top d-flex align-items-center flex-wrap gap-2">
+      <span class="text-muted" style="font-size:.75rem">Cotizaciones generadas:</span>
+      {% for c in cots %}
+      <a href="{% url 'almacen:cot_imprimir' c.pk %}" target="_blank"
+         class="badge bg-light text-dark border" style="font-size:.75rem;padding:.4em .7em;text-decoration:none">
+        <i class="bi bi-receipt me-1 text-success"></i>COT-{{ c.numero }}
+        {% if c.proveedor %}<span class="text-muted">· {{ c.proveedor|truncatechars:30 }}</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
   </div>
 </div>
 
@@ -82,13 +118,15 @@
                    name="aprobada_{{ d.pk }}"
                    id="aprobada_{{ d.pk }}"
                    class="form-control form-control-sm text-end cant-aprobada"
-                   style="max-width:130px;margin:0 auto"
-                   value="{{ d.cantidad_requerida|unlocalize }}"
+                   style="max-width:130px;margin:0 auto{% if not editable %};background:#f8f9fa;color:#6b7280{% endif %}"
+                   value="{% if editable %}{{ d.cantidad_requerida|unlocalize }}{% else %}{{ d.cantidad_aprobada|unlocalize }}{% endif %}"
                    min="0" max="{{ d.cantidad_requerida|unlocalize }}" step="0.0001"
-                   data-max="{{ d.cantidad_requerida|unlocalize }}" required>
+                   data-max="{{ d.cantidad_requerida|unlocalize }}"
+                   {% if not editable %}readonly{% else %}required{% endif %}>
             <div class="invalid-feedback text-start" style="font-size:.72rem"></div>
           </td>
           <td class="text-center">
+            {% if editable %}
             <button type="button" class="btn btn-link p-0 btn-eliminar"
                     style="color:#dc2626;font-size:1rem;line-height:1"
                     data-pk="{{ d.pk }}"
@@ -96,6 +134,7 @@
                     title="Eliminar ítem">
               <i class="bi bi-trash3"></i>
             </button>
+            {% endif %}
           </td>
         </tr>
         {% endif %}{% empty %}
@@ -107,6 +146,7 @@
 </div>
 
 <!-- Agregar insumo -->
+{% if editable %}
 <div class="card mb-3">
   <div class="card-header d-flex justify-content-between align-items-center"
        style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
@@ -133,6 +173,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <!-- Historial de cambios -->
 {% if historial %}
@@ -177,14 +218,98 @@
 
 <!-- Acciones -->
 <div class="d-flex gap-2 justify-content-end">
-  <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
-  <button type="submit" class="btn btn-success" id="btn-aprobar">
+  <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
+    {% if editable %}Cancelar{% else %}Volver{% endif %}
+  </a>
+  {% if editable %}
+  <button type="submit" class="btn btn-success btn-sm" id="btn-aprobar">
     <i class="bi bi-check-lg me-1"></i>Aprobar requerimiento
   </button>
+  {% elif req.estado == 'APROBADO' or req.estado == 'PARCIAL' %}
+  <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modal-anular">
+    <i class="bi bi-x-circle me-1"></i>Anular requerimiento
+  </button>
+  <button type="submit"
+          formaction="{% url 'almacen:cot_desde_req' proyecto.pk req.pk %}"
+          formmethod="post"
+          formnovalidate
+          class="btn btn-success btn-sm">
+    <i class="bi bi-receipt me-1"></i>{% if req.cotizaciones_origen.count %}Generar otra cotización{% else %}Generar cotización{% endif %}
+  </button>
+  {% elif req.estado == 'ANULADO' %}
+  <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-recuperar">
+    <i class="bi bi-arrow-counterclockwise me-1"></i>Recuperar
+  </button>
+  {% endif %}
 </div>
 </form>
 
+{% if req.estado == 'APROBADO' or req.estado == 'PARCIAL' %}
+<div class="modal fade" id="modal-anular" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'logistica:req_anular_log' proyecto.pk req.pk %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h6 class="modal-title" style="font-size:.9rem">
+            <i class="bi bi-x-circle text-danger me-1"></i>Anular REQ-{{ req.numero }}
+          </h6>
+          <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-2" style="font-size:.83rem">
+            El requerimiento pasará a estado <strong>ANULADO</strong>. La guía PENDIENTE asociada también se marcará como anulada.
+          </p>
+          <label class="form-label fw-semibold" style="font-size:.8rem">Justificación *</label>
+          <textarea name="justificacion" class="form-control form-control-sm" rows="3" required
+                    placeholder="¿Por qué se anula este requerimiento?"></textarea>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-x-circle me-1"></i>Confirmar anulación
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if req.estado == 'ANULADO' %}
+<div class="modal fade" id="modal-recuperar" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'logistica:req_recuperar_log' proyecto.pk req.pk %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h6 class="modal-title" style="font-size:.9rem">
+            <i class="bi bi-arrow-counterclockwise text-primary me-1"></i>Recuperar REQ-{{ req.numero }}
+          </h6>
+          <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-2" style="font-size:.83rem">
+            El requerimiento volverá al estado <strong>EN_REVISION</strong> para ser revisado y aprobado nuevamente.
+          </p>
+          <label class="form-label fw-semibold" style="font-size:.8rem">Justificación *</label>
+          <textarea name="justificacion" class="form-control form-control-sm" rows="3" required
+                    placeholder="¿Por qué se recupera este requerimiento?"></textarea>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Confirmar recuperación
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 <!-- Modal eliminar -->
+{% if editable %}
 <div class="modal fade" id="modal-eliminar" tabindex="-1">
   <div class="modal-dialog modal-sm">
     <div class="modal-content">
@@ -210,6 +335,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -217,6 +343,9 @@
 (function () {
   var API = '/almacen/api/productos/';
   var nuevoIdx = 0;
+
+  // Solo activar JS de edición si el formulario es editable
+  if (!document.getElementById('btn-aprobar')) return;
 
   // ── Eliminar ítem ────────────────────────────────────────────────
   var modalEl   = document.getElementById('modal-eliminar');

@@ -289,16 +289,12 @@
     <div class="seccion-body">
       <div class="fila-datos">
         <div class="dato wide">
-          <label>Transportista</label>
-          <span>{{ guia.transportista.razon_social|default:"—" }}</span>
+          <label>Nombre de Transportista</label>
+          <span>{{ guia.conductor|default:guia.transportista.razon_social|default:"—" }}</span>
         </div>
         <div class="dato">
           <label>Placa</label>
           <span>{{ guia.placa|default:"—" }}</span>
-        </div>
-        <div class="dato wide">
-          <label>Conductor</label>
-          <span>{{ guia.conductor|default:"—" }}</span>
         </div>
         <div class="dato">
           <label>N° Licencia</label>

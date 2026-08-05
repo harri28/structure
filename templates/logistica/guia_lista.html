@@ -15,22 +15,17 @@
   </a>
 </div>
 
-<!-- Filtro por estado -->
+<!-- Chips: En cola / Enviados -->
 <div class="card mb-3">
   <div class="card-body py-2">
-    <form method="get" class="d-flex align-items-center gap-2 flex-wrap">
-      <label style="font-size:.82rem;font-weight:600;margin:0">Estado:</label>
-      <select name="estado" class="form-select form-select-sm" style="width:auto"
-              onchange="this.form.submit()">
-        <option value="">Todos</option>
-        {% for val, label in estados %}
-        <option value="{{ val }}" {% if val == estado_sel %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-      {% if estado_sel %}
-      <a href="?" class="btn btn-outline-secondary btn-sm">✕ Limpiar</a>
-      {% endif %}
-    </form>
+    <div class="submodule-chips">
+      <a href="?tab=cola" class="s-chip {% if tab == 'cola' %}active{% endif %}">
+        <i class="bi bi-hourglass-split me-1"></i>En cola
+      </a>
+      <a href="?tab=enviados" class="s-chip {% if tab == 'enviados' %}active{% endif %}">
+        <i class="bi bi-send-check me-1"></i>Enviados
+      </a>
+    </div>
   </div>
 </div>
 
@@ -53,7 +48,18 @@
       <tbody>
         {% for g in guias %}
         <tr>
-          <td class="fw-bold" style="color:#2563eb">{{ g.numero }}</td>
+          <td class="fw-bold" style="color:#2563eb">
+            {{ g.numero }}
+            {% if g.requerimiento %}
+            <div style="margin-top:2px">
+              <a href="{% url 'logistica:req_revisar_log' proyecto.pk g.requerimiento_id %}"
+                 class="badge bg-light text-dark border text-decoration-none"
+                 style="font-size:.65rem;font-weight:normal;padding:.2em .5em">
+                <i class="bi bi-link-45deg text-primary"></i>REQ-{{ g.requerimiento.numero }}
+              </a>
+            </div>
+            {% endif %}
+          </td>
           <td style="font-size:.8rem">{{ g.fecha_emision|date:"d/m/Y" }}</td>
           <td style="font-size:.8rem">{{ g.fecha_traslado|date:"d/m/Y" }}</td>
           <td style="font-size:.8rem">{{ g.get_motivo_display }}</td>
@@ -80,8 +86,11 @@
         {% empty %}
         <tr>
           <td colspan="9" class="text-center py-4 text-muted">
-            Sin guías{% if estado_sel %} con estado "{{ estado_sel }}"{% endif %}.
-            <a href="{% url 'logistica:guia_crear' proyecto.pk %}">Crear una guía</a>
+            {% if tab == 'enviados' %}
+              No hay guías enviadas todavía.
+            {% else %}
+              No hay guías en cola. Aprobá un requerimiento para generar una.
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

@@ -14,25 +14,64 @@
     <div class="text-muted">Precios cotizados por proveedores y tiendas</div>
   </div>
   <div class="d-flex gap-2">
-    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalCotRapida">
+    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalCotRapida">
       <i class="bi bi-upload me-1"></i>Registrar Cotización
     </button>
-    <a href="{% url 'almacen:cot_crear' proyecto.pk %}" class="btn btn-primary">
+    <a href="{% url 'almacen:cot_crear' proyecto.pk %}" class="btn btn-primary btn-sm">
       <i class="bi bi-plus-lg me-1"></i>Nueva Cotización
     </a>
   </div>
 </div>
 
 <div class="card">
+  <div class="card-header bg-white py-2 d-flex align-items-center gap-2 flex-wrap">
+    <div class="input-group input-group-sm" style="max-width:420px">
+      <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="cot-search"
+             class="form-control form-control-sm"
+             placeholder="Buscar por N° COT, proveedor o material…"
+             autocomplete="off">
+      <button type="button" id="cot-search-clear" class="btn btn-outline-secondary btn-sm" title="Limpiar búsqueda" style="display:none">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form method="get" class="d-flex align-items-center gap-2">
+      <label class="text-muted mb-0" style="font-size:.78rem">Estado:</label>
+      <select name="estado" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for val, label in estados %}
+        <option value="{{ val }}" {% if val == estado_sel %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if estado_sel %}
+      <a href="?" class="btn btn-outline-secondary btn-sm" title="Limpiar filtro"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+
+    <span id="cot-search-count" class="text-muted ms-auto" style="font-size:.8rem;display:none">
+      <i class="bi bi-funnel-fill me-1"></i><span id="cot-search-count-num">0</span> de {{ cotizaciones|length }}
+    </span>
+  </div>
   <div class="card-body p-0">
     <table class="table-modern">
-      <thead><tr><th>N° COT</th><th>Fecha</th><th>Proveedor</th><th>Estado</th><th class="text-end">Total (S/.)</th><th></th></tr></thead>
+      <thead><tr><th>N° COT</th><th>Fecha</th><th>Proveedor</th><th>Origen</th><th>Estado</th><th class="text-end">Total (S/.)</th><th></th></tr></thead>
       <tbody>
         {% for c in cotizaciones %}
-        <tr>
+        <tr class="cot-row"
+            data-search="COT-{{ c.numero|lower }} {{ c.proveedor|lower }} {% if c.requerimiento_origen %}REQ-{{ c.requerimiento_origen.numero|lower }}{% endif %}{% for d in c.detalles.all %} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}">
           <td><a href="{% url 'almacen:cot_detalle' c.pk %}" class="fw-semibold text-decoration-none">COT-{{ c.numero }}</a></td>
           <td>{{ c.fecha|date:"d/m/Y" }}</td>
-          <td>{{ c.proveedor }}</td>
+          <td>{{ c.proveedor|default:"—" }}</td>
+          <td>
+            {% if c.requerimiento_origen %}
+            <a href="{% url 'logistica:req_revisar_log' proyecto.pk c.requerimiento_origen_id %}"
+               class="badge bg-light text-dark border text-decoration-none"
+               style="font-size:.7rem;padding:.3em .6em">
+              <i class="bi bi-link-45deg me-1 text-primary"></i>REQ-{{ c.requerimiento_origen.numero }}
+            </a>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
           <td>
             <span class="badge {% if c.estado == 'APROBADA' %}bg-success{% elif c.estado == 'RECHAZADA' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
               {{ c.get_estado_display }}
@@ -45,12 +84,67 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="text-center py-4 text-muted">Sin cotizaciones registradas</td></tr>
+        <tr><td colspan="7" class="text-center py-4 text-muted">Sin cotizaciones registradas{% if estado_sel %} con estado <strong>{{ estado_sel }}</strong>{% endif %}</td></tr>
         {% endfor %}
+        <tr id="cot-no-results" style="display:none">
+          <td colspan="7">
+            <div class="empty-state py-4">
+              <i class="bi bi-search d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
+              <p class="text-muted mb-0">Ninguna cotización coincide con "<strong id="cot-no-results-q"></strong>".</p>
+              <button type="button" id="cot-no-results-clear" class="btn btn-link btn-sm mt-2">Limpiar búsqueda</button>
+            </div>
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 </div>
+
+<script>
+(function () {
+  var input   = document.getElementById('cot-search');
+  var clearB  = document.getElementById('cot-search-clear');
+  var count   = document.getElementById('cot-search-count');
+  var countN  = document.getElementById('cot-search-count-num');
+  var noRes   = document.getElementById('cot-no-results');
+  var noResQ  = document.getElementById('cot-no-results-q');
+  var noResC  = document.getElementById('cot-no-results-clear');
+  if (!input) return;
+  var rows = Array.prototype.slice.call(document.querySelectorAll('tr.cot-row'));
+
+  function filtrar() {
+    var q = input.value.trim().toLowerCase();
+    var visibles = 0;
+    rows.forEach(function (r) {
+      if (!q) { r.style.display = ''; visibles++; }
+      else {
+        var hay = (r.getAttribute('data-search') || '').indexOf(q) !== -1;
+        r.style.display = hay ? '' : 'none';
+        if (hay) visibles++;
+      }
+    });
+    if (q) {
+      clearB.style.display = '';
+      count.style.display = '';
+      countN.textContent = visibles;
+      if (visibles === 0 && rows.length > 0) {
+        noRes.style.display = '';
+        noResQ.textContent = input.value.trim();
+      } else {
+        noRes.style.display = 'none';
+      }
+    } else {
+      clearB.style.display = 'none';
+      count.style.display = 'none';
+      noRes.style.display = 'none';
+    }
+  }
+
+  input.addEventListener('input', filtrar);
+  clearB.addEventListener('click', function () { input.value = ''; filtrar(); input.focus(); });
+  noResC.addEventListener('click', function () { input.value = ''; filtrar(); input.focus(); });
+})();
+</script>
 
 <!-- ── Modal: Registrar Cotización rápida ─────────────────────────── -->
 <div class="modal fade" id="modalCotRapida" tabindex="-1" aria-labelledby="modalCotRapidaLabel" aria-hidden="true">

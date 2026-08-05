@@ -10,7 +10,7 @@ SECRET_KEY = os.environ['SECRET_KEY']
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.100.38').split(',')
 
 CSRF_TRUSTED_ORIGINS = [f'https://{h}' for h in ALLOWED_HOSTS if h not in ('localhost', '127.0.0.1')]
 CSRF_TRUSTED_ORIGINS += ['http://localhost', 'http://127.0.0.1']
@@ -61,6 +61,7 @@ TEMPLATES = [
                 'config.context_processors.permisos_usuario',
                 'config.context_processors.notif_no_leidas',
                 'config.context_processors.req_enviados_count',
+                'config.context_processors.req_solicitados_count',
             ],
             'builtins': [
                 'apps.presupuesto.templatetags.pres_fmt',

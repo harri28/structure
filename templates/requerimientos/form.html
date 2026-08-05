@@ -9,9 +9,28 @@
 {% endblock %}
 
 {% block content %}
-<h4 class="fw-bold mb-4">{{ titulo }}</h4>
-<form method="post">
+<h4 class="fw-bold mb-4">
+  {{ titulo }}
+  {% if modo_ajuste %}
+  <span class="badge bg-danger ms-2" style="font-size:.68rem;vertical-align:middle">AJUSTE — Excede presupuesto</span>
+  {% endif %}
+</h4>
+
+{% if modo_ajuste %}
+<div class="alert d-flex align-items-start gap-2 mb-3 py-2"
+     style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-size:.82rem">
+  <i class="bi bi-exclamation-triangle-fill fs-6 mt-1" style="flex-shrink:0"></i>
+  <div>
+    <strong>Modo Ajuste activo:</strong> podés solicitar cantidades por encima de lo presupuestado.
+    Este requerimiento quedará marcado como adicional. El impacto formal en el presupuesto
+    se documenta pero no se registra automáticamente (ver <code>REGLAS_NEGOCIO.md §14</code>).
+  </div>
+</div>
+{% endif %}
+
+<form method="post" id="req-form">
   {% csrf_token %}
+  {% if modo_ajuste %}<input type="hidden" name="modo_ajuste" value="1">{% endif %}
 
   <div class="card mb-3">
     <div class="card-header">Datos Generales</div>
@@ -74,7 +93,14 @@
   </div>
 
   <div class="d-flex gap-2">
-    {% if req and req.estado != 'BORRADOR' %}
+    {% if req and req.estado == 'SOLICITADO' %}
+    <button type="submit" name="accion" value="guardar" class="btn btn-outline-secondary">
+      <i class="bi bi-floppy me-1"></i>Guardar cambios
+    </button>
+    <button type="submit" name="accion" value="enviar" class="btn btn-success">
+      <i class="bi bi-check2-square me-1"></i>Aprobar y enviar a Logística
+    </button>
+    {% elif req and req.estado != 'BORRADOR' %}
     <button type="submit" name="accion" value="guardar" class="btn btn-outline-secondary">
       <i class="bi bi-floppy me-1"></i>Guardar cambios
     </button>
@@ -82,7 +108,9 @@
     <button type="submit" name="accion" value="borrador" class="btn btn-outline-secondary">
       <i class="bi bi-floppy me-1"></i>Guardar borrador
     </button>
-    <button type="submit" name="accion" value="enviar" class="btn btn-primary">
+    <button type="submit" name="accion" value="enviar"
+            class="btn {% if modo_ajuste %}btn-danger{% else %}btn-primary{% endif %}"
+            id="btn-enviar-req">
       <i class="bi bi-send me-1"></i>Enviar a Logística
     </button>
     {% endif %}
@@ -102,5 +130,34 @@ document.getElementById('btn-auto-num')?.addEventListener('click', function() {
     fechaInput.value = new Date().toISOString().split('T')[0];
   }
 })();
+
+{% if not modo_ajuste %}
+// Bloquear "Enviar a Logística" si algún ítem excede el presupuesto (solo en modo normal).
+(function () {
+  const btn = document.getElementById('btn-enviar-req');
+  if (!btn) return;
+  const originalHTML = btn.innerHTML;
+
+  function chequear() {
+    const excede = document.querySelectorAll('.cant-req-error[style*="display: block"], .cant-req-error[style*="display:block"]').length > 0;
+    if (excede) {
+      btn.disabled = true;
+      btn.title = 'Uno o más ítems exceden el presupuesto.';
+      btn.innerHTML = '<i class="bi bi-lock me-1"></i>Enviar bloqueado (excede presupuesto)';
+      btn.classList.add('opacity-75');
+    } else {
+      btn.disabled = false;
+      btn.title = '';
+      btn.innerHTML = originalHTML;
+      btn.classList.remove('opacity-75');
+    }
+  }
+
+  document.addEventListener('input',  function (e) { if (e.target.matches('input[name$="-cantidad_requerida"]')) setTimeout(chequear, 30); });
+  document.addEventListener('change', function (e) { if (e.target.matches('input[name$="-cantidad_requerida"]')) setTimeout(chequear, 30); });
+  // Chequeo inicial al cargar la página
+  setTimeout(chequear, 200);
+})();
+{% endif %}
 </script>
 {% endblock %}

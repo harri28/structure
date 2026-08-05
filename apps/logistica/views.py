@@ -6,10 +6,13 @@ from apps.proyectos.models import Proyecto
 from apps.registro.utils import log, notificar
 from .models import GuiaRemision, DetalleGuia, Transportista, ESTADOS_GUIA, MOTIVOS_TRASLADO
 from .forms import GuiaRemisionForm, DetalleGuiaFormSet, TransportistaForm
+from config.permisos import requiere, proyecto_visible
 
 # ── REALTIME POLL ──────────────────────────────────────────────────
 # Para desactivar completamente: eliminar esta función + el path
 # 'ping_reqs' en urls.py + el bloque <!-- REALTIME POLL --> en dashboard.html
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
 def ping_reqs(request, proyecto_id):
     from django.http import JsonResponse
     from apps.requerimientos.models import Requerimiento
@@ -30,9 +33,12 @@ def _get_proyecto(pk):
 
 # ── Dashboard ─────────────────────────────────────────────────────
 
+@requiere('puede_ver_logistica')
+@proyecto_visible
 def dashboard(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
-    qs = GuiaRemision.objects.filter(proyecto=proyecto)
+    # Excluir ANULADAS del listado y del total (siguen existiendo en la BD para trazabilidad)
+    qs = GuiaRemision.objects.filter(proyecto=proyecto).exclude(estado='ANULADO')
     recientes = qs.select_related('transportista').order_by('-creado_en')[:8]
 
     from apps.requerimientos.models import Requerimiento
@@ -54,17 +60,22 @@ def dashboard(request, proyecto_id):
 
 # ── Guías de Remisión ─────────────────────────────────────────────
 
+@requiere('puede_gestionar_logistica')
+@proyecto_visible
 def guia_lista(request, proyecto_id):
     proyecto  = _get_proyecto(proyecto_id)
-    qs        = GuiaRemision.objects.filter(proyecto=proyecto).select_related('transportista')
-    estado_sel = request.GET.get('estado', '')
-    if estado_sel:
-        qs = qs.filter(estado=estado_sel)
+    tab = request.GET.get('tab', 'cola')  # 'cola' | 'enviados'
+    qs = (GuiaRemision.objects.filter(proyecto=proyecto)
+          .select_related('transportista', 'requerimiento'))
+    if tab == 'enviados':
+        qs = qs.filter(estado__in=['EN_TRANSITO', 'ENTREGADO'])
+    else:
+        tab = 'cola'
+        qs = qs.filter(estado='PENDIENTE')
     return render(request, 'logistica/guia_lista.html', {
-        'proyecto':   proyecto,
-        'guias':      qs,
-        'estados':    ESTADOS_GUIA,
-        'estado_sel': estado_sel,
+        'proyecto':  proyecto,
+        'guias':     qs,
+        'tab':       tab,
     })
 
 
@@ -89,6 +100,8 @@ def _registrar_entrada_almacen(guia, proyecto):
         )
 
 
+@requiere('puede_gestionar_logistica')
+@proyecto_visible
 def guia_crear(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
     if request.method == 'POST':
@@ -139,6 +152,7 @@ def guia_crear(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_logistica')
 def guia_detalle(request, pk):
     guia = get_object_or_404(
         GuiaRemision.objects.select_related('proyecto', 'transportista')
@@ -152,6 +166,7 @@ def guia_detalle(request, pk):
     })
 
 
+@requiere('puede_gestionar_logistica')
 def guia_editar(request, pk):
     guia    = get_object_or_404(GuiaRemision, pk=pk)
     proyecto = guia.proyecto
@@ -174,6 +189,7 @@ def guia_editar(request, pk):
 
 
 @require_POST
+@requiere('puede_gestionar_logistica')
 def guia_estado(request, pk):
     guia  = get_object_or_404(GuiaRemision, pk=pk)
     nuevo = request.POST.get('estado', '')
@@ -187,6 +203,7 @@ def guia_estado(request, pk):
 
 
 @require_POST
+@requiere('puede_gestionar_logistica')
 def guia_eliminar(request, pk):
     guia       = get_object_or_404(GuiaRemision, pk=pk)
     proyecto_id = guia.proyecto_id
@@ -199,11 +216,13 @@ def guia_eliminar(request, pk):
 
 # ── Transportistas ────────────────────────────────────────────────
 
+@requiere('puede_gestionar_logistica')
 def transportista_lista(request):
     qs = Transportista.objects.all()
     return render(request, 'logistica/transportista_lista.html', {'transportistas': qs})
 
 
+@requiere('puede_gestionar_logistica')
 def transportista_crear(request):
     if request.method == 'POST':
         form = TransportistaForm(request.POST)
@@ -218,6 +237,7 @@ def transportista_crear(request):
                   {'form': form, 'titulo': 'Nuevo Transportista'})
 
 
+@requiere('puede_gestionar_logistica')
 def transportista_editar(request, pk):
     t = get_object_or_404(Transportista, pk=pk)
     if request.method == 'POST':
@@ -235,11 +255,16 @@ def transportista_editar(request, pk):
 
 # ── Sub-módulos Logística ─────────────────────────────────────────
 
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
 def requerimientos_log(request, proyecto_id):
     from apps.requerimientos.models import Requerimiento, ESTADOS_REQ
     proyecto = _get_proyecto(proyecto_id)
     estado_sel = request.GET.get('estado', '')
-    qs = Requerimiento.objects.filter(proyecto=proyecto).order_by('-fecha', '-numero')
+    qs = (Requerimiento.objects
+          .filter(proyecto=proyecto)
+          .prefetch_related('detalles__insumo')
+          .order_by('-fecha', '-numero'))
     if estado_sel:
         qs = qs.filter(estado=estado_sel)
     return render(request, 'logistica/requerimientos.html', {
@@ -251,6 +276,8 @@ def requerimientos_log(request, proyecto_id):
     })
 
 
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
 def consolidados_log(request, proyecto_id):
     from apps.requerimientos.models import Requerimiento
     proyecto = _get_proyecto(proyecto_id)
@@ -258,6 +285,21 @@ def consolidados_log(request, proyecto_id):
                       .filter(proyecto=proyecto, estado__in=['APROBADO', 'PARCIAL'])
                       .order_by('-fecha', '-numero'))
     return render(request, 'logistica/req_consolidados.html', {
+        'proyecto':       proyecto,
+        'requerimientos': requerimientos,
+    })
+
+
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
+def historial_log(request, proyecto_id):
+    from apps.requerimientos.models import Requerimiento
+    proyecto = _get_proyecto(proyecto_id)
+    requerimientos = (Requerimiento.objects
+                      .filter(proyecto=proyecto,
+                              estado__in=['EN_REVISION', 'APROBADO', 'PARCIAL', 'ANULADO'])
+                      .order_by('-fecha', '-numero'))
+    return render(request, 'logistica/req_historial.html', {
         'proyecto':       proyecto,
         'requerimientos': requerimientos,
     })
@@ -285,6 +327,8 @@ def _backfill_codigos(detalles, proyecto):
         DetalleRequerimiento.objects.bulk_update(to_update, ['codigo'])
 
 
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
 def req_detalle_log(request, proyecto_id, pk):
     from apps.requerimientos.models import Requerimiento
     proyecto = _get_proyecto(proyecto_id)
@@ -359,6 +403,8 @@ def _despachar_req(guia):
     req.save(update_fields=['estado'])
 
 
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
 def req_revisar_log(request, proyecto_id, pk):
     from decimal import Decimal, InvalidOperation
     from apps.requerimientos.models import Requerimiento, HistorialRevisionReq
@@ -367,10 +413,13 @@ def req_revisar_log(request, proyecto_id, pk):
     proyecto = _get_proyecto(proyecto_id)
     req = get_object_or_404(Requerimiento, pk=pk, proyecto=proyecto)
 
-    ESTADOS_EDITABLES = ('ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL')
-    if req.estado not in ESTADOS_EDITABLES:
-        messages.error(request, 'Este requerimiento no puede editarse en su estado actual.')
+    ESTADOS_VISIBLES  = ('ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL', 'ANULADO', 'ATENDIDO')
+    ESTADOS_EDITABLES = ('ENVIADO', 'EN_REVISION')
+    if req.estado not in ESTADOS_VISIBLES:
+        messages.error(request, 'Este requerimiento no puede visualizarse en su estado actual.')
         return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
+
+    editable = req.estado in ESTADOS_EDITABLES
 
     if req.estado == 'ENVIADO':
         req.estado = 'EN_REVISION'
@@ -380,6 +429,10 @@ def req_revisar_log(request, proyecto_id, pk):
     _backfill_codigos(detalles, proyecto)
 
     if request.method == 'POST':
+        if not editable:
+            messages.error(request, 'Este requerimiento ya fue aprobado; usa Anular o Recuperar.')
+            return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
         errores = []
 
         # ── Procesar ítems existentes ────────────────────────────────
@@ -437,6 +490,7 @@ def req_revisar_log(request, proyecto_id, pk):
             return render(request, 'logistica/req_revisar.html', {
                 'proyecto': proyecto, 'req': req,
                 'detalles': detalles, 'historial': historial,
+                'editable': editable,
             })
 
         # ── Guardar aprobaciones y registrar eliminaciones ───────────
@@ -512,9 +566,114 @@ def req_revisar_log(request, proyecto_id, pk):
         'req':      req,
         'detalles': detalles,
         'historial': historial,
+        'editable': editable,
     })
 
 
+def _guia_bloqueante(req):
+    """Retorna la primera guía en EN_TRANSITO o ENTREGADO ligada al req, si existe."""
+    return req.guias_remision.filter(estado__in=['EN_TRANSITO', 'ENTREGADO']).first()
+
+
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
+def req_anular_log(request, proyecto_id, pk):
+    from decimal import Decimal
+    from apps.requerimientos.models import Requerimiento, HistorialRevisionReq
+
+    if request.method != 'POST':
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
+    proyecto = _get_proyecto(proyecto_id)
+    req = get_object_or_404(Requerimiento, pk=pk, proyecto=proyecto)
+
+    if req.estado not in ('APROBADO', 'PARCIAL'):
+        messages.error(request, 'Solo se pueden anular requerimientos aprobados.')
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
+    guia_bloq = _guia_bloqueante(req)
+    if guia_bloq:
+        messages.error(request, f'No se puede anular: la guía {guia_bloq.numero} ya está {guia_bloq.get_estado_display()}.')
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
+    justificacion = request.POST.get('justificacion', '').strip()
+    if not justificacion:
+        messages.error(request, 'La justificación es obligatoria para anular.')
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
+    req.estado = 'ANULADO'
+    req.save(update_fields=['estado'])
+
+    req.guias_remision.filter(estado='PENDIENTE').update(estado='ANULADO')
+
+    HistorialRevisionReq.objects.create(
+        requerimiento=req,
+        accion='ANULAR',
+        descripcion=f'Requerimiento REQ-{req.numero} anulado',
+        unidad='',
+        cantidad=Decimal('0'),
+        justificacion=justificacion,
+        usuario=request.user,
+    )
+
+    log(request, 'ANULAR', 'Logística',
+        f'REQ-{req.numero} anulado por {request.user.get_full_name() or request.user.username}')
+    notificar(f'REQ-{req.numero} anulado',
+              mensaje=f'{proyecto.codigo} — {justificacion[:80]}',
+              tipo='danger')
+    messages.success(request, f'REQ-{req.numero} anulado.')
+    return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
+
+
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
+def req_recuperar_log(request, proyecto_id, pk):
+    from decimal import Decimal
+    from apps.requerimientos.models import Requerimiento, HistorialRevisionReq
+
+    if request.method != 'POST':
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
+    proyecto = _get_proyecto(proyecto_id)
+    req = get_object_or_404(Requerimiento, pk=pk, proyecto=proyecto)
+
+    if req.estado != 'ANULADO':
+        messages.error(request, 'Solo se pueden recuperar requerimientos anulados.')
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
+    guia_bloq = _guia_bloqueante(req)
+    if guia_bloq:
+        messages.error(request, f'No se puede recuperar: la guía {guia_bloq.numero} ya está {guia_bloq.get_estado_display()}.')
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
+    justificacion = request.POST.get('justificacion', '').strip()
+    if not justificacion:
+        messages.error(request, 'La justificación es obligatoria para recuperar.')
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
+    req.estado = 'EN_REVISION'
+    req.save(update_fields=['estado'])
+
+    HistorialRevisionReq.objects.create(
+        requerimiento=req,
+        accion='RECUPERAR',
+        descripcion=f'Requerimiento REQ-{req.numero} recuperado a EN_REVISION',
+        unidad='',
+        cantidad=Decimal('0'),
+        justificacion=justificacion,
+        usuario=request.user,
+    )
+
+    log(request, 'RECUPERAR', 'Logística',
+        f'REQ-{req.numero} recuperado por {request.user.get_full_name() or request.user.username}')
+    notificar(f'REQ-{req.numero} recuperado',
+              mensaje=f'{proyecto.codigo} — devuelto a revisión.',
+              tipo='info')
+    messages.success(request, f'REQ-{req.numero} recuperado. Vuelve a estar en revisión.')
+    return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
+
+
+@requiere('puede_gestionar_logistica')
 def guia_imprimir(request, pk):
     from apps.configuracion.models import ConfigEmpresa
     guia = get_object_or_404(
@@ -529,6 +688,7 @@ def guia_imprimir(request, pk):
     })
 
 
+@requiere('puede_gestionar_logistica')
 def guia_bienes_api(request, pk):
     from django.http import JsonResponse
     guia = get_object_or_404(GuiaRemision, pk=pk)
@@ -536,6 +696,8 @@ def guia_bienes_api(request, pk):
     return JsonResponse({'bienes': bienes})
 
 
+@requiere('puede_gestionar_logistica')
+@proyecto_visible
 def guias_pendientes_api(request, proyecto_id):
     from django.http import JsonResponse
     proyecto = _get_proyecto(proyecto_id)
@@ -546,21 +708,22 @@ def guias_pendientes_api(request, proyecto_id):
     return JsonResponse({'guias': list(qs)})
 
 
-def inventarios(request, proyecto_id):
-    proyecto = _get_proyecto(proyecto_id)
-    return render(request, 'logistica/inventarios.html', {'proyecto': proyecto})
-
-
+@requiere('puede_gestionar_almacen_log')
+@proyecto_visible
 def almacen_log(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
     return render(request, 'logistica/almacen_log.html', {'proyecto': proyecto})
 
 
+@requiere('puede_gestionar_ctrl_maq_log')
+@proyecto_visible
 def control_maquinaria(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
     return render(request, 'logistica/control_maquinaria.html', {'proyecto': proyecto})
 
 
+@requiere('puede_gestionar_abastecimiento')
+@proyecto_visible
 def abastecimiento(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
     return render(request, 'logistica/abastecimiento.html', {'proyecto': proyecto})

@@ -4,8 +4,11 @@ from . import views
 app_name = 'requerimientos'
 
 urlpatterns = [
-    path('proyecto/<int:proyecto_id>/',          views.lista,    name='lista'),
-    path('proyecto/<int:proyecto_id>/nuevo/',    views.crear,    name='crear'),
+    path('proyecto/<int:proyecto_id>/',                 views.lista,             name='lista'),
+    path('proyecto/<int:proyecto_id>/nuevo/',           views.crear,             name='crear'),
+    path('proyecto/<int:proyecto_id>/ajustes/',         views.ajustes,           name='ajustes'),
+    path('proyecto/<int:proyecto_id>/solicitar/',       views.solicitar,         name='solicitar'),
+    path('proyecto/<int:proyecto_id>/bandeja-entrada/', views.bandeja_entrada,   name='bandeja_entrada'),
     path('<int:pk>/',                            views.detalle,  name='detalle'),
     path('<int:pk>/editar/',                     views.editar,   name='editar'),
     path('<int:pk>/eliminar/',                   views.eliminar, name='eliminar'),

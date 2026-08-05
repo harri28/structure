@@ -26,14 +26,16 @@ urlpatterns = [
     # Requerimientos recibidos
     path('proyecto/<int:proyecto_id>/requerimientos/',                       views.requerimientos_log,  name='requerimientos_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/consolidados/',          views.consolidados_log,    name='consolidados_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/historial/',             views.historial_log,       name='historial_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/',              views.req_detalle_log,    name='req_detalle_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/revisar/',      views.req_revisar_log,    name='req_revisar_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/anular/',       views.req_anular_log,     name='req_anular_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/recuperar/',    views.req_recuperar_log,  name='req_recuperar_log'),
 
     # REALTIME POLL — eliminar junto con ping_reqs en views.py para desactivar
     path('proyecto/<int:proyecto_id>/ping-reqs/', views.ping_reqs, name='ping_reqs'),
 
     # Sub-módulos
-    path('proyecto/<int:proyecto_id>/inventarios/',        views.inventarios,        name='inventarios'),
     path('proyecto/<int:proyecto_id>/almacen/',            views.almacen_log,        name='almacen_log'),
     path('proyecto/<int:proyecto_id>/control-maquinaria/', views.control_maquinaria, name='control_maquinaria'),
     path('proyecto/<int:proyecto_id>/abastecimiento/',     views.abastecimiento,     name='abastecimiento'),

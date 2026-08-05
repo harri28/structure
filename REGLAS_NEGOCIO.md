@@ -59,7 +59,7 @@ BORRADOR → ENVIADO → EN_REVISION → APROBADO / PARCIAL → ATENDIDO
 | Columna | Fuente | Descripción |
 |---------|--------|-------------|
 | **CANTIDAD** | `InsumoPresupuesto.cantidad_total` | Cantidad original del presupuesto. Solo informativa, nunca cambia. No se resta ni suma. |
-| **STOCK EN OBRA** | `InsumoPresupuesto.cantidad` | Contador restante disponible. Se descuenta cada vez que logística aprueba un requerimiento. |
+| **STOCK EN OBRA** | `InsumoPresupuesto.cantidad` | **Cupo restante del presupuesto**, no stock físico. Se descuenta al generar la Guía de Remisión (EN_TRANSITO), no al aprobar el requerimiento. Ver §11 para la distinción con el stock físico del almacén. |
 | **CANT. REQUERIDA** | Ingresada por el usuario | No puede superar el valor de STOCK EN OBRA. |
 
 **Regla:** La columna CANTIDAD es solo referencia presupuestada. El límite real para pedir es STOCK EN OBRA.
@@ -227,6 +227,28 @@ Campos eliminados del formulario (no aplican al flujo del consorcio): IGV, Sitio
 
 ## 6. Roles y Acceso
 
+Ver `arquitectura_structure.md` para el detalle completo del modelo RBAC (mapeo
+de permisos, dashboards por rol, enforcement con `@requiere`). Esta sección
+resume solo las reglas de dominio.
+
+### Los cuatro roles del sistema
+
+**Aclaración semántica clave:** "Administrador de Obra" ≠ "Administrador del sistema".
+En términos de ingeniería civil, el Admin de Obra es el **residente**: puede
+haber varios en el sistema, cada uno en su propio proyecto. El "admin del
+sistema" es el Superadmin.
+
+Otra distinción a no confundir: **Personal ≠ Usuarios**. "Personal" son los
+obreros y cuadrillas del proyecto (no ingresan al sistema). "Usuarios" son
+las cuentas que sí ingresan (hoy 3: Admin de Obra, Logística, Almacenero).
+
+| Rol | Rol en la vida real | Alcance |
+|---|---|---|
+| Superadmin | Programador / dueño del sistema | Todo el consorcio, todos los proyectos |
+| Administrador de Obra | Residente de obra | Un proyecto (puede haber varios residentes en distintos proyectos) |
+| Logística | Área de logística del consorcio | Atraviesa proyectos |
+| Almacenero | Operador de almacén de un proyecto | Un proyecto |
+
 ### Visibilidad del sidebar por permiso
 
 | Sección sidebar | Permiso requerido |
@@ -235,12 +257,15 @@ Campos eliminados del formulario (no aplican al flujo del consorcio): IGV, Sitio
 | Requerimientos | `puede_crear_requerimientos` o `puede_aprobar_requerimientos` |
 | Almacén | `puede_ver_almacen` o `puede_gestionar_entradas` o `puede_gestionar_salidas` |
 | Maquinaria / Cuadrilla | `puede_ver_maquinaria` o `puede_gestionar_maquinaria` |
+| Personal | `puede_gestionar_personal` *(por crear — hoy usa `puede_crear_proyectos or puede_administrar_usuarios`)* |
+| Actividad | `puede_ver_actividad` *(por crear — hoy usa `puede_administrar_usuarios`)* |
 | Logística (sección completa) | `puede_ver_logistica` |
 | Administración | Al menos un permiso de administración |
 
 ### Superadmin
 
-El rol `es_superadmin = True` bypasea todos los permisos. El usuario `is_superuser` de Django también tiene acceso total.
+El rol `es_superadmin = True` bypasea todos los permisos. El usuario
+`is_superuser` de Django también tiene acceso total.
 
 ---
 
@@ -248,9 +273,9 @@ El rol `es_superadmin = True` bypasea todos los permisos. El usuario `is_superus
 
 El icono de campana en el topbar muestra notificaciones del sistema. Al hacer clic, carga la lista via fetch (JSON). Cada notificación puede tener tipo: `info`, `success`, `warning`, `danger`.
 
-**Estado actual:** El panel y el badge funcionan. Las notificaciones aún no están conectadas a eventos del sistema (no hay llamadas a `Notificacion.objects.create()` en el flujo operativo). Se habilitará cuando el sistema esté más maduro.
+**Estado actual (2026-08-02):** El panel y el badge funcionan. Las notificaciones **sí están conectadas** a eventos del sistema — hay ~13 llamadas a `notificar()` en `requerimientos`, `logistica`, `almacen` y `presupuesto` (verificar con `grep -rn "notificar(" apps/`).
 
-**SSE desactivado:** La actualización en tiempo real del badge (EventSource) está desactivada temporalmente por causar lentitud — cada pestaña abierta mantenía una conexión persistente consultando la DB cada 10s.
+**SSE desactivado (huérfano):** El endpoint `registro:notif_stream` existe pero no hay ningún `EventSource` en los templates. La campana carga con `fetch` a `notif_json` al hacer clic, no en tiempo real. Se desactivó por lentitud — cada pestaña abierta mantenía una conexión persistente consultando la DB cada 10 s. **No reactivar** sin motivo explícito.
 
 ---
 
@@ -264,7 +289,264 @@ El icono de campana en el topbar muestra notificaciones del sistema. Al hacer cl
 
 ## 9. Pendientes / Decisiones futuras
 
+**Pendientes originales:**
 - [ ] `DetalleGuia` debe recibir FK a `InsumoPresupuesto` para vincular guías con insumos (necesario para que la columna ATENDIDO en Req vs Atenciones se calcule correctamente)
 - [ ] Revisar si el estado `ATENDIDO` del requerimiento debe dispararse automáticamente al generar la guía o manualmente
-- [ ] Conectar `Notificacion.objects.create()` en eventos clave: aprobación de requerimiento, envío de requerimiento a logística
-- [ ] Reactivar SSE de notificaciones una vez conectados los eventos
+- [x] ~~Conectar `Notificacion.objects.create()` en eventos clave~~ — hecho (ver §7)
+- [ ] Reactivar SSE de notificaciones — desestimado por ahora (ver §7)
+
+**Pendientes de RBAC (2026-08-02, ver `arquitectura_structure.md` para detalle):**
+- [ ] Migración: agregar `puede_gestionar_personal` y `puede_ver_actividad` al modelo `Rol`
+- [ ] Decidir qué hacer con el link "Configuración" en el sidebar del Admin de Obra (opción a/b/c)
+- [ ] Crear los 3 roles en la BD con el mapeo definido
+- [ ] Implementar la Opción B para requerimientos (Almacenero → Admin de Obra) — ver §10
+- [ ] Decorar los módulos restantes con `@requiere`: `almacen`, `maquinaria`, `proyectos`, `catalogo`, `registro`
+- [ ] Cablear `proyectos_visibles()` en las vistas que reciben `proyecto_id` (aislamiento entre proyectos)
+
+**Decisiones de flujo confirmadas (2026-08-02):**
+- [x] Nombre del estado: `SOLICITADO` (label "Solicitado por Almacén")
+- [x] Formulario del Almacenero: opción A — ve el cupo restante del presupuesto (`InsumoPresupuesto.cantidad`), con validación estricta (no puede pedir más que el cupo)
+
+**Decisiones confirmadas (2026-08-02, continuación):**
+- [x] Link "Configuración" del sidebar del Admin de Obra: **opción B** — crear
+  un módulo nuevo `configuracion:proyecto` para editar el proyecto activo
+  (nombre, fechas, presupuesto, etc.). Ver §13.
+- [x] Sobre-solicitud (excedente): NO genera `Modificacion` automática, sí
+  requiere justificación, se muestra en rojo en pantalla separada. Ver §12.
+- [x] Creación de los 3 roles en la BD: por migración (data migration Django),
+  no manual desde el UI. Motivo: el usuario aún no tiene usuario Almacenero
+  y necesita los roles ya sembrados para pruebas.
+
+**Campo nuevo `stock_almacen` en `InsumoPresupuesto`:**
+
+*Fase 1 — el campo (a agregar ya, junto con el ciclo actual):*
+- [ ] Agregar `stock_almacen = DecimalField(max_digits=18, decimal_places=4, default=0)`
+  al modelo `InsumoPresupuesto`
+- [ ] Migración: los insumos existentes quedan con `stock_almacen=0`
+  (comportamiento correcto — el almacén parte vacío)
+- [ ] Verificar que el importador (`apps/presupuesto/importador.py`) no
+  necesita cambios (el default 0 alcanza)
+
+*Fase 2 — lógica de actualización (pendiente, se decide cuando se necesite):*
+- [ ] Definir cuándo/cómo se actualiza el contador (probablemente al aprobar
+  Entradas y al registrar Salidas, pero pendiente de confirmar)
+- [ ] Función utilitaria de recálculo si se necesita
+- [ ] Uso en vistas (Req vs Atenciones, dashboards, etc.)
+
+Motivo: el usuario necesita el campo persistido ahora para poder usarlo más
+adelante en varias vistas. La lógica de actualización se define cuando se toque
+cada uno de esos usos, sin bloquear la creación del campo.
+
+Ver §11 para la distinción con `cantidad` (cupo del presupuesto).
+
+**Sistema de trazabilidad de materiales (pendiente — no en este ciclo):**
+- [ ] Diseñar e implementar un sistema tipo "blockchain" (append-only, no reescribir)
+  para seguir un material desde que se solicita (por Admin de Obra o Almacenero)
+  hasta que llega físicamente al almacén.
+- Consideraciones:
+  - Un mismo material puede tener varios requerimientos activos en distintos momentos.
+  - La traza debe unir: origen del pedido (rol + usuario + fecha) → aprobaciones
+    intermedias → guía de remisión → llegada al almacén.
+  - Reutilizar `HistorialRevisionReq` (ya existente) donde sea posible; extender
+    con eventos nuevos si hace falta.
+- Decisión: NO se aborda en el ciclo actual de RBAC. Se levantará como bloque
+  aparte cuando se estabilice el enforcement y los 3 roles estén en producción.
+
+---
+
+## 10. Flujo Almacenero → Admin de Obra → Logística (Opción B — pendiente de implementar)
+
+Ver `arquitectura_structure.md §3` para el fundamento del diseño. Esta sección
+documenta las reglas de dominio del flujo cuando se implemente.
+
+### Ciclo completo del material
+
+```
+Almacenero pide (su bandeja)
+    │ Envía (sin borrador, un solo acto)
+    ▼
+Estado nuevo: SOLICITADO (label "Solicitado por Almacén")
+    │
+    ▼
+Admin de Obra (bandeja de entrada — vista nueva)
+    │ Aprueba (puede editar cantidades, insumos, agregar/quitar)
+    ▼
+Estado: ENVIADO (idéntico al flujo actual del Admin de Obra)
+    │
+    ▼
+Logística (bandeja actual, sin cambios)
+    │ Revisa, aprueba, genera Guía de Remisión
+    ▼
+Guía en EN_TRANSITO → descuenta contadores, crea Entrada en almacén
+    │
+    ▼
+Almacenero recibe (bandeja de Entradas) → aprueba la llegada ✓ ciclo cerrado
+```
+
+### Reglas del formulario del Almacenero
+
+- Formulario **atómico**: se envía o se cancela. No existe "guardar como borrador".
+- La palabra "borrador" no aparece en la UI del Almacenero.
+- Muestra la lista de `InsumoPresupuesto` del proyecto (mismo autocompletado que
+  el Admin de Obra hoy).
+- Stock visible: **pendiente de decidir** (ver §11 y §9).
+
+### Reglas de la bandeja del Admin de Obra
+
+- Vista nueva "Bandeja de Entrada" — lista los requerimientos con estado
+  `SOLICITADO` del proyecto activo.
+- El Admin de Obra tiene **poder total** sobre el requerimiento recibido:
+  puede cambiar cantidades, agregar insumos, quitar insumos, cambiar materiales.
+  Es el residente y tiene el mayor peso sobre el proyecto.
+- Al aprobar → `SOLICITADO → ENVIADO` (se une al flujo normal a Logística).
+- **No existe "rechazar":** si el Admin de Obra decide no aprobar, el
+  requerimiento simplemente se queda en `SOLICITADO`. No hay devolución
+  con motivo.
+
+### Independencia con el flujo del Admin de Obra
+
+Los propios requerimientos del Admin de Obra (creados por él, no por el
+Almacenero) siguen su flujo actual sin cambios: `BORRADOR → ENVIADO → …`.
+La Opción B solo agrega el camino paralelo desde el Almacenero.
+
+---
+
+## 11. Dos contadores distintos: cupo del presupuesto vs stock físico
+
+Uno de los errores más frecuentes al leer este sistema es confundir estos dos
+conceptos. Son distintos y ambos válidos.
+
+| Concepto | Qué representa | Dónde vive | Empieza en | Cuándo cambia |
+|---|---|---|---|---|
+| **Cupo restante del presupuesto** | Cuánto se puede aún **pedir** a Logística de un insumo dado | `InsumoPresupuesto.cantidad` | `cantidad_total` (lo que trajo el S10) | Baja al pasar guía a EN_TRANSITO |
+| **Stock físico del almacén** | Cuánto material **realmente está** en el galpón ahora mismo | Calculado: `sum(Entrada.cantidad) - sum(Salida.cantidad)` por insumo | 0 | Sube con Entradas aprobadas, baja con Salidas |
+
+**Ejemplo con 10 abrazaderas:**
+
+| Paso | `cantidad_total` | `cantidad` (cupo) | Stock físico |
+|---|---|---|---|
+| Importación S10 | 10 | 10 | 0 |
+| Admin pide 10, Logística aprueba 5, genera guía | 10 | 5 | 0 |
+| Almacenero aprueba la Entrada | 10 | 5 | **5** |
+| Salida de 3 a una cuadrilla | 10 | 5 | 2 |
+
+**Consecuencia crítica:** al importar el presupuesto NO pasan automáticamente
+10 abrazaderas al almacén. El almacén empieza vacío y solo aparece material
+cuando físicamente llega (vía guía de remisión aprobada).
+
+**Regla de protección:** `cantidad` nunca puede volverse negativo. El descuento
+al despachar usa `max(Decimal('0'), cantidad - cantidad_aprobada)`.
+
+---
+
+## 12. Sobre-solicitud (excedente del presupuesto) — solo Admin de Obra
+
+**Regla base (aplica al Almacenero y al Admin de Obra por defecto):** en el
+formulario normal de requerimiento, la cantidad pedida por insumo no puede
+superar `InsumoPresupuesto.cantidad` (el cupo restante del presupuesto).
+
+**Excepción — Admin de Obra puede exceder:** el Admin de Obra tiene una vía
+especial para solicitar por encima del presupuesto. Ejemplo: presupuesto de
+10 abrazaderas ya despachadas, pero necesita 2 más → puede pedirlas.
+
+**IMPORTANTE — No confundir con `Modificacion` tipo Adicional.** El sistema
+tiene `Modificacion` (Adicionales / Deductivos / Vinculantes) pero eso aplica
+a **partidas** del presupuesto, no a insumos. Aunque comparte el nombre
+"Adicional", la sobre-solicitud de insumos es una cosa distinta y **NO** debe
+generar automáticamente un `Modificacion` en la BD.
+
+**Reglas de dominio confirmadas (a implementar en un ciclo futuro):**
+- La sobre-solicitud vive en **una pantalla distinta** del formulario normal
+  (no se mezcla con el pedido regular).
+- Es una vía **exclusiva del Admin de Obra**. Almacenero y otros no la ven.
+- El formulario **exige un campo de justificación** al solicitar el excedente
+  (obligatorio, no opcional).
+- La cantidad excedente debe mostrarse **en rojo** para señalar visualmente
+  que rebasa el presupuesto.
+- Debe haber una **pantalla / vista aparte** que liste los excedentes por
+  proyecto e insumo, para consultarlos después.
+- **NO** se crea `Modificacion` automáticamente. El excedente es un registro
+  informativo asociado al requerimiento; el ajuste formal del presupuesto
+  (si se decide hacer) es un acto separado del Admin de Obra.
+
+**Preguntas de diseño abiertas (por decidir cuando se implemente):**
+- ¿Requiere aprobación adicional del Superadmin, o el Admin de Obra decide
+  por su cuenta con la justificación registrada?
+- ¿Cómo se estructura el reporte de excedentes: por insumo, por proyecto,
+  por período, todo lo anterior?
+
+**No en este ciclo.** El excedente se implementa después del flujo base
+Almacenero → Admin de Obra → Logística.
+
+---
+
+## 13. Módulo "Configuración del Proyecto" (por crear)
+
+Módulo nuevo dedicado al Administrador de Obra para configurar los datos de
+**su proyecto activo**. No confundir con `configuracion:hub` (que es la
+configuración GLOBAL del consorcio: Empresa, SUNAT, Unidades, Usuarios,
+Roles — exclusivo del Superadmin).
+
+**Ámbito de este módulo (según lo definido):**
+- Nombre del proyecto
+- Fechas del proyecto
+- Presupuesto (parámetros — GG%, Utilidad%, IGV%, etc.)
+- Otros parámetros propios del proyecto (por definir a medida que aparezcan)
+
+**Reglas:**
+- Solo visible/accesible al **Admin de Obra** del proyecto activo.
+- Opera sobre `Proyecto` (y posiblemente `Presupuesto`) del proyecto activo
+  en sesión (`request.session['proyecto_id']`).
+- Requiere un permiso nuevo, propuesta: `puede_configurar_proyecto`.
+- URL propuesta: `/proyecto/<pk>/configuracion/` o namespace nuevo
+  `configuracion_proyecto:*`.
+
+**Preguntas de diseño abiertas (a resolver cuando se implemente):**
+- ¿Qué campos exactos van en cada sección (datos generales, presupuesto,
+  fechas, personal responsable)?
+- ¿Editar el `Presupuesto` desde aquí implica poder cambiar `gastos_generales_pct`,
+  `utilidad_pct`, `igv_pct`? ¿Solo esos o hay otros?
+- ¿El Admin de Obra puede editar el `codigo` del proyecto o solo el `nombre`?
+- ¿El link "Configuración" del sidebar apunta directo a esta pantalla nueva,
+  o hay un sub-menú?
+
+**No en este ciclo.** Este módulo se diseña e implementa después del flujo
+base de RBAC y del flujo Opción B.
+
+---
+
+## 14. Ajustes / Adicionales de Requerimiento (implementado parcialmente)
+
+**Implementado (2026-08-04):**
+- Nuevo chip **"Ajustes"** en la vista `requerimientos:lista` (Admin de Obra).
+- Vista `requerimientos:ajustes` — lista requerimientos con `es_ajuste=True`
+  filtrados aparte de los regulares.
+- Vista `requerimientos:crear?ajuste=1` — form de creación en modo Ajuste:
+  - Bandera roja en el título, banner de advertencia.
+  - `DetalleRequerimientoForm` recibe `modo_ajuste=True` vía `form_kwargs` del
+    formset, y en `clean()` **NO** valida `cant_requerida > cantidad_presupuestada`.
+  - Al guardar, `Requerimiento.es_ajuste = True`.
+- Campo nuevo `Requerimiento.es_ajuste = BooleanField(default=False)`
+  (migración `0013_requerimiento_es_ajuste`).
+- Filtro: `requerimientos:lista` excluye `es_ajuste=True` para no mezclarlos.
+- Bloqueo del botón "Enviar a Logística" en el flujo NORMAL cuando algún ítem
+  excede lo presupuestado (JS detecta `.cant-req-error` visible → deshabilita
+  botón con tooltip: "Uno o más ítems exceden el presupuesto. Usá el chip
+  Ajustes para adicionales.").
+
+**NO implementado — pendiente contable / presupuestal:**
+- No se crea automáticamente una `Modificacion` de tipo Adicional en el
+  presupuesto cuando se registra un Ajuste. El impacto formal en el `Presupuesto`
+  (subir `cantidad_total` del insumo, generar registro contable de pérdida,
+  aumentar `costo_directo`) queda como **decisión gerencial separada**.
+- El Ajuste actual es un registro **informativo** que documenta la sobre-solicitud
+  y permite operativamente pedir el material a Logística. No modifica el
+  contrato ni el presupuesto vinculante.
+- Cuando se implemente el flujo contable, el enlace natural sería:
+  `Requerimiento(es_ajuste=True)` → `Modificacion` (tipo Adicional) →
+  `PartidaModificacion` con el insumo excedente.
+
+**Relación con §12 (Sobre-solicitud):** este mecanismo cumple con lo especificado
+en §12 (pantalla aparte, marcado en rojo, no genera `Modificacion` automática).
+La justificación obligatoria por ítem mencionada en §12 aún NO está enforced
+en el form de Ajuste — queda como refinamiento futuro.

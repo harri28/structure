@@ -38,6 +38,25 @@ def req_enviados_count(request):
         return {'req_enviados': 0}
 
 
+def req_solicitados_count(request):
+    """Conteo de requerimientos en estado SOLICITADO del proyecto activo.
+
+    Alimenta el badge de la 'Bandeja de Entrada' del Administrador de Obra.
+    Ver REGLAS_NEGOCIO.md §10.
+    """
+    try:
+        if not request.user.is_authenticated:
+            return {'req_solicitados': 0}
+        pid = request.session.get('proyecto_id')
+        if not pid:
+            return {'req_solicitados': 0}
+        from apps.requerimientos.models import Requerimiento
+        count = Requerimiento.objects.filter(proyecto_id=pid, estado='SOLICITADO').count()
+        return {'req_solicitados': count}
+    except Exception:
+        return {'req_solicitados': 0}
+
+
 def permisos_usuario(request):
     try:
         if not request.user.is_authenticated:

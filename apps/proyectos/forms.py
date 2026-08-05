@@ -5,7 +5,8 @@ from .models import Proyecto
 class ProyectoForm(forms.ModelForm):
     class Meta:
         model = Proyecto
-        fields = ['codigo', 'nombre', 'empresa_ejecutora', 'cliente', 'ubicacion', 'responsable',
+        fields = ['codigo', 'nombre', 'empresa_ejecutora', 'cliente', 'ubicacion', 'sector',
+                  'responsable', 'cargo_responsable',
                   'fecha_inicio', 'fecha_fin', 'plazo_dias', 'estado', 'descripcion']
         widgets = {
             'codigo':             forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'style': 'background:#f8f9fa'}),
@@ -13,7 +14,9 @@ class ProyectoForm(forms.ModelForm):
             'empresa_ejecutora':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Empresa o consorcio ejecutor'}),
             'cliente':            forms.TextInput(attrs={'class': 'form-control'}),
             'ubicacion':          forms.TextInput(attrs={'class': 'form-control'}),
+            'sector':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Sector Norte, Zona A'}),
             'responsable':        forms.TextInput(attrs={'class': 'form-control'}),
+            'cargo_responsable':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Ing. Residente, Jefe de Obra'}),
             'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'id': 'id_fecha_inicio'}, format='%Y-%m-%d'),
             'fecha_fin':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'id': 'id_fecha_fin'}, format='%Y-%m-%d'),
             'plazo_dias':  forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_plazo_dias', 'min': '1', 'placeholder': 'Días'}),

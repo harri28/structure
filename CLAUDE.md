@@ -5,20 +5,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Development server (use one or the other, not both)
+# Development server (use one only, not several at once)
+python servidor_asgi.py             # Uvicorn ASGI — servidor estándar, local y producción (workers=1)
 python manage.py runserver          # Django dev server (port 8000)
-python servidor.py                  # Waitress WSGI server (production, port 8000)
+python servidor.py                  # Waitress WSGI — legado, sigue presente pero no es el camino habitual
 
 # Database
 python manage.py makemigrations <app_name>
 python manage.py migrate
 python manage.py createsuperuser
 
-# Static files (required after any CSS/JS change for Apache to serve them)
+# Static files (required after any CSS/JS change for Apache/WhiteNoise to serve them)
 python manage.py collectstatic --noinput
 ```
 
-There are no tests implemented — `tests.py` files are empty stubs.
+`workers=1` en `servidor_asgi.py` es deliberado: con Python de Microsoft Store (`python3.12.exe`) en Windows, más workers dejan procesos zombie. Para matarlos: `taskkill /IM python3.12.exe /F /T`.
+
+There are no tests implemented — `tests.py` files are empty stubs (including `apps/maquinaria/tests.py`).
+
+## Documentación de dominio — leer antes de tocar lógica de negocio
+
+`REGLAS_NEGOCIO.md` en la raíz es la referencia autoritativa del **por qué** de cada flujo (contadores de insumos, estados de requerimiento, generación de guías, fórmulas de presupuesto). No duplica el esquema de modelos. **Consúltalo antes de modificar lógica de requerimientos, logística o presupuesto** — varias reglas ahí no son deducibles leyendo el código.
+
+Otros documentos: `DOCUMENTACION_SISTEMA.md` (funcional, extenso), `contexto_app.md` (diseño de una app Flutter offline-first aún no implementada — define arquitectura, no genera código), `config_vps.md`, `documentación/normativa.md`.
+
+Ese documento se desactualiza: verifica contra el código antes de dar por firme una afirmación de estado. Al 2026-08-02 el §7 (notificaciones) fue actualizado tras detectar que las llamadas a `notificar()` sí existen en varios módulos.
+
+Secrets come from a `.env` file at the repo root (`python-dotenv`, loaded in `config/settings.py`). `SECRET_KEY` is required (`os.environ['SECRET_KEY']` — raises `KeyError` if missing); `DEBUG`, `ALLOWED_HOSTS`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` are optional with dev defaults.
 
 ## PDF Parsing Toolchain (`anlisis-pdf/`)
 
@@ -107,7 +120,7 @@ Invoke-WebRequest -Uri "http://127.0.0.1:8000/static/css/main.css" -UseBasicPars
 **Soluciones permanentes instaladas:**
 - `config/middleware.py` — `/static/` y `/media/` en rutas públicas
 - `config/settings.py` — `whitenoise.middleware.WhiteNoiseMiddleware` en posición 2 del MIDDLEWARE
-- WhiteNoise permite que Waitress sirva estáticos directamente sin Apache
+- WhiteNoise permite que el servidor de aplicación sirva estáticos directamente sin Apache
 
 **Reinicio correcto del servidor:**
 ```powershell
@@ -119,37 +132,61 @@ python servidor.py
 
 ## Stack
 
-- **Django 6.0.6** · Python 3.12 · PostgreSQL (`ss_gestion`, user=`postgres`, password=`1234`, localhost:5432)
-- **Serving (Windows)**: Apache (XAMPP) on **port 80** as reverse proxy → Waitress on port 8000. Apache serves `/static/` and `/media/` directly via `Alias` in `c:\xampp\apache\conf\extra\httpd-vhosts.conf`. **Always access via port 80** — accessing port 8000 directly skips Apache and CSS/static files won't load. Run `collectstatic` after any CSS/JS change.
+- **Django 6.0.6** · Python 3.12 · PostgreSQL (`ss_gestion`, localhost:5432, credentials read from `.env`)
+- **Serving (Windows)**: Apache (XAMPP) on **port 80** as reverse proxy → app server on port 8000. Apache serves `/static/` and `/media/` directly via `Alias` in `c:\xampp\apache\conf\extra\httpd-vhosts.conf`. **Always access via port 80** — accessing port 8000 directly skips Apache and CSS/static files won't load. Run `collectstatic` after any CSS/JS change.
+  - El servidor estándar en ambos entornos es **Uvicorn/ASGI** (`servidor_asgi.py` → `config.asgi:application`). `servidor.py` (Waitress/WSGI) sigue en el repo como legado.
 - **Frontend**: Bootstrap 5.3.3 + Bootstrap Icons 1.11.3 + Inter font. No build step — all CDN except `static/css/main.css`.
 
 ## Project Architecture
 
 ### Single-project model
-The system operates on **one active project at a time**. `Proyecto.activo = BooleanField` controls which project drives the entire UI. `Proyecto.save()` automatically deactivates all others when one is set active. Switching projects is an admin operation via **Administración → Proyectos**.
+The system operates on **one active project at a time**, tracked per-session via `request.session['proyecto_id']`. `config/context_processors.py → proyecto_activo()` reads that session key and injects the current `Proyecto` into every template as `{{ proyecto_activo }}`. Switching projects happens through project-selection views in `apps/proyectos`.
+(`Proyecto` also has a legacy `activo` boolean, still present on the model, but it is not what drives the UI anymore — the session value is authoritative.)
 
-The active project is injected globally via `config/context_processors.py → proyecto_activo()`, which does a simple `Proyecto.objects.filter(activo=True).first()`. All sidebar links use `{{ proyecto_activo.pk }}` directly in templates.
+Other global context processors registered in `config/settings.py`: `notif_no_leidas` (unread notification count for the bell icon), `req_enviados_count` (count of `Requerimiento` in `ENVIADO` state, drives a sidebar badge), `permisos_usuario` (see permission system below).
 
 ### Apps (`apps/`)
 
 | App | Responsibility |
 |-----|---------------|
-| `proyectos` | `Proyecto` (single active), `ProyectoMiembro` (team), project admin |
-| `presupuesto` | `Presupuesto` → `Partida` tree (up to 5 levels) + `RecursoPartida` (ACU) + `InsumoPresupuesto` + `Modificacion`/`PartidaModificacion`. Imports S10 `.xls` and generic `.xlsx` via `importador.py`. `Presupuesto` stores `gastos_generales_pct`, `utilidad_pct`, `igv_pct`; computes `costo_directo()`, `gastos_generales()`, `utilidad()`, `sub_total()`, `igv()`, `total_presupuesto()`. |
-| `almacen` | `Requerimiento` → `Entrada` → `Salida` → `Cotizacion` → `OrdenCompra`. All tied to `Proyecto` + `Producto` from catálogo |
+| `proyectos` | `Proyecto`, `ProyectoMiembro` (team), project admin, dashboards |
+| `presupuesto` | `Presupuesto` → `Partida` tree (up to 5 levels) + `RecursoPartida` (ACU) + `InsumoPresupuesto` + `Modificacion`/`PartidaModificacion`. Imports S10 `.xls` and generic `.xlsx` via `importador.py`. `Presupuesto` stores `gastos_generales_pct`, `utilidad_pct`, `igv_pct`; computes `costo_directo()`, `gastos_generales()`, `utilidad()`, `sub_total()`, `igv()`, `total_presupuesto()`. Also hosts the ML engine (see above). |
+| `requerimientos` | `Requerimiento` (material/equipment request, numbered per project) → `DetalleRequerimiento` line items against `InsumoPresupuesto` (supports substitution via `insumo_sustituto`) + `HistorialRevisionReq` audit trail. State flow: `BORRADOR → ENVIADO → EN_REVISION → APROBADO → ATENDIDO`/`PARCIAL` (or `ANULADO`). Reviewed from the `logistica` app. |
+| `almacen` | `Entrada` → `Salida` → `Cotizacion` → `OrdenCompra`, each optionally linked back to the originating `requerimientos.Requerimiento`. Tied to `Proyecto` + `InsumoPresupuesto`. |
+| `logistica` | Receiving/processing side of the requirement pipeline: reviews `Requerimiento`s sent by projects (`requerimientos_log`, `req_revisar_log`), `GuiaRemision`/`DetalleGuia` (shipping manifests) + `Transportista` catalog, plus dashboard sub-views (inventarios, almacén, control de maquinaria, abastecimiento). Has a lightweight realtime poll endpoint (`ping_reqs`) explicitly flagged in `urls.py` as removable if superseded. |
+| `maquinaria` | Equipment/crew tracking: `Maquinaria` (equipment catalog), `TipoPersonal`/`Cuadrilla`/`IntegranteCuadrilla` (crew composition + hourly cost), `RegistroDiario` (daily crew log tied to a `Partida`), `RegistroMaquinaria` (daily equipment parte diario; auto-computes `horas` from `hora_entrada`/`hora_salida` and auto-numbers `numero_parte` per machine in `save()`), `Liquidacion` (monthly settlement grouping a machine's `RegistroMaquinaria` entries, computes `monto_a_pagar` per `modalidad_costo`). |
 | `catalogo` | `Producto` — master product catalog shared across all projects |
-| `configuracion` | `ConfigEmpresa` (singleton via `get()`), `Rol` (18 BooleanField permissions), `PerfilUsuario` (User↔Rol) |
+| `configuracion` | `ConfigEmpresa` (singleton via `get()`), `Rol` (~26 BooleanField permissions defined by `GRUPOS_PERMISOS`), `PerfilUsuario` (User↔Rol), `UnidadMedida`, decimal precision and cargo (job title) catalogs |
+| `registro` | Cross-cutting activity log (`RegistroAccion`, written via `apps/registro/utils.py → log(request, accion, modulo, descripcion)`) and in-app `Notificacion` (written via `notificar(titulo, ..., usuario=None)` — `usuario=None` difunde a todos los usuarios activos). La campana del topbar carga notificaciones con `fetch` a `registro:notif_json` **al hacer clic**, no en tiempo real. El endpoint SSE `notif_stream` existe en el backend pero está **huérfano**: no hay ningún `EventSource` en los templates. Se desactivó porque cada pestaña abierta mantenía una conexión consultando la DB cada 10 s. No lo trates como funcionalidad viva ni lo "arregles" sin pedirlo. |
+
+### El contador de insumos — invariante central del sistema
+
+`InsumoPresupuesto` lleva **dos** cantidades que se confunden con facilidad:
+
+| Campo | Significado | ¿Muta en operación? |
+|-------|-------------|---------------------|
+| `cantidad_total` | Cantidad original importada de S10. Fuente de verdad permanente. En la UI es **CANTIDAD** / **PRESUPUESTADO**, solo informativa. | Nunca |
+| `cantidad` | Contador de saldo restante. En la UI es **STOCK EN OBRA**, y es el límite real para pedir. | Sí |
+
+El descuento ocurre **al generar la Guía de Remisión** (`PENDIENTE → EN_TRANSITO`), **no** al aprobar el requerimiento:
+
+```python
+insumo.cantidad = max(Decimal('0'), insumo.cantidad - cantidad_aprobada)   # nunca negativo
+```
+
+Aprobar un requerimiento solo escribe `cantidad_aprobada` y auto-genera una guía en `PENDIENTE`; recién "Guardar y generar guía" descuenta el contador, pasa el requerimiento a `ATENDIDO` y crea la `Entrada` en almacén. Confundir ambos momentos produce doble descuento. Para restaurar: Superadmin → Proyecto → Restablecer → Logística hace `cantidad = cantidad_total`.
+
+En la vista **Req vs Atenciones**, `SOLICITADO` suma `cantidad_aprobada` de requerimientos en `APROBADO`/`PARCIAL`/`ATENDIDO`, mientras `ATENDIDO` solo suma los que están en `ATENDIDO`. Detalles y casos borde en `REGLAS_NEGOCIO.md`.
 
 ### Role / permission system (`config/permisos.py`)
 - `tiene(user, permiso)` — returns bool; superuser and `es_superadmin` roles bypass all checks
-- `permisos_dict(user)` — returns `{campo: bool}` for all 18 permissions; injected globally as `{{ permisos }}` via context processor
+- `permisos_dict(user)` — returns `{campo: bool}` for every field in `TODOS_LOS_PERMISOS`; injected globally as `{{ permisos }}` via context processor
+- `proyectos_visibles(user)` — QuerySet of projects a user may see. Superuser, `es_superadmin`, or a role with `acceso_todos_proyectos` → all projects. A role *without* `acceso_todos_proyectos` → only projects where the user is a `ProyectoMiembro`. **No role assigned at all → sees every project** (fail-open default — deliberate, not a bug).
 - Roles are created from the UI (Administración → Usuarios & Roles), not hardcoded
 - `GRUPOS_PERMISOS` and `TODOS_LOS_PERMISOS` in `apps/configuracion/models.py` are the single source of truth for permission fields
 
 ### Sidebar nav block system
-Each page template declares which sidebar link is "active" via `{% block nav_* %}active{% endblock %}`:
-
-`nav_dashboard` · `nav_proyecto` · `nav_presupuesto` · `nav_almacen` · `nav_req` · `nav_entradas` · `nav_salidas` · `nav_cot` · `nav_proyectos` · `nav_catalogo` · `nav_config_empresa` · `nav_config_equipo`
+Each page template declares which sidebar link is "active" via `{% block nav_* %}active{% endblock %}`. See `templates/base.html` for the authoritative, current list — it changes as sections are added. Roughly grouped as: Presupuesto (`nav_pres_*`), Requerimientos (`nav_req`, `nav_req_lista`, `nav_req_vs`), Almacén (`nav_stock`, `nav_consumo`, `nav_entradas`, `nav_salidas`), Logística (`nav_logistica`, `nav_log_*`), Maquinaria (`nav_maquinaria`, `nav_personal`, `nav_reg_cuadrilla`, `nav_cuadrillas_admin`), Configuración (`nav_config_hub`).
 
 ### Template conventions
 - **Never pass raw `request.POST` / `QueryDict` to templates** as a context variable named `datos` — Django 6 raises `VariableDoesNotExist` when template filters use dict keys as arguments (e.g. `{{ datos.nombre }}`). Always extract values explicitly: `'form_nombre': datos.get('nombre', '')`.
@@ -158,34 +195,22 @@ Each page template declares which sidebar link is "active" via `{% block nav_* %
 - All templates extend `templates/base.html`. Project-specific pages live in `templates/proyectos/`, `templates/presupuesto/`, etc.
 
 ### Authentication
-`config/middleware.py → LoginRequiredMiddleware` redirects unauthenticated requests to `/login/`. Public paths: `/login/`, `/admin/`.
+`config/middleware.py → LoginRequiredMiddleware` redirects unauthenticated requests to `/login/`. Public path prefixes: `/login/`, `/admin/`, `/static/`, `/media/`.
 
 ### URL structure
 ```
 /                               → redirect to proyectos:dashboard
-/proyectos/                     → admin project list (activate/create/edit)
-/proyectos/<pk>/                → project detail (Descripción)
+/panel/dashboard/               → cross-project panel dashboard
+/proyecto/<pk>/dashboard/       → single-project dashboard
 
-/presupuesto/proyecto/<pk>/     → presupuesto lista (monto vigente + modificaciones)
-/presupuesto/<pk>/              → presupuesto detalle (árbol de partidas)
-/presupuesto/<pk>/insumos/      → resumen de insumos
-/presupuesto/<pk>/importar/     → importar S10 XLSX
-/presupuesto/partida/<pk>/acu/  → ACU por partida hoja (CRUD recursos)
-/presupuesto/partida/<pk>/ml/sugeridos/   → JSON: recursos ML sugeridos
-/presupuesto/partida/<pk>/ml/importar/    → POST: importar recursos ML
-/presupuesto/<pk>/ml/buscar/?q= → JSON: búsqueda semántica TF-IDF
-
-/presupuesto/proyecto/<pk>/modificacion/nueva/  → crear Adicional/Deductivo/Vinculante
-/presupuesto/modificacion/<pk>/                 → detalle modificación
-/presupuesto/modificacion/<pk>/editar/
-
-/almacen/proyecto/<pk>/              → warehouse dashboard
-/almacen/proyecto/<pk>/requerimientos/
-/almacen/proyecto/<pk>/entradas/
-/almacen/proyecto/<pk>/salidas/
-/almacen/proyecto/<pk>/cotizaciones/
-/almacen/proyecto/<pk>/ordenes/
-
-/configuracion/equipo/          → combined Users & Roles page (tabs)
-/configuracion/empresa/
+/proyectos/                     → apps.proyectos.urls
+/presupuesto/                   → apps.presupuesto.urls
+/almacen/                       → apps.almacen.urls
+/catalogo/                      → apps.catalogo.urls
+/configuracion/                 → apps.configuracion.urls (hub, empresa, sunat, equipo, roles, usuarios, unidades, decimal, cargos, perfil)
+/maquinaria/                    → apps.maquinaria.urls
+/logistica/                     → apps.logistica.urls
+/registro/                      → apps.registro.urls (log de actividad + notificaciones)
+/requerimientos/                → apps.requerimientos.urls
 ```
+Within each app's `urls.py`, project-scoped views are namespaced `proyecto/<int:proyecto_id>/...`; entity detail/edit views hang directly off the app root as `<int:pk>/...`.

@@ -78,7 +78,7 @@
   <div class="card-body p-0">
     <table class="table-modern">
       <thead>
-        <tr><th>Código</th><th>Descripción</th><th>Cantidad</th><th>Unidad</th><th>Observación</th></tr>
+        <tr><th>Código</th><th>Descripción</th><th>Cantidad</th><th>Solicitado</th><th>Unidad</th><th>Observación</th></tr>
       </thead>
       <tbody>
         {% for d in req.detalles.all %}
@@ -86,11 +86,12 @@
           <td><code>{% if d.insumo %}{{ d.insumo.codigo }}{% else %}—{% endif %}</code></td>
           <td>{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
           <td>{{ d.cantidad|floatformat:2 }}</td>
+          <td>{{ d.cantidad_requerida|floatformat:2 }}</td>
           <td>{{ d.unidad }}</td>
           <td class="text-muted" style="font-size:.82rem">{{ d.observacion|default:"" }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="text-center py-3 text-muted">Sin ítems</td></tr>
+        <tr><td colspan="6" class="text-center py-3 text-muted">Sin ítems</td></tr>
         {% endfor %}
       </tbody>
     </table>

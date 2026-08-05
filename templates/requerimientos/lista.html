@@ -12,8 +12,16 @@
   <div>
     <h4><i class="bi bi-file-earmark-text me-2"></i>Requerimientos</h4>
     <div class="text-muted">Solicitudes de materiales del proyecto</div>
+    <div class="submodule-chips mt-2">
+      <a href="{% url 'requerimientos:lista' proyecto.pk %}" class="s-chip active">
+        <i class="bi bi-list-ul me-1"></i>Solicitar Requerimiento
+      </a>
+      <a href="{% url 'requerimientos:ajustes' proyecto.pk %}" class="s-chip">
+        <i class="bi bi-plus-slash-minus me-1"></i>Ajustes
+      </a>
+    </div>
   </div>
-  <a href="{% url 'requerimientos:crear' proyecto.pk %}" class="btn btn-primary">
+  <a href="{% url 'requerimientos:crear' proyecto.pk %}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus-lg me-1"></i>Nuevo Requerimiento
   </a>
 </div>
@@ -45,6 +53,21 @@
 {% endif %}
 
 <div class="card">
+  <div class="card-header bg-white py-2 d-flex align-items-center gap-2 flex-wrap">
+    <div class="input-group input-group-sm" style="max-width:520px">
+      <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="req-search-lista"
+             class="form-control form-control-sm"
+             placeholder="Buscar por código o nombre de material…"
+             autocomplete="off">
+      <button type="button" id="req-search-lista-clear" class="btn btn-outline-secondary btn-sm" title="Limpiar búsqueda" style="display:none">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <span id="req-search-lista-count" class="text-muted ms-auto" style="font-size:.8rem;display:none">
+      <i class="bi bi-funnel-fill me-1"></i><span id="req-search-lista-count-num">0</span> de {{ requerimientos|length }}
+    </span>
+  </div>
   <div class="card-body p-0">
     <table class="table-modern">
       <thead>
@@ -54,7 +77,9 @@
       </thead>
       <tbody>
         {% for r in requerimientos %}
-        <tr class="req-row" style="cursor:pointer" onclick="window.location='{% url 'requerimientos:detalle' r.pk %}'">
+        <tr class="req-row" style="cursor:pointer"
+            data-search="REQ-{{ r.numero|lower }} {{ r.solicitante|lower }}{% for d in r.detalles.all %} {{ d.codigo|lower }} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}"
+            onclick="window.location='{% url 'requerimientos:detalle' r.pk %}'">
           <td class="fw-semibold">
             REQ-{{ r.numero }}
             {% if not r.aprobacion_vista %}{% if r.estado == 'APROBADO' or r.estado == 'PARCIAL' %}
@@ -84,10 +109,68 @@
         {% empty %}
         <tr><td colspan="6" class="text-center py-4 text-muted">Sin requerimientos registrados</td></tr>
         {% endfor %}
+        <tr id="req-no-results-lista" style="display:none">
+          <td colspan="6">
+            <div class="empty-state py-5">
+              <i class="bi bi-search d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
+              <p class="text-muted mb-0">Ningún requerimiento contiene ítems que coincidan con "<strong id="req-no-results-lista-q"></strong>".</p>
+              <button type="button" id="req-no-results-lista-clear" class="btn btn-link btn-sm mt-2">Limpiar búsqueda</button>
+            </div>
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 </div>
+
+<script>
+(function () {
+  var input   = document.getElementById('req-search-lista');
+  var clearB  = document.getElementById('req-search-lista-clear');
+  var count   = document.getElementById('req-search-lista-count');
+  var countN  = document.getElementById('req-search-lista-count-num');
+  var noRes   = document.getElementById('req-no-results-lista');
+  var noResQ  = document.getElementById('req-no-results-lista-q');
+  var noResC  = document.getElementById('req-no-results-lista-clear');
+  if (!input) return;
+  var rows = Array.prototype.slice.call(document.querySelectorAll('tr.req-row'));
+
+  function filtrar() {
+    var q = input.value.trim().toLowerCase();
+    var visibles = 0;
+    rows.forEach(function (r) {
+      if (!q) {
+        r.style.display = '';
+        visibles++;
+      } else {
+        var hay = (r.getAttribute('data-search') || '').indexOf(q) !== -1;
+        r.style.display = hay ? '' : 'none';
+        if (hay) visibles++;
+      }
+    });
+
+    if (q) {
+      clearB.style.display = '';
+      count.style.display = '';
+      countN.textContent = visibles;
+      if (visibles === 0 && rows.length > 0) {
+        noRes.style.display = '';
+        noResQ.textContent = input.value.trim();
+      } else {
+        noRes.style.display = 'none';
+      }
+    } else {
+      clearB.style.display = 'none';
+      count.style.display = 'none';
+      noRes.style.display = 'none';
+    }
+  }
+
+  input.addEventListener('input', filtrar);
+  clearB.addEventListener('click', function () { input.value = ''; filtrar(); input.focus(); });
+  noResC.addEventListener('click', function () { input.value = ''; filtrar(); input.focus(); });
+})();
+</script>
 
 <style>
   .req-chip {

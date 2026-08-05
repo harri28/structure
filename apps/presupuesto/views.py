@@ -19,12 +19,15 @@ from .importador import importar_presupuesto_excel, importar_insumos_excel, impo
 from .pdf_parser import importar_pdf, PYMUPDF_OK
 from . import ml as ml_engine
 from apps.registro.utils import log, notificar
+from config.permisos import requiere, proyecto_visible
 
 _ESTADOS_VALIDOS = [e[0] for e in ESTADOS_MODIFICACION]
 
 
 # ── Presupuesto Contractual ───────────────────────────────────────
 
+@requiere('puede_ver_presupuesto')
+@proyecto_visible
 def lista(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
 
@@ -70,6 +73,7 @@ def lista(request, proyecto_id):
     })
 
 
+@requiere('puede_ver_presupuesto')
 def detalle(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     partidas_raiz = (
@@ -104,6 +108,7 @@ def detalle(request, pk):
     })
 
 
+@requiere('puede_ver_presupuesto')
 def insumos(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     tipo_sel = request.GET.get('tipo', '')
@@ -125,6 +130,8 @@ def insumos(request, pk):
     })
 
 
+@requiere('puede_editar_presupuesto')
+@proyecto_visible
 def crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
 
@@ -135,6 +142,7 @@ def crear(request, proyecto_id):
     return redirect('presupuesto:importar', pk=presupuesto.pk)
 
 
+@requiere('puede_editar_presupuesto')
 def importar(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     if request.method == 'POST' and request.FILES.get('archivo'):
@@ -264,6 +272,7 @@ def importar(request, pk):
 
 
 @require_POST
+@requiere('puede_editar_presupuesto')
 def partidas_limpiar(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     presupuesto.partidas.all().delete()
@@ -277,6 +286,7 @@ def partidas_limpiar(request, pk):
 
 
 @require_POST
+@requiere('puede_editar_presupuesto')
 def insumos_limpiar(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     presupuesto.insumos.all().delete()
@@ -284,6 +294,7 @@ def insumos_limpiar(request, pk):
     return redirect('presupuesto:importar', pk=pk)
 
 
+@requiere('puede_editar_presupuesto')
 def eliminar(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     proyecto = presupuesto.proyecto
@@ -299,6 +310,8 @@ def eliminar(request, pk):
 
 # ── Modificaciones ────────────────────────────────────────────────
 
+@requiere('puede_editar_presupuesto')
+@proyecto_visible
 def modificacion_crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
 
@@ -428,6 +441,7 @@ def modificacion_crear(request, proyecto_id):
     })
 
 
+@requiere('puede_ver_presupuesto')
 def modificacion_detalle(request, pk):
     mod = get_object_or_404(Modificacion, pk=pk)
     partidas_ad  = mod.partidas.filter(subtipo='ADICIONAL')
@@ -441,6 +455,7 @@ def modificacion_detalle(request, pk):
     })
 
 
+@requiere('puede_editar_presupuesto')
 def modificacion_editar(request, pk):
     mod = get_object_or_404(Modificacion, pk=pk)
     proyecto = mod.proyecto
@@ -514,6 +529,7 @@ def modificacion_editar(request, pk):
     })
 
 
+@requiere('puede_editar_presupuesto')
 def modificacion_estado(request, pk):
     if request.method == 'POST':
         mod = get_object_or_404(Modificacion, pk=pk)
@@ -525,6 +541,7 @@ def modificacion_estado(request, pk):
     return redirect('presupuesto:modificacion_detalle', pk=pk)
 
 
+@requiere('puede_editar_presupuesto')
 def modificacion_eliminar(request, pk):
     mod = get_object_or_404(Modificacion, pk=pk)
     proyecto = mod.proyecto
@@ -549,6 +566,7 @@ _TIPO_META = {
 }
 
 
+@requiere('puede_ver_presupuesto', 'puede_editar_presupuesto')
 def acu_partida(request, pk):
     partida = get_object_or_404(Partida, pk=pk)
     presupuesto = partida.presupuesto
@@ -620,6 +638,7 @@ def acu_partida(request, pk):
     })
 
 
+@requiere('puede_editar_presupuesto')
 def acu_recurso_editar(request, pk):
     recurso = get_object_or_404(RecursoPartida, pk=pk)
     partida = recurso.partida
@@ -653,6 +672,7 @@ def acu_recurso_editar(request, pk):
     })
 
 
+@requiere('puede_editar_presupuesto')
 def acu_recurso_eliminar(request, pk):
     recurso = get_object_or_404(RecursoPartida, pk=pk)
     partida_pk = recurso.partida_id
@@ -668,6 +688,7 @@ def acu_recurso_eliminar(request, pk):
 # ── ML — Aprendizaje automático ───────────────────────────────────
 
 @require_GET
+@requiere('puede_ver_presupuesto', 'puede_editar_presupuesto')
 def ml_sugeridos(request, pk):
     """AJAX: retorna recursos sugeridos para una partida (JSON)."""
     partida = get_object_or_404(Partida, pk=pk)
@@ -676,6 +697,7 @@ def ml_sugeridos(request, pk):
 
 
 @require_POST
+@requiere('puede_editar_presupuesto')
 def ml_importar(request, pk):
     """Importa recursos sugeridos seleccionados a una partida."""
     partida = get_object_or_404(Partida, pk=pk)
@@ -712,6 +734,7 @@ def ml_importar(request, pk):
 
 
 @require_GET
+@requiere('puede_ver_presupuesto')
 def partida_hijos(request, pk):
     """AJAX: retorna las filas hijas directas de una partida (lazy tree expand)."""
     partida = get_object_or_404(Partida, pk=pk)
@@ -720,6 +743,7 @@ def partida_hijos(request, pk):
 
 
 @require_GET
+@requiere('puede_ver_presupuesto')
 def partida_panel(request, pk):
     """AJAX: fragmento HTML del panel lateral de detalle de una partida."""
     partida = get_object_or_404(Partida.objects.prefetch_related('hijos', 'recursos'), pk=pk)
@@ -755,6 +779,7 @@ def partida_panel(request, pk):
 
 
 @require_GET
+@requiere('puede_ver_presupuesto')
 def ml_buscar(request, pk):
     """AJAX: búsqueda semántica de partidas dentro de un presupuesto."""
     presupuesto = get_object_or_404(Presupuesto, pk=pk)

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Bandeja de Entrada — {{ proyecto.codigo }}{% endblock %}
+{% block nav_bandeja %}active{% endblock %}
+{% block nav_req_open %}show{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Requerimientos</a></li>
+<li class="breadcrumb-item active">Bandeja de Entrada</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h4><i class="bi bi-inbox me-2"></i>Bandeja de Entrada</h4>
+    <div class="text-muted">Solicitudes de material enviadas por el Almacenero, pendientes de tu aprobación.</div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>N° REQ</th>
+          <th>Fecha</th>
+          <th>Solicitante</th>
+          <th>Ítems</th>
+          <th>Observaciones</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in solicitudes %}
+        <tr class="req-row" style="cursor:pointer" onclick="window.location='{% url 'requerimientos:editar' r.pk %}'">
+          <td class="fw-semibold">
+            REQ-{{ r.numero }}
+            <span class="badge rounded-1 ms-1"
+                  style="background:#fef3c7;color:#92400e;font-weight:500;font-size:.7rem">
+              Solicitado
+            </span>
+          </td>
+          <td>{{ r.fecha|date:"d/m/Y" }}</td>
+          <td>{{ r.solicitante|default:"—" }}</td>
+          <td>{{ r.detalles.count }}</td>
+          <td class="text-muted small" style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            {{ r.observaciones|default:"—" }}
+          </td>
+          <td onclick="event.stopPropagation()">
+            <a href="{% url 'requerimientos:editar' r.pk %}" class="btn btn-sm btn-primary">
+              <i class="bi bi-pencil-square me-1"></i>Revisar
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-5 text-muted">
+            <i class="bi bi-inbox display-6 d-block mb-2 opacity-25"></i>
+            No hay solicitudes pendientes del Almacenero.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .req-row { cursor: pointer; }
+  .req-row:hover { background: #f8fafc; }
+  .req-row td:last-child { cursor: default; }
+</style>
+{% endblock %}

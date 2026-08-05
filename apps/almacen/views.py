@@ -20,6 +20,7 @@ from .forms import (
     OrdenCompraForm, DetalleOrdenCompraFormSet,
 )
 from apps.requerimientos.models import Requerimiento
+from config.permisos import requiere, proyecto_visible
 
 
 def _sync_insumo_snapshot(detalle):
@@ -32,6 +33,8 @@ def _sync_insumo_snapshot(detalle):
     detalle.save()
 
 
+@requiere('puede_ver_almacen')
+@proyecto_visible
 def dashboard(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     ctx = {
@@ -50,6 +53,8 @@ def dashboard(request, proyecto_id):
 
 # ── Stock / Kardex ───────────────────────────────────────────────────────────
 
+@requiere('puede_ver_almacen')
+@proyecto_visible
 def stock(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     tipo_sel = request.GET.get('tipo', '')
@@ -95,6 +100,8 @@ def stock(request, proyecto_id):
     })
 
 
+@requiere('puede_ver_almacen')
+@proyecto_visible
 def consumo(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     tipo_sel = request.GET.get('tipo', '')
@@ -140,6 +147,8 @@ def consumo(request, proyecto_id):
     })
 
 
+@requiere('puede_ver_almacen')
+@proyecto_visible
 def kardex(request, proyecto_id, insumo_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     insumo = get_object_or_404(InsumoPresupuesto, pk=insumo_id)
@@ -192,6 +201,8 @@ def kardex(request, proyecto_id, insumo_id):
 
 # ── Entradas ────────────────────────────────────────────────────────────────
 
+@requiere('puede_gestionar_entradas')
+@proyecto_visible
 def entrada_lista(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     return render(request, 'almacen/entrada_lista.html', {
@@ -199,11 +210,14 @@ def entrada_lista(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_entradas')
 def entrada_detalle(request, pk):
     entrada = get_object_or_404(Entrada, pk=pk)
     return render(request, 'almacen/entrada_detalle.html', {'entrada': entrada, 'proyecto': entrada.proyecto})
 
 
+@requiere('puede_gestionar_entradas')
+@proyecto_visible
 def entrada_crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     if request.method == 'POST':
@@ -235,6 +249,7 @@ def entrada_crear(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_entradas')
 def entrada_editar(request, pk):
     entrada = get_object_or_404(Entrada, pk=pk)
     proyecto = entrada.proyecto
@@ -257,6 +272,7 @@ def entrada_editar(request, pk):
     })
 
 
+@requiere('puede_gestionar_entradas')
 def entrada_eliminar(request, pk):
     entrada = get_object_or_404(Entrada, pk=pk)
     proyecto = entrada.proyecto
@@ -269,6 +285,7 @@ def entrada_eliminar(request, pk):
     return render(request, 'almacen/confirmar_eliminar.html', {'obj': entrada, 'proyecto': proyecto})
 
 
+@requiere('puede_gestionar_entradas')
 def entrada_aceptar(request, pk):
     entrada = get_object_or_404(Entrada, pk=pk)
     if request.method == 'POST' and entrada.estado == 'PENDIENTE':
@@ -285,6 +302,7 @@ def entrada_aceptar(request, pk):
     return redirect('almacen:entrada_lista', proyecto_id=entrada.proyecto.pk)
 
 
+@requiere('puede_gestionar_entradas')
 def entrada_rechazar(request, pk):
     entrada = get_object_or_404(Entrada, pk=pk)
     if request.method == 'POST' and entrada.estado == 'PENDIENTE':
@@ -305,6 +323,8 @@ def entrada_rechazar(request, pk):
 
 # ── Salidas ─────────────────────────────────────────────────────────────────
 
+@requiere('puede_gestionar_salidas')
+@proyecto_visible
 def salida_lista(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     return render(request, 'almacen/salida_lista.html', {
@@ -312,11 +332,14 @@ def salida_lista(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_salidas')
 def salida_detalle(request, pk):
     salida = get_object_or_404(Salida, pk=pk)
     return render(request, 'almacen/salida_detalle.html', {'salida': salida, 'proyecto': salida.proyecto})
 
 
+@requiere('puede_gestionar_salidas')
+@proyecto_visible
 def salida_crear(request, proyecto_id):
     from apps.requerimientos.models import Requerimiento as Req
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
@@ -356,6 +379,7 @@ def salida_crear(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_salidas')
 def salida_editar(request, pk):
     salida = get_object_or_404(Salida, pk=pk)
     proyecto = salida.proyecto
@@ -378,6 +402,7 @@ def salida_editar(request, pk):
     })
 
 
+@requiere('puede_gestionar_salidas')
 def salida_eliminar(request, pk):
     salida = get_object_or_404(Salida, pk=pk)
     proyecto = salida.proyecto
@@ -392,18 +417,68 @@ def salida_eliminar(request, pk):
 
 # ── Cotizaciones ─────────────────────────────────────────────────────────────
 
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
+@proyecto_visible
 def cot_lista(request, proyecto_id):
+    from apps.almacen.models import ESTADOS_COT
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    estado_sel = request.GET.get('estado', '')
+    qs = (proyecto.cotizaciones
+          .select_related('requerimiento_origen')
+          .prefetch_related('detalles__insumo')
+          .order_by('-fecha', '-pk'))
+    if estado_sel:
+        qs = qs.filter(estado=estado_sel)
     return render(request, 'almacen/cot_lista.html', {
-        'proyecto': proyecto, 'cotizaciones': proyecto.cotizaciones.all(),
+        'proyecto':     proyecto,
+        'cotizaciones': qs,
+        'estados':      ESTADOS_COT,
+        'estado_sel':   estado_sel,
     })
 
 
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
 def cot_detalle(request, pk):
     cot = get_object_or_404(Cotizacion, pk=pk)
     return render(request, 'almacen/cot_detalle.html', {'cot': cot, 'proyecto': cot.proyecto})
 
 
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
+def cot_imprimir(request, pk):
+    from decimal import InvalidOperation
+    from apps.configuracion.models import ConfigEmpresa
+    cot = get_object_or_404(
+        Cotizacion.objects.select_related('proyecto', 'requerimiento_origen')
+                          .prefetch_related('detalles__insumo'),
+        pk=pk,
+    )
+
+    if request.method == 'POST':
+        for det in cot.detalles.all():
+            raw = request.POST.get(f'cantidad_{det.pk}', '').strip()
+            if not raw:
+                continue
+            try:
+                nueva = Decimal(raw)
+                if nueva >= 0 and nueva != det.cantidad:
+                    det.cantidad = nueva
+                    det.save(update_fields=['cantidad'])
+            except (InvalidOperation, ValueError):
+                continue
+        log(request, 'EDITAR', 'Almacén',
+            f'Cantidades de COT-{cot.numero} actualizadas por {request.user.get_full_name() or request.user.username}')
+        messages.success(request, f'Cantidades de COT-{cot.numero} guardadas.')
+        return redirect('almacen:cot_imprimir', pk=cot.pk)
+
+    return render(request, 'almacen/cot_imprimir.html', {
+        'cot':      cot,
+        'proyecto': cot.proyecto,
+        'empresa':  ConfigEmpresa.get(),
+    })
+
+
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
+@proyecto_visible
 def cot_crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     if request.method == 'POST':
@@ -430,8 +505,13 @@ def cot_crear(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
+@proyecto_visible
 def cot_desde_req(request, proyecto_id, req_pk):
-    """Genera una cotización pre-cargada con los ítems de un requerimiento."""
+    """Genera una cotización pre-cargada con los ítems (cantidad_aprobada) de un requerimiento.
+    Numeración: espeja el número del REQ. Si ya existen cotizaciones para el mismo REQ,
+    agrega sufijo -2, -3, ...  Ej: REQ-025 → COT-025, luego COT-025-2, COT-025-3.
+    """
     from django.utils.timezone import now
     from apps.requerimientos.models import Requerimiento
 
@@ -441,19 +521,22 @@ def cot_desde_req(request, proyecto_id, req_pk):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     req = get_object_or_404(Requerimiento, pk=req_pk, proyecto=proyecto)
 
-    ultimo = proyecto.cotizaciones.order_by('-pk').first()
-    try:
-        siguiente = int(''.join(filter(str.isdigit, str(ultimo.numero)))) + 1 if ultimo else 1
-    except (ValueError, AttributeError):
-        siguiente = proyecto.cotizaciones.count() + 1
+    base = str(req.numero)
+    cots_previas = req.cotizaciones_origen.count()
+    numero = base if cots_previas == 0 else f'{base}-{cots_previas + 1}'
+    # guardarnos de colisiones (por si el usuario borró alguna en el medio)
+    while Cotizacion.objects.filter(proyecto=proyecto, numero=numero).exists():
+        cots_previas += 1
+        numero = f'{base}-{cots_previas + 1}'
 
     cot = Cotizacion.objects.create(
         proyecto=proyecto,
-        numero=str(siguiente).zfill(3),
+        requerimiento_origen=req,
+        numero=numero,
         fecha=now().date(),
         proveedor='',
         estado='PENDIENTE',
-        observaciones=f'Generada desde REQ-{req.numero}',
+        observaciones=f'Solicitud de cotización generada desde REQ-{req.numero}',
     )
 
     detalles = req.detalles.select_related('insumo').all()
@@ -470,16 +553,18 @@ def cot_desde_req(request, proyecto_id, req_pk):
             unidad=d.unidad,
         )
 
-    if not req.cotizacion_sistema_id:
-        req.cotizacion_sistema = cot
-        req.save(update_fields=['cotizacion_sistema'])
+    # Mantener req.cotizacion_sistema apuntando a la última creada (compat con flujos previos)
+    req.cotizacion_sistema = cot
+    req.save(update_fields=['cotizacion_sistema'])
 
     log(request, 'CREAR', 'Almacén',
         f'Cotización COT-{cot.numero} generada desde REQ-{req.numero} en {proyecto.codigo}')
-    messages.success(request, f'Cotización COT-{cot.numero} generada. Completa el proveedor y precios.')
-    return redirect('almacen:cot_editar', pk=cot.pk)
+    messages.success(request, f'Solicitud de cotización COT-{cot.numero} generada.')
+    return redirect('almacen:cot_imprimir', pk=cot.pk)
 
 
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
+@proyecto_visible
 def cot_rapida(request, proyecto_id):
     """Crea una cotización desde el modal rápido de la lista."""
     from django.utils.dateparse import parse_date
@@ -540,6 +625,7 @@ def cot_rapida(request, proyecto_id):
     return redirect('almacen:cot_detalle', pk=cot.pk)
 
 
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
 def cot_editar(request, pk):
     cot = get_object_or_404(Cotizacion, pk=pk)
     proyecto = cot.proyecto
@@ -562,6 +648,7 @@ def cot_editar(request, pk):
     })
 
 
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
 def cot_eliminar(request, pk):
     cot = get_object_or_404(Cotizacion, pk=pk)
     proyecto = cot.proyecto
@@ -576,6 +663,8 @@ def cot_eliminar(request, pk):
 
 # ── Órdenes de Compra ────────────────────────────────────────────────────────
 
+@requiere('puede_gestionar_oc')
+@proyecto_visible
 def oc_lista(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     qs = proyecto.ordenes_compra.all()
@@ -590,11 +679,14 @@ def oc_lista(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_oc')
 def oc_detalle(request, pk):
     oc = get_object_or_404(OrdenCompra, pk=pk)
     return render(request, 'almacen/oc_detalle.html', {'oc': oc, 'proyecto': oc.proyecto})
 
 
+@requiere('puede_gestionar_oc')
+@proyecto_visible
 def oc_crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     if request.method == 'POST':
@@ -620,6 +712,7 @@ def oc_crear(request, proyecto_id):
     })
 
 
+@requiere('puede_gestionar_oc')
 def oc_editar(request, pk):
     oc = get_object_or_404(OrdenCompra, pk=pk)
     proyecto = oc.proyecto
@@ -641,6 +734,7 @@ def oc_editar(request, pk):
     })
 
 
+@requiere('puede_gestionar_oc')
 def oc_eliminar(request, pk):
     oc = get_object_or_404(OrdenCompra, pk=pk)
     proyecto = oc.proyecto
@@ -655,6 +749,7 @@ def oc_eliminar(request, pk):
 
 # ── API ───────────────────────────────────────────────────────────────────────
 
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
 def api_req_detalles(request, pk):
     from apps.requerimientos.models import Requerimiento as Req
     try:
@@ -673,6 +768,7 @@ def api_req_detalles(request, pk):
     return JsonResponse(data, safe=False)
 
 
+@requiere('puede_ver_almacen', 'puede_gestionar_entradas', 'puede_gestionar_salidas', 'puede_crear_requerimientos', 'puede_aprobar_requerimientos')
 def api_insumo_stock(request, insumo_id):
     pid = request.session.get('proyecto_id')
     proyecto = Proyecto.objects.filter(pk=pid).first() if pid else None
@@ -687,6 +783,7 @@ def api_insumo_stock(request, insumo_id):
     return JsonResponse({'stock': float(entrada - salida)})
 
 
+@requiere('puede_ver_almacen', 'puede_gestionar_entradas', 'puede_gestionar_salidas', 'puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log', 'puede_gestionar_oc')
 def api_productos(request):
     q = request.GET.get('q', '')
     pid = request.session.get('proyecto_id')

@@ -5,6 +5,7 @@ from apps.proyectos.models import Proyecto
 from apps.registro.utils import log, notificar
 from .models import Requerimiento, DetalleRequerimiento, ESTADOS_REQ
 from .forms import RequerimientoForm, DetalleRequerimientoFormSet
+from config.permisos import requiere, tiene, proyecto_visible
 
 
 def _siguiente_numero(proyecto):
@@ -34,10 +35,12 @@ def _sync_snapshot(detalle):
     detalle.save()
 
 
+@requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos')
+@proyecto_visible
 def lista(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     estado_sel = request.GET.get('estado', '')
-    qs = proyecto.requerimientos.all()
+    qs = proyecto.requerimientos.filter(es_ajuste=False).prefetch_related('detalles__insumo')
     if estado_sel:
         qs = qs.filter(estado=estado_sel)
     nuevos = proyecto.requerimientos.filter(
@@ -52,6 +55,24 @@ def lista(request, proyecto_id):
     })
 
 
+@requiere('puede_aprobar_requerimientos')
+@proyecto_visible
+def bandeja_entrada(request, proyecto_id):
+    """Bandeja del Administrador de Obra: lista los requerimientos en estado
+    `SOLICITADO` que le mandó el Almacenero. Desde aquí puede abrir cada uno
+    para editar/aprobar y enviar a Logística. Ver REGLAS_NEGOCIO.md §10.
+    """
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    solicitudes = Requerimiento.objects.filter(
+        proyecto=proyecto, estado='SOLICITADO'
+    ).prefetch_related('detalles').order_by('-fecha', '-numero')
+    return render(request, 'requerimientos/bandeja_entrada.html', {
+        'proyecto': proyecto,
+        'solicitudes': solicitudes,
+    })
+
+
+@requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos')
 def detalle(request, pk):
     req = get_object_or_404(Requerimiento, pk=pk)
     if not req.aprobacion_vista and req.estado in ('APROBADO', 'PARCIAL'):
@@ -62,20 +83,113 @@ def detalle(request, pk):
     })
 
 
+@requiere('puede_crear_requerimientos')
+@proyecto_visible
 def crear(request, proyecto_id):
     from apps.configuracion.models import ConfigEmpresa
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     empresa  = ConfigEmpresa.get()
     siguiente = _siguiente_numero(proyecto)
     siguiente_global = _siguiente_numero_global()
+    modo_ajuste = request.GET.get('ajuste') == '1' or request.POST.get('modo_ajuste') == '1'
     if request.method == 'POST':
         form = RequerimientoForm(request.POST, proyecto=proyecto)
-        formset = DetalleRequerimientoFormSet(request.POST, prefix='detalles')
+        formset = DetalleRequerimientoFormSet(
+            request.POST, prefix='detalles',
+            form_kwargs={'modo_ajuste': modo_ajuste},
+        )
         accion = request.POST.get('accion', 'borrador')
         if form.is_valid() and formset.is_valid():
             req = form.save(commit=False)
             req.proyecto = proyecto
-            req.estado = 'ENVIADO' if accion == 'enviar' else 'BORRADOR'
+            req.es_ajuste = modo_ajuste
+            puede_enviar = tiene(request.user, 'puede_aprobar_requerimientos')
+            req.estado = 'ENVIADO' if accion == 'enviar' and puede_enviar else 'BORRADOR'
+            req.numero = siguiente
+            req.numero_global = siguiente_global
+            req.save()
+            for f in formset:
+                if f.cleaned_data and not f.cleaned_data.get('DELETE'):
+                    d = f.save(commit=False)
+                    d.requerimiento = req
+                    _sync_snapshot(d)
+            tipo_txt = 'Ajuste' if modo_ajuste else 'Requerimiento'
+            log(request, 'CREAR', 'Requerimientos',
+                f'REQ-{req.numero} ({tipo_txt}) {"enviado" if req.estado == "ENVIADO" else "guardado como borrador"} en {proyecto.codigo}')
+            if req.estado == 'ENVIADO':
+                notificar(
+                    f'Nuevo {tipo_txt.lower()} REQ-{req.numero}',
+                    mensaje=f'Enviado por {request.user.get_full_name() or request.user.username} — {proyecto.codigo}. Pendiente en Logística.',
+                    tipo='warning' if modo_ajuste else 'info',
+                )
+                messages.success(request, f'{tipo_txt} REQ-{req.numero} enviado a Logística.')
+            else:
+                messages.success(request, f'{tipo_txt} REQ-{req.numero} guardado como borrador.')
+            return redirect('requerimientos:detalle', pk=req.pk)
+    else:
+        form = RequerimientoForm(proyecto=proyecto, initial={
+            'numero': siguiente,
+            'obra': proyecto.nombre,
+            'solicitante': proyecto.responsable,
+            'cargo_solicitante': proyecto.cargo_responsable,
+            'sector_obra': proyecto.sector,
+        })
+        formset = DetalleRequerimientoFormSet(
+            prefix='detalles',
+            form_kwargs={'modo_ajuste': modo_ajuste},
+        )
+    return render(request, 'requerimientos/form.html', {
+        'form': form, 'formset': formset, 'proyecto': proyecto,
+        'empresa': empresa,
+        'titulo': 'Nuevo Ajuste' if modo_ajuste else 'Nuevo Requerimiento',
+        'siguiente_numero': siguiente,
+        'numero_global': siguiente_global,
+        'modo_ajuste': modo_ajuste,
+    })
+
+
+@requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos')
+@proyecto_visible
+def ajustes(request, proyecto_id):
+    """Lista de requerimientos marcados como ajuste (adicionales fuera de presupuesto).
+    Ver REGLAS_NEGOCIO.md §14."""
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    qs = (proyecto.requerimientos
+          .filter(es_ajuste=True)
+          .prefetch_related('detalles__insumo'))
+    return render(request, 'requerimientos/ajustes.html', {
+        'proyecto': proyecto,
+        'requerimientos': qs,
+    })
+
+
+@requiere('puede_crear_requerimientos')
+@proyecto_visible
+def solicitar(request, proyecto_id):
+    """Vista del Almacenero para crear requerimientos que van al Admin de Obra.
+
+    Formulario atómico: se envía o se cancela, no hay borrador. El requerimiento
+    nace en estado `SOLICITADO` y aparece en la Bandeja de Entrada del Admin de
+    Obra. Ver REGLAS_NEGOCIO.md §10.
+    """
+    from apps.configuracion.models import ConfigEmpresa
+    # El Admin de Obra usa su propia vista `crear` (con borrador). Si tiene
+    # el permiso de aprobación, se le redirige para no confundir flujos.
+    if tiene(request.user, 'puede_aprobar_requerimientos'):
+        return redirect('requerimientos:crear', proyecto_id=proyecto_id)
+
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    empresa = ConfigEmpresa.get()
+    siguiente = _siguiente_numero(proyecto)
+    siguiente_global = _siguiente_numero_global()
+
+    if request.method == 'POST':
+        form = RequerimientoForm(request.POST, proyecto=proyecto)
+        formset = DetalleRequerimientoFormSet(request.POST, prefix='detalles')
+        if form.is_valid() and formset.is_valid():
+            req = form.save(commit=False)
+            req.proyecto = proyecto
+            req.estado = 'SOLICITADO'
             req.numero = siguiente
             req.numero_global = siguiente_global
             req.save()
@@ -85,32 +199,46 @@ def crear(request, proyecto_id):
                     d.requerimiento = req
                     _sync_snapshot(d)
             log(request, 'CREAR', 'Requerimientos',
-                f'REQ-{req.numero} {"enviado" if req.estado == "ENVIADO" else "guardado como borrador"} en {proyecto.codigo}')
-            if req.estado == 'ENVIADO':
-                notificar(
-                    f'Nuevo requerimiento REQ-{req.numero}',
-                    mensaje=f'Enviado por {request.user.get_full_name() or request.user.username} — {proyecto.codigo}. Pendiente en Logística.',
-                    tipo='info',
-                )
-                messages.success(request, f'Requerimiento REQ-{req.numero} enviado a Logística.')
-            else:
-                messages.success(request, f'Requerimiento REQ-{req.numero} guardado como borrador.')
-            return redirect('requerimientos:detalle', pk=req.pk)
+                f'REQ-{req.numero} solicitado por {request.user.get_full_name() or request.user.username} en {proyecto.codigo}')
+            notificar(
+                f'Nueva solicitud REQ-{req.numero}',
+                mensaje=f'Solicitada por {request.user.get_full_name() or request.user.username} — {proyecto.codigo}. Pendiente en Bandeja de Entrada.',
+                tipo='info',
+            )
+            messages.success(request, f'Solicitud REQ-{req.numero} enviada al Administrador de Obra.')
+            return redirect('requerimientos:lista', proyecto_id=proyecto_id)
     else:
+        # Cargo del Almacenero: viene de su PerfilUsuario.cargo; si está vacío,
+        # cae al nombre del rol. NUNCA usar proyecto.cargo_responsable —
+        # ver feedback-almacenero-req-propio: el requerimiento del Almacenero
+        # debe reflejar sus datos, no los del responsable del proyecto.
+        cargo_almacenero = ''
+        try:
+            cargo_almacenero = request.user.perfil.cargo or (
+                request.user.perfil.rol.nombre if request.user.perfil.rol else ''
+            )
+        except AttributeError:
+            pass
+
         form = RequerimientoForm(proyecto=proyecto, initial={
             'numero': siguiente,
             'obra': proyecto.nombre,
-            'solicitante': proyecto.responsable,
+            'solicitante': request.user.get_full_name() or request.user.username,
+            'cargo_solicitante': cargo_almacenero,
+            'sector_obra': proyecto.sector,
         })
         formset = DetalleRequerimientoFormSet(prefix='detalles')
-    return render(request, 'requerimientos/form.html', {
+
+    return render(request, 'requerimientos/solicitar.html', {
         'form': form, 'formset': formset, 'proyecto': proyecto,
         'empresa': empresa,
-        'titulo': 'Nuevo Requerimiento', 'siguiente_numero': siguiente,
+        'titulo': 'Solicitar material',
+        'siguiente_numero': siguiente,
         'numero_global': siguiente_global,
     })
 
 
+@requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos')
 def editar(request, pk):
     from apps.configuracion.models import ConfigEmpresa
     req = get_object_or_404(Requerimiento, pk=pk)
@@ -122,11 +250,12 @@ def editar(request, pk):
         accion = request.POST.get('accion', '')
         if form.is_valid() and formset.is_valid():
             updated = form.save(commit=False)
-            if accion == 'enviar' and req.estado == 'BORRADOR':
+            if accion == 'enviar' and req.estado in ('BORRADOR', 'SOLICITADO') and tiene(request.user, 'puede_aprobar_requerimientos'):
+                origen = 'solicitud del Almacén' if req.estado == 'SOLICITADO' else 'borrador propio'
                 updated.estado = 'ENVIADO'
                 notificar(
-                    f'Requerimiento REQ-{req.numero} enviado',
-                    mensaje=f'Enviado por {request.user.get_full_name() or request.user.username} — {proyecto.codigo}.',
+                    f'Requerimiento REQ-{req.numero} enviado a Logística',
+                    mensaje=f'Enviado por {request.user.get_full_name() or request.user.username} — {proyecto.codigo} (desde {origen}).',
                     tipo='info',
                 )
             else:
@@ -148,14 +277,17 @@ def editar(request, pk):
     })
 
 
+@requiere('puede_aprobar_requerimientos')
 def enviar(request, pk):
     from django.views.decorators.http import require_POST
     req = get_object_or_404(Requerimiento, pk=pk)
-    if request.method == 'POST' and req.estado == 'BORRADOR':
+    if request.method == 'POST' and req.estado in ('BORRADOR', 'SOLICITADO'):
+        estado_previo = req.estado
         req.estado = 'ENVIADO'
         req.save(update_fields=['estado'])
+        origen = 'solicitud del Almacén' if estado_previo == 'SOLICITADO' else 'borrador propio'
         log(request, 'EDITAR', 'Requerimientos',
-            f'REQ-{req.numero} enviado a Logística por {request.user.get_full_name() or request.user.username}')
+            f'REQ-{req.numero} enviado a Logística por {request.user.get_full_name() or request.user.username} (desde {origen})')
         notificar(
             f'Nuevo requerimiento REQ-{req.numero}',
             mensaje=f'Enviado por {request.user.get_full_name() or request.user.username} — {req.proyecto.codigo}. Pendiente en Logística.',
@@ -165,6 +297,7 @@ def enviar(request, pk):
     return redirect('requerimientos:detalle', pk=req.pk)
 
 
+@requiere('puede_revisar_reqs_log')
 def aprobar(request, pk):
     from django.views.decorators.http import require_POST
     req = get_object_or_404(Requerimiento, pk=pk)
@@ -183,6 +316,8 @@ def aprobar(request, pk):
     return redirect(next_url or 'requerimientos:detalle', pk=req.pk) if not next_url else redirect(next_url)
 
 
+@requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos')
+@proyecto_visible
 def vs_atenciones(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL', 'ATENDIDO']
@@ -235,6 +370,8 @@ def vs_atenciones(request, proyecto_id):
     })
 
 
+@requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos')
+@proyecto_visible
 def vs_atenciones_insumo(request, proyecto_id, insumo_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL', 'ATENDIDO']
@@ -256,6 +393,7 @@ def vs_atenciones_insumo(request, proyecto_id, insumo_id):
     })
 
 
+@requiere('puede_aprobar_requerimientos')
 def eliminar(request, pk):
     req = get_object_or_404(Requerimiento, pk=pk)
     proyecto = req.proyecto

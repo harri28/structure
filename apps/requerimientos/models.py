@@ -14,6 +14,7 @@ TIPOS_MATERIAL = [
 
 ESTADOS_REQ = [
     ('BORRADOR', 'Borrador'),
+    ('SOLICITADO', 'Solicitado por Almacén'),
     ('ENVIADO', 'Enviado a Logística'),
     ('EN_REVISION', 'En revisión'),
     ('APROBADO', 'Aprobado'),
@@ -44,6 +45,10 @@ class Requerimiento(models.Model):
     cotizacion_pdf = models.FileField(
         upload_to='requerimientos/cotizaciones/', null=True, blank=True
     )
+    # Marca "Ajuste": solicitud que excede el stock presupuestado (adicional).
+    # El impacto formal en el presupuesto (crear Modificacion / aumentar cantidad_total)
+    # NO está implementado — ver REGLAS_NEGOCIO.md §14 (TODO).
+    es_ajuste = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'Requerimiento'
@@ -79,8 +84,10 @@ class DetalleRequerimiento(models.Model):
 
 class HistorialRevisionReq(models.Model):
     ACCIONES = [
-        ('ELIMINAR', 'Ítem eliminado'),
-        ('AGREGAR',  'Ítem agregado'),
+        ('ELIMINAR',   'Ítem eliminado'),
+        ('AGREGAR',    'Ítem agregado'),
+        ('ANULAR',     'Requerimiento anulado'),
+        ('RECUPERAR',  'Requerimiento recuperado'),
     ]
     requerimiento = models.ForeignKey(Requerimiento, on_delete=models.CASCADE, related_name='historial_revision')
     accion        = models.CharField(max_length=10, choices=ACCIONES)

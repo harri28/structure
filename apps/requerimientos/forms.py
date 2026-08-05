@@ -1,7 +1,6 @@
 from datetime import date
 from django import forms
 from django.forms import inlineformset_factory
-from django.contrib.auth.models import User
 from .models import Requerimiento, DetalleRequerimiento
 
 
@@ -10,28 +9,21 @@ class RequerimientoForm(forms.ModelForm):
         model = Requerimiento
         fields = ['fecha', 'obra', 'solicitante', 'cargo_solicitante', 'sector_obra']
         widgets = {
-            'fecha': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-            'observaciones': forms.Textarea(attrs={'rows': 2}),
+            'fecha':             forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'obra':              forms.TextInput(attrs={'class': 'form-control'}),
+            'solicitante':       forms.TextInput(attrs={'class': 'form-control'}),
+            'cargo_solicitante': forms.TextInput(attrs={'class': 'form-control'}),
+            'sector_obra':       forms.TextInput(attrs={'class': 'form-control'}),
+            'observaciones':     forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
-        proyecto = kwargs.pop('proyecto', None)
+        # `proyecto` kwarg se acepta por compatibilidad con las vistas (crear/solicitar/editar)
+        # aunque ya no filtre choices — el solicitante ahora es texto libre pre-cargado.
+        kwargs.pop('proyecto', None)
         super().__init__(*args, **kwargs)
         if not self.data.get('fecha') and not (self.instance.pk and self.instance.fecha):
             self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
-        if proyecto is not None:
-            user_ids = proyecto.miembros.values_list('usuario_id', flat=True)
-            users = User.objects.filter(pk__in=user_ids, is_active=True).order_by('first_name', 'last_name', 'username')
-        else:
-            users = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
-        choices = [('', '— Seleccionar solicitante —')]
-        for u in users:
-            nombre = u.get_full_name() or u.username
-            choices.append((nombre, nombre))
-        self.fields['solicitante'] = forms.ChoiceField(
-            choices=choices, required=False,
-            widget=forms.Select(attrs={'class': 'form-select'}),
-        )
 
 
 class DetalleRequerimientoForm(forms.ModelForm):
@@ -43,7 +35,8 @@ class DetalleRequerimientoForm(forms.ModelForm):
             'descripcion': forms.HiddenInput(),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, modo_ajuste=False, **kwargs):
+        self.modo_ajuste = modo_ajuste
         super().__init__(*args, **kwargs)
         self.fields['cantidad'].required = False
         self.fields['cantidad_requerida'].required = False
@@ -64,7 +57,8 @@ class DetalleRequerimientoForm(forms.ModelForm):
             return data
         cantidad = data.get('cantidad') or 0
         cant_req = data.get('cantidad_requerida') or 0
-        if cantidad and cant_req > cantidad:
+        # En modo ajuste (adicional) se permite exceder lo presupuestado.
+        if not self.modo_ajuste and cantidad and cant_req > cantidad:
             self.add_error(
                 'cantidad_requerida',
                 f'No puede superar la cantidad presupuestada ({cantidad}).',

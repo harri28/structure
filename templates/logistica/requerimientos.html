@@ -1,7 +1,6 @@
 ﻿{% extends 'base.html' %}
 {% block title %}Requerimientos recibidos — {{ proyecto.codigo }}{% endblock %}
-{% block nav_log_reqs_open %}show{% endblock %}
-{% block nav_req_logistica_lista %}active{% endblock %}
+{% block nav_req_logistica %}active{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
@@ -23,11 +22,29 @@
       <a href="{% url 'logistica:consolidados_log' proyecto.pk %}" class="s-chip">
         <i class="bi bi-layer-forward me-1"></i>R. Consolidados
       </a>
+      <a href="{% url 'logistica:historial_log' proyecto.pk %}" class="s-chip">
+        <i class="bi bi-clock-history me-1"></i>Historial
+      </a>
     </div>
   </div>
 </div>
 
 <div class="card">
+  <div class="card-header bg-white py-2 d-flex align-items-center gap-2 flex-wrap">
+    <div class="input-group input-group-sm" style="max-width:520px">
+      <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="req-search"
+             class="form-control form-control-sm"
+             placeholder="Buscar por código o nombre de material…"
+             autocomplete="off">
+      <button type="button" id="req-search-clear" class="btn btn-outline-secondary btn-sm" title="Limpiar búsqueda" style="display:none">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <span id="req-search-count" class="text-muted ms-auto" style="font-size:.8rem;display:none">
+      <i class="bi bi-funnel-fill me-1"></i><span id="req-search-count-num">0</span> de {{ requerimientos|length }}
+    </span>
+  </div>
   <div class="card-body p-0">
     <table class="table-modern">
       <thead>
@@ -37,13 +54,14 @@
           <th>Tipo</th>
           <th>Solicitante</th>
           <th>Estado</th>
+          <th style="text-align:center">Ítems</th>
           <th>Observaciones</th>
-          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for r in requerimientos %}
-        <tr class="req-row" style="cursor:pointer"
+        <tr class="req-row" style="cursor:pointer{% if r.estado == 'ENVIADO' %};background:#eff6ff{% endif %}"
+            data-search="REQ-{{ r.numero|lower }} {{ r.solicitante|lower }}{% for d in r.detalles.all %} {{ d.codigo|lower }} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}"
             onclick="window.location.href='{% if r.estado == 'ENVIADO' or r.estado == 'EN_REVISION' or r.estado == 'APROBADO' or r.estado == 'PARCIAL' %}{% url 'logistica:req_revisar_log' proyecto.pk r.pk %}{% else %}{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}{% endif %}'">
           <td class="fw-semibold">REQ-{{ r.numero }}</td>
           <td>{{ r.fecha|date:"d/m/Y" }}</td>
@@ -61,26 +79,83 @@
               {% if r.estado == 'ENVIADO' %}Nuevo{% else %}{{ r.get_estado_display }}{% endif %}
             </span>
           </td>
-          <td class="text-muted" style="font-size:.82rem">{{ r.observaciones|default:"—"|truncatechars:60 }}</td>
-          <td onclick="event.stopPropagation()">
-            <a href="{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}" class="btn-tbl" title="Ver detalle">
-              <i class="bi bi-eye"></i>
-            </a>
+          <td style="text-align:center">
+            <span class="badge rounded-pill bg-primary"
+                  style="font-size:.7rem;padding:.25em .6em">{{ r.detalles.count }}</span>
           </td>
+          <td class="text-muted" style="font-size:.82rem">{{ r.observaciones|default:"—"|truncatechars:60 }}</td>
         </tr>
         {% empty %}
         <tr>
           <td colspan="7">
             <div class="empty-state py-5">
               <i class="bi bi-inbox d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
-              <p class="text-muted">No hay requerimientos recibidos</p>
+              <p class="text-muted mb-0">No hay requerimientos recibidos</p>
             </div>
           </td>
         </tr>
         {% endfor %}
+        <tr id="req-no-results" style="display:none">
+          <td colspan="7">
+            <div class="empty-state py-5">
+              <i class="bi bi-search d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
+              <p class="text-muted mb-0">Ningún requerimiento contiene ítems que coincidan con "<strong id="req-no-results-q"></strong>".</p>
+              <button type="button" id="req-no-results-clear" class="btn btn-link btn-sm mt-2">Limpiar búsqueda</button>
+            </div>
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 </div>
+
+<script>
+(function () {
+  var input   = document.getElementById('req-search');
+  var clearB  = document.getElementById('req-search-clear');
+  var count   = document.getElementById('req-search-count');
+  var countN  = document.getElementById('req-search-count-num');
+  var noRes   = document.getElementById('req-no-results');
+  var noResQ  = document.getElementById('req-no-results-q');
+  var noResC  = document.getElementById('req-no-results-clear');
+  if (!input) return;
+  var rows = Array.prototype.slice.call(document.querySelectorAll('tr.req-row'));
+
+  function filtrar() {
+    var q = input.value.trim().toLowerCase();
+    var visibles = 0;
+    rows.forEach(function (r) {
+      if (!q) {
+        r.style.display = '';
+        visibles++;
+      } else {
+        var hay = (r.getAttribute('data-search') || '').indexOf(q) !== -1;
+        r.style.display = hay ? '' : 'none';
+        if (hay) visibles++;
+      }
+    });
+
+    if (q) {
+      clearB.style.display = '';
+      count.style.display = '';
+      countN.textContent = visibles;
+      if (visibles === 0 && rows.length > 0) {
+        noRes.style.display = '';
+        noResQ.textContent = input.value.trim();
+      } else {
+        noRes.style.display = 'none';
+      }
+    } else {
+      clearB.style.display = 'none';
+      count.style.display = 'none';
+      noRes.style.display = 'none';
+    }
+  }
+
+  input.addEventListener('input', filtrar);
+  clearB.addEventListener('click', function () { input.value = ''; filtrar(); input.focus(); });
+  noResC.addEventListener('click', function () { input.value = ''; filtrar(); input.focus(); });
+})();
+</script>
 
 {% endblock %}

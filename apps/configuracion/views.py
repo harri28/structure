@@ -4,10 +4,12 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, ReglaDeteccionInsumo, Reporte, ImagenReporte, MODULOS_REPORTE, ESTADOS_REPORTE, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS
+from config.permisos import requiere
 
 
 # ── Hub ───────────────────────────────────────────────────────────
 
+@requiere('puede_configurar_empresa', 'puede_administrar_usuarios', 'puede_administrar_roles')
 def hub(request):
     config = ConfigEmpresa.get()
     sunat  = ConfigSunat.get()
@@ -38,6 +40,7 @@ class EmpresaForm(forms.ModelForm):
         }
 
 
+@requiere('puede_configurar_empresa')
 def empresa(request):
     config = ConfigEmpresa.get()
     if request.method == 'POST':
@@ -87,6 +90,7 @@ def sunat(request):
 
 # ── Equipo (Usuarios + Roles combinados) ──────────────────────────
 
+@requiere('puede_administrar_usuarios', 'puede_administrar_roles')
 def equipo(request):
     from apps.proyectos.models import Proyecto
 
@@ -129,6 +133,7 @@ def equipo(request):
     })
 
 
+@requiere('puede_administrar_roles')
 def roles(request):
     from django.shortcuts import redirect as _redirect
     return _redirect('/configuracion/equipo/?tab=roles')
@@ -137,6 +142,7 @@ def roles(request):
 # ── Roles ─────────────────────────────────────────────────────────
 
 
+@requiere('puede_administrar_roles')
 def rol_crear(request):
     error = {}
     datos = {}
@@ -176,6 +182,7 @@ def rol_crear(request):
     })
 
 
+@requiere('puede_administrar_roles')
 def rol_editar(request, pk):
     rol   = get_object_or_404(Rol, pk=pk)
     error = {}
@@ -214,6 +221,7 @@ def rol_editar(request, pk):
     })
 
 
+@requiere('puede_administrar_roles')
 def rol_eliminar(request, pk):
     rol = get_object_or_404(Rol, pk=pk)
     if request.method == 'POST':
@@ -229,6 +237,7 @@ def rol_eliminar(request, pk):
 
 # ── Usuarios ──────────────────────────────────────────────────────
 
+@requiere('puede_administrar_usuarios')
 def usuarios(request):
     from django.shortcuts import redirect as _redirect
     return _redirect('/configuracion/equipo/')
@@ -242,6 +251,7 @@ def _guardar_perfil(usuario, rol_id):
     perfil.save()
 
 
+@requiere('puede_administrar_usuarios')
 def usuario_crear(request):
     from apps.proyectos.models import Proyecto, ProyectoMiembro
 
@@ -314,6 +324,7 @@ def usuario_crear(request):
     })
 
 
+@requiere('puede_administrar_usuarios')
 def usuario_editar(request, pk):
     u = get_object_or_404(User, pk=pk)
     error = {}
@@ -360,6 +371,7 @@ def usuario_editar(request, pk):
     })
 
 
+@requiere('puede_administrar_usuarios')
 def usuario_password(request, pk):
     u = get_object_or_404(User, pk=pk)
     error = {}
@@ -385,6 +397,7 @@ def usuario_password(request, pk):
     })
 
 
+@requiere('puede_administrar_usuarios')
 def usuario_eliminar(request, pk):
     u = get_object_or_404(User, pk=pk)
     if u.pk == request.user.pk:
@@ -398,6 +411,7 @@ def usuario_eliminar(request, pk):
     return render(request, 'configuracion/usuario_confirmar_eliminar.html', {'usuario': u})
 
 
+@requiere('puede_administrar_usuarios')
 def usuario_toggle(request, pk):
     if request.method == 'POST':
         u = get_object_or_404(User, pk=pk)

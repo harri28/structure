@@ -137,6 +137,9 @@ body.sb-collapsed #sidebar .collapse { display: none !important; }
 
 /* Sección header */
 .sb-section { padding: .65rem 0 .2rem; }
+/* Cuando una sección viene después de otra y NO tiene sb-label,
+   quitamos el padding-top para no dejar hueco visible. */
+.sb-section + .sb-section:not(:has(> .sb-label)) { padding-top: 0; }
 .sb-label {
   font-size: .62rem; font-weight: 700; letter-spacing: .1em;
   text-transform: uppercase; color: var(--text-light);
@@ -259,6 +262,22 @@ body.sb-collapsed .sb-chevron-btn { display: none; }
   font-size: .72rem; font-weight: 600;
   color: var(--text); white-space: nowrap;
   font-family: var(--mono);
+}
+.role-chip {
+  background: var(--accent-pale);
+  color: var(--accent);
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-xs);
+  padding: .18rem .55rem;
+  font-size: .7rem; font-weight: 600;
+  white-space: nowrap;
+  font-family: var(--mono);
+  letter-spacing: .01em;
+  display: inline-flex; align-items: center; gap: .3rem;
+}
+.role-chip.role-chip-sm {
+  font-size: .65rem;
+  padding: .1rem .4rem;
 }
 .btn-topbar {
   background: transparent;
