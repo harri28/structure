@@ -5,6 +5,7 @@ app_name = 'almacen'
 
 urlpatterns = [
     path('proyecto/<int:proyecto_id>/', views.dashboard, name='dashboard'),
+    path('proyecto/<int:proyecto_id>/almacenero/', views.dashboard_almacenero, name='dashboard_almacenero'),
     # Stock / Kardex / Consumo
     path('proyecto/<int:proyecto_id>/stock/', views.stock, name='stock'),
     path('proyecto/<int:proyecto_id>/stock/api/', views.stock_api, name='stock_api'),

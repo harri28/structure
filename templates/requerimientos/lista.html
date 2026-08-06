@@ -21,9 +21,16 @@
       </a>
     </div>
   </div>
+  {% if permisos.puede_crear_requerimientos and not permisos.puede_aprobar_requerimientos %}
+  {# Almacenero — usa el flujo simplificado /solicitar/ #}
+  <a href="{% url 'requerimientos:solicitar' proyecto.pk %}" class="btn btn-success btn-sm">
+    <i class="bi bi-cart-plus me-1"></i>Solicitar Material
+  </a>
+  {% else %}
   <a href="{% url 'requerimientos:crear' proyecto.pk %}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus-lg me-1"></i>Nuevo Requerimiento
   </a>
+  {% endif %}
 </div>
 
 {% if nuevos_aprobados %}

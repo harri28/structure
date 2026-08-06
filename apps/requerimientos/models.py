@@ -38,6 +38,12 @@ class Requerimiento(models.Model):
     observaciones = models.TextField(blank=True)
     aprobacion_vista = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Usuario que creó el requerimiento (Almacenero, Admin de Obra, etc.).
+    # Usado para filtrar "Mis solicitudes" en el dashboard del Almacenero.
+    created_by = models.ForeignKey(
+        'auth.User', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='requerimientos_creados',
+    )
     cotizacion_sistema = models.ForeignKey(
         'almacen.Cotizacion', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='requerimientos'

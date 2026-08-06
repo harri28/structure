@@ -41,6 +41,10 @@ def lista(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     estado_sel = request.GET.get('estado', '')
     qs = proyecto.requerimientos.filter(es_ajuste=False).prefetch_related('detalles__insumo')
+    # Almacenero (crea pero no aprueba): solo ve SUS solicitudes.
+    # Admin de Obra / Superadmin: ve todas las del proyecto.
+    if tiene(request.user, 'puede_crear_requerimientos') and not tiene(request.user, 'puede_aprobar_requerimientos'):
+        qs = qs.filter(created_by=request.user)
     if estado_sel:
         qs = qs.filter(estado=estado_sel)
     nuevos = proyecto.requerimientos.filter(
@@ -107,6 +111,7 @@ def crear(request, proyecto_id):
             req.estado = 'ENVIADO' if accion == 'enviar' and puede_enviar else 'BORRADOR'
             req.numero = siguiente
             req.numero_global = siguiente_global
+            req.created_by = request.user
             req.save()
             for f in formset:
                 if f.cleaned_data and not f.cleaned_data.get('DELETE'):
@@ -192,6 +197,7 @@ def solicitar(request, proyecto_id):
             req.estado = 'SOLICITADO'
             req.numero = siguiente
             req.numero_global = siguiente_global
+            req.created_by = request.user
             req.save()
             for f in formset:
                 if f.cleaned_data and not f.cleaned_data.get('DELETE'):

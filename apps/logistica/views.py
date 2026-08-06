@@ -719,8 +719,32 @@ def guias_pendientes_api(request, proyecto_id):
 @requiere('puede_gestionar_almacen_log')
 @proyecto_visible
 def almacen_log(request, proyecto_id):
+    """Vista informativa del stock del Almacenero desde Logística.
+    Solo lectura — reusa los helpers de apps.almacen.views.stock."""
+    from django.core.paginator import Paginator
+    from apps.almacen.views import _stock_query, _build_items, PAGE_SIZE_STOCK
+    from apps.presupuesto.models import TIPOS_RECURSO
+
     proyecto = _get_proyecto(proyecto_id)
-    return render(request, 'logistica/almacen_log.html', {'proyecto': proyecto})
+    tipo_sel = request.GET.get('tipo', '')
+    q        = request.GET.get('q', '').strip()
+    order    = request.GET.get('order', 'codigo')
+
+    qs, entradas_agg, salidas_agg = _stock_query(proyecto, tipo_sel, q, order)
+    paginator = Paginator(qs, PAGE_SIZE_STOCK)
+    page      = paginator.get_page(request.GET.get('page') or 1)
+    items     = _build_items(page.object_list, entradas_agg, salidas_agg)
+
+    return render(request, 'logistica/almacen_log.html', {
+        'proyecto':   proyecto,
+        'items':      items,
+        'tipos':      TIPOS_RECURSO,
+        'tipo_sel':   tipo_sel,
+        'q':          q,
+        'page':       page,
+        'total':      paginator.count,
+        'tiene_presupuesto': hasattr(proyecto, 'presupuesto') and proyecto.presupuesto is not None,
+    })
 
 
 @requiere('puede_gestionar_ctrl_maq_log')

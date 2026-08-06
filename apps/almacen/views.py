@@ -36,6 +36,10 @@ def _sync_insumo_snapshot(detalle):
 @requiere('puede_ver_almacen')
 @proyecto_visible
 def dashboard(request, proyecto_id):
+    # Si el usuario es Almacenero (crea reqs pero no aprueba), redirigir a su dashboard propio
+    from config.permisos import tiene
+    if tiene(request.user, 'puede_crear_requerimientos') and not tiene(request.user, 'puede_aprobar_requerimientos'):
+        return redirect('almacen:dashboard_almacenero', proyecto_id=proyecto_id)
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     ctx = {
         'proyecto': proyecto,
@@ -49,6 +53,45 @@ def dashboard(request, proyecto_id):
         'ultimas_salidas': proyecto.salidas.all()[:5],
     }
     return render(request, 'almacen/dashboard.html', ctx)
+
+
+@requiere('puede_ver_almacen')
+@proyecto_visible
+def dashboard_almacenero(request, proyecto_id):
+    """Dashboard específico del Almacenero — foco en su día a día:
+    guías por recibir, stock general, sus solicitudes de material."""
+    from apps.logistica.models import GuiaRemision
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+
+    # Guías despachadas (pendientes de recibir + ya registradas)
+    guias_qs = GuiaRemision.objects.filter(
+        proyecto=proyecto, estado__in=['EN_TRANSITO', 'ENTREGADO']
+    )
+    guias_por_recibir = guias_qs.filter(entrada__isnull=True).count()
+    guias_sin_ver    = guias_qs.filter(vista_por_almacen=False).count()
+    ultimas_guias    = (guias_qs.select_related('transportista', 'requerimiento')
+                                 .order_by('-fecha_emision', '-pk')[:5])
+
+    # Stock: total de insumos del presupuesto
+    try:
+        total_insumos = proyecto.presupuesto.insumos.count()
+    except Exception:
+        total_insumos = 0
+
+    # Mis solicitudes: solo las creadas por el Almacenero logueado
+    mis_solicitudes_qs = proyecto.requerimientos.filter(created_by=request.user)
+    ultimas_solicitudes = mis_solicitudes_qs.order_by('-fecha', '-numero')[:5]
+    total_solicitudes   = mis_solicitudes_qs.count()
+
+    return render(request, 'almacen/dashboard_almacenero.html', {
+        'proyecto':          proyecto,
+        'guias_por_recibir': guias_por_recibir,
+        'guias_sin_ver':     guias_sin_ver,
+        'ultimas_guias':     ultimas_guias,
+        'total_insumos':     total_insumos,
+        'ultimas_solicitudes': ultimas_solicitudes,
+        'total_solicitudes':   total_solicitudes,
+    })
 
 
 # ── Stock / Kardex ───────────────────────────────────────────────────────────
@@ -142,10 +185,12 @@ def stock(request, proyecto_id):
     })
 
 
-@requiere('puede_ver_almacen')
+@requiere('puede_ver_almacen', 'puede_gestionar_almacen_log')
 @proyecto_visible
 def stock_api(request, proyecto_id):
-    """Endpoint JSON para búsqueda + paginación live del Stock."""
+    """Endpoint JSON para búsqueda + paginación live del Stock.
+    Accesible por Almacenero (puede_ver_almacen) y por Logística
+    (puede_gestionar_almacen_log) para su vista informativa."""
     from django.core.paginator import Paginator
     from django.http import JsonResponse
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)

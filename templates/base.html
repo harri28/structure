@@ -109,13 +109,13 @@
 
     {# Almacenero — solo crea, no aprueba #}
     {% if permisos.puede_crear_requerimientos and not permisos.puede_aprobar_requerimientos %}
-    <a href="{% url 'requerimientos:solicitar' proyecto_activo.pk %}"
-       class="sb-link {% block nav_solicitar %}{% endblock %}">
-      <i class="bi bi-cart-plus"></i> Solicitar material
+    <a href="{% url 'almacen:dashboard_almacenero' proyecto_activo.pk %}"
+       class="sb-link {% block nav_dashboard_almacenero %}{% endblock %}">
+      <i class="bi bi-grid-1x2"></i> Dashboard
     </a>
     <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
-       class="sb-link {% block nav_mis_solicitudes %}{% endblock %}">
-      <i class="bi bi-list-ul"></i> Mis solicitudes
+       class="sb-link {% block nav_solicitar %}{% endblock %}">
+      <i class="bi bi-cart-plus"></i> Solicitar material
     </a>
     {% endif %}
 

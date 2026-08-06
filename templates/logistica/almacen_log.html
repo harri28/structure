@@ -1,5 +1,5 @@
-﻿{% extends 'base.html' %}
-{% block title %}Almacén — {{ proyecto.codigo }}{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Almacén (Logística) — {{ proyecto.codigo }}{% endblock %}
 {% block nav_log_almacen %}active{% endblock %}
 
 {% block breadcrumb %}
@@ -8,18 +8,255 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h4 class="d-flex align-items-center gap-2">
-    <i class="bi bi-box-seam" style="color:#2563eb"></i>
-    Almacén — {{ proyecto.codigo }}
-  </h4>
-</div>
-<div class="card">
-  <div class="card-body">
-    <div class="empty-state py-5">
-      <i class="bi bi-box-seam d-block" style="font-size:2.5rem;opacity:.2;margin-bottom:.75rem"></i>
-      <p class="text-muted">Módulo en construcción</p>
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'logistica:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Logística</a>
+    <h4><i class="bi bi-box-seam me-2" style="color:#2563eb"></i>Almacén — Stock del proyecto</h4>
+    <div class="text-muted">
+      Vista informativa del stock físico registrado por el Almacenero.
+      <span class="badge bg-light text-muted border ms-2" style="font-size:.68rem;padding:.25em .55em">Solo lectura</span>
     </div>
   </div>
 </div>
+
+<!-- Filtros + buscador -->
+<div class="card mb-3">
+  <div class="card-body py-2 d-flex gap-2 align-items-center flex-wrap">
+    <div class="input-group input-group-sm" style="max-width:360px">
+      <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="stock-search"
+             class="form-control form-control-sm"
+             placeholder="Buscar por código o descripción…"
+             autocomplete="off"
+             value="{{ q|default:'' }}">
+      <button type="button" id="stock-search-clear" class="btn btn-outline-secondary btn-sm" title="Limpiar" style="display:none">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <select id="stock-tipo" class="form-select form-select-sm" style="width:auto">
+      <option value="">Todos los tipos</option>
+      {% for val, label in tipos %}
+      <option value="{{ val }}" {% if tipo_sel == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+              data-bs-toggle="dropdown" aria-expanded="false" id="stock-order-btn">
+        <i class="bi bi-funnel me-1"></i>Filtrar por
+      </button>
+      <ul class="dropdown-menu" style="font-size:.85rem" id="stock-order-menu">
+        <li><a class="dropdown-item d-flex align-items-center" href="#" data-order="codigo">
+          <i class="bi bi-check2 me-2" style="font-size:.9rem;color:#2563eb"></i>
+          <span>Por código (numérico)</span>
+        </a></li>
+        <li><a class="dropdown-item d-flex align-items-center" href="#" data-order="alpha">
+          <i class="bi bi-check2 me-2" style="font-size:.9rem;color:#2563eb;visibility:hidden"></i>
+          <span>Alfabético (A-Z)</span>
+        </a></li>
+        <li><a class="dropdown-item d-flex align-items-center" href="#" data-order="cantidad_desc">
+          <i class="bi bi-check2 me-2" style="font-size:.9rem;color:#2563eb;visibility:hidden"></i>
+          <span>Cantidad más alta</span>
+        </a></li>
+        <li><a class="dropdown-item d-flex align-items-center" href="#" data-order="cantidad_asc">
+          <i class="bi bi-check2 me-2" style="font-size:.9rem;color:#2563eb;visibility:hidden"></i>
+          <span>Cantidad más baja</span>
+        </a></li>
+      </ul>
+    </div>
+    <input type="hidden" id="stock-order" value="codigo">
+
+    <span class="ms-auto text-muted" style="font-size:.78rem">
+      <span id="stock-count">{{ total }}</span> insumo<span id="stock-count-s">{% if total != 1 %}s{% endif %}</span>
+    </span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Descripción</th>
+          <th>Tipo</th>
+          <th>Unidad</th>
+          <th class="text-end">Presupuestado</th>
+          <th class="text-end">Entradas</th>
+          <th class="text-end">Salidas</th>
+          <th class="text-end">Stock Almacén</th>
+        </tr>
+      </thead>
+      <tbody id="stock-tbody">
+        {% for item in items %}
+        <tr>
+          <td><code>{{ item.insumo.codigo }}</code></td>
+          <td>{{ item.insumo.descripcion }}</td>
+          <td><span class="badge bg-secondary" style="font-size:.7rem">{{ item.insumo.get_tipo_display }}</span></td>
+          <td class="text-muted">{{ item.insumo.unidad }}</td>
+          <td class="text-end text-muted">{{ item.presupuestado|floatformat:2 }}</td>
+          <td class="text-end text-success fw-semibold">{{ item.total_entrada|floatformat:2 }}</td>
+          <td class="text-end text-danger">{{ item.total_salida|floatformat:2 }}</td>
+          <td class="text-end fw-bold {% if item.saldo > 0 %}text-success{% else %}text-muted{% endif %}">
+            {{ item.saldo|floatformat:2 }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state py-5 text-center">
+              <i class="bi bi-archive d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
+              {% if tiene_presupuesto %}
+              <p class="text-muted mb-0">Este proyecto no tiene insumos en su presupuesto.</p>
+              {% else %}
+              <p class="text-muted mb-0">Este proyecto aún no tiene presupuesto cargado.</p>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
+    <div class="text-muted" style="font-size:.78rem" id="stock-page-info">
+      Página {{ page.number }} de {{ page.paginator.num_pages }}
+    </div>
+    <nav>
+      <ul class="pagination pagination-sm mb-0" id="stock-pagination"></ul>
+    </nav>
+  </div>
+</div>
+
+<script>
+(function () {
+  const API = '{% url "almacen:stock_api" proyecto.pk %}';
+  const input      = document.getElementById('stock-search');
+  const clearB     = document.getElementById('stock-search-clear');
+  const tipoSel    = document.getElementById('stock-tipo');
+  const orderSel   = document.getElementById('stock-order');
+  const orderMenu  = document.getElementById('stock-order-menu');
+  const tbody      = document.getElementById('stock-tbody');
+  const countEl    = document.getElementById('stock-count');
+  const countS     = document.getElementById('stock-count-s');
+  const pagInfo    = document.getElementById('stock-page-info');
+  const pagUl      = document.getElementById('stock-pagination');
+  let currentPage  = {{ page.number }};
+  let totalPages   = {{ page.paginator.num_pages }};
+  let timer;
+
+  const STORAGE_KEY = 'stockAlmacenSort';  // compartido con la vista Almacenero
+  const savedOrder = localStorage.getItem(STORAGE_KEY);
+  const validOrders = ['codigo', 'alpha', 'cantidad_desc', 'cantidad_asc'];
+  if (savedOrder && validOrders.indexOf(savedOrder) !== -1) orderSel.value = savedOrder;
+
+  function marcarOrderActivo(value) {
+    orderMenu.querySelectorAll('a[data-order]').forEach(function (a) {
+      const icon = a.querySelector('i.bi-check2');
+      if (icon) icon.style.visibility = (a.dataset.order === value) ? 'visible' : 'hidden';
+    });
+  }
+  marcarOrderActivo(orderSel.value);
+
+  function render(data) {
+    if (data.items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state py-4 text-center">' +
+        '<i class="bi bi-search d-block" style="font-size:1.8rem;opacity:.2;margin-bottom:.4rem"></i>' +
+        '<p class="text-muted mb-0">Ningún insumo coincide con la búsqueda.</p></div></td></tr>';
+    } else {
+      tbody.innerHTML = data.items.map(function (it) {
+        return '<tr>' +
+          '<td><code>' + it.codigo + '</code></td>' +
+          '<td>' + it.descripcion + '</td>' +
+          '<td><span class="badge bg-secondary" style="font-size:.7rem">' + it.tipo + '</span></td>' +
+          '<td class="text-muted">' + it.unidad + '</td>' +
+          '<td class="text-end text-muted">' + it.presupuestado + '</td>' +
+          '<td class="text-end text-success fw-semibold">' + it.total_entrada + '</td>' +
+          '<td class="text-end text-danger">' + it.total_salida + '</td>' +
+          '<td class="text-end fw-bold ' + (it.saldo_pos ? 'text-success' : 'text-muted') + '">' + it.saldo + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+    countEl.textContent = data.count;
+    countS.textContent = data.count === 1 ? '' : 's';
+    pagInfo.textContent = 'Página ' + data.page + ' de ' + data.total_pages;
+    currentPage = data.page;
+    totalPages  = data.total_pages;
+    renderPagination();
+    clearB.style.display = input.value ? '' : 'none';
+  }
+
+  function renderPagination() {
+    if (totalPages <= 1) { pagUl.innerHTML = ''; return; }
+    const pages = buildPageRange(currentPage, totalPages);
+    let html = '';
+    html += '<li class="page-item ' + (currentPage === 1 ? 'disabled' : '') + '">' +
+      '<a class="page-link" href="#" data-page="' + (currentPage - 1) + '">«</a></li>';
+    pages.forEach(function (p) {
+      if (p === '…') html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+      else html += '<li class="page-item ' + (p === currentPage ? 'active' : '') + '">' +
+        '<a class="page-link" href="#" data-page="' + p + '">' + p + '</a></li>';
+    });
+    html += '<li class="page-item ' + (currentPage === totalPages ? 'disabled' : '') + '">' +
+      '<a class="page-link" href="#" data-page="' + (currentPage + 1) + '">»</a></li>';
+    pagUl.innerHTML = html;
+  }
+
+  function buildPageRange(current, total) {
+    const range = [];
+    if (total <= 7) { for (let i = 1; i <= total; i++) range.push(i); return range; }
+    range.push(1);
+    if (current > 3) range.push('…');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) range.push(i);
+    if (current < total - 2) range.push('…');
+    range.push(total);
+    return range;
+  }
+
+  function fetchPage(page) {
+    const params = new URLSearchParams({
+      q:     input.value.trim(),
+      tipo:  tipoSel.value,
+      order: orderSel.value,
+      page:  page,
+    });
+    fetch(API + '?' + params.toString())
+      .then(function (r) { return r.json(); })
+      .then(render).catch(function () {});
+  }
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () { fetchPage(1); }, 250);
+  });
+  clearB.addEventListener('click', function () { input.value = ''; clearB.style.display = 'none'; fetchPage(1); input.focus(); });
+  tipoSel.addEventListener('change', function () { fetchPage(1); });
+  orderMenu.addEventListener('click', function (e) {
+    const a = e.target.closest('a[data-order]');
+    if (!a) return;
+    e.preventDefault();
+    const nuevo = a.dataset.order;
+    if (nuevo === orderSel.value) return;
+    orderSel.value = nuevo;
+    localStorage.setItem(STORAGE_KEY, nuevo);
+    marcarOrderActivo(nuevo);
+    fetchPage(1);
+  });
+  pagUl.addEventListener('click', function (e) {
+    const a = e.target.closest('a[data-page]');
+    if (!a) return;
+    e.preventDefault();
+    const li = a.closest('li');
+    if (li.classList.contains('disabled') || li.classList.contains('active')) return;
+    const p = parseInt(a.dataset.page, 10);
+    if (!isNaN(p)) fetchPage(p);
+  });
+
+  renderPagination();
+
+  if (savedOrder && savedOrder !== 'codigo') fetchPage(1);
+})();
+</script>
 {% endblock %}
