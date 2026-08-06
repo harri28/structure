@@ -596,3 +596,63 @@ Sin el CAST, PostgreSQL ordena lexicográficamente y da `1, 10, 100, 11, 2, 20, 
 - Diferenciar visualmente los códigos de distintos grupos (prefijo o badge).
 - Definir qué pasa si el usuario intenta buscar "1" en el buscador global —
   ¿ambigüedad? ¿desambiguar por grupo?
+
+---
+
+## 16. Flujo Logística → Almacén: recepción manual con validación
+
+**Implementado (2026-08-05):**
+
+### Ciclo actual
+1. **Logística** hace click en "Guardar y Generar guía" → guía pasa a `EN_TRANSITO`,
+   se descuenta el stock del `InsumoPresupuesto`, el REQ pasa a `ATENDIDO`.
+2. **NO se crea automáticamente una Entrada en Almacén** — se removió el
+   `_registrar_entrada_almacen` del `guia_crear`. La Entrada nace únicamente
+   por acción manual del Almacenero.
+3. Se dispara una notificación `"Nueva Guía GR-XXX"` con URL a
+   `/almacen/proyecto/N/guias/` (buzón de recepción del Almacén).
+4. **Almacén → Guías** (sub-módulo nuevo) muestra las guías EN_TRANSITO/ENTREGADO
+   con fondo verde suave + badge "NUEVA" para las no vistas
+   (`GuiaRemision.vista_por_almacen`, `BooleanField default=False`, migración
+   `logistica/0003`). Al abrir el detalle, se marca vista=True.
+5. **Detalle readonly** (`guia_almacen_detalle`) muestra datos e ítems no
+   editables. Botón inferior:
+   - **"Registrar guía"** (verde) si aún no hay Entrada asociada
+   - **"Guía Registrada"** (gris disabled) si `Entrada.objects.filter(guia=guia).exists()`
+6. **Nueva Entrada** en modo `?guia=<pk>`:
+   - Fecha de recepción = **`date.today()`** automática, no editable
+   - Datos de la Guía en solo lectura (labels + texto, sin apariencia de input)
+   - Tabla `Insumos | U. Medida | Stock | Cantidad | Observaciones | Acciones`
+   - Cantidad prellenada con la despachada; **editable manualmente**
+   - Botón **Aplicar** por fila (verde) → actualiza el stock visualmente
+     (Stock + Cantidad) y bloquea la cantidad. Cambia a **Editar** (azul outline)
+     para revertir. Marca `item_applied_{i}=1` en hidden input
+   - Al submit Guardar → solo se crean `DetalleEntrada` de las filas con
+     `applied=1`. El resto se ignora
+   - Trazabilidad: `Entrada.guia = guia` (OneToOne)
+
+### Reglas de validación de cantidad
+Al ingresar cantidad en un ítem (comparada contra `guia.detalle.cantidad`):
+
+| Situación | UI |
+|---|---|
+| Cantidad **=** Despachada | Todo OK. Aplicar habilitado. Observaciones deshabilitada |
+| Cantidad **>** Despachada | Input rojo. Mensaje: "La cantidad despachada no coincide con la cantidad ingresada". **Aplicar bloqueado** (opacity 50%). Regla de seguridad — el Almacén no puede recibir más de lo que Logística despachó |
+| Cantidad **<** Despachada | Observaciones **required**, placeholder "Motivo del faltante *". Aplicar solo se habilita cuando hay texto en Observaciones. La observación se persiste en `DetalleEntrada.observaciones` (`CharField 300`, migración `almacen/0010`) |
+| Cantidad = 0 o vacía | Aplicar bloqueado |
+
+### Impacto en Stock
+El "Stock Almacén" mostrado en `Almacén → Stock` es un cálculo derivado:
+`Σ DetalleEntrada.cantidad − Σ DetalleSalida.cantidad` por insumo. Al crear
+Entradas nuevas, el saldo se refleja automáticamente. NO se toca
+`InsumoPresupuesto.cantidad` (ese sigue siendo el cupo restante del presupuesto
+que descuenta Logística al despachar).
+
+### Pendientes conocidos
+- **Notificaciones dirigidas** — hoy la notif se dispara globalmente
+  (`usuario=None`). Filtrar por rol Almacenero requiere extender `notificar()`.
+- **SSE real-time** en la campana — el endpoint `notif_stream` existe pero
+  está huérfano (ver §7). Reactivarlo tiene costo por conexiones concurrentes.
+- **Rechazo de guía** — hoy si Cantidad > Despachada solo se bloquea Aplicar.
+  No hay flujo para "rechazar la guía" formalmente. `Entrada.estado='RECHAZADO'`
+  existe en el modelo pero no está expuesto en la UI actual.
