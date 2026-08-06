@@ -56,6 +56,10 @@ class GuiaRemision(models.Model):
         on_delete=models.SET_NULL,
         related_name='guias_remision',
     )
+    # Marca "sin ver" del Almacén: cuando Logística despacha, arranca en False.
+    # Se pasa a True cuando el Almacenero abre el detalle en Almacén → Guías.
+    # Usado para resaltar en verde suave las guías nuevas en la lista.
+    vista_por_almacen = models.BooleanField(default=False)
     creado_en      = models.DateTimeField(auto_now_add=True)
 
     class Meta:

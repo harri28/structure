@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}Guía {{ guia.numero }} — Almacén{% endblock %}
+{% block nav_guias_almacen %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'almacen:dashboard' proyecto.pk %}">Almacén</a></li>
+<li class="breadcrumb-item"><a href="{% url 'almacen:guias_almacen_lista' proyecto.pk %}">Guías</a></li>
+<li class="breadcrumb-item active">{{ guia.numero }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'almacen:guias_almacen_lista' proyecto.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Guías
+    </a>
+    <h4>
+      <i class="bi bi-truck me-2" style="color:#2563eb"></i>
+      Guía <code>{{ guia.numero }}</code>
+      {% if guia.requerimiento %}
+      <a href="#" class="badge bg-light text-dark border ms-2" style="font-size:.7rem;padding:.3em .6em;text-decoration:none">
+        <i class="bi bi-link-45deg me-1 text-primary"></i>REQ-{{ guia.requerimiento.numero }}
+      </a>
+      {% endif %}
+    </h4>
+    <div class="text-muted">Vista de solo lectura — datos generados por Logística</div>
+  </div>
+</div>
+
+<!-- Datos de la guía (readonly) -->
+<div class="card mb-3">
+  <div class="card-header" style="font-size:.82rem;font-weight:700;background:#f8fafc">
+    <i class="bi bi-file-earmark-text me-1"></i> Datos de la Guía
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      {# Fila 1 — 4 columnas: N° Guía | Fecha Emisión | Fecha Traslado | Motivo #}
+      <div class="col-md-3">
+        <label class="text-muted small">N° Guía</label>
+        <p class="mb-0 fw-bold" style="color:#2563eb">{{ guia.numero }}</p>
+      </div>
+      <div class="col-md-3">
+        <label class="text-muted small">Fecha Emisión</label>
+        <p class="mb-0">{{ guia.fecha_emision|date:"d/m/Y" }}</p>
+      </div>
+      <div class="col-md-3">
+        <label class="text-muted small">Fecha Traslado</label>
+        <p class="mb-0">{{ guia.fecha_traslado|date:"d/m/Y" }}</p>
+      </div>
+      <div class="col-md-3">
+        <label class="text-muted small">Motivo</label>
+        <p class="mb-0">{{ guia.get_motivo_display }}</p>
+      </div>
+
+      {# Fila 2 — 4 columnas alineadas con Fila 1: Transportista | Placa | N° Licencia | Peso (kg) #}
+      <div class="col-md-3">
+        <label class="text-muted small">Nombre de Transportista</label>
+        <p class="mb-0">
+          {% if guia.conductor %}{{ guia.conductor }}
+          {% elif guia.transportista %}{{ guia.transportista.razon_social }}
+          {% else %}—{% endif %}
+        </p>
+      </div>
+      <div class="col-md-3">
+        <label class="text-muted small">Placa</label>
+        <p class="mb-0">{{ guia.placa|default:"—" }}</p>
+      </div>
+      <div class="col-md-3">
+        <label class="text-muted small">N° Licencia</label>
+        <p class="mb-0">{{ guia.licencia|default:"—" }}</p>
+      </div>
+      <div class="col-md-3">
+        <label class="text-muted small">Peso (kg)</label>
+        <p class="mb-0">{% if guia.peso_kg %}{{ guia.peso_kg|floatformat:2 }}{% else %}—{% endif %}</p>
+      </div>
+
+      {# Fila 3 — 2 columnas anchas: Origen | Destino #}
+      <div class="col-md-6">
+        <label class="text-muted small">Punto de Partida</label>
+        <p class="mb-0">{{ guia.origen|default:"—" }}</p>
+      </div>
+      <div class="col-md-6">
+        <label class="text-muted small">Punto de Llegada</label>
+        <p class="mb-0"><strong>{{ guia.destino|default:"—" }}</strong></p>
+      </div>
+
+      {% if guia.observaciones %}
+      <div class="col-12">
+        <label class="text-muted small">Observaciones</label>
+        <p class="mb-0">{{ guia.observaciones }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Ítems (readonly) -->
+<div class="card mb-3">
+  <div class="card-header" style="font-size:.82rem;font-weight:700;background:#f8fafc">
+    <i class="bi bi-boxes me-1"></i> Materiales a Recibir
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead style="background:#f8fafc">
+        <tr>
+          <th>Descripción</th>
+          <th style="width:80px" class="text-center">Unidad</th>
+          <th style="width:120px" class="text-end">Cantidad</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in guia.detalles.all %}
+        <tr>
+          <td style="font-size:.83rem">{{ d.descripcion }}</td>
+          <td class="text-center" style="font-size:.82rem;color:#6b7280">{{ d.unidad|default:"—" }}</td>
+          <td class="text-end fw-semibold" style="font-size:.83rem">{{ d.cantidad|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:.82rem">Sin ítems registrados en la guía</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Acción: registrar entrada -->
+<div class="d-flex justify-content-end gap-2">
+  <a href="{% url 'almacen:guias_almacen_lista' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
+    Cancelar
+  </a>
+  {% if guia_registrada %}
+  <button type="button" class="btn btn-secondary btn-sm" disabled style="cursor:not-allowed;opacity:.65">
+    <i class="bi bi-check-circle-fill me-1"></i>Guía Registrada
+  </button>
+  {% else %}
+  <a href="{% url 'almacen:entrada_crear' proyecto.pk %}?guia={{ guia.pk }}" class="btn btn-success btn-sm">
+    <i class="bi bi-box-arrow-in-down me-1"></i>Registrar guía
+  </a>
+  {% endif %}
+</div>
+{% endblock %}

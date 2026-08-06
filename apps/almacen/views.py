@@ -283,6 +283,53 @@ def kardex(request, proyecto_id, insumo_id):
     })
 
 
+# ── Guías (perspectiva Almacén) ─────────────────────────────────────────────
+
+@requiere('puede_gestionar_entradas')
+@proyecto_visible
+def guias_almacen_lista(request, proyecto_id):
+    """Sub-módulo 'Guías' del Almacén: recibe las guías despachadas por Logística.
+    Muestra todas las guías con estado EN_TRANSITO o ENTREGADO (excluye ANULADAS).
+    Las no vistas por Almacén (vista_por_almacen=False) se resaltan en verde suave.
+    """
+    from apps.logistica.models import GuiaRemision
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+
+    guias = (GuiaRemision.objects
+             .filter(proyecto=proyecto, estado__in=['EN_TRANSITO', 'ENTREGADO'])
+             .select_related('transportista', 'requerimiento')
+             .prefetch_related('detalles')
+             .order_by('-fecha_emision', '-pk'))
+
+    return render(request, 'almacen/guias_lista.html', {
+        'proyecto': proyecto,
+        'guias':    guias,
+    })
+
+
+@requiere('puede_gestionar_entradas')
+def guia_almacen_detalle(request, pk):
+    """Vista readonly de una guía desde la perspectiva del Almacén.
+    Al abrirse, marca la guía como vista_por_almacen=True (para que ya no aparezca
+    en verde en la lista). Muestra datos + ítems no editables, con botón 'Registrar'
+    abajo que lleva al form de Nueva Entrada con autofill (?guia=<pk>).
+    """
+    from apps.logistica.models import GuiaRemision
+    guia = get_object_or_404(
+        GuiaRemision.objects.select_related('proyecto', 'transportista', 'requerimiento')
+                            .prefetch_related('detalles'),
+        pk=pk,
+    )
+    if not guia.vista_por_almacen:
+        guia.vista_por_almacen = True
+        guia.save(update_fields=['vista_por_almacen'])
+    return render(request, 'almacen/guia_almacen_detalle.html', {
+        'guia':     guia,
+        'proyecto': guia.proyecto,
+        'guia_registrada': Entrada.objects.filter(guia=guia).exists(),
+    })
+
+
 # ── Entradas ────────────────────────────────────────────────────────────────
 
 @requiere('puede_gestionar_entradas')
@@ -303,34 +350,159 @@ def entrada_detalle(request, pk):
 @requiere('puede_gestionar_entradas')
 @proyecto_visible
 def entrada_crear(request, proyecto_id):
+    from apps.logistica.models import GuiaRemision
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+
+    # Detectar modo guía (viene desde Almacén → Guías → Registrar guía)
+    guia_pk = (request.GET.get('guia') or request.POST.get('guia_pk') or '').strip()
+    guia = None
+    if guia_pk:
+        try:
+            guia = (GuiaRemision.objects
+                    .select_related('transportista', 'requerimiento')
+                    .prefetch_related('detalles')
+                    .get(pk=int(guia_pk), proyecto=proyecto))
+        except (ValueError, GuiaRemision.DoesNotExist):
+            guia = None
+
     if request.method == 'POST':
         form = EntradaForm(request.POST, proyecto=proyecto)
-        formset = DetalleEntradaFormSet(request.POST, prefix='detalles')
-        if form.is_valid() and formset.is_valid():
-            entrada = form.save(commit=False)
-            entrada.proyecto = proyecto
-            entrada.save()
-            for f in formset:
-                if f.cleaned_data and not f.cleaned_data.get('DELETE'):
-                    d = f.save(commit=False)
-                    d.entrada = entrada
-                    _sync_insumo_snapshot(d)
-            log(request, 'CREAR', 'Almacén',
-                f'Entrada GUIA {entrada.serie}-{entrada.numero_guia} registrada en {proyecto.codigo}')
-            notificar(
-                f'Nueva entrada registrada — Guía {entrada.serie}-{entrada.numero_guia}',
-                mensaje=f'Por {request.user.get_full_name() or request.user.username} en {proyecto.codigo}',
-                tipo='success',
-            )
-            messages.success(request, 'Entrada registrada.')
-            return redirect('almacen:entrada_detalle', pk=entrada.pk)
+        if guia:
+            # Modo guía: no usamos DetalleEntradaFormSet, iteramos por los items enviados.
+            if form.is_valid():
+                from datetime import date
+                entrada = form.save(commit=False)
+                entrada.proyecto = proyecto
+                entrada.guia = guia
+                # La fecha de recepción se registra automáticamente al día de HOY,
+                # independientemente de la fecha de traslado de la guía.
+                entrada.fecha = date.today()
+                entrada.save()
+                items_count = int(request.POST.get('items_count', 0) or 0)
+                for i in range(items_count):
+                    # Solo procesamos las filas que el Almacenero marcó como "Aplicadas"
+                    applied = request.POST.get(f'item_applied_{i}', '0').strip()
+                    if applied != '1':
+                        continue
+                    desc      = request.POST.get(f'item_desc_{i}', '').strip()
+                    unidad    = request.POST.get(f'item_unidad_{i}', '').strip()
+                    cant_raw  = request.POST.get(f'item_cantidad_{i}', '0').strip()
+                    insumo_pk = request.POST.get(f'item_insumo_pk_{i}', '').strip()
+                    obs       = request.POST.get(f'item_observaciones_{i}', '').strip()
+                    try:
+                        cant = Decimal(cant_raw) if cant_raw else Decimal('0')
+                    except Exception:
+                        cant = Decimal('0')
+                    if not desc or cant <= 0:
+                        continue
+                    ins = None
+                    if insumo_pk:
+                        try:
+                            ins = InsumoPresupuesto.objects.get(pk=int(insumo_pk))
+                        except (ValueError, InsumoPresupuesto.DoesNotExist):
+                            pass
+                    det = DetalleEntrada.objects.create(
+                        entrada=entrada,
+                        insumo=ins,
+                        descripcion=desc,
+                        unidad=unidad,
+                        cantidad=cant,
+                        observaciones=obs,
+                    )
+                    _sync_insumo_snapshot(det)
+                log(request, 'CREAR', 'Almacén',
+                    f'Entrada registrada desde Guía {guia.numero} en {proyecto.codigo}')
+                notificar(
+                    f'Nueva entrada registrada — Guía {guia.numero}',
+                    mensaje=f'Por {request.user.get_full_name() or request.user.username} en {proyecto.codigo}',
+                    tipo='success',
+                )
+                messages.success(request, f'Entrada de Guía {guia.numero} registrada.')
+                return redirect('almacen:entrada_detalle', pk=entrada.pk)
+        else:
+            # Modo manual clásico: usa el formset
+            formset = DetalleEntradaFormSet(request.POST, prefix='detalles')
+            if form.is_valid() and formset.is_valid():
+                entrada = form.save(commit=False)
+                entrada.proyecto = proyecto
+                entrada.save()
+                for f in formset:
+                    if f.cleaned_data and not f.cleaned_data.get('DELETE'):
+                        d = f.save(commit=False)
+                        d.entrada = entrada
+                        _sync_insumo_snapshot(d)
+                log(request, 'CREAR', 'Almacén',
+                    f'Entrada GUIA {entrada.serie}-{entrada.numero_guia} registrada en {proyecto.codigo}')
+                notificar(
+                    f'Nueva entrada registrada — Guía {entrada.serie}-{entrada.numero_guia}',
+                    mensaje=f'Por {request.user.get_full_name() or request.user.username} en {proyecto.codigo}',
+                    tipo='success',
+                )
+                messages.success(request, 'Entrada registrada.')
+                return redirect('almacen:entrada_detalle', pk=entrada.pk)
     else:
-        form = EntradaForm(proyecto=proyecto)
+        # GET
+        initial = {}
+        items_recibir = []
+        if guia:
+            from datetime import date
+            initial = {
+                'numero_guia': guia.numero,
+                'serie':       guia.numero,
+                'fecha':       date.today(),   # fecha de recepción = hoy (no la de traslado)
+                'proveedor':   guia.conductor or (guia.transportista.razon_social if guia.transportista else ''),
+                'descripcion': guia.get_motivo_display(),
+                'requerimiento': guia.requerimiento_id,
+            }
+            # Preparar items con stock actual (entradas - salidas) buscando insumo por descripción
+            entradas_agg = {
+                r['insumo_id']: r['total']
+                for r in DetalleEntrada.objects
+                .filter(entrada__proyecto=proyecto)
+                .values('insumo_id')
+                .annotate(total=Sum('cantidad'))
+            }
+            salidas_agg = {
+                r['insumo_id']: r['total']
+                for r in DetalleSalida.objects
+                .filter(salida__proyecto=proyecto)
+                .values('insumo_id')
+                .annotate(total=Sum('cantidad'))
+            }
+            for d in guia.detalles.all():
+                # Buscar el InsumoPresupuesto por descripción (iexact)
+                ins = None
+                try:
+                    ins = proyecto.presupuesto.insumos.filter(descripcion__iexact=d.descripcion).first()
+                except Exception:
+                    pass
+                if ins:
+                    stock_actual = (entradas_agg.get(ins.pk, Decimal('0'))
+                                    - salidas_agg.get(ins.pk, Decimal('0')))
+                else:
+                    stock_actual = None  # None → mostrar '—' en el template
+                items_recibir.append({
+                    'descripcion':   d.descripcion,
+                    'unidad':        d.unidad,
+                    'cantidad_guia': d.cantidad,
+                    'insumo_pk':     ins.pk if ins else '',
+                    'stock_actual':  stock_actual,
+                })
+
+        form = EntradaForm(proyecto=proyecto, initial=initial)
         formset = DetalleEntradaFormSet(prefix='detalles')
-    return render(request, 'almacen/entrada_form.html', {
-        'form': form, 'formset': formset, 'proyecto': proyecto, 'titulo': 'Nueva Entrada',
-    })
+
+    ctx = {
+        'form': form, 'formset': formset, 'proyecto': proyecto,
+        'titulo': 'Nueva Entrada',
+    }
+    if guia:
+        ctx.update({
+            'guia': guia,
+            'modo_guia': True,
+            'items_recibir': items_recibir if request.method == 'GET' else [],
+        })
+    return render(request, 'almacen/entrada_form.html', ctx)
 
 
 @requiere('puede_gestionar_entradas')

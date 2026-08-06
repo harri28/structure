@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Guías (Recepción) — {{ proyecto.codigo }}{% endblock %}
+{% block nav_guias_almacen %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'almacen:dashboard' proyecto.pk %}">Almacén</a></li>
+<li class="breadcrumb-item active">Guías</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <a href="{% url 'almacen:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Almacén</a>
+    <h4><i class="bi bi-truck me-2" style="color:#2563eb"></i>Guías Recibidas</h4>
+    <div class="text-muted">
+      Guías despachadas por Logística.
+      <span class="badge" style="background:#dcfce7;color:#166534;font-size:.7rem;padding:.2em .5em;margin-left:.35rem">Verde</span> = aún sin ver
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>N° Guía</th>
+          <th>Origen (REQ)</th>
+          <th>Emisión</th>
+          <th>Traslado</th>
+          <th>Destino</th>
+          <th>Transportista</th>
+          <th class="text-center">Ítems</th>
+          <th class="text-end" style="width:180px">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in guias %}
+        <tr class="guia-row" style="cursor:pointer{% if not g.vista_por_almacen %};background:#dcfce7{% endif %}"
+            onclick="window.location='{% url 'almacen:guia_almacen_detalle' g.pk %}'">
+          <td class="fw-bold" style="color:#2563eb">
+            {{ g.numero }}
+            {% if not g.vista_por_almacen %}
+            <span class="badge bg-success ms-1" style="font-size:.6rem;padding:.15em .45em;vertical-align:middle">NUEVA</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if g.requerimiento %}
+            <span class="badge bg-light text-dark border" style="font-size:.7rem;padding:.3em .6em">
+              <i class="bi bi-link-45deg me-1 text-primary"></i>REQ-{{ g.requerimiento.numero }}
+            </span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td style="font-size:.8rem">{{ g.fecha_emision|date:"d/m/Y" }}</td>
+          <td style="font-size:.8rem">{{ g.fecha_traslado|date:"d/m/Y" }}</td>
+          <td style="font-size:.78rem">{{ g.destino|truncatechars:35 }}</td>
+          <td style="font-size:.78rem">
+            {% if g.conductor %}{{ g.conductor }}
+            {% elif g.transportista %}{{ g.transportista.razon_social }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            <span class="badge rounded-pill bg-primary" style="font-size:.7rem;padding:.25em .6em">{{ g.detalles.count }}</span>
+          </td>
+          <td class="text-end">
+            <a href="{% url 'almacen:guia_almacen_detalle' g.pk %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-eye me-1"></i>Ver Guía
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state py-5 text-center">
+              <i class="bi bi-truck d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
+              <p class="text-muted mb-0">Aún no hay guías despachadas por Logística.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

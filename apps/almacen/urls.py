@@ -24,6 +24,9 @@ urlpatterns = [
     path('salidas/<int:pk>/', views.salida_detalle, name='salida_detalle'),
     path('salidas/<int:pk>/editar/', views.salida_editar, name='salida_editar'),
     path('salidas/<int:pk>/eliminar/', views.salida_eliminar, name='salida_eliminar'),
+    # Guías (perspectiva Almacén — recepción de guías despachadas por Logística)
+    path('proyecto/<int:proyecto_id>/guias/', views.guias_almacen_lista, name='guias_almacen_lista'),
+    path('guias/<int:pk>/ver/', views.guia_almacen_detalle, name='guia_almacen_detalle'),
     # Cotizaciones
     path('proyecto/<int:proyecto_id>/cotizaciones/', views.cot_lista, name='cot_lista'),
     path('proyecto/<int:proyecto_id>/cotizaciones/nueva/',  views.cot_crear,  name='cot_crear'),

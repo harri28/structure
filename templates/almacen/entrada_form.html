@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block title %}{{ titulo }}{% endblock %}
 {% block nav_entradas %}active{% endblock %}
 {% block breadcrumb %}
@@ -8,20 +8,95 @@
 {% endblock %}
 
 {% block content %}
-<h4 class="fw-bold mb-4">{{ titulo }}</h4>
+<h4 class="fw-bold mb-4">
+  {{ titulo }}
+  {% if modo_guia %}<span class="badge bg-primary ms-2" style="font-size:.68rem;vertical-align:middle">Desde Guía {{ guia.numero }}</span>{% endif %}
+</h4>
+
 <form method="post" class="form-compact">
   {% csrf_token %}
+  {% if modo_guia %}<input type="hidden" name="guia_pk" value="{{ guia.pk }}">{% endif %}
+
+  {# ═══ Datos de la Guía ═══ #}
   <div class="card mb-3">
     <div class="card-header">Datos de la Guía</div>
-    <div class="card-body">
+    <div class="card-body {% if modo_guia %}py-2{% endif %}">
+      {% if modo_guia %}
+      {# Modo guía: mismo layout vertical de 4 columnas que guia_almacen_detalle.html #}
       <div class="row g-3">
-        <div class="col-md-2">
-          <label class="form-label fw-semibold">Serie</label>
-          <input type="text" name="serie" value="{{ form.serie.value|default:'001' }}" class="form-control">
+        {# Fila 1 — N° Guía | Fecha Emisión | Fecha Traslado | Motivo #}
+        <div class="col-md-3">
+          <label class="text-muted small">N° Guía</label>
+          <p class="mb-0 fw-bold" style="color:#2563eb">{{ guia.numero }}</p>
         </div>
         <div class="col-md-3">
-          <label class="form-label fw-semibold">N° Guía</label>
-          <input type="text" name="numero_guia" value="{{ form.numero_guia.value|default:'' }}" class="form-control" required>
+          <label class="text-muted small">Fecha Emisión</label>
+          <p class="mb-0">{{ guia.fecha_emision|date:"d/m/Y" }}</p>
+        </div>
+        <div class="col-md-3">
+          <label class="text-muted small">Fecha Traslado</label>
+          <p class="mb-0">{{ guia.fecha_traslado|date:"d/m/Y" }}</p>
+        </div>
+        <div class="col-md-3">
+          <label class="text-muted small">Motivo</label>
+          <p class="mb-0">{{ guia.get_motivo_display }}</p>
+        </div>
+
+        {# Fila 2 — Transportista | Placa | N° Licencia | Peso (kg) #}
+        <div class="col-md-3">
+          <label class="text-muted small">Nombre de Transportista</label>
+          <p class="mb-0">
+            {% if guia.conductor %}{{ guia.conductor }}
+            {% elif guia.transportista %}{{ guia.transportista.razon_social }}
+            {% else %}—{% endif %}
+          </p>
+        </div>
+        <div class="col-md-3">
+          <label class="text-muted small">Placa</label>
+          <p class="mb-0">{{ guia.placa|default:"—" }}</p>
+        </div>
+        <div class="col-md-3">
+          <label class="text-muted small">N° Licencia</label>
+          <p class="mb-0">{{ guia.licencia|default:"—" }}</p>
+        </div>
+        <div class="col-md-3">
+          <label class="text-muted small">Peso (kg)</label>
+          <p class="mb-0">{% if guia.peso_kg %}{{ guia.peso_kg|floatformat:2 }}{% else %}—{% endif %}</p>
+        </div>
+
+        {# Fila 3 — Punto de Partida | Punto de Llegada #}
+        <div class="col-md-6">
+          <label class="text-muted small">Punto de Partida</label>
+          <p class="mb-0">{{ guia.origen|default:"—" }}</p>
+        </div>
+        <div class="col-md-6">
+          <label class="text-muted small">Punto de Llegada</label>
+          <p class="mb-0"><strong>{{ guia.destino|default:"—" }}</strong></p>
+        </div>
+
+        {# Fila 4 — REQ origen (si hay) #}
+        {% if guia.requerimiento %}
+        <div class="col-12">
+          <label class="text-muted small">Requerimiento origen</label>
+          <p class="mb-0"><code style="color:#2563eb">REQ-{{ guia.requerimiento.numero }}</code></p>
+        </div>
+        {% endif %}
+      </div>
+      {# Hidden inputs para que el form igual envíe los valores al POST #}
+      <input type="hidden" name="serie"         value="{{ form.serie.value|default:'' }}">
+      <input type="hidden" name="numero_guia"   value="{{ form.numero_guia.value|default:form.serie.value|default:'' }}">
+      <input type="hidden" name="fecha"         value="{{ form.fecha.value|default:'' }}">
+      <input type="hidden" name="requerimiento" value="{{ form.requerimiento.value|default:'' }}">
+      <input type="hidden" name="proveedor"     value="{{ form.proveedor.value|default:'' }}">
+      <input type="hidden" name="descripcion"   value="{{ form.descripcion.value|default:'' }}">
+      {% else %}
+      {# Modo manual: inputs normales editables #}
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">Número de guía</label>
+          <input type="text" name="serie" value="{{ form.serie.value|default:'' }}" class="form-control"
+                 placeholder="Ej: GR-2026-001">
+          <input type="hidden" name="numero_guia" value="{{ form.numero_guia.value|default:form.serie.value|default:'' }}">
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">Fecha</label>
@@ -44,22 +119,95 @@
           <textarea name="observaciones" rows="2" class="form-control">{{ form.observaciones.value|default:'' }}</textarea>
         </div>
       </div>
+      {% endif %}
     </div>
   </div>
+
+  {# ═══ Materiales Recibidos ═══ #}
   <div class="card mb-3">
     <div class="card-header">Materiales Recibidos</div>
-    <div class="card-body">
-      {% include 'almacen/_formset_detalle.html' with formset=formset %}
+    <div class="card-body p-0">
+      {% if modo_guia %}
+      <table class="table table-sm mb-0 align-middle" id="tabla-recepcion" style="width:100%;table-layout:fixed">
+        <thead style="background:#f8fafc">
+          <tr>
+            <th style="width:55%">Insumos</th>
+            <th style="width:6%" class="text-center">U. Medida</th>
+            <th style="width:6%" class="text-end">Stock</th>
+            <th style="width:8%" class="text-center">Cantidad</th>
+            <th style="width:17%" class="text-center">Observaciones</th>
+            <th style="width:8%" class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in items_recibir %}
+          <tr class="fila-recepcion" data-idx="{{ forloop.counter0 }}"
+              data-stock-original="{{ it.stock_actual|default_if_none:'' }}"
+              data-cantidad-despachada="{{ it.cantidad_guia|unlocalize }}">
+            <td style="font-size:.83rem">{{ it.descripcion }}</td>
+            <td class="text-center text-muted" style="font-size:.82rem">{{ it.unidad|default:"—" }}</td>
+            <td class="text-end stock-cell" style="font-size:.83rem">
+              {% if it.stock_actual is None %}
+                <span class="text-muted">—</span>
+              {% else %}
+                <span class="stock-valor {% if it.stock_actual > 0 %}text-success{% else %}text-muted{% endif %}">
+                  {{ it.stock_actual|floatformat:2 }}
+                </span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <input type="hidden" name="item_desc_{{ forloop.counter0 }}" value="{{ it.descripcion }}">
+              <input type="hidden" name="item_unidad_{{ forloop.counter0 }}" value="{{ it.unidad|default:'' }}">
+              <input type="hidden" name="item_insumo_pk_{{ forloop.counter0 }}" value="{{ it.insumo_pk }}">
+              <input type="hidden" name="item_applied_{{ forloop.counter0 }}" value="0" class="applied-flag">
+              <input type="number" name="item_cantidad_{{ forloop.counter0 }}"
+                     value="{{ it.cantidad_guia|floatformat:2 }}"
+                     class="form-control form-control-sm text-end cant-input"
+                     step="0.01" min="0" required
+                     style="max-width:100px;margin:0 auto">
+              <div class="cant-error text-danger" style="font-size:.7rem;display:none;margin-top:.2rem;line-height:1.2">
+                La cantidad despachada no coincide con la cantidad ingresada
+              </div>
+            </td>
+            <td>
+              <input type="text" name="item_observaciones_{{ forloop.counter0 }}"
+                     class="form-control form-control-sm obs-input" value=""
+                     placeholder="—" disabled
+                     style="font-size:.78rem">
+              <div class="obs-hint text-warning" style="font-size:.68rem;display:none;margin-top:.15rem;line-height:1.2">
+                Justificá la diferencia
+              </div>
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn btn-success btn-sm btn-aplicar" style="min-width:82px">
+                <i class="bi bi-check2 me-1"></i>Aplicar
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-3" style="font-size:.82rem">La guía no tiene ítems.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <input type="hidden" name="items_count" value="{{ items_recibir|length }}">
+      {% else %}
+      <div class="p-3">
+        {% include 'almacen/_formset_detalle.html' with formset=formset %}
+      </div>
+      {% endif %}
     </div>
   </div>
-  <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Guardar</button>
-    <a href="{% url 'almacen:entrada_lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+
+  <div class="d-flex gap-2 justify-content-end">
+    <a href="{% if modo_guia %}{% url 'almacen:guias_almacen_lista' proyecto.pk %}{% else %}{% url 'almacen:entrada_lista' proyecto.pk %}{% endif %}"
+       class="btn btn-outline-secondary btn-sm">Cancelar</a>
+    <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-lg me-1"></i>Guardar</button>
   </div>
 </form>
 {% endblock %}
 
 {% block extra_js %}
+{% if not modo_guia %}
 <script>
 const totalForms = document.querySelector('[name="detalles-TOTAL_FORMS"]');
 document.getElementById('add-row')?.addEventListener('click', function() {
@@ -73,4 +221,137 @@ document.getElementById('add-row')?.addEventListener('click', function() {
   if (totalForms) totalForms.value = idx + 1;
 });
 </script>
+{% else %}
+<script>
+(function () {
+  document.querySelectorAll('tr.fila-recepcion').forEach(function (row) {
+    const btn        = row.querySelector('.btn-aplicar');
+    const cantInp    = row.querySelector('.cant-input');
+    const cantError  = row.querySelector('.cant-error');
+    const obsInp     = row.querySelector('.obs-input');
+    const obsHint    = row.querySelector('.obs-hint');
+    const appliedInp = row.querySelector('.applied-flag');
+    const stockSpan  = row.querySelector('.stock-valor');
+    const stockOrigRaw = row.dataset.stockOriginal;
+    const hasStock   = stockOrigRaw !== '';
+    const stockOrig  = hasStock ? parseFloat(stockOrigRaw) : NaN;
+    const despachada = parseFloat(row.dataset.cantidadDespachada) || 0;
+
+    // Validación en vivo de cantidad vs despachada.
+    // Retorna: 'ok' (=), 'menor' (justificar), 'mayor' (bloquear), 'invalida' (vacío / 0)
+    function validarCantidad() {
+      const val = parseFloat(cantInp.value);
+      if (isNaN(val) || val <= 0) return 'invalida';
+      if (val > despachada + 0.0001)  return 'mayor';
+      if (val < despachada - 0.0001)  return 'menor';
+      return 'ok';
+    }
+
+    function actualizarUI() {
+      const estado = validarCantidad();
+      if (estado === 'mayor') {
+        cantInp.classList.add('is-invalid');
+        cantError.style.display = 'block';
+        // Bloquear el botón Aplicar
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+        btn.style.cursor = 'not-allowed';
+        obsInp.disabled = true; obsInp.value = ''; obsHint.style.display = 'none';
+      } else if (estado === 'menor') {
+        cantInp.classList.remove('is-invalid');
+        cantError.style.display = 'none';
+        // Requerir justificación
+        obsInp.disabled = false;
+        obsInp.required = true;
+        obsHint.style.display = 'block';
+        obsInp.placeholder = 'Motivo del faltante *';
+        // El botón Aplicar solo se habilita si hay observación
+        const tieneObs = obsInp.value.trim().length > 0;
+        btn.disabled = !tieneObs;
+        btn.classList.toggle('opacity-50', !tieneObs);
+        btn.style.cursor = tieneObs ? '' : 'not-allowed';
+      } else if (estado === 'ok') {
+        cantInp.classList.remove('is-invalid');
+        cantError.style.display = 'none';
+        obsInp.disabled = true;
+        obsInp.required = false;
+        obsInp.value = '';
+        obsHint.style.display = 'none';
+        obsInp.placeholder = '—';
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+        btn.style.cursor = '';
+      } else {
+        // invalida
+        cantInp.classList.remove('is-invalid');
+        cantError.style.display = 'none';
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+        btn.style.cursor = 'not-allowed';
+        obsInp.disabled = true; obsInp.value = ''; obsHint.style.display = 'none';
+      }
+    }
+
+    function setModoAplicado() {
+      const cant = parseFloat(cantInp.value) || 0;
+      if (hasStock) {
+        const nuevo = stockOrig + cant;
+        stockSpan.textContent = nuevo.toFixed(2);
+        stockSpan.classList.remove('text-muted');
+        stockSpan.classList.add('text-success', 'fw-bold');
+      }
+      cantInp.readOnly = true;
+      cantInp.style.background = '#f3f4f6';
+      obsInp.readOnly = true;
+      obsInp.style.background = '#f3f4f6';
+      appliedInp.value = '1';
+      btn.classList.remove('btn-success');
+      btn.classList.add('btn-outline-primary');
+      btn.innerHTML = '<i class="bi bi-pencil me-1"></i>Editar';
+      row.style.background = '#f0fdf4';
+    }
+
+    function setModoEditar() {
+      if (hasStock) {
+        stockSpan.textContent = stockOrig.toFixed(2);
+        stockSpan.classList.remove('fw-bold');
+        if (stockOrig > 0) {
+          stockSpan.classList.add('text-success');
+          stockSpan.classList.remove('text-muted');
+        } else {
+          stockSpan.classList.add('text-muted');
+          stockSpan.classList.remove('text-success');
+        }
+      }
+      cantInp.readOnly = false;
+      cantInp.style.background = '';
+      obsInp.readOnly = false;
+      obsInp.style.background = '';
+      appliedInp.value = '0';
+      btn.classList.remove('btn-outline-primary');
+      btn.classList.add('btn-success');
+      btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Aplicar';
+      row.style.background = '';
+      actualizarUI();
+    }
+
+    btn.addEventListener('click', function () {
+      if (btn.disabled) return;
+      if (appliedInp.value === '1') {
+        setModoEditar();
+      } else {
+        setModoAplicado();
+      }
+    });
+
+    // Listeners para validación en vivo
+    cantInp.addEventListener('input', actualizarUI);
+    obsInp.addEventListener('input', actualizarUI);
+
+    // Estado inicial (por defecto Cantidad = Despachada = OK)
+    actualizarUI();
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

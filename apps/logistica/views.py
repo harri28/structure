@@ -116,11 +116,17 @@ def guia_crear(request, proyecto_id):
                 guia.estado = 'EN_TRANSITO'
                 guia.save()
                 _despachar_req(guia)
-                _registrar_entrada_almacen(guia, proyecto)
+                # NOTA: la Entrada ya NO se crea automáticamente al despachar.
+                # El Almacenero la registra manualmente vía Almacén → Guías → Registrar guía.
                 log(request, 'CREAR', 'Logística', f'Guía {guia.numero} despachada en {proyecto.codigo}')
-                notificar(f'Guía {guia.numero} despachada',
-                          mensaje=f'{proyecto.codigo} — {guia.get_motivo_display()}. Entrada generada en Almacén.',
-                          tipo='info')
+                # Notif dirigida al Almacén con el nº correlativo. Al hacer click en la campana,
+                # el link lleva a Almacén → Guías donde la nueva aparece en verde suave.
+                notificar(
+                    f'Nueva Guía {guia.numero}',
+                    mensaje=f'{proyecto.codigo} — Despachada por Logística. Registrá su recepción.',
+                    tipo='info',
+                    url=f'/almacen/proyecto/{proyecto.pk}/guias/',
+                )
                 messages.success(request, f'Guía {guia.numero} generada. Requerimiento marcado como atendido.')
                 return redirect('logistica:guia_detalle', pk=guia.pk)
             else:
@@ -136,12 +142,14 @@ def guia_crear(request, proyecto_id):
                 guia.save()
                 formset.instance = guia
                 formset.save()
-                _registrar_entrada_almacen(guia, proyecto)
+                # NOTA: la Entrada ya NO se crea automáticamente. El Almacenero la registra
+                # manualmente desde Almacén → Guías → Registrar guía.
                 log(request, 'CREAR', 'Logística', f'Guía {guia.numero} creada en {proyecto.codigo}')
-                notificar(f'Nueva guía de remisión {guia.numero}',
-                          mensaje=f'{proyecto.codigo} — {guia.get_motivo_display()}. Entrada generada en Almacén.',
-                          tipo='info')
-                messages.success(request, f'Guía {guia.numero} creada. Entrada generada en Almacén.')
+                notificar(f'Nueva Guía {guia.numero}',
+                          mensaje=f'{proyecto.codigo} — {guia.get_motivo_display()}. Registrá su recepción.',
+                          tipo='info',
+                          url=f'/almacen/proyecto/{proyecto.pk}/guias/')
+                messages.success(request, f'Guía {guia.numero} creada.')
                 return redirect('logistica:guia_detalle', pk=guia.pk)
     else:
         form    = GuiaRemisionForm()

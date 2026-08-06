@@ -54,6 +54,9 @@ class DetalleEntrada(models.Model):
     cantidad = models.DecimalField(max_digits=15, decimal_places=4)
     precio_unitario = models.DecimalField(max_digits=15, decimal_places=4, default=0)
     unidad = models.CharField(max_length=20, blank=True)
+    # Justificación cuando la cantidad recibida es MENOR a la despachada por la guía.
+    # Requerida por UI cuando hay diferencia negativa (faltante, avería, etc.).
+    observaciones = models.CharField(max_length=300, blank=True)
 
     def subtotal(self):
         return self.cantidad * self.precio_unitario
