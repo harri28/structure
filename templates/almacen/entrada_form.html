@@ -1,6 +1,17 @@
 {% extends 'base.html' %}
 {% load l10n %}
 {% block title %}{{ titulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Quitar el ícono de validación de Bootstrap en el input Cantidad */
+  input.cant-input.is-invalid,
+  input.cant-input.is-invalid:focus {
+    background-image: none !important;
+    padding-right: .55rem !important;
+  }
+</style>
+{% endblock %}
 {% block nav_entradas %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
@@ -132,16 +143,17 @@
       <table class="table table-sm mb-0 align-middle" id="tabla-recepcion" style="width:100%;table-layout:fixed">
         <thead style="background:#f8fafc">
           <tr>
-            <th style="width:55%">Insumos</th>
-            <th style="width:6%" class="text-center">U. Medida</th>
-            <th style="width:6%" class="text-end">Stock</th>
-            <th style="width:8%" class="text-center">Cantidad</th>
-            <th style="width:17%" class="text-center">Observaciones</th>
-            <th style="width:8%" class="text-center">Acciones</th>
+            <th style="width:38%">Insumos</th>
+            <th style="width:10%;padding-left:.75rem" class="text-center">U. Medida</th>
+            <th style="width:10%" class="text-end">Stock</th>
+            <th style="width:12%" class="text-center">Cantidad</th>
+            <th style="width:18%" class="text-center">Observaciones</th>
+            <th style="width:12%" class="text-center">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {% for it in items_recibir %}
+          {# Fila 1 — DATOS: siempre a la misma altura horizontal, sin mensajes #}
           <tr class="fila-recepcion" data-idx="{{ forloop.counter0 }}"
               data-stock-original="{{ it.stock_actual|default_if_none:'' }}"
               data-cantidad-despachada="{{ it.cantidad_guia|unlocalize }}">
@@ -166,24 +178,33 @@
                      class="form-control form-control-sm text-end cant-input"
                      step="0.01" min="0" required
                      style="max-width:100px;margin:0 auto">
-              <div class="cant-error text-danger" style="font-size:.7rem;display:none;margin-top:.2rem;line-height:1.2">
-                La cantidad despachada no coincide con la cantidad ingresada
-              </div>
             </td>
             <td>
               <input type="text" name="item_observaciones_{{ forloop.counter0 }}"
                      class="form-control form-control-sm obs-input" value=""
                      placeholder="—" disabled
                      style="font-size:.78rem">
-              <div class="obs-hint text-warning" style="font-size:.68rem;display:none;margin-top:.15rem;line-height:1.2">
-                Justificá la diferencia
-              </div>
             </td>
             <td class="text-center">
               <button type="button" class="btn btn-success btn-sm btn-aplicar" style="min-width:82px">
                 <i class="bi bi-check2 me-1"></i>Aplicar
               </button>
             </td>
+          </tr>
+          {# Fila 2 — MENSAJES: oculta por default, se activa cuando hay algún error o hint #}
+          <tr class="fila-mensajes" data-idx-msg="{{ forloop.counter0 }}" style="display:none">
+            <td colspan="3" style="border-top:none;padding-top:0"></td>
+            <td class="text-center" style="border-top:none;padding-top:0">
+              <div class="cant-error text-danger" style="font-size:.7rem;line-height:1.2;display:none">
+                <!-- texto dinámico por JS -->
+              </div>
+            </td>
+            <td style="border-top:none;padding-top:0">
+              <div class="obs-hint text-warning" style="font-size:.68rem;line-height:1.3;display:none">
+                Justificá la diferencia
+              </div>
+            </td>
+            <td style="border-top:none;padding-top:0"></td>
           </tr>
           {% empty %}
           <tr><td colspan="6" class="text-center text-muted py-3" style="font-size:.82rem">La guía no tiene ítems.</td></tr>
@@ -226,11 +247,13 @@ document.getElementById('add-row')?.addEventListener('click', function() {
 <script>
 (function () {
   document.querySelectorAll('tr.fila-recepcion').forEach(function (row) {
+    const idx        = row.dataset.idx;
+    const msgRow     = document.querySelector('tr.fila-mensajes[data-idx-msg="' + idx + '"]');
     const btn        = row.querySelector('.btn-aplicar');
     const cantInp    = row.querySelector('.cant-input');
-    const cantError  = row.querySelector('.cant-error');
+    const cantError  = msgRow ? msgRow.querySelector('.cant-error') : null;
     const obsInp     = row.querySelector('.obs-input');
-    const obsHint    = row.querySelector('.obs-hint');
+    const obsHint    = msgRow ? msgRow.querySelector('.obs-hint') : null;
     const appliedInp = row.querySelector('.applied-flag');
     const stockSpan  = row.querySelector('.stock-valor');
     const stockOrigRaw = row.dataset.stockOriginal;
@@ -238,10 +261,20 @@ document.getElementById('add-row')?.addEventListener('click', function() {
     const stockOrig  = hasStock ? parseFloat(stockOrigRaw) : NaN;
     const despachada = parseFloat(row.dataset.cantidadDespachada) || 0;
 
+    // Muestra/oculta la fila de mensajes según si hay algún mensaje visible
+    function actualizarFilaMsg() {
+      if (!msgRow) return;
+      const hayMsg = (cantError && cantError.style.display !== 'none') ||
+                     (obsHint   && obsHint.style.display   !== 'none');
+      msgRow.style.display = hayMsg ? 'table-row' : 'none';
+    }
+
     // Validación en vivo de cantidad vs despachada.
-    // Retorna: 'ok' (=), 'menor' (justificar), 'mayor' (bloquear), 'invalida' (vacío / 0)
+    // Retorna: 'ok' (=), 'menor' (justificar), 'mayor' (bloquear), 'invalida' (0), 'vacia' (sin valor)
     function validarCantidad() {
-      const val = parseFloat(cantInp.value);
+      const raw = cantInp.value.trim();
+      if (raw === '') return 'vacia';
+      const val = parseFloat(raw);
       if (isNaN(val) || val <= 0) return 'invalida';
       if (val > despachada + 0.0001)  return 'mayor';
       if (val < despachada - 0.0001)  return 'menor';
@@ -252,6 +285,7 @@ document.getElementById('add-row')?.addEventListener('click', function() {
       const estado = validarCantidad();
       if (estado === 'mayor') {
         cantInp.classList.add('is-invalid');
+        cantError.textContent = 'La cantidad despachada no coincide con la cantidad ingresada';
         cantError.style.display = 'block';
         // Bloquear el botón Aplicar
         btn.disabled = true;
@@ -264,6 +298,7 @@ document.getElementById('add-row')?.addEventListener('click', function() {
         // Requerir justificación
         obsInp.disabled = false;
         obsInp.required = true;
+        obsHint.textContent = 'Justificá la diferencia';
         obsHint.style.display = 'block';
         obsInp.placeholder = 'Motivo del faltante *';
         // El botón Aplicar solo se habilita si hay observación
@@ -282,8 +317,17 @@ document.getElementById('add-row')?.addEventListener('click', function() {
         btn.disabled = false;
         btn.classList.remove('opacity-50');
         btn.style.cursor = '';
+      } else if (estado === 'invalida') {
+        // 0 o negativo — mensaje debajo de Cantidad
+        cantInp.classList.add('is-invalid');
+        cantError.textContent = 'Ingrese una cantidad válida';
+        cantError.style.display = 'block';
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+        btn.style.cursor = 'not-allowed';
+        obsInp.disabled = true; obsInp.value = ''; obsHint.style.display = 'none';
       } else {
-        // invalida
+        // vacía — sin mensajes, solo bloquear Aplicar silenciosamente
         cantInp.classList.remove('is-invalid');
         cantError.style.display = 'none';
         btn.disabled = true;
@@ -291,6 +335,7 @@ document.getElementById('add-row')?.addEventListener('click', function() {
         btn.style.cursor = 'not-allowed';
         obsInp.disabled = true; obsInp.value = ''; obsHint.style.display = 'none';
       }
+      actualizarFilaMsg();
     }
 
     function setModoAplicado() {
@@ -339,11 +384,48 @@ document.getElementById('add-row')?.addEventListener('click', function() {
     btn.addEventListener('click', function () {
       if (btn.disabled) return;
       if (appliedInp.value === '1') {
+        // Modo Editar → solo desbloquea el input, el registro en BD queda
+        // con el valor anterior hasta que el user vuelva a hacer Aplicar
         setModoEditar();
       } else {
-        setModoAplicado();
+        // Aplicar → llamada AJAX que persiste en la BD
+        aplicarAjax();
       }
     });
+
+    function aplicarAjax() {
+      const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      const url  = '{% if guia %}{% url "almacen:entrada_aplicar_item" proyecto.pk guia.pk %}{% endif %}';
+      const fd   = new FormData();
+      fd.append('csrfmiddlewaretoken', csrf);
+      fd.append('item_desc',          row.querySelector('input[name^="item_desc_"]').value);
+      fd.append('item_unidad',        row.querySelector('input[name^="item_unidad_"]').value);
+      fd.append('item_insumo_pk',     row.querySelector('input[name^="item_insumo_pk_"]').value);
+      fd.append('item_cantidad',      cantInp.value);
+      fd.append('item_observaciones', obsInp.value);
+
+      // Estado visual: guardando
+      const htmlOriginal = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando…';
+
+      fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok) {
+            setModoAplicado();
+          } else {
+            alert('Error: ' + (data.msg || 'no se pudo aplicar'));
+            btn.disabled = false;
+            btn.innerHTML = htmlOriginal;
+          }
+        })
+        .catch(function () {
+          alert('Error de conexión — no se pudo aplicar');
+          btn.disabled = false;
+          btn.innerHTML = htmlOriginal;
+        });
+    }
 
     // Listeners para validación en vivo
     cantInp.addEventListener('input', actualizarUI);

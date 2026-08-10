@@ -72,7 +72,10 @@ class Maquinaria(models.Model):
     costo_hora     = models.DecimalField('Costo por hora', max_digits=12, decimal_places=4, default=0)
 
     # Personal
-    propietario = models.CharField('Propietario', max_length=200, blank=True)
+    propietario_documento    = models.CharField('RUC / DNI', max_length=15, blank=True)
+    propietario_razon_social = models.CharField('Razón social', max_length=200, blank=True)
+    propietario_celular      = models.CharField('Celular', max_length=20, blank=True)
+    propietario_direccion    = models.CharField('Dirección', max_length=300, blank=True)
     operador    = models.CharField('Operador', max_length=200, blank=True)
 
     # Fechas de obra
@@ -241,9 +244,9 @@ class RegistroMaquinaria(models.Model):
     propietario = models.CharField(max_length=200, blank=True)
     operador    = models.CharField(max_length=200, blank=True)
 
-    # Turno — hora entrada / salida
-    hora_entrada = models.TimeField('Hora entrada', null=True, blank=True)
-    hora_salida  = models.TimeField('Hora salida',  null=True, blank=True)
+    # Turno — horómetro (lectura del contador de horas de la máquina)
+    hora_entrada = models.DecimalField('Horómetro entrada', max_digits=10, decimal_places=2, null=True, blank=True)
+    hora_salida  = models.DecimalField('Horómetro salida',  max_digits=10, decimal_places=2, null=True, blank=True)
 
     # Actividad
     horas       = models.DecimalField(max_digits=6, decimal_places=2, default=0)
@@ -265,13 +268,10 @@ class RegistroMaquinaria(models.Model):
         return f'{self.fecha} — {self.nombre or (self.maquinaria or "")}'
 
     def save(self, *args, **kwargs):
-        if self.hora_entrada and self.hora_salida:
-            from datetime import datetime, date as date_
-            dt_e = datetime.combine(date_.today(), self.hora_entrada)
-            dt_s = datetime.combine(date_.today(), self.hora_salida)
-            diff = dt_s - dt_e
-            if diff.total_seconds() > 0:
-                self.horas = Decimal(str(round(diff.total_seconds() / 3600, 2)))
+        if self.hora_entrada is not None and self.hora_salida is not None:
+            diff = self.hora_salida - self.hora_entrada
+            if diff > 0:
+                self.horas = diff.quantize(Decimal('0.01'))
         if not self.numero_parte and self.maquinaria_id:
             qs = RegistroMaquinaria.objects.filter(maquinaria_id=self.maquinaria_id)
             if self.pk:

@@ -1,18 +1,25 @@
 {% extends 'base.html' %}
 {% block title %}{{ titulo }}{% endblock %}
-{% block nav_maq_catalogo %}active{% endblock %}
+{% block nav_maquinaria %}active{% endblock %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{% url 'maquinaria:maquinaria_lista' %}">Catálogo</a></li>
+{% if proyecto_activo %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_principal' proyecto_activo.pk %}">Maquinaria</a></li>
+{% endif %}
+{% if obj and back_url %}
+<li class="breadcrumb-item"><a href="{{ back_url }}">{{ obj.nombre }}</a></li>
+{% endif %}
 <li class="breadcrumb-item active">{{ titulo }}</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
-    <a href="{% url 'maquinaria:maquinaria_lista' %}" class="btn-back">
-      <i class="bi bi-chevron-left"></i> Catálogo
+    {% if back_url %}
+    <a href="{{ back_url }}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> {{ back_label }}
     </a>
+    {% endif %}
     <h4><i class="bi bi-truck me-2"></i>{{ titulo }}</h4>
   </div>
 </div>
@@ -82,11 +89,33 @@
           text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:.4rem">
         Personal
       </h6>
-      <div class="row g-3 mb-4">
+      <div class="row g-3 mb-3">
         <div class="col-sm-6">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Propietario</label>
-          {{ form.propietario }}
+          <label class="form-label fw-semibold" style="font-size:.83rem">Ingrese Ruc o Dni del propietario</label>
+          <div class="d-flex align-items-stretch gap-2">
+            {{ form.propietario_documento }}
+            <button type="button" id="btn-buscar-propietario" class="btn btn-primary d-flex align-items-center justify-content-center" style="width:38px;padding:0;flex-shrink:0" title="Buscar RUC/DNI">
+              <i class="bi bi-search"></i>
+            </button>
+          </div>
+          <div id="doc-msg" style="font-size:.78rem;margin-top:.3rem;display:none"></div>
         </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Razón social</label>
+          {{ form.propietario_razon_social }}
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Celular</label>
+          {{ form.propietario_celular }}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem">Jr. / Dirección</label>
+          {{ form.propietario_direccion }}
+        </div>
+      </div>
+      <div class="row g-3 mb-4">
         <div class="col-sm-6">
           <label class="form-label fw-semibold" style="font-size:.83rem">Operador</label>
           {{ form.operador }}
@@ -122,9 +151,76 @@
         <button type="submit" class="btn btn-primary btn-sm">
           <i class="bi bi-check-lg me-1"></i>Guardar
         </button>
-        <a href="{% url 'maquinaria:maquinaria_lista' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+        {% if back_url %}
+        <a href="{{ back_url }}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+        {% endif %}
       </div>
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var btn      = document.getElementById('btn-buscar-propietario');
+  var iDoc     = document.querySelector('[name="propietario_documento"]');
+  var iRazon   = document.querySelector('[name="propietario_razon_social"]');
+  var iDir     = document.querySelector('[name="propietario_direccion"]');
+  var msg      = document.getElementById('doc-msg');
+  if (!btn || !iDoc) return;
+
+  function getCsrf() {
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function showMsg(text, ok) {
+    if (!msg) return;
+    msg.textContent = text;
+    msg.style.color = ok ? '#16a34a' : '#dc2626';
+    msg.style.display = 'block';
+  }
+  function clearMsg() { if (msg) msg.style.display = 'none'; }
+
+  btn.addEventListener('click', function () {
+    var numero = (iDoc.value || '').trim();
+    if (numero.length !== 8 && numero.length !== 11) {
+      showMsg('DNI = 8 dígitos, RUC = 11 dígitos.', false);
+      return;
+    }
+    clearMsg();
+    btn.disabled = true;
+    var iconoOriginal = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.9rem;height:.9rem"></span>';
+
+    fetch("{% url 'maquinaria:consulta_doc' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ numero: numero }),
+    })
+    .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+    .then(function (res) {
+      var d = res.data || {};
+      if (!d.ok) {
+        showMsg(d.error || 'No encontrado.', false);
+        return;
+      }
+      if (d.razon_social && iRazon) iRazon.value = d.razon_social;
+      if (d.direccion    && iDir)   iDir.value   = d.direccion;
+      showMsg('Datos autocompletados desde SUNAT.', true);
+    })
+    .catch(function () {
+      showMsg('Error al consultar el servicio.', false);
+    })
+    .finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = iconoOriginal;
+    });
+  });
+})();
+</script>
 {% endblock %}

@@ -15,7 +15,7 @@ class TipoPersonalAdmin(admin.ModelAdmin):
 
 @admin.register(Maquinaria)
 class MaquinariaAdmin(admin.ModelAdmin):
-    list_display = ['codigo', 'nombre', 'tipo_equipo', 'placa', 'propietario', 'activo']
+    list_display = ['codigo', 'nombre', 'tipo_equipo', 'placa', 'propietario_razon_social', 'activo']
     list_filter  = ['tipo_equipo', 'activo']
 
 

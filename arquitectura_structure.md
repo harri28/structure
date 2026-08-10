@@ -159,7 +159,7 @@ Este es un cambio de comportamiento importante respecto a
 
 **Semántica nueva de los dos permisos existentes:**
 
-- `puede_crear_requerimientos` → crear y editar requerimientos en estado BORRADOR
+- `puede_crear_requerimientosCrei` → crear y editar requerimientos en estado BORRADOR
 - `puede_aprobar_requerimientos` → **pulsar "Enviar a Logística"** (pasar BORRADOR → ENVIADO)
 
 **Resultado operativo:**

@@ -84,7 +84,7 @@ Ver **REGLAS_NEGOCIO §16** para el flujo completo. Resumen:
 
 ## Recordatorios activos en memoria (`~/.claude/.../memory/`)
 
-- [reference-vps] — IP `161.132.4.82`, dominio `corfiemsistem.com`, ruta `/var/www/ssgestion`, stack nginx + Uvicorn, comandos de deploy
+- [reference-vps] — IP `161.132.4.82`, dominio `sys360.cloud`, ruta `/var/www/ssgestion`, stack nginx + Uvicorn, comandos de deploy
 - [project-git-push-ip-mobaxterm] — antes de deploy verificar IP en MobaXterm
 - [feedback-almacenero-req-propio] — reqs del Almacenero muestran SUS datos, no del responsable
 - [feedback-no-commit-sin-pedir] — no auto-commit

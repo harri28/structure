@@ -20,7 +20,9 @@ class MaquinariaForm(forms.ModelForm):
         fields = [
             'codigo', 'nombre', 'tipo_equipo', 'marca', 'modelo', 'placa',
             'costo', 'modalidad_costo', 'costo_hora',
-            'propietario', 'operador',
+            'propietario_documento', 'propietario_razon_social',
+            'propietario_celular', 'propietario_direccion',
+            'operador',
             'fecha_llegada', 'fecha_reinicio', 'fecha_salida_obra',
             'activo',
         ]
@@ -34,7 +36,10 @@ class MaquinariaForm(forms.ModelForm):
             'costo':           forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'modalidad_costo': forms.Select(attrs={'class': 'form-select'}),
             'costo_hora':      forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'min': '0'}),
-            'propietario':     forms.TextInput(attrs={'class': 'form-control'}),
+            'propietario_documento':    forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'maxlength': '11', 'placeholder': 'DNI (8) o RUC (11)'}),
+            'propietario_razon_social': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre o razón social'}),
+            'propietario_celular':      forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'placeholder': 'Ej: 987654321'}),
+            'propietario_direccion':    forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Jr. Los Pinos 123'}),
             'operador':        forms.TextInput(attrs={'class': 'form-control'}),
             'fecha_llegada':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'fecha_reinicio':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -115,8 +120,8 @@ class RegistroMaquinariaForm(forms.ModelForm):
         widgets = {
             'maquinaria':   forms.Select(attrs={'class': 'form-select'}),
             'fecha':        forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'hora_entrada': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-            'hora_salida':  forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'hora_entrada': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'min': '0', 'placeholder': 'Ej: 14015.4'}),
+            'hora_salida':  forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'min': '0', 'placeholder': 'Ej: 14022.4'}),
             'operador':     forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del operador / conductor'}),
             'insumo':       forms.Select(attrs={'class': 'form-select'}),
             'partida':      forms.Select(attrs={'class': 'form-select'}),
@@ -161,8 +166,8 @@ class ParteForm(forms.ModelForm):
         fields = ['fecha', 'hora_entrada', 'hora_salida', 'horas', 'combustible', 'insumo', 'partida', 'observacion']
         widgets = {
             'fecha':        forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date'}),
-            'hora_entrada': forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}),
-            'hora_salida':  forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}),
+            'hora_entrada': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.1', 'min': '0', 'placeholder': 'Horómetro ini'}),
+            'hora_salida':  forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.1', 'min': '0', 'placeholder': 'Horómetro fin'}),
             'horas':        forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.5', 'min': '0'}),
             'combustible':  forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0', 'placeholder': 'gal'}),
             'insumo':       forms.Select(attrs={'class': 'form-select form-select-sm'}),

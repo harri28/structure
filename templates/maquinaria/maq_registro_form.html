@@ -39,16 +39,16 @@
 
           <div class="row g-2 mb-3">
             <div class="col-6">
-              <label class="form-label fw-semibold">Hora entrada</label>
+              <label class="form-label fw-semibold">Horómetro entrada</label>
               {{ form.hora_entrada }}
             </div>
             <div class="col-6">
-              <label class="form-label fw-semibold">Hora salida</label>
+              <label class="form-label fw-semibold">Horómetro salida</label>
               {{ form.hora_salida }}
             </div>
           </div>
           <div id="horas-preview" style="display:none;font-size:.8rem;color:#2563eb;font-weight:600;margin-bottom:.75rem">
-            <i class="bi bi-clock me-1"></i><span id="horas-preview-txt"></span> horas calculadas
+            <i class="bi bi-speedometer2 me-1"></i><span id="horas-preview-txt"></span> horas calculadas
           </div>
 
           <div class="mb-3">
@@ -94,12 +94,13 @@ const preview = document.getElementById('horas-preview');
 const previewTxt = document.getElementById('horas-preview-txt');
 
 function calcularHoras() {
-  if (!entrada || !salida || !entrada.value || !salida.value) { preview.style.display = 'none'; return; }
-  const [he, me] = entrada.value.split(':').map(Number);
-  const [hs, ms] = salida.value.split(':').map(Number);
-  const diff = (hs * 60 + ms) - (he * 60 + me);
+  if (!entrada || !salida || entrada.value === '' || salida.value === '') { preview.style.display = 'none'; return; }
+  const he = parseFloat(entrada.value);
+  const hs = parseFloat(salida.value);
+  if (isNaN(he) || isNaN(hs)) { preview.style.display = 'none'; return; }
+  const diff = hs - he;
   if (diff <= 0) { preview.style.display = 'none'; return; }
-  previewTxt.textContent = (diff / 60).toFixed(2);
+  previewTxt.textContent = diff.toFixed(2);
   preview.style.display = 'block';
 }
 if (entrada) entrada.addEventListener('change', calcularHoras);

@@ -3,27 +3,29 @@
 {% block nav_maquinaria %}active{% endblock %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{% url 'maquinaria:dashboard' proyecto.pk %}">Maquinaria</a></li>
-<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}">Equipos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_principal' proyecto.pk %}">Maquinaria</a></li>
 <li class="breadcrumb-item active">{{ maquinaria.nombre }}</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
-    <a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}" class="btn-back">
-      <i class="bi bi-chevron-left"></i> Equipos
+    <a href="{% url 'maquinaria:maq_principal' proyecto.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Maquinaria
     </a>
     <h4><i class="bi bi-truck me-2"></i>{{ maquinaria.nombre }}</h4>
-    <div class="text-muted" style="font-size:.84rem">
-      {% if maquinaria.placa %}<code>{{ maquinaria.placa }}</code> &nbsp;·&nbsp;{% endif %}
-      {% if maquinaria.propietario %}{{ maquinaria.propietario }} &nbsp;·&nbsp;{% endif %}
+    <div style="display:inline-block;font-size:.84rem;background:#dcfce7;color:#166534;padding:.4rem .8rem;border-radius:10px;user-select:none;margin-top:.35rem">
+      {% if maquinaria.placa %}<code style="background:transparent;padding:0;color:inherit;font-weight:600">{{ maquinaria.placa }}</code> &nbsp;·&nbsp;{% endif %}
+      {% if maquinaria.propietario_razon_social %}{{ maquinaria.propietario_razon_social }} &nbsp;·&nbsp;{% endif %}
       Total: <strong>{{ total_hm|floatformat:2 }} HM</strong>
     </div>
   </div>
   <div class="d-flex gap-2">
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalLiq">
-      <i class="bi bi-plus-lg me-1"></i>Nueva Liquidación
+    <a href="{% url 'maquinaria:maq_registro_crear' proyecto.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo turno
+    </a>
+    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalLiq">
+      <i class="bi bi-file-earmark-plus me-1"></i>Nueva Liquidación
     </button>
     <a href="{% url 'maquinaria:maquinaria_editar' maquinaria.pk %}"
        class="btn btn-outline-secondary btn-sm">
@@ -72,8 +74,17 @@
       </div>
       <div class="card-body" style="font-size:.84rem">
         <div class="row g-1">
-          {% if maquinaria.propietario %}
-          <div class="col-5 text-muted">Propietario</div><div class="col-7">{{ maquinaria.propietario }}</div>
+          {% if maquinaria.propietario_razon_social %}
+          <div class="col-5 text-muted">Propietario</div><div class="col-7">{{ maquinaria.propietario_razon_social }}</div>
+          {% endif %}
+          {% if maquinaria.propietario_documento %}
+          <div class="col-5 text-muted">RUC / DNI</div><div class="col-7"><code>{{ maquinaria.propietario_documento }}</code></div>
+          {% endif %}
+          {% if maquinaria.propietario_celular %}
+          <div class="col-5 text-muted">Celular</div><div class="col-7">{{ maquinaria.propietario_celular }}</div>
+          {% endif %}
+          {% if maquinaria.propietario_direccion %}
+          <div class="col-5 text-muted">Dirección</div><div class="col-7">{{ maquinaria.propietario_direccion }}</div>
           {% endif %}
           {% if maquinaria.operador %}
           <div class="col-5 text-muted">Operador</div><div class="col-7">{{ maquinaria.operador }}</div>
@@ -124,7 +135,7 @@
           <th>N° Liquidación</th>
           <th>Período</th>
           <th class="text-end">Total HM</th>
-          <th class="text-end">Monto a pagar</th>
+          <th class="text-center">Monto a pagar</th>
           <th class="text-center">Estado</th>
           <th class="text-center">Partes</th>
           <th></th>
@@ -138,7 +149,7 @@
           <td class="text-end fw-semibold" style="color:#2563eb;font-size:.85rem">
             {{ liq.total_hm|floatformat:2|default:"0.00" }}
           </td>
-          <td class="text-end fw-semibold" style="font-size:.85rem">
+          <td class="text-center fw-semibold" style="font-size:.85rem">
             {% if liq.maquinaria.costo %}S/ —{% else %}—{% endif %}
           </td>
           <td class="text-center">

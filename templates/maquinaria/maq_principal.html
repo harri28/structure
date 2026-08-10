@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Maquinaria — {{ proyecto.nombre }}{% endblock %}
+{% block nav_maquinaria %}active{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4><i class="bi bi-truck me-2"></i>Maquinaria</h4>
+    <div class="text-muted" style="font-size:.84rem">
+      {{ maquinas|length }} equipo{{ maquinas|length|pluralize:"s" }} registrado{{ maquinas|length|pluralize:"s" }}
+    </div>
+  </div>
+  <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nueva maquinaria
+  </a>
+</div>
+
+{% if maquinas %}
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table-modern" style="min-width:1050px">
+        <thead>
+          <tr>
+            <th style="width:80px">Código</th>
+            <th style="min-width:200px">Nombre</th>
+            <th style="width:130px">Tipo</th>
+            <th style="width:100px">Marca</th>
+            <th style="width:100px">Placa</th>
+            <th style="width:140px">Modalidad</th>
+            <th style="min-width:150px">Propietario</th>
+            <th style="min-width:150px">Operador</th>
+            <th style="width:80px" class="text-center">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in maquinas %}
+          <tr onclick="window.location='{% url 'maquinaria:maq_detalle_maquinaria' proyecto.pk m.pk %}'"
+              style="cursor:pointer">
+            <td><span class="fw-bold" style="font-size:.82rem;color:#2563eb">{{ m.codigo }}</span></td>
+            <td>
+              <div class="fw-semibold" style="font-size:.85rem">{{ m.nombre }}</div>
+              {% if m.modelo %}<div style="font-size:.74rem;color:#9ca3af">{{ m.modelo }}</div>{% endif %}
+            </td>
+            <td style="font-size:.82rem">{{ m.get_tipo_equipo_display|default:"—" }}</td>
+            <td style="font-size:.82rem;color:#6b7280">{{ m.marca|default:"—" }}</td>
+            <td style="font-size:.82rem;color:#6b7280">{{ m.placa|default:"—" }}</td>
+            <td style="font-size:.78rem;color:#6b7280">{{ m.get_modalidad_costo_display|default:"—" }}</td>
+            <td style="font-size:.82rem">{{ m.propietario_razon_social|default:"—" }}</td>
+            <td style="font-size:.82rem">{{ m.operador|default:"—" }}</td>
+            <td class="text-center">
+              {% if m.activo %}
+              <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.68rem">Activo</span>
+              {% else %}
+              <span class="badge bg-secondary" style="font-size:.68rem">Inactivo</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-truck d-block mb-3" style="font-size:2.5rem;opacity:.3"></i>
+  <div class="fw-semibold mb-1">Sin maquinaria registrada</div>
+  <div style="font-size:.82rem">Comenzá agregando el primer equipo del proyecto.</div>
+  <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary btn-sm mt-3">
+    <i class="bi bi-plus-lg me-1"></i>Nueva maquinaria
+  </a>
+</div>
+{% endif %}
+{% endblock %}

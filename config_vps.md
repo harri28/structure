@@ -5,14 +5,14 @@
 | Campo | Valor |
 |-------|-------|
 | IP | `161.132.4.82` |
-| Dominio | `corfiemsistem.com` / `www.corfiemsistem.com` |
+| Dominio | `sys360.cloud` |
 | Ruta proyecto | `/var/www/ssgestion` |
 | Web server | **nginx** (reverse proxy puerto 80/443) → **Uvicorn** (ASGI, puerto 8000) |
 | Config nginx | `/etc/nginx/sites-enabled/ssgestion` |
 | Servicio systemd | `ssgestion.service` |
 | Python | `python3` global (sin virtualenv) |
 | Repositorio | `https://github.com/harri28/structure.git` |
-| SSL | Let's Encrypt (certbot) — pendiente de instalar |
+| SSL | Let's Encrypt (certbot) — activo para `sys360.cloud` |
 
 ## Deploy
 
@@ -37,8 +37,8 @@ nginx -t                               # verificar config nginx
 
 ```bash
 apt install certbot python3-certbot-nginx -y
-certbot --nginx -d corfiemsistem.com -d www.corfiemsistem.com
-# Renovación automática ya incluida por certbot
+certbot --nginx -d sys360.cloud
+# Renovación automática ya incluida por certbot (systemd timer)
 ```
 
 ## Paquetes Python (globales)

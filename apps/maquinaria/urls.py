@@ -13,11 +13,11 @@ urlpatterns = [
     path('tipos-personal/<int:pk>/editar/',        views.tipo_personal_editar,  name='tipo_personal_editar'),
     path('tipos-personal/<int:pk>/eliminar/',      views.tipo_personal_eliminar, name='tipo_personal_eliminar'),
 
-    # Maquinaria (catálogo global)
-    path('catalogo/',                              views.maquinaria_lista,    name='maquinaria_lista'),
+    # Maquinaria (alta/edición/baja; la lista vive por proyecto en maq_principal)
     path('catalogo/nuevo/',                        views.maquinaria_crear,    name='maquinaria_crear'),
     path('catalogo/<int:pk>/editar/',              views.maquinaria_editar,   name='maquinaria_editar'),
     path('catalogo/<int:pk>/eliminar/',            views.maquinaria_eliminar, name='maquinaria_eliminar'),
+    path('catalogo/consulta-doc/',                 views.consulta_documento,  name='consulta_doc'),
 
     # Cuadrillas (catálogo global)
     path('cuadrillas/',                            views.cuadrilla_lista,    name='cuadrilla_lista'),
@@ -33,6 +33,9 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/registros/nuevo/',   views.registro_crear,   name='registro_crear'),
     path('registros/<int:pk>/editar/',                    views.registro_editar,  name='registro_editar'),
     path('registros/<int:pk>/eliminar/',                  views.registro_eliminar, name='registro_eliminar'),
+
+    # Página principal de Maquinaria (lista de máquinas del proyecto)
+    path('proyecto/<int:proyecto_id>/equipos/',                          views.maq_principal,           name='maq_principal'),
 
     # Registros de Maquinaria (por proyecto)
     path('proyecto/<int:proyecto_id>/maquinaria/',                       views.maq_registro_lista,      name='maq_registro_lista'),

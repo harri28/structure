@@ -121,12 +121,17 @@
 
     {# Administrador de Obra — crea, aprueba y recibe solicitudes del Almacenero #}
     {% if permisos.puede_aprobar_requerimientos %}
-    <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
-       class="sb-link {% block nav_req %}{% endblock %}">
-      <i class="bi bi-file-earmark-text"></i> Requerimientos
-      {% if req_solicitados %}<span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;padding:.2em .45em">{{ req_solicitados }}</span>{% endif %}
-    </a>
-    <div id="nav-reqs">
+    <div class="sb-module-row">
+      <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
+         class="sb-link {% block nav_req %}{% endblock %}">
+        <i class="bi bi-file-earmark-text"></i> Requerimientos
+        {% if req_solicitados %}<span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;padding:.2em .45em">{{ req_solicitados }}</span>{% endif %}
+      </a>
+      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-reqs" aria-expanded="true" aria-label="Expandir Requerimientos">
+        <i class="bi bi-chevron-right sb-arrow"></i>
+      </button>
+    </div>
+    <div class="collapse show" id="nav-reqs">
       <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_req_lista %}{% endblock %}">
         <i class="bi bi-list-ul"></i> Requerimiento
@@ -144,11 +149,16 @@
     {% endif %}
 
     {% if permisos.puede_ver_almacen or permisos.puede_gestionar_entradas or permisos.puede_gestionar_salidas %}
-    <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
-       class="sb-link {% block nav_almacen %}{% endblock %}">
-      <i class="bi bi-box-seam"></i> Almacén
-    </a>
-    <div id="nav-almacen">
+    <div class="sb-module-row">
+      <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
+         class="sb-link {% block nav_almacen %}{% endblock %}">
+        <i class="bi bi-box-seam"></i> Almacén
+      </a>
+      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-almacen" aria-expanded="true" aria-label="Expandir Almacén">
+        <i class="bi bi-chevron-right sb-arrow"></i>
+      </button>
+    </div>
+    <div class="collapse show" id="nav-almacen">
       <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_stock %}{% endblock %}">
         <i class="bi bi-archive"></i> Stock
@@ -184,7 +194,7 @@
       <i class="bi bi-people-fill"></i> Cuadrilla
     </a>
 
-    <a href="{% url 'maquinaria:maq_registro_lista' proyecto_activo.pk %}"
+    <a href="{% url 'maquinaria:maq_principal' proyecto_activo.pk %}"
        class="sb-link {% block nav_maquinaria %}{% endblock %}">
       <i class="bi bi-truck"></i> Maquinaria
     </a>
@@ -331,10 +341,15 @@
     {% endif %}
 
     {% if permisos.puede_configurar_empresa or permisos.puede_administrar_usuarios or permisos.puede_administrar_roles %}
-    <a href="{% url 'configuracion:hub' %}" class="sb-link {% block nav_config_hub %}{% endblock %}">
-      <i class="bi bi-gear"></i> Configuración
-    </a>
-    <div id="nav-config-admin">
+    <div class="sb-module-row">
+      <a href="{% url 'configuracion:hub' %}" class="sb-link {% block nav_config_hub %}{% endblock %}">
+        <i class="bi bi-gear"></i> Configuración
+      </a>
+      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-config-admin" aria-expanded="true" aria-label="Expandir Configuración">
+        <i class="bi bi-chevron-right sb-arrow"></i>
+      </button>
+    </div>
+    <div class="collapse show" id="nav-config-admin">
       {% if permisos.puede_configurar_empresa %}
       <a href="{% url 'configuracion:empresa' %}" class="sb-link sb-sublink">
         <i class="bi bi-building"></i> Empresa
@@ -493,14 +508,39 @@ document.querySelectorAll('table.table:not(.table-modern)').forEach(function (t)
   t.classList.remove('table', 'table-sm', 'table-hover', 'table-bordered', 'table-striped');
 });
 
-// Sidebar collapse: solo Presupuesto es colapsable. Auto-abrir si hay sub-link activo.
+// Sidebar collapse: persistencia + auto-abrir si hay sub-link activo.
 (function () {
-  var col = document.getElementById('nav-presupuesto');
-  if (col && col.classList.contains('collapse') && col.querySelector('.sb-link.active')) {
-    col.classList.add('show');
-    var trigger = document.querySelector('[data-bs-target="#nav-presupuesto"]');
-    if (trigger) trigger.setAttribute('aria-expanded', 'true');
-  }
+  // Presupuesto: cerrado por defecto; se abre si tiene sub-link activo o si el user lo dejó abierto.
+  // Almacén: abierto por defecto (desglosado); solo se cierra si el user lo colapsa explícitamente.
+  var grupos = [
+    { id: 'nav-presupuesto', abiertoPorDefecto: false },
+    { id: 'nav-reqs',        abiertoPorDefecto: true  },
+    { id: 'nav-almacen',     abiertoPorDefecto: true  },
+    { id: 'nav-config-admin', abiertoPorDefecto: true }
+  ];
+
+  grupos.forEach(function (g) {
+    var col = document.getElementById(g.id);
+    if (!col) return;
+    var trigger = document.querySelector('[data-bs-target="#' + g.id + '"]');
+    var guardado = localStorage.getItem('sb-' + g.id);   // '1' abierto, '0' cerrado, null nunca tocado
+    var tieneActivo = !!col.querySelector('.sb-link.active');
+
+    var abrir;
+    if (tieneActivo)          abrir = true;              // siempre abrir si el user está viendo un sub-módulo
+    else if (guardado != null) abrir = (guardado === '1');
+    else                       abrir = g.abiertoPorDefecto;
+
+    if (abrir) col.classList.add('show');
+    else       col.classList.remove('show');
+    if (trigger) trigger.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+
+    // Persistir cuando el user usa el chevron
+    if (trigger) {
+      col.addEventListener('shown.bs.collapse',  function () { localStorage.setItem('sb-' + g.id, '1'); });
+      col.addEventListener('hidden.bs.collapse', function () { localStorage.setItem('sb-' + g.id, '0'); });
+    }
+  });
 })();
 
 // Bloquear scroll del mouse en inputs numéricos (evita cambios accidentales al scrollear).

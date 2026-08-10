@@ -101,7 +101,7 @@
     <div><strong>Máquina:</strong> {{ maquinaria.nombre }}</div>
     <div><strong>Código:</strong> {{ maquinaria.codigo }}</div>
     <div><strong>Placa:</strong> {{ maquinaria.placa|default:"—" }}</div>
-    <div><strong>Propietario:</strong> {{ maquinaria.propietario|default:"—" }}</div>
+    <div><strong>Propietario:</strong> {{ maquinaria.propietario_razon_social|default:"—" }}</div>
     <div><strong>Operador:</strong> {{ maquinaria.operador|default:"—" }}</div>
     <div><strong>Período:</strong> {{ liq.periodo_display }}</div>
     <div><strong>Modalidad:</strong> {{ maquinaria.get_modalidad_costo_display|default:"—" }}</div>

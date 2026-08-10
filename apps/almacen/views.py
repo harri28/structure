@@ -394,6 +394,97 @@ def entrada_detalle(request, pk):
 
 @requiere('puede_gestionar_entradas')
 @proyecto_visible
+def entrada_aplicar_item(request, proyecto_id, guia_pk):
+    """AJAX: aplica un ítem de la guía a la BD (crea o actualiza DetalleEntrada).
+    Idempotente: llamadas repetidas con el mismo insumo actualizan el registro
+    en lugar de crear duplicados.
+    """
+    from decimal import InvalidOperation
+    from datetime import date
+    from django.http import JsonResponse
+    from apps.logistica.models import GuiaRemision
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'msg': 'Método no permitido'}, status=405)
+
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    guia = get_object_or_404(GuiaRemision, pk=guia_pk, proyecto=proyecto)
+
+    desc      = request.POST.get('item_desc', '').strip()
+    unidad    = request.POST.get('item_unidad', '').strip()
+    cant_raw  = request.POST.get('item_cantidad', '0').strip()
+    insumo_pk = request.POST.get('item_insumo_pk', '').strip()
+    obs       = request.POST.get('item_observaciones', '').strip()
+
+    if not desc:
+        return JsonResponse({'ok': False, 'msg': 'Falta la descripción del ítem'}, status=400)
+    try:
+        cant = Decimal(cant_raw) if cant_raw else Decimal('0')
+    except (InvalidOperation, ValueError):
+        return JsonResponse({'ok': False, 'msg': 'Cantidad inválida'}, status=400)
+    if cant <= 0:
+        return JsonResponse({'ok': False, 'msg': 'La cantidad debe ser mayor a 0'}, status=400)
+
+    # Resolver el insumo (si viene FK)
+    insumo = None
+    if insumo_pk:
+        try:
+            insumo = InsumoPresupuesto.objects.get(pk=int(insumo_pk))
+        except (ValueError, InsumoPresupuesto.DoesNotExist):
+            pass
+
+    # Get or create Entrada (OneToOne con la guía)
+    entrada = Entrada.objects.filter(guia=guia).first()
+    if not entrada:
+        entrada = Entrada.objects.create(
+            proyecto=proyecto,
+            guia=guia,
+            requerimiento=guia.requerimiento,
+            numero_guia=guia.numero,
+            serie=guia.numero,
+            fecha=date.today(),
+            proveedor=guia.conductor or (guia.transportista.razon_social if guia.transportista else ''),
+            descripcion=guia.get_motivo_display(),
+        )
+        log(request, 'CREAR', 'Almacén',
+            f'Entrada iniciada desde Guía {guia.numero} en {proyecto.codigo}')
+
+    # Buscar DetalleEntrada existente (por insumo si hay FK, sino por descripción)
+    det_qs = entrada.detalles.all()
+    if insumo:
+        det = det_qs.filter(insumo=insumo).first()
+    else:
+        det = det_qs.filter(insumo__isnull=True, descripcion__iexact=desc).first()
+
+    if det:
+        det.cantidad = cant
+        det.observaciones = obs
+        det.unidad = unidad or det.unidad
+        det.descripcion = desc or det.descripcion
+        det.save(update_fields=['cantidad', 'observaciones', 'unidad', 'descripcion'])
+        accion = 'actualizado'
+    else:
+        det = DetalleEntrada.objects.create(
+            entrada=entrada,
+            insumo=insumo,
+            descripcion=desc,
+            unidad=unidad,
+            cantidad=cant,
+            observaciones=obs,
+        )
+        _sync_insumo_snapshot(det)
+        accion = 'creado'
+
+    return JsonResponse({
+        'ok': True,
+        'entrada_pk': entrada.pk,
+        'detalle_pk': det.pk,
+        'accion': accion,
+    })
+
+
+@requiere('puede_gestionar_entradas')
+@proyecto_visible
 def entrada_crear(request, proyecto_id):
     from apps.logistica.models import GuiaRemision
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
@@ -413,57 +504,15 @@ def entrada_crear(request, proyecto_id):
     if request.method == 'POST':
         form = EntradaForm(request.POST, proyecto=proyecto)
         if guia:
-            # Modo guía: no usamos DetalleEntradaFormSet, iteramos por los items enviados.
-            if form.is_valid():
-                from datetime import date
-                entrada = form.save(commit=False)
-                entrada.proyecto = proyecto
-                entrada.guia = guia
-                # La fecha de recepción se registra automáticamente al día de HOY,
-                # independientemente de la fecha de traslado de la guía.
-                entrada.fecha = date.today()
-                entrada.save()
-                items_count = int(request.POST.get('items_count', 0) or 0)
-                for i in range(items_count):
-                    # Solo procesamos las filas que el Almacenero marcó como "Aplicadas"
-                    applied = request.POST.get(f'item_applied_{i}', '0').strip()
-                    if applied != '1':
-                        continue
-                    desc      = request.POST.get(f'item_desc_{i}', '').strip()
-                    unidad    = request.POST.get(f'item_unidad_{i}', '').strip()
-                    cant_raw  = request.POST.get(f'item_cantidad_{i}', '0').strip()
-                    insumo_pk = request.POST.get(f'item_insumo_pk_{i}', '').strip()
-                    obs       = request.POST.get(f'item_observaciones_{i}', '').strip()
-                    try:
-                        cant = Decimal(cant_raw) if cant_raw else Decimal('0')
-                    except Exception:
-                        cant = Decimal('0')
-                    if not desc or cant <= 0:
-                        continue
-                    ins = None
-                    if insumo_pk:
-                        try:
-                            ins = InsumoPresupuesto.objects.get(pk=int(insumo_pk))
-                        except (ValueError, InsumoPresupuesto.DoesNotExist):
-                            pass
-                    det = DetalleEntrada.objects.create(
-                        entrada=entrada,
-                        insumo=ins,
-                        descripcion=desc,
-                        unidad=unidad,
-                        cantidad=cant,
-                        observaciones=obs,
-                    )
-                    _sync_insumo_snapshot(det)
-                log(request, 'CREAR', 'Almacén',
-                    f'Entrada registrada desde Guía {guia.numero} en {proyecto.codigo}')
-                notificar(
-                    f'Nueva entrada registrada — Guía {guia.numero}',
-                    mensaje=f'Por {request.user.get_full_name() or request.user.username} en {proyecto.codigo}',
-                    tipo='success',
-                )
-                messages.success(request, f'Entrada de Guía {guia.numero} registrada.')
+            # Modo guía: los ítems se guardaron vía AJAX en entrada_aplicar_item.
+            # Guardar acá es idempotente — solo redirige a la Entrada creada.
+            entrada = Entrada.objects.filter(guia=guia).first()
+            if entrada:
+                messages.success(request, f'Entrada de Guía {guia.numero} guardada.')
                 return redirect('almacen:entrada_detalle', pk=entrada.pk)
+            else:
+                messages.warning(request, 'No aplicaste ningún ítem. Marcá al menos uno como "Aplicar" antes de guardar.')
+                return redirect('almacen:entrada_crear', proyecto_id=proyecto.pk)
         else:
             # Modo manual clásico: usa el formset
             formset = DetalleEntradaFormSet(request.POST, prefix='detalles')

@@ -14,6 +14,8 @@ urlpatterns = [
     # Entradas
     path('proyecto/<int:proyecto_id>/entradas/', views.entrada_lista, name='entrada_lista'),
     path('proyecto/<int:proyecto_id>/entradas/nueva/', views.entrada_crear, name='entrada_crear'),
+    path('proyecto/<int:proyecto_id>/entradas/aplicar/<int:guia_pk>/',
+         views.entrada_aplicar_item, name='entrada_aplicar_item'),
     path('entradas/<int:pk>/', views.entrada_detalle, name='entrada_detalle'),
     path('entradas/<int:pk>/editar/', views.entrada_editar, name='entrada_editar'),
     path('entradas/<int:pk>/eliminar/', views.entrada_eliminar, name='entrada_eliminar'),

@@ -1,6 +1,10 @@
+import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.conf import settings
 from django.db.models import Sum, Count
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
 from apps.proyectos.models import Proyecto
 from .models import (
@@ -77,12 +81,6 @@ def tipo_personal_eliminar(request, pk):
 
 # ── Maquinaria ────────────────────────────────────────────────────────
 
-@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
-def maquinaria_lista(request):
-    maquinas = Maquinaria.objects.all()
-    return render(request, 'maquinaria/maquinaria_lista.html', {'maquinas': maquinas})
-
-
 def _siguiente_codigo_maq():
     existentes = Maquinaria.objects.filter(codigo__startswith='M').values_list('codigo', flat=True)
     nums = []
@@ -94,15 +92,43 @@ def _siguiente_codigo_maq():
     return f'M{max(nums, default=0) + 1:03d}'
 
 
+def _volver_a_maquinaria(request, maquinaria_pk=None):
+    """Redirige al detalle de la máquina (si hay pk + proyecto activo) o al principal."""
+    pid = request.session.get('proyecto_id')
+    if pid and maquinaria_pk:
+        return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=pid, maq_pk=maquinaria_pk)
+    if pid:
+        return redirect('maquinaria:maq_principal', proyecto_id=pid)
+    return redirect('proyectos:dashboard')
+
+
+def _back_ctx(request, obj=None):
+    """URL + etiqueta para el back-link del form de maquinaria."""
+    from django.urls import reverse
+    pid = request.session.get('proyecto_id')
+    if not pid:
+        return {'back_url': None, 'back_label': None}
+    if obj and obj.pk:
+        return {
+            'back_url':   reverse('maquinaria:maq_detalle_maquinaria', args=[pid, obj.pk]),
+            'back_label': obj.nombre,
+        }
+    return {
+        'back_url':   reverse('maquinaria:maq_principal', args=[pid]),
+        'back_label': 'Maquinaria',
+    }
+
+
 @requiere('puede_gestionar_maquinaria')
 def maquinaria_crear(request):
     initial = {'codigo': _siguiente_codigo_maq()}
     form    = MaquinariaForm(request.POST or None, initial=initial)
     if form.is_valid():
-        form.save()
+        obj = form.save()
         messages.success(request, 'Equipo/maquinaria creado.')
-        return redirect('maquinaria:maquinaria_lista')
-    return render(request, 'maquinaria/maquinaria_form.html', {'form': form, 'titulo': 'Nueva Maquinaria'})
+        return _volver_a_maquinaria(request, maquinaria_pk=obj.pk)
+    ctx = {'form': form, 'titulo': 'Nueva Maquinaria', **_back_ctx(request)}
+    return render(request, 'maquinaria/maquinaria_form.html', ctx)
 
 
 @requiere('puede_gestionar_maquinaria')
@@ -112,8 +138,9 @@ def maquinaria_editar(request, pk):
     if form.is_valid():
         form.save()
         messages.success(request, 'Maquinaria actualizada.')
-        return redirect('maquinaria:maquinaria_lista')
-    return render(request, 'maquinaria/maquinaria_form.html', {'form': form, 'titulo': 'Editar Maquinaria', 'obj': obj})
+        return _volver_a_maquinaria(request, maquinaria_pk=obj.pk)
+    ctx = {'form': form, 'titulo': 'Editar Maquinaria', 'obj': obj, **_back_ctx(request, obj)}
+    return render(request, 'maquinaria/maquinaria_form.html', ctx)
 
 
 @requiere('puede_gestionar_maquinaria')
@@ -122,9 +149,11 @@ def maquinaria_eliminar(request, pk):
     if request.method == 'POST':
         obj.delete()
         messages.success(request, 'Maquinaria eliminada.')
-        return redirect('maquinaria:maquinaria_lista')
+        return _volver_a_maquinaria(request)
+    pid = request.session.get('proyecto_id')
     return render(request, 'maquinaria/confirmar_eliminar.html', {'obj': obj, 'tipo': 'Maquinaria',
-        'cancel_url': 'maquinaria:maquinaria_lista', 'cancel_args': []})
+        'cancel_url': 'maquinaria:maq_principal' if pid else 'proyectos:dashboard',
+        'cancel_args': [pid] if pid else []})
 
 
 # ── Cuadrillas ────────────────────────────────────────────────────────
@@ -267,6 +296,18 @@ def registro_eliminar(request, pk):
 
 @requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 @proyecto_visible
+def maq_principal(request, proyecto_id):
+    """Página principal de Maquinaria: catálogo de máquinas del proyecto."""
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    maquinas = Maquinaria.objects.filter(activo=True).order_by('codigo')
+    return render(request, 'maquinaria/maq_principal.html', {
+        'proyecto': proyecto,
+        'maquinas': maquinas,
+    })
+
+
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
 def maq_registro_lista(request, proyecto_id):
     """Lista de máquinas usadas en el proyecto, agrupadas con total HM."""
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
@@ -363,7 +404,7 @@ def liquidacion_detalle(request, pk):
             reg.liquidacion = liq
             reg.nombre      = maquinaria.nombre
             reg.placa       = maquinaria.placa
-            reg.propietario = maquinaria.propietario
+            reg.propietario = maquinaria.propietario_razon_social
             if not reg.operador:
                 reg.operador = maquinaria.operador
             reg.save()
@@ -545,4 +586,74 @@ def resumen(request, proyecto_id):
     return render(request, 'maquinaria/resumen.html', {
         'proyecto':      proyecto,
         'resumen_list':  resumen_list,
+    })
+
+
+# ── Consulta RUC/DNI (Factiliza) ──────────────────────────────────────
+
+@require_POST
+@requiere('puede_gestionar_maquinaria')
+def consulta_documento(request):
+    """Endpoint AJAX: POST {numero} -> {ok, razon_social, direccion} o {ok:false, error}."""
+    import requests as _requests
+
+    try:
+        payload = json.loads(request.body or b'{}')
+    except (ValueError, json.JSONDecodeError):
+        return JsonResponse({'ok': False, 'error': 'Payload inválido.'}, status=400)
+
+    numero = str(payload.get('numero', '')).strip()
+    if len(numero) == 8 and numero.isdigit():
+        tipo = 'dni'
+    elif len(numero) == 11 and numero.isdigit():
+        tipo = 'ruc'
+    else:
+        return JsonResponse({'ok': False, 'error': 'DNI = 8 dígitos, RUC = 11 dígitos.'}, status=400)
+
+    token = getattr(settings, 'FACTILIZA_TOKEN', '')
+    if not token:
+        return JsonResponse({'ok': False, 'error': 'Servicio de consulta no configurado.'}, status=500)
+
+    url = f'https://api.factiliza.com/pe/v1/{tipo}/info/{numero}'
+    try:
+        r = _requests.get(
+            url,
+            headers={'Authorization': f'Bearer {token}', 'Accept': 'application/json'},
+            timeout=20,
+        )
+    except _requests.RequestException as e:
+        return JsonResponse({'ok': False, 'error': f'Error de conexión: {e}'}, status=502)
+
+    try:
+        body = r.json()
+    except (ValueError, json.JSONDecodeError):
+        return JsonResponse({'ok': False, 'error': 'Respuesta inválida del servicio.'}, status=502)
+
+    if r.status_code >= 400 or int(body.get('status') or 200) >= 400:
+        return JsonResponse({
+            'ok': False,
+            'error': body.get('message') or 'No se encontró información para el documento.',
+        }, status=404)
+
+    data = body.get('data') or {}
+    if tipo == 'ruc':
+        razon = (data.get('nombre_o_razon_social') or '').strip()
+    else:
+        razon = ' '.join(filter(None, [
+            data.get('nombres') or '',
+            data.get('apellido_paterno') or '',
+            data.get('apellido_materno') or '',
+        ])).strip()
+
+    direccion = (data.get('direccion') or '').strip()
+    ubigeo = data.get('ubigeo_sunat') or ''
+    if ubigeo == '-':
+        ubigeo = ''
+
+    return JsonResponse({
+        'ok': True,
+        'tipo': tipo,
+        'razon_social': razon,
+        'direccion': direccion,
+        'ubigeo': ubigeo,
     })
