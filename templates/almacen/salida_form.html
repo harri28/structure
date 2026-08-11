@@ -3,7 +3,7 @@
 {% block nav_salidas %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
-<li class="breadcrumb-item"><a href="{% url 'almacen:salida_lista' proyecto.pk %}">Salidas</a></li>
+<li class="breadcrumb-item"><a href="{% url 'almacen:salida_lista' proyecto.pk %}">Atenciones / Salidas</a></li>
 <li class="breadcrumb-item active">{{ titulo }}</li>
 {% endblock %}
 

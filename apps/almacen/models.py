@@ -72,6 +72,8 @@ class Salida(models.Model):
     fecha = models.DateField()
     destino = models.CharField(max_length=200, blank=True)
     responsable = models.CharField(max_length=150, blank=True)
+    proveedor = models.CharField(max_length=200, blank=True)
+    factura = models.CharField(max_length=50, blank=True)
     observaciones = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -90,10 +92,15 @@ class Salida(models.Model):
 class DetalleSalida(models.Model):
     salida = models.ForeignKey(Salida, on_delete=models.CASCADE, related_name='detalles')
     insumo = models.ForeignKey(InsumoPresupuesto, null=True, blank=True, on_delete=models.SET_NULL)
+    guia = models.ForeignKey(
+        'logistica.GuiaRemision', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='salidas',
+    )
     descripcion = models.CharField(max_length=400, blank=True)
     cantidad = models.DecimalField(max_digits=15, decimal_places=4)
     precio_unitario = models.DecimalField(max_digits=15, decimal_places=4, default=0)
     unidad = models.CharField(max_length=20, blank=True)
+    observaciones = models.TextField(blank=True)
 
     def subtotal(self):
         return self.cantidad * self.precio_unitario

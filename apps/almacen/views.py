@@ -441,7 +441,8 @@ def entrada_aplicar_item(request, proyecto_id, guia_pk):
             guia=guia,
             requerimiento=guia.requerimiento,
             numero_guia=guia.numero,
-            serie=guia.numero,
+            # No pasamos `serie` (max_length=10) porque guia.numero suele venir tipo
+            # "GR-2026-002" y no cabe. Dejamos el default '001'.
             fecha=date.today(),
             proveedor=guia.conductor or (guia.transportista.razon_social if guia.transportista else ''),
             descripcion=guia.get_motivo_display(),
@@ -677,8 +678,161 @@ def entrada_rechazar(request, pk):
 @proyecto_visible
 def salida_lista(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    # 1 fila = 1 material atendido. Cada Atención es una Salida con 1 detalle.
+    detalles = (
+        DetalleSalida.objects
+        .filter(salida__proyecto=proyecto)
+        .select_related('salida', 'insumo', 'guia')
+        .order_by('-salida__fecha', '-salida__created_at', '-pk')
+    )
     return render(request, 'almacen/salida_lista.html', {
-        'proyecto': proyecto, 'salidas': proyecto.salidas.all(),
+        'proyecto': proyecto,
+        'detalles': detalles,
+    })
+
+
+@requiere('puede_gestionar_salidas')
+@proyecto_visible
+def api_insumos_buscar(request, proyecto_id):
+    """Autocomplete de insumos del proyecto para el modal de Atención.
+    Marca cada insumo con `seleccionable` (True si stock_almacen > 0)."""
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    q = (request.GET.get('q') or '').strip()
+    qs = InsumoPresupuesto.objects.filter(presupuesto__proyecto=proyecto)
+    if q:
+        qs = qs.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
+    qs = qs.order_by('codigo', 'descripcion')[:50]
+    data = [{
+        'id':            i.pk,
+        'codigo':        i.codigo,
+        'descripcion':   i.descripcion,
+        'unidad':        i.unidad,
+        'stock_almacen': float(i.stock_almacen or 0),
+        'seleccionable': (i.stock_almacen or 0) > 0,
+    } for i in qs]
+    return JsonResponse({'ok': True, 'items': data})
+
+
+@requiere('puede_gestionar_salidas')
+@proyecto_visible
+def api_insumo_guias(request, proyecto_id):
+    """Devuelve las guías del proyecto asociadas a requerimientos que incluyen ese insumo.
+    (DetalleGuia no tiene FK a insumo — la relación viaja por el Requerimiento)."""
+    from apps.logistica.models import GuiaRemision
+    from apps.requerimientos.models import DetalleRequerimiento
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    insumo_id = request.GET.get('insumo')
+    if not insumo_id:
+        return JsonResponse({'ok': False, 'error': 'Falta insumo'}, status=400)
+    req_ids = (
+        DetalleRequerimiento.objects
+        .filter(requerimiento__proyecto=proyecto, insumo_id=insumo_id)
+        .values_list('requerimiento_id', flat=True)
+        .distinct()
+    )
+    guias = (
+        GuiaRemision.objects
+        .filter(proyecto=proyecto, requerimiento_id__in=req_ids)
+        .order_by('-fecha_emision', '-pk')
+    )
+    data = [{
+        'id':     g.pk,
+        'numero': g.numero,
+        'fecha':  g.fecha_emision.strftime('%d/%m/%Y') if g.fecha_emision else '',
+    } for g in guias]
+    return JsonResponse({'ok': True, 'items': data})
+
+
+@requiere('puede_gestionar_salidas')
+@proyecto_visible
+def atencion_crear(request, proyecto_id):
+    """Endpoint AJAX: crea una Salida con UN detalle (una Atención = un material)."""
+    import json
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Solo POST'}, status=405)
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    try:
+        body = json.loads(request.body or b'{}')
+    except (ValueError, json.JSONDecodeError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+
+    # Validación
+    insumo_id = body.get('insumo_id')
+    if not insumo_id:
+        return JsonResponse({'ok': False, 'error': 'Debe elegir un insumo'}, status=400)
+    try:
+        insumo = InsumoPresupuesto.objects.get(pk=insumo_id, presupuesto__proyecto=proyecto)
+    except InsumoPresupuesto.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Insumo no pertenece al proyecto'}, status=400)
+
+    try:
+        cantidad = Decimal(str(body.get('cantidad') or '0'))
+        parcial  = Decimal(str(body.get('parcial')  or '0'))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Cantidad/parcial inválidos'}, status=400)
+
+    if cantidad <= 0:
+        return JsonResponse({'ok': False, 'error': 'Cantidad debe ser > 0'}, status=400)
+    if cantidad > (insumo.stock_almacen or 0):
+        return JsonResponse({
+            'ok': False,
+            'error': f'Cantidad ({cantidad}) supera el stock disponible ({insumo.stock_almacen}).',
+        }, status=400)
+
+    precio_unitario = (parcial / cantidad) if cantidad else Decimal('0')
+
+    guia = None
+    guia_id = body.get('guia_id')
+    if guia_id:
+        from apps.logistica.models import GuiaRemision
+        try:
+            guia = GuiaRemision.objects.get(pk=guia_id, proyecto=proyecto)
+        except GuiaRemision.DoesNotExist:
+            pass
+
+    # Correlativo SAL-XXX interno (trazabilidad)
+    from django.db.models import Max
+    ult = proyecto.salidas.aggregate(m=Max('numero'))['m']
+    try:
+        siguiente = int((ult or '0')) + 1
+    except (ValueError, TypeError):
+        siguiente = (proyecto.salidas.count() or 0) + 1
+
+    import datetime as _dt
+    fecha_str = body.get('fecha') or _dt.date.today().isoformat()
+    try:
+        fecha = _dt.date.fromisoformat(fecha_str)
+    except ValueError:
+        fecha = _dt.date.today()
+
+    salida = Salida.objects.create(
+        proyecto=proyecto,
+        numero=str(siguiente).zfill(4),
+        fecha=fecha,
+        proveedor=(body.get('proveedor') or '').strip(),
+        factura=(body.get('factura') or '').strip(),
+        observaciones=(body.get('observaciones') or '').strip(),
+    )
+
+    detalle = DetalleSalida.objects.create(
+        salida=salida,
+        insumo=insumo,
+        guia=guia,
+        descripcion=insumo.descripcion,
+        unidad=insumo.unidad,
+        cantidad=cantidad,
+        precio_unitario=precio_unitario.quantize(Decimal('0.0001')),
+        observaciones=(body.get('observaciones_linea') or '').strip(),
+    )
+    # El signal post_save de DetalleSalida ya descuenta stock_almacen del insumo.
+
+    log(request, 'CREAR', 'Almacén',
+        f'Atención SAL-{salida.numero}: {cantidad} {insumo.unidad} de {insumo.codigo} - {insumo.descripcion[:40]}')
+
+    return JsonResponse({
+        'ok': True,
+        'detalle_id': detalle.pk,
+        'salida_numero': salida.numero,
     })
 
 

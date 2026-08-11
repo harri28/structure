@@ -213,8 +213,9 @@
       if (d.direccion    && iDir)   iDir.value   = d.direccion;
       showMsg('Datos autocompletados desde SUNAT.', true);
     })
-    .catch(function () {
-      showMsg('Error al consultar el servicio.', false);
+    .catch(function (err) {
+      console.error('Consulta doc error:', err);
+      showMsg('Error al consultar el servicio: ' + (err && err.message ? err.message : err), false);
     })
     .finally(function () {
       btn.disabled = false;

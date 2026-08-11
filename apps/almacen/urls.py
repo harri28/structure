@@ -21,9 +21,12 @@ urlpatterns = [
     path('entradas/<int:pk>/eliminar/', views.entrada_eliminar, name='entrada_eliminar'),
     path('entradas/<int:pk>/aceptar/',  views.entrada_aceptar,  name='entrada_aceptar'),
     path('entradas/<int:pk>/rechazar/', views.entrada_rechazar,  name='entrada_rechazar'),
-    # Salidas
+    # Salidas / Atenciones
     path('proyecto/<int:proyecto_id>/salidas/', views.salida_lista, name='salida_lista'),
     path('proyecto/<int:proyecto_id>/salidas/nueva/', views.salida_crear, name='salida_crear'),
+    path('proyecto/<int:proyecto_id>/atencion/crear/',       views.atencion_crear,     name='atencion_crear'),
+    path('proyecto/<int:proyecto_id>/atencion/api/insumos/', views.api_insumos_buscar, name='api_insumos_buscar'),
+    path('proyecto/<int:proyecto_id>/atencion/api/guias/',   views.api_insumo_guias,   name='api_insumo_guias'),
     path('salidas/<int:pk>/', views.salida_detalle, name='salida_detalle'),
     path('salidas/<int:pk>/editar/', views.salida_editar, name='salida_editar'),
     path('salidas/<int:pk>/eliminar/', views.salida_eliminar, name='salida_eliminar'),

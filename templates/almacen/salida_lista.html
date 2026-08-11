@@ -1,46 +1,350 @@
 {% extends 'base.html' %}
-{% block title %}Salidas{% endblock %}
+{% block title %}Atenciones / Salidas{% endblock %}
 {% block nav_salidas %}active{% endblock %}
 {% block submodule_chips %}{% include 'almacen/_almacen_nav.html' with active_tab='salidas' %}{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:detalle' proyecto.pk %}">{{ proyecto.codigo }}</a></li>
-<li class="breadcrumb-item active">Salidas</li>
+<li class="breadcrumb-item active">Atenciones / Salidas</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
     <a href="{% url 'almacen:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Almacén</a>
-    <h4><i class="bi bi-arrow-up-circle me-2"></i>Salidas</h4>
+    <h4><i class="bi bi-arrow-up-circle me-2"></i>Atenciones / Salidas</h4>
     <div class="text-muted">Despacho de materiales al frente de obra</div>
   </div>
-  <a href="{% url 'almacen:salida_crear' proyecto.pk %}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Nueva Salida
-  </a>
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAtencion">
+    <i class="bi bi-plus-lg me-1"></i>Nueva Atención
+  </button>
 </div>
 
 <div class="card">
   <div class="card-body p-0">
-    <table class="table-modern">
-      <thead><tr><th>N° Salida</th><th>Fecha</th><th>Destino</th><th>Responsable</th><th class="text-end">Total (S/.)</th><th></th></tr></thead>
-      <tbody>
-        {% for s in salidas %}
-        <tr>
-          <td><a href="{% url 'almacen:salida_detalle' s.pk %}" class="fw-semibold text-decoration-none">SAL-{{ s.numero }}</a></td>
-          <td>{{ s.fecha|date:"d/m/Y" }}</td>
-          <td>{{ s.destino|default:"—" }}</td>
-          <td>{{ s.responsable|default:"—" }}</td>
-          <td class="text-end fw-semibold">S/. {{ s.total|floatformat:2 }}</td>
-          <td class="d-flex gap-1">
-            <a href="{% url 'almacen:salida_detalle' s.pk %}" class="btn-tbl"><i class="bi bi-eye"></i></a>
-            <a href="{% url 'almacen:salida_editar' s.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6" class="text-center py-4 text-muted">Sin salidas registradas</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table-modern" style="min-width:1200px">
+        <thead>
+          <tr>
+            <th style="width:90px">Código</th>
+            <th style="min-width:220px">Descripción</th>
+            <th style="width:70px">Unidad</th>
+            <th style="min-width:130px">Proveedor</th>
+            <th style="width:100px">Factura</th>
+            <th style="width:110px">N° Guía</th>
+            <th style="width:100px">Fecha S.</th>
+            <th style="width:90px" class="text-end">Cantidad</th>
+            <th style="width:90px" class="text-end">P.U</th>
+            <th style="width:100px" class="text-end">Parcial</th>
+            <th style="min-width:150px">Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in detalles %}
+          <tr>
+            <td><span class="fw-bold" style="font-size:.82rem;color:#2563eb">{{ d.insumo.codigo|default:"—" }}</span></td>
+            <td style="font-size:.83rem">{{ d.descripcion|default:d.insumo.descripcion|default:"—" }}</td>
+            <td style="font-size:.82rem;color:#6b7280">{{ d.unidad|default:"—" }}</td>
+            <td style="font-size:.82rem">{{ d.salida.proveedor|default:"—" }}</td>
+            <td style="font-size:.82rem;color:#6b7280">{{ d.salida.factura|default:"—" }}</td>
+            <td style="font-size:.82rem">{% if d.guia %}<code>{{ d.guia.numero }}</code>{% else %}—{% endif %}</td>
+            <td style="font-size:.82rem;color:#6b7280">{{ d.salida.fecha|date:"d/m/Y" }}</td>
+            <td class="text-end" style="font-size:.83rem">{{ d.cantidad|floatformat:2 }}</td>
+            <td class="text-end" style="font-size:.83rem">{{ d.precio_unitario|floatformat:4 }}</td>
+            <td class="text-end fw-semibold" style="font-size:.83rem">{{ d.subtotal|floatformat:2 }}</td>
+            <td style="font-size:.78rem;color:#6b7280">{{ d.observaciones|default:d.salida.observaciones|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="11" class="text-center py-5 text-muted">
+              <i class="bi bi-arrow-up-circle d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+              Sin atenciones registradas. Presioná <strong>Nueva Atención</strong> para empezar.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
+
+{# ────────────── Modal Nueva Atención ────────────── #}
+<div class="modal fade" id="modalAtencion" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title" style="font-size:.95rem"><i class="bi bi-plus-lg me-1"></i>Nueva Atención</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="form-atencion" class="form-compact">
+          {% csrf_token %}
+
+          <input type="hidden" id="at-insumo-id">
+
+          <div class="row g-2 mb-2">
+            <div class="col-sm-3">
+              <label class="form-label fw-semibold">Código</label>
+              <input type="text" id="at-codigo" class="form-control" readonly style="background:#f8fafc">
+            </div>
+            <div class="col-sm-6 position-relative">
+              <label class="form-label fw-semibold">Descripción <span class="text-danger">*</span></label>
+              <input type="text" id="at-descripcion" class="form-control" autocomplete="off" placeholder="Escribí para buscar material…">
+              <div id="at-resultados" class="list-group position-absolute w-100 shadow" style="max-height:260px;overflow-y:auto;z-index:1080;display:none;background:#fff;border:1px solid #d1d5db;border-radius:.375rem"></div>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label fw-semibold">Unidad</label>
+              <input type="text" id="at-unidad" class="form-control" readonly style="background:#f8fafc">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">N° de Guía</label>
+              <select id="at-guia" class="form-select">
+                <option value="">— (sin guía) —</option>
+              </select>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">Fecha</label>
+              <input type="date" id="at-fecha" class="form-control">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">Stock disponible</label>
+              <input type="text" id="at-stock" class="form-control" readonly style="background:#f8fafc">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Proveedor</label>
+              <input type="text" id="at-proveedor" class="form-control" placeholder="Nombre del proveedor">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Factura</label>
+              <input type="text" id="at-factura" class="form-control" placeholder="N° de factura">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">Cantidad <span class="text-danger">*</span></label>
+              <input type="number" id="at-cantidad" class="form-control" step="0.01" min="0.01" placeholder="0.00">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">Parcial (S/.) <span class="text-danger">*</span></label>
+              <input type="number" id="at-parcial" class="form-control" step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">P.U (calculado)</label>
+              <input type="text" id="at-pu" class="form-control" readonly style="background:#eff6ff;font-weight:600">
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Observaciones</label>
+            <textarea id="at-observaciones" class="form-control" rows="2" placeholder="Comentario opcional…"></textarea>
+          </div>
+
+          <div id="at-msg" style="font-size:.83rem;display:none;margin-top:.5rem"></div>
+        </form>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="btn-guardar-atencion" class="btn btn-primary btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar Atención
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var URL_INSUMOS  = "{% url 'almacen:api_insumos_buscar' proyecto.pk %}";
+  var URL_GUIAS    = "{% url 'almacen:api_insumo_guias' proyecto.pk %}";
+  var URL_CREAR    = "{% url 'almacen:atencion_crear' proyecto.pk %}";
+
+  var iResult   = document.getElementById('at-resultados');
+  var iInsumoId = document.getElementById('at-insumo-id');
+  var iCodigo   = document.getElementById('at-codigo');
+  var iDesc     = document.getElementById('at-descripcion');
+  var iUnidad   = document.getElementById('at-unidad');
+  var iStock    = document.getElementById('at-stock');
+  var iGuia     = document.getElementById('at-guia');
+  var iFecha    = document.getElementById('at-fecha');
+  var iProv     = document.getElementById('at-proveedor');
+  var iFact     = document.getElementById('at-factura');
+  var iCant     = document.getElementById('at-cantidad');
+  var iParc     = document.getElementById('at-parcial');
+  var iPU       = document.getElementById('at-pu');
+  var iObs      = document.getElementById('at-observaciones');
+  var iMsg      = document.getElementById('at-msg');
+  var btnSave   = document.getElementById('btn-guardar-atencion');
+  var modalEl   = document.getElementById('modalAtencion');
+
+  function getCsrf() {
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function showMsg(txt, ok) {
+    iMsg.textContent = txt;
+    iMsg.style.color = ok ? '#16a34a' : '#dc2626';
+    iMsg.style.display = 'block';
+  }
+  function clearMsg() { iMsg.style.display = 'none'; iMsg.textContent = ''; }
+
+  function resetForm() {
+    iInsumoId.value = '';
+    iCodigo.value = ''; iDesc.value = ''; iUnidad.value = ''; iStock.value = '';
+    iGuia.innerHTML = '<option value="">— (sin guía) —</option>';
+    iProv.value = ''; iFact.value = '';
+    iCant.value = ''; iParc.value = ''; iPU.value = ''; iObs.value = '';
+    clearMsg();
+    var hoy = new Date().toISOString().slice(0, 10);
+    iFecha.value = hoy;
+  }
+
+  // Autocomplete de insumos — dispara sobre el input Descripción
+  var buscarTimer = null;
+  iDesc.addEventListener('input', function () {
+    // Si el usuario está tipeando, invalidamos el insumo elegido para forzar re-selección
+    iInsumoId.value = '';
+    iCodigo.value = '';
+    iUnidad.value = '';
+    iStock.value = '';
+    iGuia.innerHTML = '<option value="">— (sin guía) —</option>';
+
+    clearTimeout(buscarTimer);
+    var q = iDesc.value.trim();
+    if (q.length < 2) { iResult.style.display = 'none'; return; }
+    buscarTimer = setTimeout(function () {
+      fetch(URL_INSUMOS + '?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok || !d.items || d.items.length === 0) {
+          iResult.innerHTML = '<div class="list-group-item text-muted small">Sin resultados</div>';
+          iResult.style.display = 'block'; return;
+        }
+        iResult.innerHTML = '';
+        d.items.forEach(function (it) {
+          var el = document.createElement('button');
+          el.type = 'button';
+          el.className = 'list-group-item list-group-item-action py-2';
+          el.style.fontSize = '.83rem';
+          if (!it.seleccionable) {
+            el.disabled = true;
+            el.style.opacity = '.45';
+            el.style.cursor  = 'not-allowed';
+            el.title = 'Sin stock en almacén';
+          }
+          el.innerHTML =
+            '<div class="d-flex justify-content-between">' +
+              '<div><strong style="color:#2563eb">' + (it.codigo || '') + '</strong> · ' + it.descripcion + '</div>' +
+              '<div class="small text-muted">Stock: <strong>' + it.stock_almacen + '</strong> ' + it.unidad + '</div>' +
+            '</div>';
+          el.addEventListener('click', function () {
+            if (!it.seleccionable) return;
+            iInsumoId.value = it.id;
+            iCodigo.value   = it.codigo;
+            iDesc.value     = it.descripcion;
+            iUnidad.value   = it.unidad;
+            iStock.value    = it.stock_almacen + ' ' + it.unidad;
+            iResult.style.display = 'none';
+            cargarGuias(it.id);
+          });
+          iResult.appendChild(el);
+        });
+        iResult.style.display = 'block';
+      });
+    }, 250);
+  });
+
+  // Cerrar dropdown al hacer click afuera
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#at-descripcion') && !e.target.closest('#at-resultados')) {
+      iResult.style.display = 'none';
+    }
+  });
+
+  function cargarGuias(insumoId) {
+    fetch(URL_GUIAS + '?insumo=' + insumoId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      iGuia.innerHTML = '<option value="">— (sin guía) —</option>';
+      if (d.ok && d.items) {
+        d.items.forEach(function (g) {
+          var opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = g.numero + ' (' + g.fecha + ')';
+          iGuia.appendChild(opt);
+        });
+      }
+    });
+  }
+
+  // P.U autocalculado
+  function recalcPU() {
+    var c = parseFloat(iCant.value);
+    var p = parseFloat(iParc.value);
+    if (isNaN(c) || c <= 0 || isNaN(p) || p < 0) { iPU.value = ''; return; }
+    iPU.value = (p / c).toFixed(4);
+  }
+  iCant.addEventListener('input', recalcPU);
+  iParc.addEventListener('input', recalcPU);
+
+  // Reset al abrir el modal
+  modalEl.addEventListener('show.bs.modal', resetForm);
+
+  // Submit
+  btnSave.addEventListener('click', function () {
+    if (!iInsumoId.value) { showMsg('Debés seleccionar un material.', false); return; }
+    if (!iCant.value || parseFloat(iCant.value) <= 0) { showMsg('Cantidad debe ser mayor a 0.', false); return; }
+    if (!iParc.value) { showMsg('Ingresá el parcial.', false); return; }
+    clearMsg();
+    btnSave.disabled = true;
+    var htmlOrig = btnSave.innerHTML;
+    btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando…';
+
+    var payload = {
+      insumo_id:   iInsumoId.value,
+      guia_id:     iGuia.value || null,
+      fecha:       iFecha.value,
+      proveedor:   iProv.value,
+      factura:     iFact.value,
+      cantidad:    iCant.value,
+      parcial:     iParc.value,
+      observaciones: iObs.value,
+    };
+
+    fetch(URL_CREAR, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify(payload),
+    })
+    .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+    .then(function (res) {
+      var d = res.data || {};
+      if (!d.ok) {
+        showMsg(d.error || 'Error al guardar', false);
+        return;
+      }
+      window.location.reload();
+    })
+    .catch(function (err) {
+      console.error(err);
+      showMsg('Error al guardar la atención', false);
+    })
+    .finally(function () {
+      btnSave.disabled = false;
+      btnSave.innerHTML = htmlOrig;
+    });
+  });
+})();
+</script>
 {% endblock %}
