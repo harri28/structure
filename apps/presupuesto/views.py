@@ -139,6 +139,20 @@ def avance_fisico(request, pk):
     })
 
 
+@requiere('puede_editar_presupuesto')
+@require_POST
+def igv_toggle(request, pk):
+    """Activa (18%) o desactiva (0%) el IGV de un presupuesto."""
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    presupuesto.igv_pct = Decimal('0') if presupuesto.igv_pct else Decimal('18')
+    presupuesto.save(update_fields=['igv_pct'])
+    if presupuesto.igv_pct:
+        messages.success(request, 'IGV activado (18%).')
+    else:
+        messages.success(request, 'IGV desactivado.')
+    return redirect('presupuesto:detalle', pk=pk)
+
+
 @requiere('puede_ver_presupuesto')
 def detalle(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)

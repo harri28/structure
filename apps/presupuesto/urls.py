@@ -9,6 +9,7 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/nuevo/', views.crear,    name='crear'),
     path('<int:pk>/',                         views.detalle,  name='detalle'),
     path('<int:pk>/insumos/',                 views.insumos,  name='insumos'),
+    path('<int:pk>/igv/toggle/',              views.igv_toggle, name='igv_toggle'),
     path('<int:pk>/avance/',                  views.avance_fisico, name='avance_fisico'),
     path('<int:pk>/importar/',                views.importar, name='importar'),
     path('<int:pk>/eliminar/',                views.eliminar,         name='eliminar'),

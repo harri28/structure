@@ -112,12 +112,20 @@
               <td class="text-end pe-3" style="font-size:.82rem">S/ {{ sub_total|miles:2 }}</td>
             </tr>
             {% endif %}
-            {% if presupuesto.igv_pct %}
             <tr>
-              <td class="text-muted ps-3" style="font-size:.82rem">IGV ({{ presupuesto.igv_pct }}%)</td>
+              <td class="text-muted ps-3" style="font-size:.82rem">
+                <form method="post" action="{% url 'presupuesto:igv_toggle' presupuesto.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <div class="form-check form-switch d-inline-block align-middle mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           onchange="this.form.submit()"
+                           {% if presupuesto.igv_pct %}checked{% endif %}>
+                  </div>
+                </form>
+                IGV{% if presupuesto.igv_pct %} ({{ presupuesto.igv_pct }}%){% endif %}
+              </td>
               <td class="text-end pe-3" style="font-size:.82rem">S/ {{ igv|miles:2 }}</td>
             </tr>
-            {% endif %}
             {% if presupuesto.supervision_pct %}
             <tr style="border-top:1px solid #e5e7eb">
               <td class="ps-3 fw-semibold" style="font-size:.82rem">Costo Total de Obra</td>
