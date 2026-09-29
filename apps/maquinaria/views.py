@@ -10,10 +10,12 @@ from apps.proyectos.models import Proyecto
 from .models import (
     TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla,
     RegistroDiario, RegistroMaquinaria, Liquidacion,
+    Trabajador, DocumentoTrabajador,
 )
 from .forms import (
     TipoPersonalForm, MaquinariaForm, CuadrillaForm,
     IntegranteCuadrillaForm, RegistroDiarioForm, RegistroMaquinariaForm, ParteForm,
+    TrabajadorForm, DocumentoTrabajadorForm,
 )
 from config.permisos import requiere, proyecto_visible
 
@@ -229,6 +231,101 @@ def integrante_eliminar(request, pk):
         integrante.delete()
         messages.success(request, 'Integrante eliminado.')
     return redirect('maquinaria:cuadrilla_detalle', pk=cuadrilla_pk)
+
+
+# ── Personal de Obra (Trabajadores) ────────────────────────────────────
+
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
+def trabajador_lista(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    trabajadores = (
+        Trabajador.objects.filter(proyecto=proyecto)
+        .select_related('tipo_personal')
+        .prefetch_related('documentos')
+    )
+    return render(request, 'maquinaria/trabajador_lista.html', {
+        'proyecto':     proyecto,
+        'trabajadores': trabajadores,
+    })
+
+
+@requiere('puede_gestionar_maquinaria')
+@proyecto_visible
+def trabajador_crear(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    form = TrabajadorForm(request.POST or None, request.FILES or None)
+    if form.is_valid():
+        trabajador = form.save(commit=False)
+        trabajador.proyecto = proyecto
+        trabajador.save()
+        messages.success(request, 'Trabajador registrado. Ahora puedes subir su CV y documentos.')
+        return redirect('maquinaria:trabajador_detalle', pk=trabajador.pk)
+    return render(request, 'maquinaria/trabajador_form.html', {
+        'form': form, 'proyecto': proyecto, 'titulo': 'Nuevo Trabajador',
+    })
+
+
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+def trabajador_detalle(request, pk):
+    trabajador = get_object_or_404(Trabajador, pk=pk)
+    doc_form = DocumentoTrabajadorForm()
+    return render(request, 'maquinaria/trabajador_detalle.html', {
+        'trabajador': trabajador,
+        'proyecto':   trabajador.proyecto,
+        'documentos': trabajador.documentos.all(),
+        'doc_form':   doc_form,
+    })
+
+
+@requiere('puede_gestionar_maquinaria')
+def trabajador_editar(request, pk):
+    trabajador = get_object_or_404(Trabajador, pk=pk)
+    form = TrabajadorForm(request.POST or None, request.FILES or None, instance=trabajador)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Trabajador actualizado.')
+        return redirect('maquinaria:trabajador_detalle', pk=pk)
+    return render(request, 'maquinaria/trabajador_form.html', {
+        'form': form, 'proyecto': trabajador.proyecto, 'titulo': 'Editar Trabajador', 'obj': trabajador,
+    })
+
+
+@requiere('puede_gestionar_maquinaria')
+def trabajador_eliminar(request, pk):
+    obj = get_object_or_404(Trabajador, pk=pk)
+    proyecto_id = obj.proyecto_id
+    if request.method == 'POST':
+        obj.delete()
+        messages.success(request, 'Trabajador eliminado.')
+        return redirect('maquinaria:trabajador_lista', proyecto_id=proyecto_id)
+    return render(request, 'maquinaria/confirmar_eliminar.html', {'obj': obj, 'tipo': 'Trabajador',
+        'cancel_url': 'maquinaria:trabajador_detalle', 'cancel_args': [pk]})
+
+
+@requiere('puede_gestionar_maquinaria')
+def documento_agregar(request, pk):
+    trabajador = get_object_or_404(Trabajador, pk=pk)
+    if request.method == 'POST':
+        form = DocumentoTrabajadorForm(request.POST, request.FILES)
+        if form.is_valid():
+            documento = form.save(commit=False)
+            documento.trabajador = trabajador
+            documento.save()
+            messages.success(request, 'Documento agregado.')
+        else:
+            messages.error(request, 'Error: ' + str(form.errors))
+    return redirect('maquinaria:trabajador_detalle', pk=pk)
+
+
+@requiere('puede_gestionar_maquinaria')
+def documento_eliminar(request, pk):
+    documento = get_object_or_404(DocumentoTrabajador, pk=pk)
+    trabajador_pk = documento.trabajador_id
+    if request.method == 'POST':
+        documento.delete()
+        messages.success(request, 'Documento eliminado.')
+    return redirect('maquinaria:trabajador_detalle', pk=trabajador_pk)
 
 
 # ── Registros Diarios (Cuadrilla) ─────────────────────────────────────

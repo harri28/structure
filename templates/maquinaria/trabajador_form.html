@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block nav_cuadrillas_admin %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:cuadrilla_lista' %}">Cuadrillas</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:trabajador_lista' proyecto.pk %}">Personal de Obra</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'maquinaria:trabajador_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Personal de Obra</a>
+  <h4><i class="bi bi-person-vcard me-2"></i>{{ titulo }}</h4>
+</div>
+
+<div class="card form-compact" style="max-width:680px">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Nombres</label>
+          {{ form.nombres }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Apellidos</label>
+          {{ form.apellidos }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">DNI</label>
+          {{ form.dni }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Cargo</label>
+          {{ form.tipo_personal }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Teléfono</label>
+          {{ form.telefono }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Dirección</label>
+          {{ form.direccion }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Fecha de nacimiento</label>
+          {{ form.fecha_nacimiento }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Fecha de ingreso a obra</label>
+          {{ form.fecha_ingreso }}
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Foto</label>
+          {{ form.foto }}
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <div class="form-check mb-2">
+            {{ form.activo }}
+            <label class="form-check-label">Activo</label>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          {% if obj %}Guardar cambios{% else %}Registrar y continuar a documentos{% endif %}
+        </button>
+        <a href="{% url 'maquinaria:trabajador_lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

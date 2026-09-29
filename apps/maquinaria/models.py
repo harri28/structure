@@ -120,6 +120,51 @@ class Cuadrilla(models.Model):
         )
 
 
+class Trabajador(models.Model):
+    proyecto     = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='trabajadores')
+    nombres      = models.CharField(max_length=150)
+    apellidos    = models.CharField(max_length=150)
+    dni          = models.CharField('DNI', max_length=15, blank=True)
+    tipo_personal = models.ForeignKey(
+        TipoPersonal, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='trabajadores',
+        verbose_name='Cargo',
+    )
+    telefono          = models.CharField('Teléfono', max_length=20, blank=True)
+    direccion         = models.CharField('Dirección', max_length=300, blank=True)
+    fecha_nacimiento  = models.DateField('Fecha de nacimiento', null=True, blank=True)
+    fecha_ingreso     = models.DateField('Fecha de ingreso a obra', null=True, blank=True)
+    foto              = models.ImageField('Foto', upload_to='trabajadores/fotos/', blank=True)
+    activo            = models.BooleanField(default=True)
+    created_at        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Trabajador'
+        verbose_name_plural = 'Trabajadores'
+        ordering            = ['apellidos', 'nombres']
+
+    def __str__(self):
+        return f'{self.apellidos}, {self.nombres}'
+
+    def nombre_completo(self):
+        return f'{self.nombres} {self.apellidos}'.strip()
+
+
+class DocumentoTrabajador(models.Model):
+    trabajador   = models.ForeignKey(Trabajador, on_delete=models.CASCADE, related_name='documentos')
+    nombre       = models.CharField('Nombre del documento', max_length=150)
+    archivo      = models.FileField('Archivo', upload_to='trabajadores/documentos/')
+    fecha_subida = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Documento de Trabajador'
+        verbose_name_plural = 'Documentos de Trabajador'
+        ordering            = ['-fecha_subida']
+
+    def __str__(self):
+        return f'{self.nombre} — {self.trabajador}'
+
+
 class IntegranteCuadrilla(models.Model):
     cuadrilla      = models.ForeignKey(Cuadrilla, on_delete=models.CASCADE, related_name='integrantes')
     tipo_personal  = models.ForeignKey(TipoPersonal, on_delete=models.CASCADE)

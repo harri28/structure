@@ -74,6 +74,72 @@ def lista(request, proyecto_id):
 
 
 @requiere('puede_ver_presupuesto')
+def avance_fisico(request, pk):
+    """Prototipo BI de avance físico. Todos los datos son de ejemplo (no persisten en BD)."""
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+
+    meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    programado = [4, 10, 18, 27, 37, 46, 55, 64, 74, 84, 93, 100]
+    ejecutado  = [3, 8, 15, 23, 32, 41, 49, 58, 67, None, None, None]
+
+    kpis = {
+        'avance_fisico':    58.4,
+        'avance_financiero': 54.1,
+        'desviacion':        4.3,
+        'partidas_ok':       27,
+        'partidas_total':    40,
+        'valorizacion_mes':  185420.30,
+    }
+
+    partidas = [
+        {'codigo': '02.03', 'nombre': 'Movimiento de Tierras',        'programado': 82, 'ejecutado': 61, 'estado': 'ATRASO'},
+        {'codigo': '03.01', 'nombre': 'Obras de Concreto Armado',     'programado': 70, 'ejecutado': 68, 'estado': 'OK'},
+        {'codigo': '04.02', 'nombre': 'Instalaciones Eléctricas',     'programado': 45, 'ejecutado': 22, 'estado': 'ATRASO'},
+        {'codigo': '04.03', 'nombre': 'Instalaciones Sanitarias',     'programado': 50, 'ejecutado': 47, 'estado': 'OK'},
+        {'codigo': '05.01', 'nombre': 'Arquitectura — Acabados',      'programado': 30, 'ejecutado': 12, 'estado': 'ATRASO'},
+        {'codigo': '06.01', 'nombre': 'Estructuras Metálicas',        'programado': 65, 'ejecutado': 65, 'estado': 'OK'},
+        {'codigo': '07.01', 'nombre': 'Pavimentos y Veredas',         'programado': 20, 'ejecutado': 5,  'estado': 'ATRASO'},
+        {'codigo': '08.01', 'nombre': 'Obras Exteriores',             'programado': 15, 'ejecutado': 15, 'estado': 'OK'},
+    ]
+    for p in partidas:
+        p['desviacion'] = p['ejecutado'] - p['programado']
+
+    incidencias = [
+        {'fecha': '2026-07-02', 'tipo': 'INCIDENCIA', 'severidad': 'ALTA',  'partida': '02.03 Movimiento de Tierras',    'descripcion': 'Napa freática encontrada a 1.8 m, obliga a rediseñar excavación.', 'responsable': 'Ing. Residente', 'estado': 'ABIERTA'},
+        {'fecha': '2026-07-05', 'tipo': 'EVENTO',      'severidad': 'BAJA',  'partida': '—',                              'descripcion': 'Visita de supervisión de la Entidad — sin observaciones.',          'responsable': 'Supervisión',    'estado': 'CERRADA'},
+        {'fecha': '2026-07-09', 'tipo': 'INCIDENCIA', 'severidad': 'MEDIA', 'partida': '04.02 Instalaciones Eléctricas', 'descripcion': 'Retraso de proveedor en entrega de tableros eléctricos (7 días).', 'responsable': 'Logística',      'estado': 'ABIERTA'},
+        {'fecha': '2026-07-12', 'tipo': 'INCIDENCIA', 'severidad': 'ALTA',  'partida': '—',                              'descripcion': 'Accidente leve de personal — corte superficial, atendido en obra.', 'responsable': 'Prevencionista', 'estado': 'CERRADA'},
+        {'fecha': '2026-07-15', 'tipo': 'EVENTO',      'severidad': 'MEDIA', 'partida': '—',                              'descripcion': 'Paro de transportistas de la zona — acceso restringido medio día.', 'responsable': 'Ing. Residente', 'estado': 'CERRADA'},
+        {'fecha': '2026-07-18', 'tipo': 'INCIDENCIA', 'severidad': 'BAJA',  'partida': '07.01 Pavimentos y Veredas',     'descripcion': 'Lluvia inesperada retrasó vaciado de concreto medio día.',          'responsable': 'Ing. Residente', 'estado': 'CERRADA'},
+        {'fecha': '2026-07-22', 'tipo': 'INCIDENCIA', 'severidad': 'MEDIA', 'partida': '05.01 Arquitectura — Acabados',  'descripcion': 'Diferencia de metrados detectada en cotización de acabados.',       'responsable': 'Oficina Técnica','estado': 'ABIERTA'},
+        {'fecha': '2026-07-25', 'tipo': 'EVENTO',      'severidad': 'BAJA',  'partida': '—',                              'descripcion': 'Capacitación de seguridad (trabajos en altura) — 100% asistencia.',  'responsable': 'Prevencionista', 'estado': 'CERRADA'},
+    ]
+    incidencias_kpis = {
+        'abiertas':  sum(1 for i in incidencias if i['estado'] == 'ABIERTA'),
+        'cerradas':  sum(1 for i in incidencias if i['estado'] == 'CERRADA'),
+        'eventos':   sum(1 for i in incidencias if i['tipo'] == 'EVENTO'),
+        'altas':     sum(1 for i in incidencias if i['severidad'] == 'ALTA'),
+    }
+
+    return render(request, 'presupuesto/avance_fisico.html', {
+        'presupuesto': presupuesto,
+        'proyecto':    presupuesto.proyecto,
+        'kpis':        kpis,
+        'partidas':    partidas,
+        'incidencias':      incidencias,
+        'incidencias_kpis': incidencias_kpis,
+        'curva_s_json': json.dumps({
+            'meses': meses, 'programado': programado, 'ejecutado': ejecutado,
+        }),
+        'avance_partidas_json': json.dumps({
+            'labels':     [f"{p['codigo']} {p['nombre']}" for p in partidas],
+            'programado': [p['programado'] for p in partidas],
+            'ejecutado':  [p['ejecutado'] for p in partidas],
+        }),
+    })
+
+
+@requiere('puede_ver_presupuesto')
 def detalle(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     partidas_raiz = (

@@ -65,6 +65,7 @@ TEMPLATES = [
                 'config.context_processors.notif_no_leidas',
                 'config.context_processors.req_enviados_count',
                 'config.context_processors.req_solicitados_count',
+                'config.context_processors.tema_empresa',
             ],
             'builtins': [
                 'apps.presupuesto.templatetags.pres_fmt',

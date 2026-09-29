@@ -60,6 +60,29 @@
     </div>
 
     <div class="col-lg-4">
+      <!-- Apariencia -->
+      <div class="card mb-3">
+        <div class="card-header">Apariencia del Sistema</div>
+        <div class="card-body" style="padding:1.25rem">
+          <label class="form-label" style="font-size:.78rem">Color primario</label>
+          <div class="d-flex align-items-center gap-2">
+            {{ form.color_primario }}
+            <span class="text-muted" style="font-size:.8rem">{{ config.color_primario|default:'#2563eb' }}</span>
+          </div>
+          <div class="form-text" style="font-size:.72rem">Se aplica a botones, enlaces activos y acentos en todo el sistema.</div>
+
+          <label class="form-label mt-3" style="font-size:.78rem">Imagen de marca (sidebar)</label>
+          {% if config.imagen_marca %}
+          <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center">
+            <img src="{{ config.imagen_marca.url }}" alt="Imagen de marca"
+                 style="max-height:56px;max-width:100%;object-fit:contain">
+          </div>
+          {% endif %}
+          {{ form.imagen_marca }}
+          <div class="form-text" style="font-size:.72rem">Reemplaza el ícono y texto "S&amp;S Gestión" en la franja superior del sidebar. Recomendado: PNG con fondo transparente, horizontal.</div>
+        </div>
+      </div>
+
       <!-- Logo -->
       <div class="card mb-3">
         <div class="card-header">Logo de la Empresa</div>

@@ -28,6 +28,15 @@ urlpatterns = [
     path('cuadrillas/<int:pk>/integrante/agregar/', views.integrante_agregar, name='integrante_agregar'),
     path('cuadrillas/integrante/<int:pk>/eliminar/', views.integrante_eliminar, name='integrante_eliminar'),
 
+    # Personal de Obra / Trabajadores (por proyecto)
+    path('proyecto/<int:proyecto_id>/personal/',           views.trabajador_lista,  name='trabajador_lista'),
+    path('proyecto/<int:proyecto_id>/personal/nuevo/',     views.trabajador_crear,  name='trabajador_crear'),
+    path('personal/<int:pk>/',                             views.trabajador_detalle, name='trabajador_detalle'),
+    path('personal/<int:pk>/editar/',                      views.trabajador_editar,  name='trabajador_editar'),
+    path('personal/<int:pk>/eliminar/',                    views.trabajador_eliminar, name='trabajador_eliminar'),
+    path('personal/<int:pk>/documento/agregar/',           views.documento_agregar,  name='documento_agregar'),
+    path('personal/documento/<int:pk>/eliminar/',          views.documento_eliminar, name='documento_eliminar'),
+
     # Registros Diarios de Cuadrilla (por proyecto)
     path('proyecto/<int:proyecto_id>/registros/',         views.registro_lista,   name='registro_lista'),
     path('proyecto/<int:proyecto_id>/registros/nuevo/',   views.registro_crear,   name='registro_crear'),

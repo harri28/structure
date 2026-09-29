@@ -9,6 +9,16 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="{% static 'css/main.css' %}" rel="stylesheet">
+  {% if tema_color %}
+  <style>
+    :root {
+      --accent: {{ tema_color }};
+      --accent-hover: {{ tema_color_hover }};
+      --accent-pale: {{ tema_color_pale }};
+      --sb-active-bg: {{ tema_color }};
+    }
+  </style>
+  {% endif %}
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -17,13 +27,11 @@
 <aside id="sidebar">
 
   <div class="sb-brand">
-    <div class="logo-wrap">
-      <div class="logo-icon"><i class="bi bi-buildings-fill"></i></div>
-      <div class="logo-text">
-        <strong>S&amp;S Gestión</strong>
-        <span>Control de Obras</span>
-      </div>
-    </div>
+    {% if tema_imagen_marca %}
+    <img src="{{ tema_imagen_marca }}" alt="Logo" class="sb-brand-img">
+    {% else %}
+    <div class="sb-brand-placeholder"><i class="bi bi-image"></i></div>
+    {% endif %}
   </div>
 
   {% if user.is_superuser or permisos.es_superadmin %}
@@ -98,6 +106,10 @@
       <a href="{% url 'presupuesto:importar' proyecto_activo.presupuesto.pk %}"
          class="sb-link sb-sublink {% block nav_pres_importar %}{% endblock %}">
         <i class="bi bi-upload"></i> Importar
+      </a>
+      <a href="{% url 'presupuesto:avance_fisico' proyecto_activo.presupuesto.pk %}"
+         class="sb-link sb-sublink {% block nav_pres_avance %}{% endblock %}">
+        <i class="bi bi-graph-up-arrow" style="color:#0ea5e9"></i> Registro de Avance Físico
       </a>
       {% else %}
       <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}" class="sb-link sb-sublink">
@@ -197,6 +209,11 @@
     <a href="{% url 'maquinaria:maq_principal' proyecto_activo.pk %}"
        class="sb-link {% block nav_maquinaria %}{% endblock %}">
       <i class="bi bi-truck"></i> Maquinaria
+    </a>
+
+    <a href="{% url 'maquinaria:cuadrilla_lista' %}"
+       class="sb-link {% block nav_cuadrillas_admin %}{% endblock %}">
+      <i class="bi bi-diagram-3"></i> Gestionar Cuadrillas
     </a>
     {% endif %}
 

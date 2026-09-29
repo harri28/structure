@@ -1,5 +1,9 @@
 from django import forms
-from .models import TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla, RegistroDiario, RegistroMaquinaria, Liquidacion
+from .models import (
+    TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla,
+    RegistroDiario, RegistroMaquinaria, Liquidacion,
+    Trabajador, DocumentoTrabajador,
+)
 
 
 class TipoPersonalForm(forms.ModelForm):
@@ -80,6 +84,46 @@ class IntegranteCuadrillaForm(forms.ModelForm):
             self.fields['tipo_personal'].queryset = TipoPersonal.objects.filter(activo=True).exclude(pk__in=ya)
         else:
             self.fields['tipo_personal'].queryset = TipoPersonal.objects.filter(activo=True)
+
+
+class TrabajadorForm(forms.ModelForm):
+    class Meta:
+        model  = Trabajador
+        fields = [
+            'nombres', 'apellidos', 'dni', 'tipo_personal',
+            'telefono', 'direccion', 'fecha_nacimiento', 'fecha_ingreso',
+            'foto', 'activo',
+        ]
+        widgets = {
+            'nombres':           forms.TextInput(attrs={'class': 'form-control'}),
+            'apellidos':         forms.TextInput(attrs={'class': 'form-control'}),
+            'dni':               forms.TextInput(attrs={'class': 'form-control', 'maxlength': 15, 'inputmode': 'numeric', 'placeholder': 'DNI'}),
+            'tipo_personal':     forms.Select(attrs={'class': 'form-select'}),
+            'telefono':          forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 987654321'}),
+            'direccion':         forms.TextInput(attrs={'class': 'form-control'}),
+            'fecha_nacimiento':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_ingreso':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'foto':              forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'activo':            forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['tipo_personal'].queryset    = TipoPersonal.objects.filter(activo=True)
+        self.fields['tipo_personal'].required    = False
+        self.fields['tipo_personal'].empty_label = '— Sin cargo asignado —'
+        for f in ['dni', 'telefono', 'direccion', 'fecha_nacimiento', 'fecha_ingreso', 'foto']:
+            self.fields[f].required = False
+
+
+class DocumentoTrabajadorForm(forms.ModelForm):
+    class Meta:
+        model  = DocumentoTrabajador
+        fields = ['nombre', 'archivo']
+        widgets = {
+            'nombre':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: CV, DNI, Certificado SCTR, Antecedentes...'}),
+            'archivo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
 
 
 class RegistroDiarioForm(forms.ModelForm):

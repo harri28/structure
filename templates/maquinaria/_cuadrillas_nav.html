@@ -1,0 +1,16 @@
+<ul class="nav nav-tabs mb-3" style="border-bottom:none">
+  <li class="nav-item">
+    <a class="nav-link {% if active_tab == 'cuadrillas' %}active{% endif %}" href="{% url 'maquinaria:cuadrilla_lista' %}">
+      <i class="bi bi-people me-1"></i>Cuadrillas
+    </a>
+  </li>
+  <li class="nav-item">
+    {% if proyecto_activo %}
+    <a class="nav-link {% if active_tab == 'personal' %}active{% endif %}" href="{% url 'maquinaria:trabajador_lista' proyecto_activo.pk %}">
+    {% else %}
+    <a class="nav-link disabled" title="Selecciona un proyecto primero">
+    {% endif %}
+      <i class="bi bi-person-vcard me-1"></i>Personal de Obra
+    </a>
+  </li>
+</ul>

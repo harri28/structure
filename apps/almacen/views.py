@@ -1287,7 +1287,7 @@ def api_insumo_stock(request, insumo_id):
     return JsonResponse({'stock': float(entrada - salida)})
 
 
-@requiere('puede_ver_almacen', 'puede_gestionar_entradas', 'puede_gestionar_salidas', 'puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log', 'puede_gestionar_oc')
+@requiere('puede_ver_almacen', 'puede_gestionar_entradas', 'puede_gestionar_salidas', 'puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log', 'puede_gestionar_oc', 'puede_crear_requerimientos', 'puede_aprobar_requerimientos')
 def api_productos(request):
     q = request.GET.get('q', '')
     pid = request.session.get('proyecto_id')

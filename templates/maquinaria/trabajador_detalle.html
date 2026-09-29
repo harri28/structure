@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}{{ trabajador.nombre_completo }}{% endblock %}
+{% block nav_cuadrillas_admin %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:cuadrilla_lista' %}">Cuadrillas</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:trabajador_lista' proyecto.pk %}">Personal de Obra</a></li>
+<li class="breadcrumb-item active">{{ trabajador.nombre_completo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'maquinaria:trabajador_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Personal de Obra</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body text-center">
+        {% if trabajador.foto %}
+        <img src="{{ trabajador.foto.url }}" alt="{{ trabajador.nombre_completo }}"
+             style="width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto 1rem;display:block">
+        {% else %}
+        <div style="width:96px;height:96px;border-radius:50%;background:var(--surface-2);
+                    display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+          <i class="bi bi-person" style="font-size:2.2rem;color:var(--text-light)"></i>
+        </div>
+        {% endif %}
+        <div class="fw-bold" style="font-size:1.05rem">{{ trabajador.nombre_completo }}</div>
+        {% if trabajador.tipo_personal %}
+        <span class="badge mt-1" style="background:var(--accent-pale);color:var(--accent)">{{ trabajador.tipo_personal.nombre }}</span>
+        {% endif %}
+        {% if not trabajador.activo %}<span class="badge bg-secondary mt-1">Inactivo</span>{% endif %}
+
+        <table class="table table-sm mt-3 text-start" style="font-size:.84rem">
+          <tbody>
+            <tr><th class="text-muted fw-normal">DNI</th><td>{{ trabajador.dni|default:'—' }}</td></tr>
+            <tr><th class="text-muted fw-normal">Teléfono</th><td>{{ trabajador.telefono|default:'—' }}</td></tr>
+            <tr><th class="text-muted fw-normal">Dirección</th><td>{{ trabajador.direccion|default:'—' }}</td></tr>
+            <tr><th class="text-muted fw-normal">F. Nacimiento</th><td>{{ trabajador.fecha_nacimiento|default:'—' }}</td></tr>
+            <tr><th class="text-muted fw-normal">F. Ingreso a obra</th><td>{{ trabajador.fecha_ingreso|default:'—' }}</td></tr>
+          </tbody>
+        </table>
+
+        <div class="d-flex gap-2 justify-content-center mt-2">
+          <a href="{% url 'maquinaria:trabajador_editar' trabajador.pk %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </a>
+          <a href="{% url 'maquinaria:trabajador_eliminar' trabajador.pk %}" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-trash me-1"></i>Eliminar
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-file-earmark-text me-1"></i>CV y Documentos
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'maquinaria:documento_agregar' trabajador.pk %}"
+              enctype="multipart/form-data" class="d-flex gap-2 align-items-end mb-3 flex-wrap">
+          {% csrf_token %}
+          <div style="min-width:220px">
+            <label class="form-label" style="font-size:.78rem">Nombre del documento</label>
+            {{ doc_form.nombre }}
+          </div>
+          <div style="min-width:220px">
+            <label class="form-label" style="font-size:.78rem">Archivo</label>
+            {{ doc_form.archivo }}
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-upload me-1"></i>Subir
+          </button>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0" style="font-size:.84rem">
+            <thead>
+              <tr>
+                <th>Documento</th>
+                <th>Subido</th>
+                <th class="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for d in documentos %}
+              <tr>
+                <td><i class="bi bi-file-earmark me-1 text-muted"></i>{{ d.nombre }}</td>
+                <td class="text-muted">{{ d.fecha_subida|date:'d/m/Y H:i' }}</td>
+                <td class="text-end">
+                  <a href="{{ d.archivo.url }}" target="_blank" class="btn-tbl"><i class="bi bi-download"></i></a>
+                  <form method="post" action="{% url 'maquinaria:documento_eliminar' d.pk %}" class="d-inline"
+                        onsubmit="return confirm('¿Eliminar este documento?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-tbl text-danger" style="border:none;background:none">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-center text-muted py-3">Sin documentos cargados aún.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Cuadrillas{% endblock %}
-{% block nav_cuadrillas %}active{% endblock %}
+{% block nav_cuadrillas_admin %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item active">Cuadrillas</li>
 {% endblock %}
@@ -15,6 +15,8 @@
     <i class="bi bi-plus-lg me-1"></i>Nueva
   </a>
 </div>
+
+{% include 'maquinaria/_cuadrillas_nav.html' with active_tab='cuadrillas' %}
 
 <div class="row g-3">
 {% for c in cuadrillas %}

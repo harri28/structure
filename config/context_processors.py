@@ -1,3 +1,32 @@
+def _mezclar(hex_color, objetivo, factor):
+    """Mezcla hex_color hacia objetivo (0,0,0 o 255,255,255) en la proporción `factor`."""
+    hex_color = (hex_color or '').lstrip('#')
+    if len(hex_color) != 6:
+        hex_color = '2563eb'
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    ro, go, bo = objetivo
+    r = round(r + (ro - r) * factor)
+    g = round(g + (go - g) * factor)
+    b = round(b + (bo - b) * factor)
+    return f'#{r:02x}{g:02x}{b:02x}'
+
+
+def tema_empresa(request):
+    """Inyecta el color primario configurado por la empresa como variables CSS."""
+    try:
+        from apps.configuracion.models import ConfigEmpresa
+        cfg = ConfigEmpresa.get()
+        color = cfg.color_primario or '#2563eb'
+        return {
+            'tema_color':          color,
+            'tema_color_hover':    _mezclar(color, (0, 0, 0), 0.15),
+            'tema_color_pale':     _mezclar(color, (255, 255, 255), 0.92),
+            'tema_imagen_marca':   cfg.imagen_marca.url if cfg.imagen_marca else '',
+        }
+    except Exception:
+        return {}
+
+
 def proyecto_activo(request):
     """Inyecta el proyecto seleccionado en sesión en todos los templates."""
     try:

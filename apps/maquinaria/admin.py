@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla, RegistroDiario, RegistroMaquinaria
+from .models import (
+    TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla,
+    RegistroDiario, RegistroMaquinaria, Trabajador, DocumentoTrabajador,
+)
 
 
 class IntegranteInline(admin.TabularInline):
@@ -23,6 +26,18 @@ class MaquinariaAdmin(admin.ModelAdmin):
 class CuadrillaAdmin(admin.ModelAdmin):
     list_display = ['nombre', 'activo']
     inlines      = [IntegranteInline]
+
+
+class DocumentoInline(admin.TabularInline):
+    model = DocumentoTrabajador
+    extra = 0
+
+
+@admin.register(Trabajador)
+class TrabajadorAdmin(admin.ModelAdmin):
+    list_display = ['nombre_completo', 'dni', 'proyecto', 'tipo_personal', 'activo']
+    list_filter  = ['proyecto', 'activo']
+    inlines      = [DocumentoInline]
 
 
 @admin.register(RegistroDiario)

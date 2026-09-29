@@ -12,6 +12,8 @@ class ConfigEmpresa(models.Model):
     moneda       = models.CharField('Moneda', max_length=10, default='S/.')
     igv          = models.DecimalField('IGV (%)', max_digits=5, decimal_places=2, default=18.00)
     logo         = models.ImageField('Logo', upload_to='empresa/', blank=True)
+    color_primario = models.CharField('Color Primario', max_length=7, default='#2563eb', blank=True)
+    imagen_marca = models.ImageField('Imagen de Marca (sidebar)', upload_to='empresa/marca/', blank=True, null=True)
     updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:

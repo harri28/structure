@@ -27,13 +27,17 @@
       padding: 2.5rem 2rem 2rem;
     }
     .login-logo {
+      min-height: 52px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.75rem;
+    }
+    .login-logo.login-logo-fallback {
       width: 52px; height: 52px;
       border-radius: 14px;
       background: #2563eb;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 1rem;
     }
     .login-logo i { color: #fff; font-size: 1.5rem; }
+    .login-logo img { max-width: 100%; max-height: 64px; object-fit: contain; }
     .login-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; text-align: center; }
     .login-sub   { font-size: .82rem; color: #6b7280; text-align: center; margin-top: .2rem; margin-bottom: 1.75rem; }
     .form-label  { font-size: .82rem; font-weight: 600; color: #374151; margin-bottom: .35rem; }
@@ -84,11 +88,15 @@
 
 <div class="login-card">
 
+  {% if tema_imagen_marca %}
   <div class="login-logo">
+    <img src="{{ tema_imagen_marca }}" alt="Logo">
+  </div>
+  {% else %}
+  <div class="login-logo login-logo-fallback">
     <i class="bi bi-buildings-fill"></i>
   </div>
-  <div class="login-title">S&amp;S Gestión</div>
-  <div class="login-sub">Control de Obras — Ingresa tus credenciales</div>
+  {% endif %}
 
   {% if form.non_field_errors %}
   <ul class="errorlist">

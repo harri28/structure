@@ -29,14 +29,16 @@ def hub(request):
 class EmpresaForm(forms.ModelForm):
     class Meta:
         model  = ConfigEmpresa
-        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email', 'logo']
+        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email', 'logo', 'color_primario', 'imagen_marca']
         widgets = {
-            'razon_social': forms.TextInput(attrs={'class': 'form-control'}),
-            'ruc':          forms.TextInput(attrs={'class': 'form-control', 'maxlength': 11}),
-            'direccion':    forms.TextInput(attrs={'class': 'form-control'}),
-            'telefono':     forms.TextInput(attrs={'class': 'form-control'}),
-            'email':        forms.EmailInput(attrs={'class': 'form-control'}),
-            'logo':         forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'razon_social':   forms.TextInput(attrs={'class': 'form-control'}),
+            'ruc':            forms.TextInput(attrs={'class': 'form-control', 'maxlength': 11}),
+            'direccion':      forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono':       forms.TextInput(attrs={'class': 'form-control'}),
+            'email':          forms.EmailInput(attrs={'class': 'form-control'}),
+            'logo':           forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'color_primario': forms.TextInput(attrs={'class': 'form-control form-control-color', 'type': 'color'}),
+            'imagen_marca':   forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
 
 
