@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, ReglaDeteccionInsumo, Reporte, ImagenReporte, MODULOS_REPORTE, ESTADOS_REPORTE, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS
+from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, ReglaDeteccionInsumo, Reporte, ImagenReporte, MODULOS_REPORTE, ESTADOS_REPORTE, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS, ROLES_BLOQUEADOS
 from config.permisos import requiere
 
 
@@ -189,6 +189,7 @@ def rol_editar(request, pk):
     rol   = get_object_or_404(Rol, pk=pk)
     error = {}
     es_este_superadmin = rol.es_superadmin
+    rol_bloqueado       = rol.nombre in ROLES_BLOQUEADOS
     superadmin_existe  = Rol.objects.filter(es_superadmin=True).exclude(pk=pk).exists()
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
@@ -196,14 +197,19 @@ def rol_editar(request, pk):
             error['nombre'] = 'El nombre del rol es obligatorio.'
         elif Rol.objects.filter(nombre__iexact=nombre).exclude(pk=pk).exists():
             error['nombre'] = 'Ya existe otro rol con ese nombre.'
-        if request.POST.get('es_superadmin') == '1' and superadmin_existe:
+        if not rol_bloqueado and request.POST.get('es_superadmin') == '1' and superadmin_existe:
             error['es_superadmin'] = 'Ya existe un rol Superadmin. Solo puede haber uno en el sistema.'
 
         if not error:
             rol.nombre      = nombre
             rol.descripcion = request.POST.get('descripcion', '').strip()
-            for campo in TODOS_LOS_PERMISOS:
-                setattr(rol, campo, request.POST.get(campo) == '1')
+            # Los permisos de los roles sembrados (Administrador de Obra, Logística,
+            # Almacenero) vienen fijos por diseño — se ignora cualquier valor de
+            # permisos que llegue en el POST para ellos, aunque el HTML los muestre
+            # deshabilitados (un POST manual no debe poder alterarlos).
+            if not rol_bloqueado:
+                for campo in TODOS_LOS_PERMISOS:
+                    setattr(rol, campo, request.POST.get(campo) == '1')
             rol.save()
             messages.success(request, f'Rol "{rol.nombre}" actualizado.')
             return redirect('/configuracion/equipo/?tab=roles')
@@ -213,6 +219,7 @@ def rol_editar(request, pk):
         'titulo':             f'Editar Rol — {rol.nombre}',
         'accion':             'editar',
         'rol':                rol,
+        'rol_bloqueado':      rol_bloqueado,
         'grupos':             GRUPOS_PERMISOS,
         'form_nombre':        request.POST.get('nombre', rol.nombre) if request.method == 'POST' else rol.nombre,
         'form_descripcion':   request.POST.get('descripcion', rol.descripcion) if request.method == 'POST' else rol.descripcion,

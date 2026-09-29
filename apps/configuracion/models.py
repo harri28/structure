@@ -59,6 +59,10 @@ class ConfigSunat(models.Model):
 
 # ── Roles y Permisos ──────────────────────────────────────────────
 
+# Roles sembrados por la migración 0019 (configuracion/migrations/0019_seed_roles_operativos.py).
+# Sus permisos vienen predefinidos por diseño — no deben reconfigurarse desde la UI.
+ROLES_BLOQUEADOS = ['Administrador de Obra', 'Logística', 'Almacenero']
+
 GRUPOS_PERMISOS = [
     ('Proyectos', [
         ('puede_ver_dashboard',       'Ver dashboard general del proyecto'),

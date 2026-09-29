@@ -162,8 +162,9 @@
           <td class="text-center" style="font-size:.84rem">{{ liq.n_partes }}</td>
           <td class="text-end">
             <a href="{% url 'maquinaria:liquidacion_detalle' liq.pk %}"
-               class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size:.75rem">
-              <i class="bi bi-eye me-1"></i>Ver parte
+               class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size:.75rem"
+               title="Ver el parte diario imprimible de esta liquidación">
+              <i class="bi bi-eye me-1"></i>Ver parte diario
             </a>
           </td>
         </tr>
@@ -186,6 +187,17 @@
 <h6 style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280" class="mb-2">
   Registros sin liquidación
 </h6>
+<div class="alert alert-warning d-flex flex-wrap align-items-center gap-3 py-2 px-3 mb-2" style="font-size:.8rem">
+  <i class="bi bi-exclamation-triangle"></i>
+  <span>No pertenecen a ninguna liquidación — no cuentan en el "Total HM" de ninguna fila de arriba.</span>
+  <span class="ms-auto d-flex gap-3 flex-wrap">
+    <span><strong>{{ sin_liq_resumen.n_turnos }}</strong> turno{{ sin_liq_resumen.n_turnos|pluralize }}</span>
+    <span><strong>{{ sin_liq_resumen.total_hm|floatformat:2 }}</strong> HM</span>
+    {% if sin_liq_resumen.desde %}
+    <span>{{ sin_liq_resumen.desde|date:"d/m/Y" }} — {{ sin_liq_resumen.hasta|date:"d/m/Y" }}</span>
+    {% endif %}
+  </span>
+</div>
 <div class="card">
   <div class="card-body p-0">
     <table class="table-modern">

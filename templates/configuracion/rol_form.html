@@ -42,6 +42,7 @@
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span>Permisos</span>
+          {% if not rol_bloqueado %}
           <div class="d-flex gap-2">
             <button type="button" onclick="marcarTodos(true)"
                     style="font-size:.75rem;padding:.2rem .6rem;border:1px solid #e5e7eb;
@@ -54,8 +55,15 @@
               Limpiar
             </button>
           </div>
+          {% endif %}
         </div>
         <div class="card-body">
+          {% if rol_bloqueado %}
+          <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" style="font-size:.8rem">
+            <i class="bi bi-lock-fill"></i>
+            <div>Este es un rol predefinido del sistema — sus permisos vienen fijos por diseño y no se pueden reconfigurar. Puedes seguir editando el nombre y la descripción.</div>
+          </div>
+          {% endif %}
           {% for grupo, campos in grupos %}
           <div class="mb-4">
             <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
@@ -73,6 +81,14 @@
               <span style="font-size:.72rem;color:#dc2626;margin-left:.5rem;white-space:nowrap">
                 <i class="bi bi-lock-fill"></i> Ya existe un Superadmin
               </span>
+            </label>
+            {% elif rol_bloqueado %}
+            <label style="display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;border-radius:6px;
+                          opacity:.6;margin-bottom:.1rem;cursor:not-allowed"
+                   title="Permiso fijo — este rol no se puede reconfigurar">
+              <input type="checkbox" style="width:15px;height:15px;flex-shrink:0;accent-color:#2563eb;pointer-events:none"
+                     {% if campo in permisos_checked %}checked{% endif %} disabled>
+              <span style="font-size:.83rem">{{ label }}</span>
             </label>
             {% else %}
             <label style="display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;border-radius:6px;

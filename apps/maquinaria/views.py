@@ -2,7 +2,7 @@ import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.conf import settings
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Min, Max
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
@@ -472,12 +472,18 @@ def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
                 .filter(proyecto=proyecto, maquinaria=maquinaria)
                 .aggregate(t=Sum('horas'))['t'] or 0)
 
+    sin_liq_resumen = sin_liq.aggregate(
+        total_hm=Sum('horas'), n_turnos=Count('pk'),
+        desde=Min('fecha'), hasta=Max('fecha'),
+    )
+
     import datetime
     return render(request, 'maquinaria/maq_maquinaria_detalle.html', {
         'proyecto':     proyecto,
         'maquinaria':   maquinaria,
         'liquidaciones': liquidaciones,
         'sin_liq':      sin_liq,
+        'sin_liq_resumen': sin_liq_resumen,
         'total_hm':     total_hm,
         'hoy':          datetime.date.today().strftime('%Y-%m'),
     })
@@ -605,8 +611,21 @@ def maq_registro_crear(request, proyecto_id):
         if maq:
             reg.nombre = maq.nombre
             reg.placa  = maq.placa
+            # Vincular automáticamente a la liquidación ABIERTA del período (mes) de la
+            # fecha del turno, si existe, para que no quede huérfano en "sin liquidación".
+            reg.liquidacion = Liquidacion.objects.filter(
+                proyecto=proyecto, maquinaria=maq, estado='ABIERTA',
+                periodo__year=reg.fecha.year, periodo__month=reg.fecha.month,
+            ).first()
         reg.save()
-        messages.success(request, 'Registro guardado.')
+        if maq and not reg.liquidacion_id:
+            messages.warning(
+                request,
+                f'Turno guardado, pero no hay una liquidación abierta para {reg.fecha.strftime("%B %Y")} '
+                f'en esta máquina — no se sumará a ningún total hasta que crees una.'
+            )
+        else:
+            messages.success(request, 'Registro guardado.')
         if maq:
             return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq.pk)
         return redirect('maquinaria:maq_registro_lista', proyecto_id=proyecto_id)
