@@ -28,7 +28,7 @@
 </div>
 {% endif %}
 
-<form method="post" id="req-form">
+<form method="post" id="req-form" class="form-compact">
   {% csrf_token %}
   {% if modo_ajuste %}<input type="hidden" name="modo_ajuste" value="1">{% endif %}
 

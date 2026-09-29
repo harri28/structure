@@ -23,7 +23,7 @@
     </div>
     {% endif %}
 
-    <form method="post">
+    <form method="post" class="form-compact">
       {% csrf_token %}
       {% if proyecto_destino %}
       <input type="hidden" name="proyecto_pk" value="{{ proyecto_destino.pk }}">
