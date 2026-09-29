@@ -211,6 +211,13 @@ class RegistroMaquinariaForm(forms.ModelForm):
         if self.validar_horometro:
             maq     = cleaned.get('maquinaria')
             entrada = cleaned.get('hora_entrada')
+            salida  = cleaned.get('hora_salida')
+
+            # Dentro del mismo turno: la salida nunca puede ser menor a la entrada
+            # (igual sí es válido — turno de 0 horas).
+            if entrada is not None and salida is not None and salida < entrada:
+                self.add_error('hora_salida', 'El horómetro de salida no puede ser menor al de entrada.')
+
             if maq and entrada is not None:
                 from django.db.models import Max
                 qs = RegistroMaquinaria.objects.filter(maquinaria=maq)
