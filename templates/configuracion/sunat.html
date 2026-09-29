@@ -16,6 +16,37 @@
 
 <div class="row justify-content-center">
   <div class="col-lg-8">
+
+    <div class="card mb-3">
+      <div class="card-header">IGV del Proyecto Activo</div>
+      <div class="card-body">
+        {% if proyecto_activo and proyecto_activo.presupuesto %}
+        <div class="d-flex align-items-center gap-2">
+          <form method="post" action="{% url 'presupuesto:igv_toggle' proyecto_activo.presupuesto.pk %}" class="d-inline">
+            {% csrf_token %}
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     onchange="this.form.submit()"
+                     {% if proyecto_activo.presupuesto.igv_pct %}checked{% endif %}>
+            </div>
+          </form>
+          <span style="font-size:.85rem">
+            IGV{% if proyecto_activo.presupuesto.igv_pct %} ({{ proyecto_activo.presupuesto.igv_pct }}%){% endif %}
+            en el presupuesto de <strong>{{ proyecto_activo.nombre }}</strong>
+          </span>
+        </div>
+        {% elif proyecto_activo %}
+        <div class="text-muted" style="font-size:.85rem">
+          <i class="bi bi-info-circle me-1"></i>{{ proyecto_activo.nombre }} todavía no tiene un presupuesto importado.
+        </div>
+        {% else %}
+        <div class="text-muted" style="font-size:.85rem">
+          <i class="bi bi-info-circle me-1"></i>Selecciona un proyecto activo para poder activar/desactivar su IGV.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
     <form method="post" novalidate class="form-compact">
       {% csrf_token %}
 
