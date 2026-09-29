@@ -207,7 +207,7 @@
           <td style="font-size:.82rem">{{ h.descripcion }}</td>
           <td class="text-end" style="font-size:.82rem">{{ h.cantidad|floatformat:2 }} {{ h.unidad }}</td>
           <td style="font-size:.78rem;color:#6b7280">{{ h.justificacion|default:"—" }}</td>
-          <td style="font-size:.78rem">{{ h.usuario.get_full_name|default:h.usuario.username|default:"—" }}</td>
+          <td style="font-size:.78rem">{% if h.usuario %}{{ h.usuario.get_full_name|default:h.usuario.username }}{% else %}—{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>

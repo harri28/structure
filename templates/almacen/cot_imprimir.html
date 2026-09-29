@@ -298,7 +298,7 @@
         {% for d in cot.detalles.all %}
         <tr>
           <td class="left">{% if d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</td>
-          <td class="left">{{ d.descripcion|default:d.insumo.descripcion }}</td>
+          <td class="left">{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
           <td class="center">{{ d.unidad|default:"—" }}</td>
           <td class="center">
             <input type="number" name="cantidad_{{ d.pk }}" class="cant"

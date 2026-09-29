@@ -290,7 +290,7 @@
       <div class="fila-datos">
         <div class="dato wide">
           <label>Nombre de Transportista</label>
-          <span>{{ guia.conductor|default:guia.transportista.razon_social|default:"—" }}</span>
+          <span>{% if guia.conductor %}{{ guia.conductor }}{% elif guia.transportista %}{{ guia.transportista.razon_social }}{% else %}—{% endif %}</span>
         </div>
         <div class="dato">
           <label>Placa</label>

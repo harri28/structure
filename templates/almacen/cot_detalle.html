@@ -44,7 +44,7 @@
         {% for d in cot.detalles.all %}
         <tr>
           <td><code>{% if d.insumo %}{{ d.insumo.codigo }}{% else %}—{% endif %}</code></td>
-          <td>{{ d.descripcion|default:d.insumo.descripcion }}</td>
+          <td>{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
           <td class="text-end">{{ d.cantidad|floatformat:2 }}</td>
           <td>{{ d.unidad }}</td>
           <td class="text-end">{{ d.precio_unitario|floatformat:2 }}</td>

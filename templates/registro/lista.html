@@ -89,7 +89,7 @@
           </td>
           <td>
             <span class="fw-semibold" style="font-size:.82rem">
-              {{ r.usuario.get_full_name|default:r.usuario.username|default:"Sistema" }}
+              {% if r.usuario %}{{ r.usuario.get_full_name|default:r.usuario.username }}{% else %}Sistema{% endif %}
             </span>
           </td>
           <td>
