@@ -601,6 +601,7 @@ def maq_registro_crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     form     = RegistroMaquinariaForm(
         proyecto=proyecto,
+        validar_horometro=True,
         data=request.POST or None,
         initial={'fecha': __import__('datetime').date.today()},
     )

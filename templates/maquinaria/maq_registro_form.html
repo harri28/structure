@@ -41,10 +41,12 @@
             <div class="col-6">
               <label class="form-label fw-semibold">Horómetro entrada</label>
               {{ form.hora_entrada }}
+              {% for e in form.hora_entrada.errors %}<div class="text-danger mt-1" style="font-size:.83rem">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-6">
               <label class="form-label fw-semibold">Horómetro salida</label>
               {{ form.hora_salida }}
+              {% for e in form.hora_salida.errors %}<div class="text-danger mt-1" style="font-size:.83rem">{{ e }}</div>{% endfor %}
             </div>
           </div>
           <div id="horas-preview" style="display:none;font-size:.8rem;color:#2563eb;font-weight:600;margin-bottom:.75rem">

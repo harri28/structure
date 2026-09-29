@@ -172,10 +172,11 @@ class RegistroMaquinariaForm(forms.ModelForm):
             'observacion':  forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
-    def __init__(self, proyecto=None, maquinaria=None, *args, **kwargs):
+    def __init__(self, proyecto=None, maquinaria=None, validar_horometro=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from django.db.models import Count
         from apps.presupuesto.models import Partida, InsumoPresupuesto
+        self.validar_horometro = validar_horometro
         self.fields['maquinaria'].queryset    = Maquinaria.objects.filter(activo=True)
         self.fields['maquinaria'].empty_label = '— Seleccionar máquina —'
         if maquinaria:
@@ -201,6 +202,25 @@ class RegistroMaquinariaForm(forms.ModelForm):
         self.fields['insumo'].empty_label  = '— Sin insumo —'
         self.fields['hora_entrada'].required = False
         self.fields['hora_salida'].required  = False
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.validar_horometro:
+            maq     = cleaned.get('maquinaria')
+            entrada = cleaned.get('hora_entrada')
+            if maq and entrada is not None:
+                from django.db.models import Max
+                qs = RegistroMaquinaria.objects.filter(maquinaria=maq)
+                if self.instance.pk:
+                    qs = qs.exclude(pk=self.instance.pk)
+                ultimo_salida = qs.aggregate(m=Max('hora_salida'))['m']
+                if ultimo_salida is not None and entrada <= ultimo_salida:
+                    self.add_error(
+                        'hora_entrada',
+                        f'El horómetro de entrada debe ser mayor a {ultimo_salida} '
+                        f'(último horómetro de salida registrado para esta máquina).'
+                    )
+        return cleaned
 
 
 class ParteForm(forms.ModelForm):
