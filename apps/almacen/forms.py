@@ -21,6 +21,8 @@ class EntradaForm(forms.ModelForm):
 
     def __init__(self, *args, proyecto=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial.setdefault('fecha', date.today())
         if proyecto:
             self.fields['requerimiento'].queryset = proyecto.requerimientos.all()
         self.fields['requerimiento'].required = False
@@ -52,6 +54,11 @@ class SalidaForm(forms.ModelForm):
             'observaciones': forms.Textarea(attrs={'rows': 2}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial.setdefault('fecha', date.today())
+
 
 class DetalleSalidaForm(forms.ModelForm):
     class Meta:
@@ -78,6 +85,11 @@ class CotizacionForm(forms.ModelForm):
             'fecha': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'observaciones': forms.Textarea(attrs={'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial.setdefault('fecha', date.today())
 
 
 class DetalleCotizacionForm(forms.ModelForm):
@@ -109,6 +121,8 @@ class OrdenCompraForm(forms.ModelForm):
 
     def __init__(self, *args, proyecto=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial.setdefault('fecha', date.today())
         if proyecto:
             self.fields['requerimiento'].queryset = proyecto.requerimientos.all()
             self.fields['cotizacion'].queryset = proyecto.cotizaciones.all()
