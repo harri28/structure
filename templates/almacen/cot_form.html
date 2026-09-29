@@ -17,7 +17,7 @@
       <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label fw-semibold">N° Cotización</label>
-          <input type="text" name="numero" value="{{ form.numero.value|default:'' }}" class="form-control" required>
+          <input type="text" name="numero" value="{{ form.numero.value|default:'' }}" class="form-control" required{% if not form.instance.pk %} readonly{% endif %}>
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">Fecha</label>

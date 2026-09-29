@@ -981,12 +981,24 @@ def cot_imprimir(request, pk):
     })
 
 
+def _siguiente_numero_cot(proyecto):
+    """Siguiente correlativo de cotización del proyecto (001, 002, ...)."""
+    ultimo = proyecto.cotizaciones.order_by('-pk').first()
+    try:
+        siguiente = int(''.join(filter(str.isdigit, str(ultimo.numero)))) + 1 if ultimo else 1
+    except (ValueError, AttributeError):
+        siguiente = proyecto.cotizaciones.count() + 1
+    return str(siguiente).zfill(3)
+
+
 @requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
 @proyecto_visible
 def cot_crear(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     if request.method == 'POST':
-        form = CotizacionForm(request.POST)
+        post = request.POST.copy()
+        post['numero'] = _siguiente_numero_cot(proyecto)  # siempre automático
+        form = CotizacionForm(post)
         formset = DetalleCotizacionFormSet(request.POST, prefix='detalles')
         if form.is_valid() and formset.is_valid():
             cot = form.save(commit=False)
@@ -1002,7 +1014,7 @@ def cot_crear(request, proyecto_id):
             messages.success(request, 'Cotización registrada.')
             return redirect('almacen:cot_detalle', pk=cot.pk)
     else:
-        form = CotizacionForm()
+        form = CotizacionForm(initial={'numero': _siguiente_numero_cot(proyecto)})
         formset = DetalleCotizacionFormSet(prefix='detalles')
     return render(request, 'almacen/cot_form.html', {
         'form': form, 'formset': formset, 'proyecto': proyecto, 'titulo': 'Nueva Cotización',
@@ -1084,12 +1096,7 @@ def cot_rapida(request, proyecto_id):
         return redirect('almacen:cot_lista', proyecto_id=proyecto_id)
 
     # Auto-numerar
-    ultimo = proyecto.cotizaciones.order_by('-pk').first()
-    try:
-        siguiente = int(''.join(filter(str.isdigit, str(ultimo.numero)))) + 1 if ultimo else 1
-    except (ValueError, AttributeError):
-        siguiente = proyecto.cotizaciones.count() + 1
-    numero = str(siguiente).zfill(3)
+    numero = _siguiente_numero_cot(proyecto)
 
     pdf = request.FILES.get('archivo_pdf') or None
     cot = Cotizacion.objects.create(
