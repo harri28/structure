@@ -58,7 +58,7 @@
       <thead><tr><th>N° COT</th><th>Fecha</th><th>Proveedor</th><th>Origen</th><th>Estado</th><th class="text-end">Total (S/.)</th><th></th></tr></thead>
       <tbody>
         {% for c in cotizaciones %}
-        <tr class="cot-row"
+        <tr class="cot-row" style="cursor:pointer" data-href="{% url 'almacen:cot_detalle' c.pk %}"
             data-search="COT-{{ c.numero|lower }} {{ c.proveedor|lower }} {% if c.requerimiento_origen %}REQ-{{ c.requerimiento_origen.numero|lower }}{% endif %}{% for d in c.detalles.all %} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}">
           <td><a href="{% url 'almacen:cot_detalle' c.pk %}" class="fw-semibold text-decoration-none">COT-{{ c.numero }}</a></td>
           <td>{{ c.fecha|date:"d/m/Y" }}</td>
@@ -79,7 +79,6 @@
           </td>
           <td class="text-end fw-semibold">S/. {{ c.total|floatformat:2 }}</td>
           <td class="d-flex gap-1">
-            <a href="{% url 'almacen:cot_detalle' c.pk %}" class="btn-tbl"><i class="bi bi-eye"></i></a>
             <a href="{% url 'almacen:cot_editar' c.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
           </td>
         </tr>
@@ -140,6 +139,13 @@
     }
   }
 
+  rows.forEach(function (r) {
+    r.addEventListener('click', function (e) {
+      if (e.target.closest('a, button')) return;
+      window.location.href = r.getAttribute('data-href');
+    });
+  });
+
   input.addEventListener('input', filtrar);
   clearB.addEventListener('click', function () { input.value = ''; filtrar(); input.focus(); });
   noResC.addEventListener('click', function () { input.value = ''; filtrar(); input.focus(); });
@@ -164,7 +170,7 @@
           <div class="row g-3 mb-4">
             <div class="col-md-4">
               <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
-              <input type="date" name="fecha" id="cot-fecha" class="form-control" required>
+              <input type="date" name="fecha" id="cot-fecha" class="form-control" value="{% now 'Y-m-d' %}" required>
             </div>
             <div class="col-md-8">
               <label class="form-label fw-semibold">Proveedor / Tienda <span class="text-danger">*</span></label>
