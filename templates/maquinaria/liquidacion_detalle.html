@@ -4,7 +4,7 @@
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'maquinaria:dashboard' proyecto.pk %}">Maquinaria</a></li>
-<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}">Equipos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_principal' proyecto.pk %}">Maquinaria</a></li>
 <li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_detalle_maquinaria' proyecto.pk maquinaria.pk %}">{{ maquinaria.codigo }}</a></li>
 <li class="breadcrumb-item active">LIQ-{{ liq.numero|stringformat:"03d" }}</li>
 {% endblock %}

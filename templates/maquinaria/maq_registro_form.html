@@ -7,7 +7,7 @@
 {% if maquinaria_fija %}
 <li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_detalle_maquinaria' proyecto.pk maquinaria_fija.pk %}">{{ maquinaria_fija.nombre }}</a></li>
 {% else %}
-<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}">Equipos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:maq_principal' proyecto.pk %}">Maquinaria</a></li>
 {% endif %}
 <li class="breadcrumb-item active">{{ titulo }}</li>
 {% endblock %}
@@ -20,8 +20,8 @@
       <i class="bi bi-chevron-left"></i> {{ maquinaria_fija.nombre }}
     </a>
     {% else %}
-    <a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}" class="btn-back">
-      <i class="bi bi-chevron-left"></i> Equipos
+    <a href="{% url 'maquinaria:maq_principal' proyecto.pk %}" class="btn-back">
+      <i class="bi bi-chevron-left"></i> Maquinaria
     </a>
     {% endif %}
     <h4><i class="bi bi-truck me-2"></i>{{ titulo }}</h4>
@@ -97,8 +97,13 @@
             <button type="submit" class="btn btn-primary btn-sm">
               <i class="bi bi-check-lg me-1"></i>Guardar
             </button>
-            <a href="{% url 'maquinaria:maq_registro_lista' proyecto.pk %}"
+            {% if maquinaria_fija %}
+            <a href="{% url 'maquinaria:maq_detalle_maquinaria' proyecto.pk maquinaria_fija.pk %}"
                class="btn btn-outline-secondary btn-sm">Cancelar</a>
+            {% else %}
+            <a href="{% url 'maquinaria:maq_principal' proyecto.pk %}"
+               class="btn btn-outline-secondary btn-sm">Cancelar</a>
+            {% endif %}
           </div>
         </form>
       </div>

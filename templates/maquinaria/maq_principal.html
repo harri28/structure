@@ -8,18 +8,24 @@
     <h4><i class="bi bi-truck me-2"></i>Maquinaria</h4>
     <div class="text-muted" style="font-size:.84rem">
       {{ maquinas|length }} equipo{{ maquinas|length|pluralize:"s" }} registrado{{ maquinas|length|pluralize:"s" }}
+      · Total acumulado: <strong>{{ total_hm_proyecto|floatformat:1 }} HM</strong>
     </div>
   </div>
-  <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-lg me-1"></i>Nueva maquinaria
-  </a>
+  <div class="d-flex gap-2">
+    <a href="{% url 'maquinaria:maq_registro_crear' proyecto.pk %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo turno
+    </a>
+    <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nueva maquinaria
+    </a>
+  </div>
 </div>
 
 {% if maquinas %}
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table-modern" style="min-width:1050px">
+      <table class="table-modern" style="min-width:1200px">
         <thead>
           <tr>
             <th style="width:80px">Código</th>
@@ -30,6 +36,8 @@
             <th style="width:140px">Modalidad</th>
             <th style="min-width:150px">Propietario</th>
             <th style="min-width:150px">Operador</th>
+            <th style="width:90px" class="text-end">HM acum.</th>
+            <th style="width:70px" class="text-end">Turnos</th>
             <th style="width:80px" class="text-center">Estado</th>
           </tr>
         </thead>
@@ -48,6 +56,8 @@
             <td style="font-size:.78rem;color:#6b7280">{{ m.get_modalidad_costo_display|default:"—" }}</td>
             <td style="font-size:.82rem">{{ m.propietario_razon_social|default:"—" }}</td>
             <td style="font-size:.82rem">{{ m.operador|default:"—" }}</td>
+            <td class="text-end fw-semibold" style="font-size:.82rem;color:#2563eb">{{ m.total_hm|default:0|floatformat:1 }}</td>
+            <td class="text-end" style="font-size:.82rem;color:#6b7280">{{ m.n_turnos|default:0 }}</td>
             <td class="text-center">
               {% if m.activo %}
               <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.68rem">Activo</span>

@@ -2,7 +2,7 @@ import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.conf import settings
-from django.db.models import Sum, Count, Min, Max
+from django.db.models import Sum, Count, Min, Max, Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
@@ -26,7 +26,7 @@ from config.permisos import requiere, proyecto_visible
 @proyecto_visible
 def dashboard(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    registros_cuadrilla  = RegistroDiario.objects.filter(proyecto=proyecto).select_related('cuadrilla__integrantes', 'partida')
+    registros_cuadrilla  = RegistroDiario.objects.filter(proyecto=proyecto).select_related('partida')
     registros_maquinaria = RegistroMaquinaria.objects.filter(proyecto=proyecto).select_related('maquinaria', 'partida')
 
     total_hh = sum(r.horas_hombre() for r in registros_cuadrilla.prefetch_related('cuadrilla__integrantes'))
@@ -394,40 +394,21 @@ def registro_eliminar(request, pk):
 @requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 @proyecto_visible
 def maq_principal(request, proyecto_id):
-    """Página principal de Maquinaria: catálogo de máquinas del proyecto."""
+    """Página principal de Maquinaria: catálogo de máquinas + uso (HM/turnos) en este proyecto."""
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    maquinas = Maquinaria.objects.filter(activo=True).order_by('codigo')
-    return render(request, 'maquinaria/maq_principal.html', {
-        'proyecto': proyecto,
-        'maquinas': maquinas,
-    })
-
-
-@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
-@proyecto_visible
-def maq_registro_lista(request, proyecto_id):
-    """Lista de máquinas usadas en el proyecto, agrupadas con total HM."""
-    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    # Máquinas del catálogo que tienen al menos un registro en este proyecto
-    maquinas_usadas = (
-        Maquinaria.objects
-        .filter(registromaquinaria__proyecto=proyecto)
+    maquinas = (
+        Maquinaria.objects.filter(activo=True)
         .annotate(
-            total_hm=Sum('registromaquinaria__horas'),
-            n_registros=Count('registromaquinaria'),
+            total_hm=Sum('registromaquinaria__horas', filter=Q(registromaquinaria__proyecto=proyecto)),
+            n_turnos=Count('registromaquinaria', filter=Q(registromaquinaria__proyecto=proyecto)),
         )
-        .order_by('nombre')
+        .order_by('codigo')
     )
-    # Máquinas del catálogo sin registros aún (para poder registrar)
-    ids_usadas = maquinas_usadas.values_list('pk', flat=True)
-    maquinas_sin_uso = Maquinaria.objects.filter(activo=True).exclude(pk__in=ids_usadas).order_by('nombre')
-
-    total_hm = RegistroMaquinaria.objects.filter(proyecto=proyecto).aggregate(t=Sum('horas'))['t'] or 0
-    return render(request, 'maquinaria/maq_registro_lista.html', {
-        'proyecto':        proyecto,
-        'maquinas_usadas': maquinas_usadas,
-        'maquinas_sin_uso': maquinas_sin_uso,
-        'total_hm':        total_hm,
+    total_hm_proyecto = RegistroMaquinaria.objects.filter(proyecto=proyecto).aggregate(t=Sum('horas'))['t'] or 0
+    return render(request, 'maquinaria/maq_principal.html', {
+        'proyecto':          proyecto,
+        'maquinas':          maquinas,
+        'total_hm_proyecto': total_hm_proyecto,
     })
 
 
@@ -631,7 +612,7 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
             messages.success(request, 'Registro guardado.')
         if maq:
             return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq.pk)
-        return redirect('maquinaria:maq_registro_lista', proyecto_id=proyecto_id)
+        return redirect('maquinaria:maq_principal', proyecto_id=proyecto_id)
     return render(request, 'maquinaria/maq_registro_form.html', {
         'form':            form,
         'proyecto':        proyecto,
@@ -659,7 +640,7 @@ def maq_registro_editar(request, pk):
         if registro.maquinaria_id:
             return redirect('maquinaria:maq_detalle_maquinaria',
                             proyecto_id=registro.proyecto_id, maq_pk=registro.maquinaria_id)
-        return redirect('maquinaria:maq_registro_lista', proyecto_id=registro.proyecto_id)
+        return redirect('maquinaria:maq_principal', proyecto_id=registro.proyecto_id)
     return render(request, 'maquinaria/maq_registro_form.html', {
         'form':     form,
         'proyecto': registro.proyecto,
@@ -678,7 +659,7 @@ def maq_registro_eliminar(request, pk):
         messages.success(request, 'Registro eliminado.')
     if maq_pk:
         return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq_pk)
-    return redirect('maquinaria:maq_registro_lista', proyecto_id=proyecto_id)
+    return redirect('maquinaria:maq_principal', proyecto_id=proyecto_id)
 
 
 # ── Resumen HH / HM por partida ───────────────────────────────────────
