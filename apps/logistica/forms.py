@@ -35,8 +35,8 @@ class GuiaRemisionForm(forms.ModelForm):
         ]
         widgets = {
             'numero':        forms.TextInput(attrs={**_ctrl, 'placeholder': 'T001-000001'}),
-            'fecha_emision': forms.DateInput(attrs=_date),
-            'fecha_traslado':forms.DateInput(attrs=_date),
+            'fecha_emision': forms.DateInput(attrs=_date, format='%Y-%m-%d'),
+            'fecha_traslado':forms.DateInput(attrs=_date, format='%Y-%m-%d'),
             'motivo':        forms.Select(attrs=_sel),
             'origen':        forms.TextInput(attrs={**_ctrl, 'placeholder': 'Almacén central, Av. …'}),
             'destino':       forms.TextInput(attrs={**_ctrl, 'placeholder': 'Obra / destino'}),

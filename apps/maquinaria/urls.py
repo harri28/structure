@@ -49,6 +49,7 @@ urlpatterns = [
     # Registros de Maquinaria (por proyecto)
     path('proyecto/<int:proyecto_id>/maquinaria/',                       views.maq_registro_lista,      name='maq_registro_lista'),
     path('proyecto/<int:proyecto_id>/maquinaria/nuevo/',                 views.maq_registro_crear,      name='maq_registro_crear'),
+    path('proyecto/<int:proyecto_id>/maquinaria/nuevo/<int:maq_pk>/',    views.maq_registro_crear,      name='maq_registro_crear'),
     path('proyecto/<int:proyecto_id>/maquinaria/<int:maq_pk>/detalle/',  views.maq_detalle_maquinaria,  name='maq_detalle_maquinaria'),
     path('maquinaria-reg/<int:pk>/',                                     views.maq_registro_detalle,    name='maq_registro_detalle'),
     path('maquinaria-reg/<int:pk>/editar/',                              views.maq_registro_editar,     name='maq_registro_editar'),

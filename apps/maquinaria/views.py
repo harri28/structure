@@ -597,10 +597,12 @@ def resumen_mensual(request, proyecto_id):
 
 @requiere('puede_gestionar_maquinaria')
 @proyecto_visible
-def maq_registro_crear(request, proyecto_id):
+def maq_registro_crear(request, proyecto_id, maq_pk=None):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    maquinaria_fija = get_object_or_404(Maquinaria, pk=maq_pk) if maq_pk else None
     form     = RegistroMaquinariaForm(
         proyecto=proyecto,
+        maquinaria=maquinaria_fija,
         validar_horometro=True,
         data=request.POST or None,
         initial={'fecha': __import__('datetime').date.today()},
@@ -631,9 +633,10 @@ def maq_registro_crear(request, proyecto_id):
             return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq.pk)
         return redirect('maquinaria:maq_registro_lista', proyecto_id=proyecto_id)
     return render(request, 'maquinaria/maq_registro_form.html', {
-        'form':     form,
-        'proyecto': proyecto,
-        'titulo':   'Nuevo Registro de Maquinaria',
+        'form':            form,
+        'proyecto':        proyecto,
+        'maquinaria_fija': maquinaria_fija,
+        'titulo':          f'Nuevo Turno — {maquinaria_fija.nombre} ({maquinaria_fija.codigo})' if maquinaria_fija else 'Nuevo Registro de Maquinaria',
     })
 
 

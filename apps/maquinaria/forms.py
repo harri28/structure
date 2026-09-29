@@ -45,9 +45,9 @@ class MaquinariaForm(forms.ModelForm):
             'propietario_celular':      forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'placeholder': 'Ej: 987654321'}),
             'propietario_direccion':    forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Jr. Los Pinos 123'}),
             'operador':        forms.TextInput(attrs={'class': 'form-control'}),
-            'fecha_llegada':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_reinicio':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_salida_obra': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_llegada':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_reinicio':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_salida_obra': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'activo':          forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -101,8 +101,8 @@ class TrabajadorForm(forms.ModelForm):
             'tipo_personal':     forms.Select(attrs={'class': 'form-select'}),
             'telefono':          forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 987654321'}),
             'direccion':         forms.TextInput(attrs={'class': 'form-control'}),
-            'fecha_nacimiento':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_ingreso':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_nacimiento':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_ingreso':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'foto':              forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'activo':            forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -131,7 +131,7 @@ class RegistroDiarioForm(forms.ModelForm):
         model  = RegistroDiario
         fields = ['fecha', 'partida', 'cuadrilla', 'horas', 'observacion']
         widgets = {
-            'fecha':       forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha':       forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'partida':     forms.Select(attrs={'class': 'form-select'}),
             'cuadrilla':   forms.Select(attrs={'class': 'form-select'}),
             'horas':       forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'min': '0'}),
@@ -163,7 +163,7 @@ class RegistroMaquinariaForm(forms.ModelForm):
         ]
         widgets = {
             'maquinaria':   forms.Select(attrs={'class': 'form-select'}),
-            'fecha':        forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha':        forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'hora_entrada': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'min': '0', 'placeholder': 'Ej: 14015.4'}),
             'hora_salida':  forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'min': '0', 'placeholder': 'Ej: 14022.4'}),
             'operador':     forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del operador / conductor'}),
@@ -182,6 +182,9 @@ class RegistroMaquinariaForm(forms.ModelForm):
         if maquinaria:
             self.fields['maquinaria'].initial  = maquinaria
             self.fields['maquinaria'].required = True
+            # Máquina fija por contexto (se entró desde la ficha de esa máquina): ya no
+            # se elige por dropdown, viaja oculta y se muestra como texto de solo lectura.
+            self.fields['maquinaria'].widget = forms.HiddenInput()
         if proyecto:
             self.fields['partida'].queryset = (
                 Partida.objects
@@ -229,7 +232,7 @@ class ParteForm(forms.ModelForm):
         model  = RegistroMaquinaria
         fields = ['fecha', 'hora_entrada', 'hora_salida', 'horas', 'combustible', 'insumo', 'partida', 'observacion']
         widgets = {
-            'fecha':        forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date'}),
+            'fecha':        forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date'}, format='%Y-%m-%d'),
             'hora_entrada': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.1', 'min': '0', 'placeholder': 'Horómetro ini'}),
             'hora_salida':  forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.1', 'min': '0', 'placeholder': 'Horómetro fin'}),
             'horas':        forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.5', 'min': '0'}),

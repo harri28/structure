@@ -21,7 +21,7 @@
     </div>
   </div>
   <div class="d-flex gap-2">
-    <a href="{% url 'maquinaria:maq_registro_crear' proyecto.pk %}" class="btn btn-primary btn-sm">
+    <a href="{% url 'maquinaria:maq_registro_crear' proyecto.pk maquinaria.pk %}" class="btn btn-primary btn-sm">
       <i class="bi bi-plus-lg me-1"></i>Nuevo turno
     </a>
     <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalLiq">
