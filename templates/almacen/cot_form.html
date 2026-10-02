@@ -20,17 +20,25 @@
     <div class="card-header">Datos de la Cotización</div>
     <div class="card-body">
       <div class="row g-3">
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">N° Cotización</label>
-          <input type="text" name="numero" value="{{ form.numero.value|default:'' }}" class="form-control" required{% if not form.instance.pk %} readonly{% endif %}>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">Fecha</label>
-          <input type="date" name="fecha" value="{{ form.fecha.value|default:'' }}" class="form-control" required>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">Estado</label>
-          {{ form.estado }}
+        <div class="col-12 d-flex flex-wrap align-items-end gap-4 pb-2 border-bottom">
+          <div>
+            <div class="text-muted text-uppercase fw-semibold" style="font-size:.68rem;letter-spacing:.04em">N° Cotización</div>
+            <div class="fw-bold" style="font-size:1.05rem">COT-{{ form.numero.value|default:'' }}</div>
+            <input type="hidden" name="numero" value="{{ form.numero.value|default:'' }}">
+          </div>
+          <div>
+            <div class="text-muted text-uppercase fw-semibold" style="font-size:.68rem;letter-spacing:.04em">Fecha</div>
+            {% if form.instance.pk %}
+            <input type="date" name="fecha" value="{{ form.fecha.value|date:'Y-m-d'|default:form.fecha.value|default:'' }}" class="form-control form-control-sm" style="width:auto" required>
+            {% else %}
+            <div class="fw-bold" style="font-size:1.05rem">{% now "d/m/Y" %}</div>
+            <input type="hidden" name="fecha" value="{{ form.fecha.value|default:'' }}">
+            {% endif %}
+          </div>
+          <div class="ms-auto">
+            <label class="form-label fw-semibold mb-1">Estado</label>
+            {{ form.estado }}
+          </div>
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">RUC</label>
