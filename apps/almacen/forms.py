@@ -22,7 +22,7 @@ class EntradaForm(forms.ModelForm):
     def __init__(self, *args, proyecto=None, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
-            self.initial.setdefault('fecha', date.today())
+            self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
         if proyecto:
             self.fields['requerimiento'].queryset = proyecto.requerimientos.all()
         self.fields['requerimiento'].required = False
@@ -57,7 +57,7 @@ class SalidaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
-            self.initial.setdefault('fecha', date.today())
+            self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
 
 
 class DetalleSalidaForm(forms.ModelForm):
@@ -89,7 +89,7 @@ class CotizacionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
-            self.initial.setdefault('fecha', date.today())
+            self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
 
 
 class DetalleCotizacionForm(forms.ModelForm):
@@ -122,7 +122,7 @@ class OrdenCompraForm(forms.ModelForm):
     def __init__(self, *args, proyecto=None, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
-            self.initial.setdefault('fecha', date.today())
+            self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
         if proyecto:
             self.fields['requerimiento'].queryset = proyecto.requerimientos.all()
             self.fields['cotizacion'].queryset = proyecto.cotizaciones.all()

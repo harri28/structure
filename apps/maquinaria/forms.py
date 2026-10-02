@@ -142,7 +142,7 @@ class RegistroDiarioForm(forms.ModelForm):
     def __init__(self, proyecto=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
-            self.initial.setdefault('fecha', date.today())
+            self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
         from django.db.models import Count
         from apps.presupuesto.models import Partida
         if proyecto:
@@ -178,7 +178,7 @@ class RegistroMaquinariaForm(forms.ModelForm):
     def __init__(self, proyecto=None, maquinaria=None, validar_horometro=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
-            self.initial.setdefault('fecha', date.today())
+            self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
         from django.db.models import Count
         from apps.presupuesto.models import Partida, InsumoPresupuesto
         self.validar_horometro = validar_horometro
@@ -257,7 +257,7 @@ class ParteForm(forms.ModelForm):
     def __init__(self, proyecto=None, maquinaria=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
-            self.initial.setdefault('fecha', date.today())
+            self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
         from django.db.models import Count
         from apps.presupuesto.models import Partida, InsumoPresupuesto
         self.fields['hora_entrada'].required = False
