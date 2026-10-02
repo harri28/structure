@@ -1,10 +1,10 @@
 ﻿{% extends 'base.html' %}
-{% block title %}Requerimientos recibidos — {{ proyecto.codigo }}{% endblock %}
+{% block title %}Ingreso de Requerimientos — {{ proyecto.codigo }}{% endblock %}
 {% block nav_req_logistica %}active{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
-<li class="breadcrumb-item active">Requerimientos</li>
+<li class="breadcrumb-item active">Ingreso de Requerimientos</li>
 {% endblock %}
 
 {% block content %}
@@ -12,12 +12,12 @@
   <div>
     <h4 class="d-flex align-items-center gap-2">
       <i class="bi bi-file-earmark-text" style="color:#2563eb"></i>
-      Requerimientos recibidos
+      Ingreso de Requerimientos
     </h4>
     <div class="text-muted">Solicitudes de materiales enviadas por el equipo de obra</div>
     <div class="submodule-chips mt-2">
       <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="s-chip active">
-        <i class="bi bi-list-ul me-1"></i>Requerimientos recibidos
+        <i class="bi bi-list-ul me-1"></i>Ingreso de Requerimientos
       </a>
       <a href="{% url 'logistica:consolidados_log' proyecto.pk %}" class="s-chip">
         <i class="bi bi-layer-forward me-1"></i>R. Consolidados
