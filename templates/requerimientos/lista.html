@@ -1,20 +1,20 @@
 {% extends 'base.html' %}
-{% block title %}Solicitar Requerimiento — {{ proyecto.codigo }}{% endblock %}
+{% block title %}Requerimientos — {{ proyecto.codigo }}{% endblock %}
 {% block nav_req_lista %}active{% endblock %}
 {% block nav_req_open %}show{% endblock %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item active">Solicitar Requerimiento</li>
+<li class="breadcrumb-item active">Requerimientos</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
-    <h4><i class="bi bi-file-earmark-text me-2"></i>Solicitar Requerimiento</h4>
+    <h4><i class="bi bi-file-earmark-text me-2"></i>Requerimientos</h4>
     <div class="text-muted">Solicitudes de materiales del proyecto</div>
     <div class="submodule-chips mt-2">
       <a href="{% url 'requerimientos:lista' proyecto.pk %}" class="s-chip active">
-        <i class="bi bi-list-ul me-1"></i>Solicitar Requerimiento
+        <i class="bi bi-list-ul me-1"></i>Requerimientos
       </a>
       <a href="{% url 'requerimientos:ajustes' proyecto.pk %}" class="s-chip">
         <i class="bi bi-plus-slash-minus me-1"></i>Ajustes

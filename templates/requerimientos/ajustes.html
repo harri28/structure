@@ -4,7 +4,7 @@
 {% block nav_req_open %}show{% endblock %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Solicitar Requerimiento</a></li>
+<li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Requerimientos</a></li>
 <li class="breadcrumb-item active">Ajustes</li>
 {% endblock %}
 
@@ -14,7 +14,7 @@
     <h4><i class="bi bi-plus-slash-minus me-2" style="color:#6b7280"></i>Ajustes</h4>
     <div class="submodule-chips mt-2">
       <a href="{% url 'requerimientos:lista' proyecto.pk %}" class="s-chip">
-        <i class="bi bi-list-ul me-1"></i>Solicitar Requerimiento
+        <i class="bi bi-list-ul me-1"></i>Requerimientos
       </a>
       <a href="{% url 'requerimientos:ajustes' proyecto.pk %}" class="s-chip active">
         <i class="bi bi-plus-slash-minus me-1"></i>Ajustes

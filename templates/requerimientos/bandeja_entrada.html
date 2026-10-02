@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
-{% block title %}Bandeja de Entrada — {{ proyecto.codigo }}{% endblock %}
+{% block title %}Ingreso de Requerimiento de almacén — {{ proyecto.codigo }}{% endblock %}
 {% block nav_bandeja %}active{% endblock %}
 {% block nav_req_open %}show{% endblock %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Solicitar Requerimiento</a></li>
-<li class="breadcrumb-item active">Bandeja de Entrada</li>
+<li class="breadcrumb-item"><a href="{% url 'requerimientos:lista' proyecto.pk %}">Requerimientos</a></li>
+<li class="breadcrumb-item active">Ingreso de Requerimiento de almacén</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
-    <h4><i class="bi bi-inbox me-2"></i>Bandeja de Entrada</h4>
+    <h4><i class="bi bi-inbox me-2"></i>Ingreso de Requerimiento de almacén</h4>
     <div class="text-muted">Solicitudes de material enviadas por el Almacenero, pendientes de tu aprobación.</div>
   </div>
 </div>

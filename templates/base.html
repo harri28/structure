@@ -136,21 +136,21 @@
     <div class="sb-module-row">
       <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
          class="sb-link {% block nav_req %}{% endblock %}">
-        <i class="bi bi-file-earmark-text"></i> Solicitar Requerimiento
+        <i class="bi bi-file-earmark-text"></i> Requerimientos
         {% if req_solicitados %}<span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;padding:.2em .45em">{{ req_solicitados }}</span>{% endif %}
       </a>
-      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-reqs" aria-expanded="true" aria-label="Expandir Solicitar Requerimiento">
+      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-reqs" aria-expanded="true" aria-label="Expandir Requerimientos">
         <i class="bi bi-chevron-right sb-arrow"></i>
       </button>
     </div>
     <div class="collapse show" id="nav-reqs">
       <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_req_lista %}{% endblock %}">
-        <i class="bi bi-list-ul"></i> Requerimiento
+        <i class="bi bi-list-ul"></i> Solicitar Requerimiento
       </a>
       <a href="{% url 'requerimientos:bandeja_entrada' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_bandeja %}{% endblock %}">
-        <i class="bi bi-inbox"></i> Bandeja de Entrada
+        <i class="bi bi-inbox"></i> <span>Ingreso de Requerimiento<br>de almacén</span>
         {% if req_solicitados %}<span class="badge bg-warning text-dark ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_solicitados }}</span>{% endif %}
       </a>
       <a href="{% url 'requerimientos:vs_atenciones' proyecto_activo.pk %}"
