@@ -693,7 +693,7 @@ def resumen(request, proyecto_id):
 # ── Consulta RUC/DNI (Factiliza) ──────────────────────────────────────
 
 @require_POST
-@requiere('puede_gestionar_maquinaria')
+@requiere('puede_gestionar_maquinaria', 'puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
 def consulta_documento(request):
     """Endpoint AJAX: POST {numero} -> {ok, razon_social, direccion} o {ok:false, error}."""
     import requests as _requests

@@ -28,19 +28,25 @@
           <label class="form-label fw-semibold">Fecha</label>
           <input type="date" name="fecha" value="{{ form.fecha.value|default:'' }}" class="form-control" required>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
           <label class="form-label fw-semibold">Estado</label>
           {{ form.estado }}
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
           <label class="form-label fw-semibold">RUC</label>
-          <input type="text" name="ruc" value="{{ form.ruc.value|default:'' }}" class="form-control" maxlength="11" inputmode="numeric" pattern="[0-9]{11}" title="El RUC debe tener 11 dígitos">
+          <div class="d-flex align-items-stretch gap-2">
+            <input type="text" name="ruc" value="{{ form.ruc.value|default:'' }}" class="form-control" maxlength="11" inputmode="numeric" pattern="[0-9]{11}" title="El RUC debe tener 11 dígitos">
+            <button type="button" id="btn-buscar-ruc" class="btn btn-primary d-flex align-items-center justify-content-center" style="width:38px;padding:0;flex-shrink:0" title="Buscar RUC en SUNAT">
+              <i class="bi bi-search"></i>
+            </button>
+          </div>
+          <div id="ruc-msg" style="font-size:.78rem;margin-top:.3rem;display:none"></div>
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Razón social</label>
           <input type="text" name="proveedor" value="{{ form.proveedor.value|default:'' }}" class="form-control" required>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label fw-semibold">Dirección</label>
           <input type="text" name="direccion" value="{{ form.direccion.value|default:'' }}" class="form-control">
         </div>
@@ -73,6 +79,58 @@
 
 {% block extra_js %}
 <script>
+(function () {
+  var btn    = document.getElementById('btn-buscar-ruc');
+  var iRuc   = document.querySelector('[name="ruc"]');
+  var iRazon = document.querySelector('[name="proveedor"]');
+  var iDir   = document.querySelector('[name="direccion"]');
+  var msg    = document.getElementById('ruc-msg');
+  if (!btn || !iRuc) return;
+
+  function getCsrf() {
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function showMsg(text, ok) {
+    msg.textContent = text;
+    msg.style.color = ok ? '#16a34a' : '#dc2626';
+    msg.style.display = 'block';
+  }
+
+  btn.addEventListener('click', function () {
+    var numero = (iRuc.value || '').trim();
+    if (numero.length !== 11) { showMsg('El RUC debe tener 11 dígitos.', false); return; }
+    msg.style.display = 'none';
+    btn.disabled = true;
+    var iconoOriginal = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.9rem;height:.9rem"></span>';
+
+    fetch("{% url 'maquinaria:consulta_doc' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ numero: numero }),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.ok) { showMsg(d.error || 'No encontrado.', false); return; }
+      if (d.razon_social) iRazon.value = d.razon_social;
+      if (d.direccion)    iDir.value   = d.direccion;
+      showMsg('Datos autocompletados desde SUNAT.', true);
+    })
+    .catch(function (err) {
+      showMsg('Error al consultar el servicio: ' + (err && err.message ? err.message : err), false);
+    })
+    .finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = iconoOriginal;
+    });
+  });
+})();
+
 const totalForms = document.querySelector('[name="detalles-TOTAL_FORMS"]');
 document.getElementById('add-row')?.addEventListener('click', function() {
   const container = document.getElementById('formset-container');
