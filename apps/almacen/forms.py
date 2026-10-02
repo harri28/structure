@@ -80,7 +80,7 @@ DetalleSalidaFormSet = inlineformset_factory(
 class CotizacionForm(forms.ModelForm):
     class Meta:
         model = Cotizacion
-        fields = ['numero', 'fecha', 'proveedor', 'estado', 'observaciones']
+        fields = ['numero', 'fecha', 'ruc', 'proveedor', 'direccion', 'celular', 'estado', 'observaciones']
         widgets = {
             'fecha': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'observaciones': forms.Textarea(attrs={'rows': 2}),

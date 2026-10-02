@@ -10,10 +10,12 @@
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
-    <a href="{% url 'almacen:cot_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Cotizaciones</a>
     <h4>Cotización <code>COT-{{ cot.numero }}</code></h4>
   </div>
   <div class="d-flex gap-2">
+    <a href="{% url 'almacen:cot_lista' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Volver a cotizaciones
+    </a>
     <a href="{% url 'almacen:cot_imprimir' cot.pk %}" target="_blank" class="btn btn-outline-primary btn-sm">
       <i class="bi bi-printer me-1"></i>Imprimir A4
     </a>
@@ -25,7 +27,10 @@
   <div class="card-body">
     <div class="row g-2">
       <div class="col-sm-3"><label class="text-muted small">Fecha</label><p class="mb-0 fw-semibold">{{ cot.fecha|date:"d/m/Y" }}</p></div>
-      <div class="col-sm-4"><label class="text-muted small">Proveedor / Tienda</label><p class="mb-0">{{ cot.proveedor }}</p></div>
+      <div class="col-sm-4"><label class="text-muted small">Razón social</label><p class="mb-0">{{ cot.proveedor }}</p></div>
+      <div class="col-sm-3"><label class="text-muted small">RUC</label><p class="mb-0">{{ cot.ruc|default:"—" }}</p></div>
+      <div class="col-sm-4"><label class="text-muted small">Dirección</label><p class="mb-0">{{ cot.direccion|default:"—" }}</p></div>
+      <div class="col-sm-3"><label class="text-muted small">Celular</label><p class="mb-0">{{ cot.celular|default:"—" }}</p></div>
       <div class="col-sm-2"><label class="text-muted small">Estado</label>
         <p class="mb-0"><span class="badge {% if cot.estado == 'APROBADA' %}bg-success{% elif cot.estado == 'RECHAZADA' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ cot.get_estado_display }}</span></p>
       </div>

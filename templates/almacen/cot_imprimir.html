@@ -221,6 +221,7 @@
 
 <div class="barra-acciones no-print">
   <a href="{% if cot.requerimiento_origen_id %}{% url 'logistica:req_revisar_log' proyecto.pk cot.requerimiento_origen_id %}{% else %}{% url 'almacen:cot_detalle' cot.pk %}{% endif %}" class="btn btn-back">← Volver</a>
+  <a href="{% url 'almacen:cot_lista' proyecto.pk %}" class="btn btn-back">☰ Cotizaciones</a>
   <div class="barra-acciones-derecha">
     <button type="submit" class="btn btn-save">💾 Guardar cantidades</button>
     <button type="button" class="btn btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
