@@ -19,6 +19,9 @@
       <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="s-chip active">
         <i class="bi bi-list-ul me-1"></i>Ingreso de Requerimientos
       </a>
+      <a href="{% url 'logistica:por_atender_log' proyecto.pk %}" class="s-chip">
+        <i class="bi bi-hourglass-split me-1"></i>Por atender
+      </a>
       <a href="{% url 'logistica:consolidados_log' proyecto.pk %}" class="s-chip">
         <i class="bi bi-layer-forward me-1"></i>R. Consolidados
       </a>

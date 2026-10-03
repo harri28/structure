@@ -315,6 +315,20 @@ def historial_log(request, proyecto_id):
 
 @requiere('puede_revisar_reqs_log')
 @proyecto_visible
+def por_atender_log(request, proyecto_id):
+    from apps.requerimientos.models import Requerimiento
+    proyecto = _get_proyecto(proyecto_id)
+    requerimientos = (Requerimiento.objects
+                      .filter(proyecto=proyecto, estado='PARCIAL')
+                      .order_by('-fecha', '-numero'))
+    return render(request, 'logistica/req_por_atender.html', {
+        'proyecto':       proyecto,
+        'requerimientos': requerimientos,
+    })
+
+
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
 def anulados_log(request, proyecto_id):
     from apps.requerimientos.models import Requerimiento
     proyecto = _get_proyecto(proyecto_id)
