@@ -933,9 +933,36 @@ def cot_lista(request, proyecto_id):
           .order_by('-fecha', '-pk'))
     if estado_sel:
         qs = qs.filter(estado=estado_sel)
+    cotizaciones = list(qs)
+
+    # Agrupar por requerimiento de origen (más reciente primero); las que no
+    # tienen requerimiento van en un grupo propio al final.
+    por_req = {}
+    sin_req = []
+    for c in sorted(cotizaciones, key=lambda x: x.pk):
+        if c.requerimiento_origen_id:
+            por_req.setdefault(c.requerimiento_origen_id, []).append(c)
+        else:
+            sin_req.append(c)
+
+    def _grupo(req, cots):
+        return {
+            'req': req,
+            'cots': cots,
+            'aprobadas':  sum(1 for c in cots if c.estado == 'APROBADA'),
+            'pendientes': sum(1 for c in cots if c.estado == 'PENDIENTE'),
+            'rechazadas': sum(1 for c in cots if c.estado == 'RECHAZADA'),
+        }
+
+    grupos = [_grupo(cots[0].requerimiento_origen, cots) for cots in por_req.values()]
+    grupos.sort(key=lambda g: (g['req'].fecha, g['req'].pk), reverse=True)
+    if sin_req:
+        grupos.append(_grupo(None, sin_req))
+
     return render(request, 'almacen/cot_lista.html', {
         'proyecto':     proyecto,
-        'cotizaciones': qs,
+        'cotizaciones': cotizaciones,
+        'grupos':       grupos,
         'estados':      ESTADOS_COT,
         'estado_sel':   estado_sel,
     })

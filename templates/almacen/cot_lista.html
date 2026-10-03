@@ -55,23 +55,35 @@
   </div>
   <div class="card-body p-0">
     <table class="table-modern">
-      <thead><tr><th>N° COT</th><th>Fecha</th><th>Proveedor</th><th>Origen</th><th>Estado</th><th class="text-end">Total (S/.)</th><th></th></tr></thead>
+      <thead><tr><th>N° COT</th><th>Fecha</th><th>Proveedor</th><th>Estado</th><th class="text-end">Total (S/.)</th><th></th></tr></thead>
       <tbody>
-        {% for c in cotizaciones %}
-        <tr class="cot-row" style="cursor:pointer" data-href="{% url 'almacen:cot_detalle' c.pk %}"
-            data-search="COT-{{ c.numero|lower }} COT{{ c.numero|lower }} {{ c.proveedor|lower }} {% if c.requerimiento_origen %}REQ-{{ c.requerimiento_origen.numero|lower }}{% endif %}{% for d in c.detalles.all %} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}">
-          <td><a href="{% url 'almacen:cot_detalle' c.pk %}" class="fw-semibold text-decoration-none">COT{{ c.numero }}</a></td>
+        {% for g in grupos %}
+        <tr class="cot-group" data-group="g{{ forloop.counter }}" style="cursor:pointer;background:#f8fafc">
+          <td colspan="6" style="padding:.55rem .75rem;border-top:1px solid #e5e7eb">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <i class="bi bi-chevron-down cot-group-arrow" style="font-size:.8rem;color:#6b7280;transition:transform .15s"></i>
+              {% if g.req %}
+              <a href="{% url 'logistica:req_revisar_log' proyecto.pk g.req.pk %}" class="fw-bold text-decoration-none" style="color:#2563eb">REQ{{ g.req.numero }}</a>
+              <span class="text-muted" style="font-size:.8rem">{{ g.req.solicitante|default:"—" }} · {{ g.req.fecha|date:"d/m/Y" }}</span>
+              <span class="badge bg-light text-dark border" style="font-size:.66rem">{{ g.req.get_estado_display }}</span>
+              {% else %}
+              <span class="fw-bold">Sin requerimiento</span>
+              {% endif %}
+              <span class="ms-auto text-muted" style="font-size:.78rem">
+                {{ g.cots|length }} cotizaci{{ g.cots|length|pluralize:"ón,ones" }}
+                {% if g.aprobadas %}· <span class="text-success">{{ g.aprobadas }} aprobada{{ g.aprobadas|pluralize }}</span>{% endif %}
+                {% if g.pendientes %}· <span class="text-warning-emphasis">{{ g.pendientes }} pendiente{{ g.pendientes|pluralize }}</span>{% endif %}
+                {% if g.rechazadas %}· <span class="text-danger">{{ g.rechazadas }} rechazada{{ g.rechazadas|pluralize }}</span>{% endif %}
+              </span>
+            </div>
+          </td>
+        </tr>
+        {% for c in g.cots %}
+        <tr class="cot-row" style="cursor:pointer" data-group="g{{ forloop.parentloop.counter }}" data-href="{% url 'almacen:cot_detalle' c.pk %}"
+            data-search="COT-{{ c.numero|lower }} COT{{ c.numero|lower }} {{ c.proveedor|lower }} {% if c.requerimiento_origen %}REQ-{{ c.requerimiento_origen.numero|lower }} REQ{{ c.requerimiento_origen.numero|lower }}{% endif %}{% for d in c.detalles.all %} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}">
+          <td style="padding-left:1.75rem"><a href="{% url 'almacen:cot_detalle' c.pk %}" class="fw-semibold text-decoration-none">COT{{ c.numero }}</a></td>
           <td>{{ c.fecha|date:"d/m/Y" }}</td>
           <td>{{ c.proveedor|default:"—" }}</td>
-          <td>
-            {% if c.requerimiento_origen %}
-            <a href="{% url 'logistica:req_revisar_log' proyecto.pk c.requerimiento_origen_id %}"
-               class="badge bg-light text-dark border text-decoration-none"
-               style="font-size:.7rem;padding:.3em .6em">
-              <i class="bi bi-link-45deg me-1 text-primary"></i>REQ{{ c.requerimiento_origen.numero }}
-            </a>
-            {% else %}<span class="text-muted">—</span>{% endif %}
-          </td>
           <td>
             <span class="badge {% if c.estado == 'APROBADA' %}bg-success{% elif c.estado == 'RECHAZADA' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
               {{ c.get_estado_display }}
@@ -82,11 +94,12 @@
             <a href="{% url 'almacen:cot_editar' c.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
           </td>
         </tr>
+        {% endfor %}
         {% empty %}
-        <tr><td colspan="7" class="text-center py-4 text-muted">Sin cotizaciones registradas{% if estado_sel %} con estado <strong>{{ estado_sel }}</strong>{% endif %}</td></tr>
+        <tr><td colspan="6" class="text-center py-4 text-muted">Sin cotizaciones registradas{% if estado_sel %} con estado <strong>{{ estado_sel }}</strong>{% endif %}</td></tr>
         {% endfor %}
         <tr id="cot-no-results" style="display:none">
-          <td colspan="7">
+          <td colspan="6">
             <div class="empty-state py-4">
               <i class="bi bi-search d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
               <p class="text-muted mb-0">Ninguna cotización coincide con "<strong id="cot-no-results-q"></strong>".</p>
@@ -109,18 +122,25 @@
   var noResQ  = document.getElementById('cot-no-results-q');
   var noResC  = document.getElementById('cot-no-results-clear');
   if (!input) return;
-  var rows = Array.prototype.slice.call(document.querySelectorAll('tr.cot-row'));
+  var rows   = Array.prototype.slice.call(document.querySelectorAll('tr.cot-row'));
+  var heads  = Array.prototype.slice.call(document.querySelectorAll('tr.cot-group'));
+  var plegados = {};
 
   function filtrar() {
     var q = input.value.trim().toLowerCase();
     var visibles = 0;
+    var conCoincidencia = {};
     rows.forEach(function (r) {
-      if (!q) { r.style.display = ''; visibles++; }
-      else {
-        var hay = (r.getAttribute('data-search') || '').indexOf(q) !== -1;
-        r.style.display = hay ? '' : 'none';
-        if (hay) visibles++;
-      }
+      var g = r.getAttribute('data-group');
+      var hay = !q || (r.getAttribute('data-search') || '').indexOf(q) !== -1;
+      if (hay) { visibles++; conCoincidencia[g] = true; }
+      r.style.display = (hay && !plegados[g]) ? '' : 'none';
+    });
+    heads.forEach(function (h) {
+      var g = h.getAttribute('data-group');
+      h.style.display = conCoincidencia[g] ? '' : 'none';
+      var flecha = h.querySelector('.cot-group-arrow');
+      if (flecha) flecha.style.transform = plegados[g] ? 'rotate(-90deg)' : '';
     });
     if (q) {
       clearB.style.display = '';
@@ -138,6 +158,15 @@
       noRes.style.display = 'none';
     }
   }
+
+  heads.forEach(function (h) {
+    h.addEventListener('click', function (e) {
+      if (e.target.closest('a, button')) return;
+      var g = h.getAttribute('data-group');
+      plegados[g] = !plegados[g];
+      filtrar();
+    });
+  });
 
   rows.forEach(function (r) {
     r.addEventListener('click', function (e) {
