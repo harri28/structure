@@ -56,6 +56,13 @@ class GuiaRemision(models.Model):
         on_delete=models.SET_NULL,
         related_name='guias_remision',
     )
+    # Cotizaciones aprobadas cuyos ítems viajan en esta guía. Una cotización solo
+    # puede estar en una guía activa (no anulada): evita descontar el stock dos veces.
+    cotizaciones   = models.ManyToManyField(
+        'almacen.Cotizacion',
+        blank=True,
+        related_name='guias_remision',
+    )
     # Marca "sin ver" del Almacén: cuando Logística despacha, arranca en False.
     # Se pasa a True cuando el Almacenero abre el detalle en Almacén → Guías.
     # Usado para resaltar en verde suave las guías nuevas en la lista.

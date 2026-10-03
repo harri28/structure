@@ -18,7 +18,6 @@
 
 <form method="post" class="form-compact">
 {% csrf_token %}
-{% if not guia %}<input type="hidden" name="selected_guia_pk" id="selected-guia-pk" value="">{% endif %}
 <div class="row g-3">
 
   <!-- Datos de la guía -->
@@ -29,25 +28,47 @@
       </div>
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-sm-4" style="position:relative">
-            <label class="form-label">N° Guía *</label>
-            {{ form.numero }}
-            {% if form.numero.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.numero.errors.0 }}</div>{% endif %}
-            {% if not guia %}
-            <div id="guia-dropdown" style="display:none;position:absolute;left:0;right:0;z-index:9999;
-                 background:#fff;border:1px solid #dee2e6;border-radius:6px;
-                 max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);top:100%">
+          <div class="col-12 d-flex flex-wrap align-items-end gap-4 pb-2 border-bottom">
+            <div>
+              <div class="text-muted text-uppercase fw-semibold" style="font-size:.68rem;letter-spacing:.04em">N° Guía</div>
+              <div class="fw-bold" style="font-size:1.05rem">{% if guia %}{{ guia.numero }}{% else %}{{ form.numero.value|default:'' }}{% endif %}</div>
+              <input type="hidden" name="numero" value="{% if guia %}{{ guia.numero }}{% else %}{{ form.numero.value|default:'' }}{% endif %}">
             </div>
-            {% endif %}
+            <div>
+              <div class="text-muted text-uppercase fw-semibold" style="font-size:.68rem;letter-spacing:.04em">Fecha emisión</div>
+              {% if guia %}
+              <div style="width:170px">{{ form.fecha_emision }}</div>
+              {% else %}
+              <div class="fw-bold" style="font-size:1.05rem">{% now "d/m/Y" %}</div>
+              <input type="hidden" name="fecha_emision" value="{{ form.fecha_emision.value|default:'' }}">
+              {% endif %}
+            </div>
+            <div>
+              <div class="text-muted text-uppercase fw-semibold" style="font-size:.68rem;letter-spacing:.04em">Fecha traslado *</div>
+              <div style="width:170px">{{ form.fecha_traslado }}</div>
+              {% if form.fecha_traslado.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.fecha_traslado.errors.0 }}</div>{% endif %}
+            </div>
           </div>
-          <div class="col-sm-4">
-            <label class="form-label">Fecha Emisión *</label>
-            {{ form.fecha_emision }}
+          {% if not guia %}
+          <div class="col-12" style="position:relative">
+            <label class="form-label">N° de Cotización Aprobada *</label>
+            <input type="text" id="cot-search" class="form-control" autocomplete="off"
+                   placeholder="Buscar cotización aprobada por N°, proveedor o REQ…">
+            <div id="cot-dropdown" style="display:none;position:absolute;left:12px;right:12px;z-index:9999;
+                 background:#fff;border:1px solid #dee2e6;border-radius:6px;
+                 max-height:240px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);top:100%"></div>
+            <div id="cot-chips" class="d-flex flex-wrap gap-2 mt-2"></div>
+            <div id="cot-hidden"></div>
+            <div class="form-text" style="font-size:.72rem">Puedes agregar varias cotizaciones. Sus ítems se cargan abajo y el stock en obra se descuenta al generar la guía.</div>
           </div>
-          <div class="col-sm-4">
-            <label class="form-label">Fecha Traslado *</label>
-            {{ form.fecha_traslado }}
+          {% else %}
+          {% if guia.cotizaciones.exists %}
+          <div class="col-12">
+            <div class="text-muted text-uppercase fw-semibold" style="font-size:.68rem;letter-spacing:.04em">Cotizaciones</div>
+            {% for c in guia.cotizaciones.all %}<span class="badge bg-light text-dark border me-1">COT{{ c.numero }}</span>{% endfor %}
           </div>
+          {% endif %}
+          {% endif %}
           <div class="col-sm-6">
             <label class="form-label">Motivo del Traslado</label>
             {{ form.motivo }}
@@ -96,7 +117,7 @@
     </div>
   </div>
 
-{{ formset.management_form }}
+{% if guia %}{{ formset.management_form }}{% endif %}
   <!-- Bienes a trasladar -->
   <div class="col-12" id="card-bienes" {% if not guia %}style="display:none"{% endif %}>
     <div class="card">
@@ -155,92 +176,102 @@
 
 {% block extra_js %}
 {% if not guia %}
+{{ cotizaciones_data|json_script:"cot-data" }}
+{{ cotizaciones_seleccion|json_script:"cot-seleccion" }}
 <script>
 (function () {
-  var inp      = document.getElementById('{{ form.numero.id_for_label }}');
-  var dropdown = document.getElementById('guia-dropdown');
-  if (!inp || !dropdown) return;
+  var data = JSON.parse(document.getElementById('cot-data').textContent);
+  var seleccion = JSON.parse(document.getElementById('cot-seleccion').textContent);
+  var inp      = document.getElementById('cot-search');
+  var dropdown = document.getElementById('cot-dropdown');
+  var chips    = document.getElementById('cot-chips');
+  var hidden   = document.getElementById('cot-hidden');
+  var card     = document.getElementById('card-bienes');
+  var tbody    = document.querySelector('#tabla-bienes tbody');
+  if (!inp) return;
 
-  var API = '{% url "logistica:guias_pendientes_api" proyecto.pk %}';
-  var guias = [];
+  function el(tag, props, texto) {
+    var e = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      if (k === 'style') e.style.cssText = props[k]; else e.setAttribute(k, props[k]);
+    });
+    if (texto !== undefined) e.textContent = texto;
+    return e;
+  }
+  function porPk(pk) { return data.filter(function (c) { return c.pk === pk; })[0]; }
 
-  function render(lista) {
+  function pintarSeleccion() {
+    chips.innerHTML = '';
+    hidden.innerHTML = '';
+    tbody.innerHTML = '';
+    seleccion.forEach(function (pk) {
+      var c = porPk(pk);
+      if (!c) return;
+      var chip = el('span', { 'class': 'badge bg-primary d-inline-flex align-items-center gap-1', style: 'font-size:.78rem;padding:.4em .6em' }, c.numero + (c.proveedor ? ' · ' + c.proveedor : ''));
+      var x = el('button', { type: 'button', 'class': 'btn-close btn-close-white', style: 'font-size:.6rem', 'aria-label': 'Quitar' });
+      x.addEventListener('click', function () { quitar(pk); });
+      chip.appendChild(x);
+      chips.appendChild(chip);
+      hidden.appendChild(el('input', { type: 'hidden', name: 'cotizaciones', value: pk }));
+      c.items.forEach(function (it) {
+        var tr = el('tr');
+        var td1 = el('td', { style: 'font-size:.83rem' }, it.descripcion);
+        td1.appendChild(el('div', { style: 'font-size:.7rem;color:#6b7280' }, c.numero + (c.req ? ' · ' + c.req : '')));
+        tr.appendChild(td1);
+        tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, it.unidad || '—'));
+        tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem' }, it.cantidad));
+        tbody.appendChild(tr);
+      });
+    });
+    if (!seleccion.length) {
+      tbody.appendChild(el('tr')).appendChild(el('td', { colspan: '3', 'class': 'text-center text-muted py-3', style: 'font-size:.82rem' }, 'Sin bienes seleccionados'));
+    }
+    card.style.display = seleccion.length ? '' : 'none';
+  }
+
+  function agregar(pk) {
+    if (seleccion.indexOf(pk) === -1) seleccion.push(pk);
+    inp.value = '';
+    dropdown.style.display = 'none';
+    pintarSeleccion();
+  }
+  function quitar(pk) {
+    seleccion = seleccion.filter(function (x) { return x !== pk; });
+    pintarSeleccion();
+  }
+
+  function pintarLista() {
+    var q = inp.value.trim().toLowerCase();
+    var lista = data.filter(function (c) {
+      if (seleccion.indexOf(c.pk) !== -1) return false;
+      return !q || (c.numero + ' ' + c.proveedor + ' ' + c.req).toLowerCase().indexOf(q) !== -1;
+    });
+    dropdown.innerHTML = '';
     if (!lista.length) {
-      dropdown.innerHTML = '<div style="padding:10px 14px;font-size:.8rem;color:#9ca3af">No hay guías pendientes</div>';
+      dropdown.appendChild(el('div', { style: 'padding:10px 14px;font-size:.8rem;color:#9ca3af' },
+        data.length ? 'Sin coincidencias' : 'No hay cotizaciones aprobadas disponibles'));
     } else {
-      dropdown.innerHTML = lista.map(function (g) {
-        return '<div class="guia-opt" data-pk="' + g.pk + '" data-numero="' + g.numero + '"' +
-          ' style="padding:8px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.82rem">' +
-          '<strong style="color:#2563eb">' + g.numero + '</strong>' +
-          '<span style="color:#6b7280;margin-left:.5rem">' + (g.destino || '') + '</span>' +
-          '</div>';
-      }).join('');
+      lista.forEach(function (c) {
+        var op = el('div', { style: 'padding:8px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.82rem' });
+        op.appendChild(el('strong', { style: 'color:#2563eb' }, c.numero));
+        op.appendChild(el('span', { style: 'color:#6b7280;margin-left:.5rem' },
+          (c.proveedor || '—') + (c.req ? ' · ' + c.req : '') + ' · ' + c.items.length + ' ítem' + (c.items.length === 1 ? '' : 's')));
+        op.addEventListener('mouseover', function () { op.style.background = '#eff6ff'; });
+        op.addEventListener('mouseout', function () { op.style.background = ''; });
+        op.addEventListener('click', function () { agregar(c.pk); });
+        dropdown.appendChild(op);
+      });
     }
     dropdown.style.display = 'block';
   }
 
-  fetch(API)
-    .then(function (r) { return r.json(); })
-    .then(function (d) { guias = d.guias || []; });
-
-  inp.addEventListener('focus', function () {
-    var q = inp.value.trim().toLowerCase();
-    var filtradas = q ? guias.filter(function (g) { return g.numero.toLowerCase().includes(q); }) : guias;
-    render(filtradas);
-  });
-
-  inp.addEventListener('input', function () {
-    var q = inp.value.trim().toLowerCase();
-    var filtradas = q ? guias.filter(function (g) { return g.numero.toLowerCase().includes(q); }) : guias;
-    if (filtradas.length || !q) render(filtradas);
-    else dropdown.style.display = 'none';
-  });
-
-  dropdown.addEventListener('click', function (e) {
-    var opt = e.target.closest('.guia-opt');
-    if (!opt) return;
-    var pk     = opt.dataset.pk;
-    var numero = opt.dataset.numero;
-    inp.value  = numero;
-    dropdown.style.display = 'none';
-
-    // Guardar pk para que el view actualice la guía existente
-    document.getElementById('selected-guia-pk').value = pk;
-
-    // Cargar bienes
-    fetch('/logistica/guia/' + pk + '/bienes/')
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        var tbody = document.querySelector('#tabla-bienes tbody');
-        if (!d.bienes.length) {
-          tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3" style="font-size:.82rem">Sin bienes registrados</td></tr>';
-        } else {
-          tbody.innerHTML = d.bienes.map(function (b) {
-            return '<tr>' +
-              '<td style="font-size:.83rem">' + b.descripcion + '</td>' +
-              '<td style="font-size:.82rem;color:#6b7280">' + (b.unidad || '—') + '</td>' +
-              '<td class="text-end fw-semibold" style="font-size:.83rem">' + parseFloat(b.cantidad) + '</td>' +
-              '</tr>';
-          }).join('');
-        }
-        document.getElementById('card-bienes').style.display = '';
-      });
-  });
-
-  dropdown.addEventListener('mouseover', function (e) {
-    var opt = e.target.closest('.guia-opt');
-    if (opt) opt.style.background = '#eff6ff';
-  });
-  dropdown.addEventListener('mouseout', function (e) {
-    var opt = e.target.closest('.guia-opt');
-    if (opt) opt.style.background = '';
-  });
-
+  inp.addEventListener('focus', pintarLista);
+  inp.addEventListener('input', pintarLista);
   document.addEventListener('click', function (e) {
-    if (!inp.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.style.display = 'none';
-    }
+    if (!inp.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
   });
+
+  pintarSeleccion();
 })();
 </script>
 {% endif %}

@@ -100,62 +100,196 @@ def _registrar_entrada_almacen(guia, proyecto):
         )
 
 
+def _siguiente_numero_guia(proyecto):
+    """Siguiente correlativo de guía del proyecto: GR-{año}-{nnn}."""
+    import datetime
+    prefijo = f'GR-{datetime.date.today().year}-'
+    mayor = 0
+    for numero in (GuiaRemision.objects
+                   .filter(proyecto=proyecto, numero__startswith=prefijo)
+                   .values_list('numero', flat=True)):
+        try:
+            mayor = max(mayor, int(numero.replace(prefijo, '')))
+        except ValueError:
+            continue
+    return f'{prefijo}{str(mayor + 1).zfill(3)}'
+
+
+ESTADOS_GUIA_ACTIVA = ['PENDIENTE', 'EN_TRANSITO', 'ENTREGADO']
+ESTADOS_GUIA_DESPACHADA = ['EN_TRANSITO', 'ENTREGADO']
+
+
+def _cotizaciones_disponibles(proyecto):
+    """Cotizaciones APROBADAS del proyecto que aún no viajan en una guía activa."""
+    from apps.almacen.models import Cotizacion
+    return (Cotizacion.objects
+            .filter(proyecto=proyecto, estado='APROBADA')
+            .exclude(guias_remision__estado__in=ESTADOS_GUIA_ACTIVA)
+            .select_related('requerimiento_origen')
+            .prefetch_related('detalles__insumo')
+            .order_by('-fecha', '-pk'))
+
+
+def _descripcion_item(d):
+    return (d.descripcion or (d.insumo.descripcion if d.insumo_id else '') or '—')[:400]
+
+
+def _unidad_item(d):
+    return (d.unidad or (d.insumo.unidad if d.insumo_id and d.insumo.unidad else ''))[:20]
+
+
+def _despachar_cotizaciones(guia, cotizaciones):
+    """Copia los ítems de las cotizaciones a la guía y descuenta el stock en obra
+    (InsumoPresupuesto.cantidad) por la cantidad de cada ítem. Nunca baja de cero."""
+    from apps.presupuesto.models import InsumoPresupuesto
+    descuentos = {}
+    for cot in cotizaciones:
+        for d in cot.detalles.all():
+            DetalleGuia.objects.create(
+                guia=guia,
+                descripcion=_descripcion_item(d),
+                unidad=_unidad_item(d),
+                cantidad=d.cantidad.quantize(Decimal('0.001')),
+            )
+            if d.insumo_id:
+                descuentos[d.insumo_id] = descuentos.get(d.insumo_id, Decimal('0')) + d.cantidad
+    for ins in InsumoPresupuesto.objects.select_for_update().filter(pk__in=descuentos):
+        ins.cantidad = max(Decimal('0'), ins.cantidad - descuentos[ins.pk])
+        ins.save(update_fields=['cantidad'])
+
+
+def _revertir_descuento(guia):
+    """Devuelve al stock en obra lo descontado por la guía (al anularla o eliminarla).
+    Nunca supera la cantidad original importada (cantidad_total)."""
+    from apps.presupuesto.models import InsumoPresupuesto
+    devoluciones = {}
+    for cot in guia.cotizaciones.prefetch_related('detalles'):
+        for d in cot.detalles.all():
+            if d.insumo_id:
+                devoluciones[d.insumo_id] = devoluciones.get(d.insumo_id, Decimal('0')) + d.cantidad
+    for ins in InsumoPresupuesto.objects.select_for_update().filter(pk__in=devoluciones):
+        nueva = ins.cantidad + devoluciones[ins.pk]
+        if ins.cantidad_total:
+            nueva = min(ins.cantidad_total, nueva)
+        ins.cantidad = nueva
+        ins.save(update_fields=['cantidad'])
+
+
+def _clave_item(insumo_id, descripcion):
+    return ('i', insumo_id) if insumo_id else ('d', (descripcion or '').strip().lower())
+
+
+def _recalcular_estado_req(req):
+    """Estado del requerimiento según lo ya despachado en guías (vía cotizaciones):
+    todo lo aprobado salió -> ATENDIDO; salió algo -> PARCIAL (Atendido Parcial);
+    nada salió -> vuelve al estado de aprobación (APROBADO / PARCIAL si se aprobó menos)."""
+    from apps.almacen.models import DetalleCotizacion
+    if req.estado not in ('APROBADO', 'PARCIAL', 'ATENDIDO'):
+        return
+    aprobado = {}
+    aprobado_total_igual_requerido = True
+    for det in req.detalles.all():
+        if det.cantidad_aprobada and det.cantidad_aprobada > 0:
+            k = _clave_item(det.insumo_id, det.descripcion)
+            aprobado[k] = aprobado.get(k, Decimal('0')) + det.cantidad_aprobada
+        if (det.cantidad_aprobada or Decimal('0')) < det.cantidad_requerida:
+            aprobado_total_igual_requerido = False
+
+    despachado = {}
+    items = (DetalleCotizacion.objects
+             .filter(cotizacion__requerimiento_origen=req,
+                     cotizacion__guias_remision__estado__in=ESTADOS_GUIA_DESPACHADA)
+             .distinct())
+    for d in items:
+        k = _clave_item(d.insumo_id, d.descripcion)
+        despachado[k] = despachado.get(k, Decimal('0')) + d.cantidad
+
+    hay_despacho = any(v > 0 for v in despachado.values())
+    completo = bool(aprobado) and all(despachado.get(k, Decimal('0')) >= v for k, v in aprobado.items())
+    if completo:
+        nuevo = 'ATENDIDO'
+    elif hay_despacho:
+        nuevo = 'PARCIAL'
+    else:
+        nuevo = 'APROBADO' if aprobado_total_igual_requerido else 'PARCIAL'
+    if nuevo != req.estado:
+        req.estado = nuevo
+        req.save(update_fields=['estado'])
+
+
+def _reqs_de_guia(guia):
+    return {c.requerimiento_origen for c in guia.cotizaciones.select_related('requerimiento_origen')
+            if c.requerimiento_origen_id}
+
+
 @requiere('puede_gestionar_logistica')
 @proyecto_visible
 def guia_crear(request, proyecto_id):
+    import datetime
+    from django.db import transaction
     proyecto = _get_proyecto(proyecto_id)
-    if request.method == 'POST':
-        selected_pk = request.POST.get('selected_guia_pk', '').strip()
+    disponibles = list(_cotizaciones_disponibles(proyecto))
+    seleccion = []
 
-        if selected_pk:
-            # Despachar una guía PENDIENTE existente (generada al aprobar req)
-            guia_existente = get_object_or_404(GuiaRemision, pk=selected_pk, proyecto=proyecto, estado='PENDIENTE')
-            form = GuiaRemisionForm(request.POST, instance=guia_existente)
-            if form.is_valid():
+    if request.method == 'POST':
+        post = request.POST.copy()
+        post['numero'] = _siguiente_numero_guia(proyecto)              # siempre automático
+        post['fecha_emision'] = datetime.date.today().strftime('%Y-%m-%d')
+        form = GuiaRemisionForm(post)
+
+        ids = []
+        for raw in request.POST.getlist('cotizaciones'):
+            if raw.isdigit() and int(raw) not in ids:
+                ids.append(int(raw))
+        elegidas = [c for c in disponibles if c.pk in ids]
+        seleccion = [c.pk for c in elegidas]
+
+        cots_ok = bool(elegidas) and len(elegidas) == len(ids)
+        if not ids:
+            messages.error(request, 'Selecciona al menos una cotización aprobada.')
+        elif not cots_ok:
+            messages.error(request, 'Alguna cotización ya no está disponible (no está aprobada o ya viaja en otra guía).')
+
+        if form.is_valid() and cots_ok:
+            with transaction.atomic():
                 guia = form.save(commit=False)
+                guia.proyecto = proyecto
                 guia.estado = 'EN_TRANSITO'
                 guia.save()
-                _despachar_req(guia)
-                # NOTA: la Entrada ya NO se crea automáticamente al despachar.
-                # El Almacenero la registra manualmente vía Almacén → Guías → Registrar guía.
-                log(request, 'CREAR', 'Logística', f'Guía {guia.numero} despachada en {proyecto.codigo}')
-                # Notif dirigida al Almacén con el nº correlativo. Al hacer click en la campana,
-                # el link lleva a Almacén → Guías donde la nueva aparece en verde suave.
-                notificar(
-                    f'Nueva Guía {guia.numero}',
-                    mensaje=f'{proyecto.codigo} — Despachada por Logística. Registrá su recepción.',
-                    tipo='info',
-                    url=f'/almacen/proyecto/{proyecto.pk}/guias/',
-                )
-                messages.success(request, f'Guía {guia.numero} generada. Requerimiento marcado como atendido.')
-                return redirect('logistica:guia_detalle', pk=guia.pk)
-            else:
-                formset = DetalleGuiaFormSet(request.POST)
-        else:
-            # Crear nueva guía desde cero
-            form    = GuiaRemisionForm(request.POST)
-            formset = DetalleGuiaFormSet(request.POST)
-            if form.is_valid() and formset.is_valid():
-                guia          = form.save(commit=False)
-                guia.proyecto = proyecto
-                guia.estado   = 'EN_TRANSITO'
-                guia.save()
-                formset.instance = guia
-                formset.save()
-                # NOTA: la Entrada ya NO se crea automáticamente. El Almacenero la registra
-                # manualmente desde Almacén → Guías → Registrar guía.
-                log(request, 'CREAR', 'Logística', f'Guía {guia.numero} creada en {proyecto.codigo}')
-                notificar(f'Nueva Guía {guia.numero}',
-                          mensaje=f'{proyecto.codigo} — {guia.get_motivo_display()}. Registrá su recepción.',
-                          tipo='info',
-                          url=f'/almacen/proyecto/{proyecto.pk}/guias/')
-                messages.success(request, f'Guía {guia.numero} creada.')
-                return redirect('logistica:guia_detalle', pk=guia.pk)
+                guia.cotizaciones.set(elegidas)
+                _despachar_cotizaciones(guia, elegidas)
+                for req in _reqs_de_guia(guia):
+                    _recalcular_estado_req(req)
+            # NOTA: la Entrada no se crea automáticamente. El Almacenero la registra
+            # manualmente desde Almacén → Guías → Registrar guía.
+            log(request, 'CREAR', 'Logística', f'Guía {guia.numero} despachada en {proyecto.codigo}')
+            notificar(
+                f'Nueva Guía {guia.numero}',
+                mensaje=f'{proyecto.codigo} — Despachada por Logística. Registrá su recepción.',
+                tipo='info',
+                url=f'/almacen/proyecto/{proyecto.pk}/guias/',
+            )
+            messages.success(request, f'Guía {guia.numero} generada.')
+            return redirect('logistica:guia_detalle', pk=guia.pk)
     else:
-        form    = GuiaRemisionForm()
-        formset = DetalleGuiaFormSet()
+        form = GuiaRemisionForm(initial={'numero': _siguiente_numero_guia(proyecto)})
+
+    cotizaciones_data = [{
+        'pk': c.pk,
+        'numero': f'COT{c.numero}',
+        'proveedor': c.proveedor or '',
+        'req': f'REQ{c.requerimiento_origen.numero}' if c.requerimiento_origen_id else '',
+        'items': [{
+            'descripcion': _descripcion_item(d),
+            'unidad': _unidad_item(d),
+            'cantidad': str(d.cantidad.quantize(Decimal('0.001')).normalize()),
+        } for d in c.detalles.all()],
+    } for c in disponibles]
+
     return render(request, 'logistica/guia_form.html', {
-        'proyecto': proyecto, 'form': form, 'formset': formset,
+        'proyecto': proyecto, 'form': form,
+        'cotizaciones_data': cotizaciones_data,
+        'cotizaciones_seleccion': seleccion,
         'titulo': 'Nueva Guía de Remisión',
     })
 
@@ -199,11 +333,23 @@ def guia_editar(request, pk):
 @require_POST
 @requiere('puede_gestionar_logistica')
 def guia_estado(request, pk):
+    from django.db import transaction
     guia  = get_object_or_404(GuiaRemision, pk=pk)
     nuevo = request.POST.get('estado', '')
-    if nuevo in dict(ESTADOS_GUIA):
-        guia.estado = nuevo
-        guia.save(update_fields=['estado'])
+    if nuevo in dict(ESTADOS_GUIA) and nuevo != guia.estado:
+        anterior = guia.estado
+        tiene_cots = guia.cotizaciones.exists()
+        if tiene_cots and anterior == 'ANULADO':
+            messages.error(request, 'Una guía anulada no se puede reactivar; genera una nueva.')
+            return redirect('logistica:guia_detalle', pk=guia.pk)
+        with transaction.atomic():
+            guia.estado = nuevo
+            guia.save(update_fields=['estado'])
+            if tiene_cots:
+                if nuevo == 'ANULADO' and anterior in ESTADOS_GUIA_DESPACHADA:
+                    _revertir_descuento(guia)
+                for req in _reqs_de_guia(guia):
+                    _recalcular_estado_req(req)
         log(request, 'EDITAR', 'Logística',
             f'Guía {guia.numero} → {guia.get_estado_display()}')
         messages.success(request, f'Estado cambiado a {guia.get_estado_display()}.')
@@ -213,10 +359,17 @@ def guia_estado(request, pk):
 @require_POST
 @requiere('puede_gestionar_logistica')
 def guia_eliminar(request, pk):
+    from django.db import transaction
     guia       = get_object_or_404(GuiaRemision, pk=pk)
     proyecto_id = guia.proyecto_id
     numero     = guia.numero
-    guia.delete()
+    with transaction.atomic():
+        reqs = _reqs_de_guia(guia)
+        if guia.estado in ESTADOS_GUIA_DESPACHADA:
+            _revertir_descuento(guia)
+        guia.delete()
+        for req in reqs:
+            _recalcular_estado_req(req)
     log(request, 'ELIMINAR', 'Logística', f'Guía {numero} eliminada')
     messages.success(request, f'Guía {numero} eliminada.')
     return redirect('logistica:guia_lista', proyecto_id=proyecto_id)
@@ -382,63 +535,6 @@ def req_detalle_log(request, proyecto_id, pk):
     })
 
 
-def _crear_guia_desde_req(req, proyecto):
-    """Crea una GuiaRemision automática (PENDIENTE) con los ítems aprobados del requerimiento."""
-    import datetime
-    from .models import GuiaRemision, DetalleGuia
-    from decimal import Decimal
-
-    # Número auto: GR-{año}-{correlativo}
-    anio = datetime.date.today().year
-    prefijo = f'GR-{anio}-'
-    ultimo = (GuiaRemision.objects
-              .filter(proyecto=proyecto, numero__startswith=prefijo)
-              .order_by('-numero').first())
-    if ultimo:
-        try:
-            n = int(ultimo.numero.replace(prefijo, '')) + 1
-        except ValueError:
-            n = 1
-    else:
-        n = 1
-    numero = f'{prefijo}{str(n).zfill(3)}'
-
-    hoy = datetime.date.today()
-    guia = GuiaRemision.objects.create(
-        proyecto=proyecto,
-        numero=numero,
-        fecha_emision=hoy,
-        fecha_traslado=hoy,
-        motivo='TRASLADO_OBRA',
-        origen='Almacén',
-        destino=req.sector_obra or req.obra or proyecto.nombre,
-        observaciones=f'Generada automáticamente desde REQ{req.numero}',
-        requerimiento=req,
-    )
-
-    for det in req.detalles.select_related('insumo').all():
-        if det.cantidad_aprobada and det.cantidad_aprobada > 0:
-            DetalleGuia.objects.create(
-                guia=guia,
-                descripcion=det.descripcion or (det.insumo.descripcion if det.insumo else '—'),
-                unidad=det.unidad or '',
-                cantidad=det.cantidad_aprobada,
-            )
-
-
-def _despachar_req(guia):
-    """Al generar guía (EN_TRANSITO): marca req como ATENDIDO y descuenta insumos."""
-    if not guia.requerimiento_id:
-        return
-    req = guia.requerimiento
-    for det in req.detalles.select_related('insumo').all():
-        if det.cantidad_aprobada and det.insumo:
-            det.insumo.cantidad = max(Decimal('0'), det.insumo.cantidad - det.cantidad_aprobada)
-            det.insumo.save(update_fields=['cantidad'])
-    req.estado = 'ATENDIDO'
-    req.save(update_fields=['estado'])
-
-
 @requiere('puede_revisar_reqs_log')
 @proyecto_visible
 def req_revisar_log(request, proyecto_id, pk):
@@ -580,9 +676,8 @@ def req_revisar_log(request, proyecto_id, pk):
         req.aprobacion_vista = False
         req.save()
 
-        # Eliminar guías PENDIENTE previas antes de crear la nueva
+        # Guías PENDIENTE heredadas del flujo anterior (ya no se generan al aprobar)
         GuiaRemision.objects.filter(requerimiento=req, estado='PENDIENTE').delete()
-        _crear_guia_desde_req(req, proyecto)
 
         tipo_estado = 'aprobado parcialmente' if es_parcial else 'aprobado'
         log(request, 'EDITAR', 'Logística',
@@ -590,10 +685,7 @@ def req_revisar_log(request, proyecto_id, pk):
         notificar(f'REQ{req.numero} {tipo_estado}',
                   mensaje=f'{proyecto.codigo} — revisado por Logística.',
                   tipo='warning' if es_parcial else 'success')
-        notificar('Despacho listo para recibir',
-                  mensaje=f'{proyecto.codigo} — Guía de Remisión REQ{req.numero} generada.',
-                  tipo='info')
-        messages.success(request, f'REQ{req.numero} {tipo_estado} correctamente. Guía de Remisión generada.')
+        messages.success(request, f'REQ{req.numero} {tipo_estado} correctamente.')
         return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
 
     historial = req.historial_revision.select_related('insumo', 'usuario').all()
@@ -607,8 +699,14 @@ def req_revisar_log(request, proyecto_id, pk):
 
 
 def _guia_bloqueante(req):
-    """Retorna la primera guía en EN_TRANSITO o ENTREGADO ligada al req, si existe."""
-    return req.guias_remision.filter(estado__in=['EN_TRANSITO', 'ENTREGADO']).first()
+    """Retorna la primera guía en EN_TRANSITO o ENTREGADO ligada al req (directamente
+    o a través de sus cotizaciones), si existe."""
+    directa = req.guias_remision.filter(estado__in=ESTADOS_GUIA_DESPACHADA).first()
+    if directa:
+        return directa
+    return (GuiaRemision.objects
+            .filter(cotizaciones__requerimiento_origen=req, estado__in=ESTADOS_GUIA_DESPACHADA)
+            .distinct().first())
 
 
 @requiere('puede_revisar_reqs_log')
@@ -730,18 +828,6 @@ def guia_bienes_api(request, pk):
     guia = get_object_or_404(GuiaRemision, pk=pk)
     bienes = list(guia.detalles.values('descripcion', 'unidad', 'cantidad'))
     return JsonResponse({'bienes': bienes})
-
-
-@requiere('puede_gestionar_logistica')
-@proyecto_visible
-def guias_pendientes_api(request, proyecto_id):
-    from django.http import JsonResponse
-    proyecto = _get_proyecto(proyecto_id)
-    qs = (GuiaRemision.objects
-          .filter(proyecto=proyecto, estado='PENDIENTE')
-          .order_by('-creado_en')
-          .values('pk', 'numero', 'origen', 'destino'))
-    return JsonResponse({'guias': list(qs)})
 
 
 @requiere('puede_gestionar_almacen_log')

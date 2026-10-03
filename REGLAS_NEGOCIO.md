@@ -129,9 +129,7 @@ Cuando logística abre un requerimiento (ya sea desde la vista de detalle o desd
    - Registra en `HistorialRevisionReq` cada eliminación (acción `ELIMINAR`) y cada ítem nuevo (acción `AGREGAR`)
    - Crea los nuevos `DetalleRequerimiento` con `cantidad_aprobada = cantidad_requerida`
    - Determina estado: `APROBADO` si todas las aprobadas igualan las requeridas, `PARCIAL` si alguna es menor o hay eliminaciones
-   - Elimina guías `PENDIENTE` previas del req (para evitar duplicados al re-aprobar)
-   - Auto-genera una nueva **Guía de Remisión** en estado `PENDIENTE` con todos los ítems con `cantidad_aprobada > 0`
-   - La guía queda vinculada al requerimiento vía FK `GuiaRemision.requerimiento`
+   - Elimina guías `PENDIENTE` heredadas del req (flujo anterior; ya **no** se genera ninguna guía al aprobar)
    - Actualiza la columna **SOLICITADO** en Req vs Atenciones
 5. **NO** se descuenta el contador de insumos en este momento
 
@@ -157,25 +155,41 @@ El historial es visible en:
 - Vista de detalle logística (`req_detalle.html`)
 - Vista de detalle del jefe de obra (`requerimientos/detalle.html`)
 
-### Flujo de generación de Guía de Remisión
+### Flujo de generación de Guía de Remisión (por cotizaciones aprobadas)
 
-1. Logística va a "Nueva Guía"
-2. En el campo N° Guía aparece un dropdown con las guías en estado `PENDIENTE`
-3. Al seleccionar una, sus bienes se cargan automáticamente debajo de "Datos del Transporte"
-4. Logística completa los datos de transporte (transportista, placa, conductor, etc.)
-5. Pulsa **"Guardar y generar guía"**
-6. El sistema ejecuta:
-   - Actualiza la guía `PENDIENTE` existente con los datos de transporte ingresados
-   - Cambia estado: `PENDIENTE → EN_TRANSITO`
-   - Descuenta del contador: `insumo.cantidad = max(0, insumo.cantidad - cantidad_aprobada)` por cada ítem
-   - Cambia estado del requerimiento vinculado: → `ATENDIDO`
-   - Actualiza la columna **ATENDIDO** en Req vs Atenciones
-   - Crea un registro de **Entrada** en Almacén
+La guía ya **no** nace del requerimiento: sale de una o varias **cotizaciones aprobadas**.
 
-### Numeración de Guías de Remisión auto-generadas
+1. Una cotización pasa a `APROBADA` con el botón **Aprobar cotización** (detalle o lista de cotizaciones).
+2. Logística va a "Nueva Guía". El **N° de guía** (`GR-{año}-{correlativo 3 dígitos}`, por proyecto y año) y la **fecha de emisión** (hoy) son automáticos: se muestran como texto y el servidor los fuerza al guardar.
+3. En **N° de Cotización Aprobada** busca y agrega **una o varias** cotizaciones del proyecto. Solo aparecen las `APROBADA` que no viajan ya en una guía activa (`PENDIENTE`/`EN_TRANSITO`/`ENTREGADO`). Sus ítems se cargan en "Bienes a trasladar" (solo lectura).
+4. Completa los datos de transporte y la fecha de traslado, y pulsa **"Guardar y generar guía"**.
+5. El sistema ejecuta, en una sola transacción:
+   - Crea la guía directamente en `EN_TRANSITO` y la liga a las cotizaciones (`GuiaRemision.cotizaciones`, M2M).
+   - Copia los ítems de las cotizaciones a `DetalleGuia`.
+   - Descuenta del contador, **solo para los ítems ligados a un insumo del presupuesto**: `insumo.cantidad = max(0, insumo.cantidad - cantidad_del_ítem_en_la_cotización)`. Los ítems sin insumo no descuentan.
+   - Recalcula el estado de cada requerimiento de origen (ver abajo).
+6. La Entrada en Almacén **no** se crea automáticamente: la registra el Almacenero desde Almacén → Guías.
 
-Formato: `GR-{año}-{correlativo 3 dígitos}`. Ejemplo: `GR-2025-001`.
-El correlativo es por proyecto y por año; se incrementa sobre el último número existente con ese prefijo.
+**Una cotización solo puede despacharse una vez.** Si la guía se **anula** (desde el detalle) o se **elimina**, el stock descontado se devuelve (sin pasar de `cantidad_total`), la cotización vuelve a estar disponible y se recalcula el requerimiento. Una guía anulada con cotizaciones **no se puede reactivar**: se genera una nueva.
+
+#### Estado del requerimiento según lo despachado
+
+Se compara, por insumo (o por descripción si el ítem no tiene insumo), la `cantidad_aprobada` del requerimiento contra la suma de lo despachado en guías `EN_TRANSITO`/`ENTREGADO` de sus cotizaciones:
+
+| Situación | Estado |
+|-----------|--------|
+| Todo lo aprobado ya salió en guías | `ATENDIDO` |
+| Salió algo, pero falta | `PARCIAL` (Atendido Parcial) |
+| No ha salido nada | `APROBADO` (o `PARCIAL` si se aprobó menos de lo requerido) |
+
+Por eso `PARCIAL` significa dos cosas: aprobado con menos cantidad, o despachado a medias. La pestaña **Por atender** (Logística → Ingreso de Requerimientos) lista los requerimientos en `PARCIAL`.
+
+La anulación de un requerimiento también se bloquea si alguna de sus cotizaciones viaja en una guía `EN_TRANSITO`/`ENTREGADO`.
+
+### Numeración de Guías de Remisión
+
+Formato: `GR-{año}-{correlativo 3 dígitos}`. Ejemplo: `GR-2026-001`.
+El correlativo es por proyecto y por año; se toma el mayor número existente con ese prefijo y se suma 1.
 
 ### Guías de Remisión — flujo en lista
 

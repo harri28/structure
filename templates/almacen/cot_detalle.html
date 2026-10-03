@@ -16,14 +16,6 @@
     <a href="{% url 'almacen:cot_lista' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-arrow-left me-1"></i>Volver a cotizaciones
     </a>
-    {% if cot.estado != 'APROBADA' %}
-    <form method="post" action="{% url 'almacen:cot_aprobar' cot.pk %}" class="d-inline">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-success btn-sm">
-        <i class="bi bi-check-circle me-1"></i>Aprobar cotización
-      </button>
-    </form>
-    {% endif %}
     <a href="{% url 'almacen:cot_imprimir' cot.pk %}" target="_blank" class="btn btn-outline-primary btn-sm">
       <i class="bi bi-printer me-1"></i>Imprimir A4
     </a>
@@ -68,4 +60,14 @@
     </table>
   </div>
 </div>
+{% if cot.estado != 'APROBADA' %}
+<div class="d-flex justify-content-end mt-3">
+  <form method="post" action="{% url 'almacen:cot_aprobar' cot.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-check-circle me-1"></i>Aprobar cotización
+    </button>
+  </form>
+</div>
+{% endif %}
 {% endblock %}
