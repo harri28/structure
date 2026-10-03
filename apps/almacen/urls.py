@@ -41,6 +41,7 @@ urlpatterns = [
     path('cotizaciones/<int:pk>/', views.cot_detalle, name='cot_detalle'),
     path('cotizaciones/<int:pk>/imprimir/', views.cot_imprimir, name='cot_imprimir'),
     path('cotizaciones/<int:pk>/editar/', views.cot_editar, name='cot_editar'),
+    path('cotizaciones/<int:pk>/aprobar/', views.cot_aprobar, name='cot_aprobar'),
     path('cotizaciones/<int:pk>/eliminar/', views.cot_eliminar, name='cot_eliminar'),
     # Órdenes de Compra
     path('proyecto/<int:proyecto_id>/ordenes/', views.oc_lista, name='oc_lista'),

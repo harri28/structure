@@ -91,6 +91,13 @@
           </td>
           <td class="text-end fw-semibold">S/. {{ c.total|floatformat:2 }}</td>
           <td class="d-flex gap-1">
+            {% if c.estado != 'APROBADA' %}
+            <form method="post" action="{% url 'almacen:cot_aprobar' c.pk %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="volver" value="lista">
+              <button type="submit" class="btn-tbl" title="Aprobar cotización" style="color:#16a34a"><i class="bi bi-check-circle"></i></button>
+            </form>
+            {% endif %}
             <a href="{% url 'almacen:cot_editar' c.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
           </td>
         </tr>

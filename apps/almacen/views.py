@@ -1187,6 +1187,25 @@ def cot_editar(request, pk):
 
 
 @requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
+def cot_aprobar(request, pk):
+    """Marca la cotización como APROBADA (la tienda/propuesta fue aceptada)."""
+    cot = get_object_or_404(Cotizacion, pk=pk)
+    if request.method != 'POST':
+        return redirect('almacen:cot_detalle', pk=cot.pk)
+    if cot.estado == 'APROBADA':
+        messages.info(request, f'La cotización COT{cot.numero} ya estaba aprobada.')
+    else:
+        cot.estado = 'APROBADA'
+        cot.save(update_fields=['estado'])
+        log(request, 'EDITAR', 'Almacén',
+            f'Cotización COT{cot.numero} aprobada en {cot.proyecto.codigo}')
+        messages.success(request, f'Cotización COT{cot.numero} aprobada.')
+    if request.POST.get('volver') == 'lista':
+        return redirect('almacen:cot_lista', proyecto_id=cot.proyecto_id)
+    return redirect('almacen:cot_detalle', pk=cot.pk)
+
+
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
 def cot_eliminar(request, pk):
     cot = get_object_or_404(Cotizacion, pk=pk)
     proyecto = cot.proyecto
