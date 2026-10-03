@@ -252,7 +252,10 @@ def editar(request, pk):
     empresa  = ConfigEmpresa.get()
     if request.method == 'POST':
         form = RequerimientoForm(request.POST, instance=req, proyecto=proyecto)
-        formset = DetalleRequerimientoFormSet(request.POST, instance=req, prefix='detalles')
+        formset = DetalleRequerimientoFormSet(
+            request.POST, instance=req, prefix='detalles',
+            form_kwargs={'modo_ajuste': req.es_ajuste},
+        )
         accion = request.POST.get('accion', '')
         if form.is_valid() and formset.is_valid():
             updated = form.save(commit=False)
@@ -275,11 +278,17 @@ def editar(request, pk):
             return redirect('requerimientos:detalle', pk=req.pk)
     else:
         form = RequerimientoForm(instance=req, proyecto=proyecto)
-        formset = DetalleRequerimientoFormSet(instance=req, prefix='detalles')
+        formset = DetalleRequerimientoFormSet(
+            instance=req, prefix='detalles',
+            form_kwargs={'modo_ajuste': req.es_ajuste},
+        )
     return render(request, 'requerimientos/form.html', {
         'form': form, 'formset': formset, 'proyecto': proyecto,
         'empresa': empresa,
         'titulo': 'Editar Requerimiento', 'req': req,
+        'numero_global': req.numero_global,
+        'siguiente_numero': req.numero,
+        'modo_ajuste': req.es_ajuste,
     })
 
 

@@ -57,6 +57,10 @@ class DetalleRequerimientoForm(forms.ModelForm):
             return data
         cantidad = data.get('cantidad') or 0
         cant_req = data.get('cantidad_requerida') or 0
+        # Un ítem sin cantidad a solicitar llegaría a Logística como 0: se exige > 0.
+        if cant_req <= 0:
+            self.add_error('cantidad_requerida', 'Ingresa la cantidad a solicitar (mayor a 0).')
+            return data
         # En modo ajuste (adicional) se permite exceder lo presupuestado.
         if not self.modo_ajuste and cantidad and cant_req > cantidad:
             self.add_error(

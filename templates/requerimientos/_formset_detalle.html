@@ -6,10 +6,10 @@
     <tr>
       <th style="width:3rem;text-align:center">Ítem</th>
       <th style="min-width:220px">Descripción</th>
-      <th style="width:130px">Cantidad</th>
+      <th style="width:130px">Presupuestado</th>
       <th style="width:80px">Unidad</th>
       <th style="width:90px">Stock en Obra</th>
-      <th style="width:110px">Cant. Requerida</th>
+      <th style="width:110px">Cant. a solicitar</th>
       <th style="min-width:180px">Justificación</th>
       <th style="width:2rem"></th>
     </tr>
@@ -58,6 +58,9 @@
                value="{{ form.cantidad_requerida.value|default:'' }}"
                class="form-control form-control-sm cant-req">
         <div class="cant-req-error" style="display:none;font-size:.72rem;color:#dc2626;margin-top:2px"></div>
+        {% if form.cantidad_requerida.errors %}
+        <div class="text-danger" style="font-size:.72rem;margin-top:2px">{{ form.cantidad_requerida.errors.0 }}</div>
+        {% endif %}
       </td>
       <td>
         <input type="text" name="{{ form.justificacion.html_name }}"
@@ -304,8 +307,22 @@
       }
     });
     let ok = true;
-    document.querySelectorAll('.cant-req').forEach(function(inp) {
-      if (!validarCantReq(inp)) ok = false;
+    document.querySelectorAll('.formset-row').forEach(function(row) {
+      const del = row.querySelector('input[type=checkbox][name$="-DELETE"]');
+      if (del && del.checked) return;
+      const inp = row.querySelector('.cant-req');
+      if (!inp) return;
+      if (!validarCantReq(inp)) { ok = false; return; }
+      const v = parseFloat(inp.value);
+      if (isNaN(v) || v <= 0) {
+        const errDiv = inp.closest('td')?.querySelector('.cant-req-error');
+        inp.classList.add('is-invalid');
+        if (errDiv) {
+          errDiv.textContent = 'Ingresa la cantidad a solicitar';
+          errDiv.style.display = 'block';
+        }
+        ok = false;
+      }
     });
     if (!ok) {
       ev.preventDefault();
