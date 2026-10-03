@@ -59,8 +59,8 @@
       <tbody>
         {% for c in cotizaciones %}
         <tr class="cot-row" style="cursor:pointer" data-href="{% url 'almacen:cot_detalle' c.pk %}"
-            data-search="COT-{{ c.numero|lower }} {{ c.proveedor|lower }} {% if c.requerimiento_origen %}REQ-{{ c.requerimiento_origen.numero|lower }}{% endif %}{% for d in c.detalles.all %} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}">
-          <td><a href="{% url 'almacen:cot_detalle' c.pk %}" class="fw-semibold text-decoration-none">COT-{{ c.numero }}</a></td>
+            data-search="COT-{{ c.numero|lower }} COT{{ c.numero|lower }} {{ c.proveedor|lower }} {% if c.requerimiento_origen %}REQ-{{ c.requerimiento_origen.numero|lower }}{% endif %}{% for d in c.detalles.all %} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}">
+          <td><a href="{% url 'almacen:cot_detalle' c.pk %}" class="fw-semibold text-decoration-none">COT{{ c.numero }}</a></td>
           <td>{{ c.fecha|date:"d/m/Y" }}</td>
           <td>{{ c.proveedor|default:"—" }}</td>
           <td>

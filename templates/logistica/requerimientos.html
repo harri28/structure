@@ -52,25 +52,25 @@
     </span>
   </div>
   <div class="card-body p-0">
-    <table class="table-modern">
+    <table class="table-modern" style="table-layout:fixed;width:100%">
       <thead>
         <tr>
-          <th>N° REQ</th>
-          <th>Fecha</th>
-          <th>Tipo</th>
-          <th>Solicitante</th>
-          <th>Estado</th>
-          <th style="text-align:center">Cotizaciones</th>
-          <th style="text-align:center">Ítems</th>
-          <th>Observaciones</th>
+          <th style="width:9%">N° REQ</th>
+          <th style="width:10%">Fecha</th>
+          <th style="width:9%">Tipo</th>
+          <th style="width:23%">Solicitante</th>
+          <th style="width:13%">Estado</th>
+          <th style="width:11%;text-align:center">Cotizaciones</th>
+          <th style="width:7%;text-align:center">Ítems</th>
+          <th style="width:18%">Observaciones</th>
         </tr>
       </thead>
       <tbody>
         {% for r in requerimientos %}
         <tr class="req-row" style="cursor:pointer{% if r.estado == 'ENVIADO' %};background:#eff6ff{% endif %}"
-            data-search="REQ-{{ r.numero|lower }} {{ r.solicitante|lower }}{% for d in r.detalles.all %} {{ d.codigo|lower }} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}"
+            data-search="REQ-{{ r.numero|lower }} REQ{{ r.numero|lower }} {{ r.solicitante|lower }}{% for d in r.detalles.all %} {{ d.codigo|lower }} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}"
             onclick="window.location.href='{% if r.estado == 'ENVIADO' or r.estado == 'EN_REVISION' or r.estado == 'APROBADO' or r.estado == 'PARCIAL' %}{% url 'logistica:req_revisar_log' proyecto.pk r.pk %}{% else %}{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}{% endif %}'">
-          <td class="fw-semibold">REQ-{{ r.numero }}</td>
+          <td class="fw-semibold">REQ{{ r.numero }}</td>
           <td>{{ r.fecha|date:"d/m/Y" }}</td>
           <td>{{ r.get_tipo_display }}</td>
           <td>{{ r.solicitante|default:"—" }}</td>
