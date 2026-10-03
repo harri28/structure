@@ -131,6 +131,9 @@ def _stock_query(proyecto, tipo_sel='', q='', order='codigo'):
         qs = proyecto.presupuesto.insumos.all()
     except Exception:
         qs = InsumoPresupuesto.objects.none()
+    # El stock físico solo lista los insumos que ya se recibieron (tienen entradas);
+    # no todo el presupuesto.
+    qs = qs.filter(pk__in=[k for k in entradas_agg if k is not None])
     if tipo_sel:
         qs = qs.filter(tipo=tipo_sel)
     if q:
