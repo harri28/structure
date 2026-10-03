@@ -88,7 +88,7 @@ def _registrar_entrada_almacen(guia, proyecto):
         numero_guia=guia.numero,
         fecha=guia.fecha_traslado,
         proveedor=guia.transportista.razon_social if guia.transportista else '',
-        descripcion=guia.get_motivo_display(),
+        descripcion=guia.motivo_texto,
         observaciones=guia.observaciones,
     )
     for det in guia.detalles.all():

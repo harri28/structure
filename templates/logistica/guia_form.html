@@ -72,6 +72,10 @@
           <div class="col-sm-6">
             <label class="form-label">Motivo del Traslado</label>
             {{ form.motivo }}
+            <div id="motivo-otro-wrap" class="mt-2" style="display:none">
+              {{ form.motivo_otro }}
+              {% if form.motivo_otro.errors %}<div class="text-danger" style="font-size:.78rem">{{ form.motivo_otro.errors.0 }}</div>{% endif %}
+            </div>
           </div>
           <div class="col-sm-6">
             <label class="form-label">Peso bruto (kg)</label>
@@ -175,6 +179,21 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+(function () {
+  var sel  = document.getElementById('{{ form.motivo.id_for_label }}');
+  var wrap = document.getElementById('motivo-otro-wrap');
+  var inp  = document.getElementById('{{ form.motivo_otro.id_for_label }}');
+  if (!sel || !wrap) return;
+  function sync() {
+    var otro = sel.value === 'OTRO';
+    wrap.style.display = otro ? '' : 'none';
+    if (inp) { inp.required = otro; if (otro && !inp.value) inp.focus(); }
+  }
+  sel.addEventListener('change', sync);
+  sync();
+})();
+</script>
 {% if not guia %}
 {{ cotizaciones_data|json_script:"cot-data" }}
 {{ cotizaciones_seleccion|json_script:"cot-seleccion" }}

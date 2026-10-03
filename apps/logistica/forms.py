@@ -28,7 +28,7 @@ class GuiaRemisionForm(forms.ModelForm):
     class Meta:
         model  = GuiaRemision
         fields = [
-            'numero', 'fecha_emision', 'fecha_traslado', 'motivo',
+            'numero', 'fecha_emision', 'fecha_traslado', 'motivo', 'motivo_otro',
             'origen', 'destino',
             'transportista', 'placa', 'conductor', 'licencia',
             'peso_kg', 'observaciones',
@@ -38,6 +38,7 @@ class GuiaRemisionForm(forms.ModelForm):
             'fecha_emision': forms.DateInput(attrs=_date, format='%Y-%m-%d'),
             'fecha_traslado':forms.DateInput(attrs=_date, format='%Y-%m-%d'),
             'motivo':        forms.Select(attrs=_sel),
+            'motivo_otro':   forms.TextInput(attrs={**_ctrl, 'placeholder': 'Escribe el motivo del traslado', 'maxlength': 200}),
             'origen':        forms.TextInput(attrs={**_ctrl, 'placeholder': 'Almacén central, Av. …'}),
             'destino':       forms.TextInput(attrs={**_ctrl, 'placeholder': 'Obra / destino'}),
             'transportista': forms.Select(attrs=_sel),
@@ -47,6 +48,17 @@ class GuiaRemisionForm(forms.ModelForm):
             'peso_kg':       forms.NumberInput(attrs={**_num, 'step': '0.01'}),
             'observaciones': forms.Textarea(attrs=_area),
         }
+
+    def clean(self):
+        data = super().clean()
+        if data.get('motivo') == 'OTRO':
+            otro = (data.get('motivo_otro') or '').strip()
+            if not otro:
+                self.add_error('motivo_otro', 'Escribe el motivo del traslado.')
+            data['motivo_otro'] = otro
+        else:
+            data['motivo_otro'] = ''
+        return data
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

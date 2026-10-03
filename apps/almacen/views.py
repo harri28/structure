@@ -445,7 +445,7 @@ def entrada_aplicar_item(request, proyecto_id, guia_pk):
             # "GR-2026-002" y no cabe. Dejamos el default '001'.
             fecha=date.today(),
             proveedor=guia.conductor or (guia.transportista.razon_social if guia.transportista else ''),
-            descripcion=guia.get_motivo_display(),
+            descripcion=guia.motivo_texto,
         )
         log(request, 'CREAR', 'Almacén',
             f'Entrada iniciada desde Guía {guia.numero} en {proyecto.codigo}')
@@ -546,7 +546,7 @@ def entrada_crear(request, proyecto_id):
                 'serie':       guia.numero,
                 'fecha':       date.today(),   # fecha de recepción = hoy (no la de traslado)
                 'proveedor':   guia.conductor or (guia.transportista.razon_social if guia.transportista else ''),
-                'descripcion': guia.get_motivo_display(),
+                'descripcion': guia.motivo_texto,
                 'requerimiento': guia.requerimiento_id,
             }
             # Preparar items con stock actual (entradas - salidas) buscando insumo por descripción

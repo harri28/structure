@@ -144,7 +144,7 @@
         <tr>
           <td><a href="{% url 'logistica:guia_detalle' g.pk %}" style="font-weight:600;color:#2563eb">{{ g.numero }}</a></td>
           <td style="font-size:.8rem">{{ g.fecha_emision|date:"d/m/Y" }}</td>
-          <td style="font-size:.8rem">{{ g.get_motivo_display }}</td>
+          <td style="font-size:.8rem">{{ g.motivo_texto }}</td>
           <td style="font-size:.8rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.destino }}</td>
           <td style="font-size:.8rem">{{ g.transportista.razon_social|default:"—" }}</td>
           <td class="text-center">

@@ -41,6 +41,7 @@ class GuiaRemision(models.Model):
     fecha_emision  = models.DateField('Fecha emisión')
     fecha_traslado = models.DateField('Fecha traslado')
     motivo         = models.CharField('Motivo', max_length=20, choices=MOTIVOS_TRASLADO, default='TRASLADO_OBRA')
+    motivo_otro    = models.CharField('Otro motivo', max_length=200, blank=True)
     origen         = models.CharField('Punto de partida', max_length=300)
     destino        = models.CharField('Punto de llegada', max_length=300)
     transportista  = models.ForeignKey(Transportista, null=True, blank=True, on_delete=models.SET_NULL, related_name='guias')
@@ -76,6 +77,13 @@ class GuiaRemision(models.Model):
 
     def __str__(self):
         return f'Guía {self.numero}'
+
+    @property
+    def motivo_texto(self):
+        """Motivo a mostrar: el escrito a mano si es 'Otro', o la etiqueta de la opción."""
+        if self.motivo == 'OTRO' and self.motivo_otro:
+            return self.motivo_otro
+        return self.get_motivo_display()
 
     @property
     def estado_badge(self):
