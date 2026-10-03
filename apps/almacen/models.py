@@ -54,6 +54,12 @@ class DetalleEntrada(models.Model):
     cantidad = models.DecimalField(max_digits=15, decimal_places=4)
     precio_unitario = models.DecimalField(max_digits=15, decimal_places=4, default=0)
     unidad = models.CharField(max_length=20, blank=True)
+    # Línea de la guía de la que viene este ítem (modo recepción de guía). Permite que dos
+    # líneas de la guía con el mismo insumo se SUMEN en el stock en vez de pisarse.
+    detalle_guia = models.ForeignKey(
+        'logistica.DetalleGuia', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
     # Justificación cuando la cantidad recibida es MENOR a la despachada por la guía.
     # Requerida por UI cuando hay diferencia negativa (faltante, avería, etc.).
     observaciones = models.CharField(max_length=300, blank=True)

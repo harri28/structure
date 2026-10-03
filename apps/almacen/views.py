@@ -418,6 +418,7 @@ def entrada_aplicar_item(request, proyecto_id, guia_pk):
     cant_raw  = request.POST.get('item_cantidad', '0').strip()
     insumo_pk = request.POST.get('item_insumo_pk', '').strip()
     obs       = request.POST.get('item_observaciones', '').strip()
+    linea_pk  = request.POST.get('item_detalle_guia_pk', '').strip()
 
     if not desc:
         return JsonResponse({'ok': False, 'msg': 'Falta la descripción del ítem'}, status=400)
@@ -453,24 +454,45 @@ def entrada_aplicar_item(request, proyecto_id, guia_pk):
         log(request, 'CREAR', 'Almacén',
             f'Entrada iniciada desde Guía {guia.numero} en {proyecto.codigo}')
 
-    # Buscar DetalleEntrada existente (por insumo si hay FK, sino por descripción)
+    # Línea de la guía que se está recibiendo. Cada línea es un ítem propio: si la guía trae
+    # dos líneas del mismo insumo (p. ej. 149 y 12), se guardan por separado y se SUMAN.
+    linea = None
+    if linea_pk.isdigit():
+        linea = guia.detalles.filter(pk=int(linea_pk)).first()
+
     det_qs = entrada.detalles.all()
-    if insumo:
-        det = det_qs.filter(insumo=insumo).first()
-    else:
-        det = det_qs.filter(insumo__isnull=True, descripcion__iexact=desc).first()
+    det = None
+    if linea:
+        det = det_qs.filter(detalle_guia=linea).first()
+    if det is None:
+        # Ítems anteriores sin línea asociada (o sin línea en la petición): se reutiliza uno
+        # sin vincular del mismo insumo / descripción en vez de duplicarlo.
+        sin_vincular = det_qs.filter(detalle_guia__isnull=True)
+        if insumo:
+            det = sin_vincular.filter(insumo=insumo).first()
+        else:
+            det = sin_vincular.filter(insumo__isnull=True, descripcion__iexact=desc).first()
+        if det is None and not linea:
+            # Petición sin línea (página antigua): comportamiento previo, por insumo.
+            det = (det_qs.filter(insumo=insumo).first() if insumo
+                   else det_qs.filter(insumo__isnull=True, descripcion__iexact=desc).first())
 
     if det:
         det.cantidad = cant
         det.observaciones = obs
         det.unidad = unidad or det.unidad
         det.descripcion = desc or det.descripcion
-        det.save(update_fields=['cantidad', 'observaciones', 'unidad', 'descripcion'])
+        campos = ['cantidad', 'observaciones', 'unidad', 'descripcion']
+        if linea and det.detalle_guia_id != linea.pk:
+            det.detalle_guia = linea
+            campos.append('detalle_guia')
+        det.save(update_fields=campos)
         accion = 'actualizado'
     else:
         det = DetalleEntrada.objects.create(
             entrada=entrada,
             insumo=insumo,
+            detalle_guia=linea,
             descripcion=desc,
             unidad=unidad,
             cantidad=cant,
@@ -580,6 +602,7 @@ def entrada_crear(request, proyecto_id):
                 else:
                     stock_actual = None  # None → mostrar '—' en el template
                 items_recibir.append({
+                    'detalle_guia_pk': d.pk,
                     'descripcion':   d.descripcion,
                     'unidad':        d.unidad,
                     'cantidad_guia': d.cantidad,

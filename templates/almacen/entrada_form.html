@@ -172,6 +172,7 @@
               <input type="hidden" name="item_desc_{{ forloop.counter0 }}" value="{{ it.descripcion }}">
               <input type="hidden" name="item_unidad_{{ forloop.counter0 }}" value="{{ it.unidad|default:'' }}">
               <input type="hidden" name="item_insumo_pk_{{ forloop.counter0 }}" value="{{ it.insumo_pk }}">
+              <input type="hidden" name="item_detalle_guia_pk_{{ forloop.counter0 }}" value="{{ it.detalle_guia_pk }}">
               <input type="hidden" name="item_applied_{{ forloop.counter0 }}" value="0" class="applied-flag">
               <input type="number" name="item_cantidad_{{ forloop.counter0 }}"
                      value="{{ it.cantidad_guia|floatformat:2 }}"
@@ -401,6 +402,7 @@ document.getElementById('add-row')?.addEventListener('click', function() {
       fd.append('item_desc',          row.querySelector('input[name^="item_desc_"]').value);
       fd.append('item_unidad',        row.querySelector('input[name^="item_unidad_"]').value);
       fd.append('item_insumo_pk',     row.querySelector('input[name^="item_insumo_pk_"]').value);
+      fd.append('item_detalle_guia_pk', row.querySelector('input[name^="item_detalle_guia_pk_"]').value);
       fd.append('item_cantidad',      cantInp.value);
       fd.append('item_observaciones', obsInp.value);
 
