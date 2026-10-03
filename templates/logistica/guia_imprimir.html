@@ -239,8 +239,8 @@
   <!-- Cabecera -->
   <div class="cabecera">
     <div class="cab-logo">
-      {% if empresa.logo %}
-      <img src="{{ empresa.logo.url }}" alt="Logo">
+      {% if empresa.imagen_marca %}
+      <img src="{{ empresa.imagen_marca.url }}" alt="Logo">
       {% endif %}
       <div class="empresa-nombre">{{ empresa.razon_social }}</div>
       {% if empresa.ruc %}<div class="empresa-ruc">RUC: {{ empresa.ruc }}</div>{% endif %}
