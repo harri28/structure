@@ -271,7 +271,7 @@ def requerimientos_log(request, proyecto_id):
     estado_sel = request.GET.get('estado', '')
     qs = (Requerimiento.objects
           .filter(proyecto=proyecto)
-          .prefetch_related('detalles__insumo')
+          .prefetch_related('detalles__insumo', 'cotizaciones_origen')
           .order_by('-fecha', '-numero'))
     if estado_sel:
         qs = qs.filter(estado=estado_sel)

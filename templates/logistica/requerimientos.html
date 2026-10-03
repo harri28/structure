@@ -60,6 +60,7 @@
           <th>Tipo</th>
           <th>Solicitante</th>
           <th>Estado</th>
+          <th style="text-align:center">Cotizaciones</th>
           <th style="text-align:center">Ítems</th>
           <th>Observaciones</th>
         </tr>
@@ -86,6 +87,12 @@
             </span>
           </td>
           <td style="text-align:center">
+            {% with n=r.cotizaciones_origen.all|length %}
+            <span class="badge rounded-pill {% if n %}bg-success{% else %}bg-secondary{% endif %}"
+                  style="font-size:.7rem;padding:.25em .6em">{{ n }}</span>
+            {% endwith %}
+          </td>
+          <td style="text-align:center">
             <span class="badge rounded-pill bg-primary"
                   style="font-size:.7rem;padding:.25em .6em">{{ r.detalles.count }}</span>
           </td>
@@ -93,7 +100,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="7">
+          <td colspan="8">
             <div class="empty-state py-5">
               <i class="bi bi-inbox d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
               <p class="text-muted mb-0">No hay requerimientos recibidos</p>
@@ -102,7 +109,7 @@
         </tr>
         {% endfor %}
         <tr id="req-no-results" style="display:none">
-          <td colspan="7">
+          <td colspan="8">
             <div class="empty-state py-5">
               <i class="bi bi-search d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
               <p class="text-muted mb-0">Ningún requerimiento contiene ítems que coincidan con "<strong id="req-no-results-q"></strong>".</p>
