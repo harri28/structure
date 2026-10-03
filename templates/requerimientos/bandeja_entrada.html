@@ -33,7 +33,7 @@
         {% for r in solicitudes %}
         <tr class="req-row" style="cursor:pointer" onclick="window.location='{% url 'requerimientos:editar' r.pk %}'">
           <td class="fw-semibold">
-            REQ-{{ r.numero }}
+            REQ{{ r.numero }}
             <span class="badge rounded-1 ms-1"
                   style="background:#fef3c7;color:#92400e;font-weight:500;font-size:.7rem">
               Solicitado

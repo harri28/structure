@@ -134,7 +134,7 @@ class Cotizacion(models.Model):
         ordering = ['-fecha']
 
     def __str__(self):
-        return f'COT-{self.numero} | {self.proveedor}'
+        return f'COT{self.numero} | {self.proveedor}'
 
     def total(self):
         return sum(d.subtotal() for d in self.detalles.all())

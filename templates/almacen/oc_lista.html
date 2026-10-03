@@ -54,7 +54,7 @@
           <td>
             {% if oc.requerimiento %}
             <a href="{% url 'requerimientos:detalle' oc.requerimiento.pk %}" class="text-decoration-none" style="font-size:.82rem">
-              REQ-{{ oc.requerimiento.numero }}
+              REQ{{ oc.requerimiento.numero }}
             </a>
             {% else %}—{% endif %}
           </td>

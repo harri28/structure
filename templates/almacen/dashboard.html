@@ -176,7 +176,7 @@
           <tbody>
           {% for r in ultimos_req %}
           <tr>
-            <td><a href="{% url 'requerimientos:detalle' r.pk %}" class="fw-semibold text-decoration-none">REQ-{{ r.numero }}</a></td>
+            <td><a href="{% url 'requerimientos:detalle' r.pk %}" class="fw-semibold text-decoration-none">REQ{{ r.numero }}</a></td>
             <td>{{ r.fecha|date:"d/m/Y" }}</td>
             <td>{{ r.get_tipo_display }}</td>
             <td><span class="badge {% if r.estado == 'ATENDIDO' %}bg-success{% elif r.estado == 'PENDIENTE' %}bg-warning text-dark{% elif r.estado == 'ANULADO' %}bg-danger{% else %}bg-secondary{% endif %}">{{ r.get_estado_display }}</span></td>

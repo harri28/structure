@@ -47,7 +47,7 @@
       <a href="{% url 'requerimientos:detalle' r.pk %}"
          class="badge text-decoration-none"
          style="background:#16a34a;color:#fff;font-size:.8rem;padding:.35em .7em">
-        REQ-{{ r.numero }}
+        REQ{{ r.numero }}
         {% if r.estado == 'PARCIAL' %}<span class="ms-1" style="opacity:.85">(parcial)</span>{% endif %}
       </a>
       {% endfor %}
@@ -85,7 +85,7 @@
             data-search="REQ-{{ r.numero|lower }} {{ r.solicitante|lower }}{% for d in r.detalles.all %} {{ d.codigo|lower }} {{ d.descripcion|lower }}{% if d.insumo %} {{ d.insumo.codigo|lower }} {{ d.insumo.descripcion|lower }}{% endif %}{% endfor %}"
             onclick="window.location='{% url 'requerimientos:detalle' r.pk %}'">
           <td class="fw-semibold">
-            REQ-{{ r.numero }}
+            REQ{{ r.numero }}
             {% if not r.aprobacion_vista %}{% if r.estado == 'APROBADO' or r.estado == 'PARCIAL' %}
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-left:4px;vertical-align:middle" title="Aprobado por Logística"></span>
             {% endif %}{% endif %}

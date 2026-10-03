@@ -153,7 +153,7 @@
           <tbody>
             {% for r in ultimas_solicitudes %}
             <tr>
-              <td class="fw-semibold" style="font-size:.82rem">REQ-{{ r.numero }}</td>
+              <td class="fw-semibold" style="font-size:.82rem">REQ{{ r.numero }}</td>
               <td style="font-size:.8rem">{{ r.fecha|date:"d/m/Y" }}</td>
               <td class="text-center">
                 <span class="badge rounded-1

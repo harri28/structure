@@ -23,7 +23,7 @@
         <div class="col-12 d-flex flex-wrap align-items-end gap-4 pb-2 border-bottom">
           <div>
             <div class="text-muted text-uppercase fw-semibold" style="font-size:.68rem;letter-spacing:.04em">N° Cotización</div>
-            <div class="fw-bold" style="font-size:1.05rem">COT-{{ form.numero.value|default:'' }}</div>
+            <div class="fw-bold" style="font-size:1.05rem">COT{{ form.numero.value|default:'' }}</div>
             <input type="hidden" name="numero" value="{{ form.numero.value|default:'' }}">
           </div>
           <div>

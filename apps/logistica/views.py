@@ -373,7 +373,7 @@ def req_detalle_log(request, proyecto_id, pk):
         req.estado = 'EN_REVISION'
         req.save(update_fields=['estado'])
         log(request, 'EDITAR', 'Logística',
-            f'REQ-{req.numero} marcado En revisión por {request.user.get_full_name() or request.user.username}')
+            f'REQ{req.numero} marcado En revisión por {request.user.get_full_name() or request.user.username}')
     detalles = list(req.detalles.select_related('insumo').all())
     _backfill_codigos(detalles, proyecto)
     return render(request, 'logistica/req_detalle.html', {
@@ -412,7 +412,7 @@ def _crear_guia_desde_req(req, proyecto):
         motivo='TRASLADO_OBRA',
         origen='Almacén',
         destino=req.sector_obra or req.obra or proyecto.nombre,
-        observaciones=f'Generada automáticamente desde REQ-{req.numero}',
+        observaciones=f'Generada automáticamente desde REQ{req.numero}',
         requerimiento=req,
     )
 
@@ -586,14 +586,14 @@ def req_revisar_log(request, proyecto_id, pk):
 
         tipo_estado = 'aprobado parcialmente' if es_parcial else 'aprobado'
         log(request, 'EDITAR', 'Logística',
-            f'REQ-{req.numero} {tipo_estado} por {request.user.get_full_name() or request.user.username}')
-        notificar(f'REQ-{req.numero} {tipo_estado}',
+            f'REQ{req.numero} {tipo_estado} por {request.user.get_full_name() or request.user.username}')
+        notificar(f'REQ{req.numero} {tipo_estado}',
                   mensaje=f'{proyecto.codigo} — revisado por Logística.',
                   tipo='warning' if es_parcial else 'success')
         notificar('Despacho listo para recibir',
-                  mensaje=f'{proyecto.codigo} — Guía de Remisión REQ-{req.numero} generada.',
+                  mensaje=f'{proyecto.codigo} — Guía de Remisión REQ{req.numero} generada.',
                   tipo='info')
-        messages.success(request, f'REQ-{req.numero} {tipo_estado} correctamente. Guía de Remisión generada.')
+        messages.success(request, f'REQ{req.numero} {tipo_estado} correctamente. Guía de Remisión generada.')
         return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
 
     historial = req.historial_revision.select_related('insumo', 'usuario').all()
@@ -645,7 +645,7 @@ def req_anular_log(request, proyecto_id, pk):
     HistorialRevisionReq.objects.create(
         requerimiento=req,
         accion='ANULAR',
-        descripcion=f'Requerimiento REQ-{req.numero} anulado',
+        descripcion=f'Requerimiento REQ{req.numero} anulado',
         unidad='',
         cantidad=Decimal('0'),
         justificacion=justificacion,
@@ -653,11 +653,11 @@ def req_anular_log(request, proyecto_id, pk):
     )
 
     log(request, 'ANULAR', 'Logística',
-        f'REQ-{req.numero} anulado por {request.user.get_full_name() or request.user.username}')
-    notificar(f'REQ-{req.numero} anulado',
+        f'REQ{req.numero} anulado por {request.user.get_full_name() or request.user.username}')
+    notificar(f'REQ{req.numero} anulado',
               mensaje=f'{proyecto.codigo} — {justificacion[:80]}',
               tipo='danger')
-    messages.success(request, f'REQ-{req.numero} anulado.')
+    messages.success(request, f'REQ{req.numero} anulado.')
     return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
 
 
@@ -693,7 +693,7 @@ def req_recuperar_log(request, proyecto_id, pk):
     HistorialRevisionReq.objects.create(
         requerimiento=req,
         accion='RECUPERAR',
-        descripcion=f'Requerimiento REQ-{req.numero} recuperado a EN_REVISION',
+        descripcion=f'Requerimiento REQ{req.numero} recuperado a EN_REVISION',
         unidad='',
         cantidad=Decimal('0'),
         justificacion=justificacion,
@@ -701,11 +701,11 @@ def req_recuperar_log(request, proyecto_id, pk):
     )
 
     log(request, 'RECUPERAR', 'Logística',
-        f'REQ-{req.numero} recuperado por {request.user.get_full_name() or request.user.username}')
-    notificar(f'REQ-{req.numero} recuperado',
+        f'REQ{req.numero} recuperado por {request.user.get_full_name() or request.user.username}')
+    notificar(f'REQ{req.numero} recuperado',
               mensaje=f'{proyecto.codigo} — devuelto a revisión.',
               tipo='info')
-    messages.success(request, f'REQ-{req.numero} recuperado. Vuelve a estar en revisión.')
+    messages.success(request, f'REQ{req.numero} recuperado. Vuelve a estar en revisión.')
     return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
 
 

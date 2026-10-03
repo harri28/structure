@@ -24,7 +24,7 @@
     <div class="row g-2">
       <div class="col-sm-3"><label class="text-muted small">Fecha</label><p class="mb-0 fw-semibold">{{ entrada.fecha|date:"d/m/Y" }}</p></div>
       <div class="col-sm-3"><label class="text-muted small">Proveedor</label><p class="mb-0">{{ entrada.proveedor|default:"—" }}</p></div>
-      <div class="col-sm-3"><label class="text-muted small">Requerimiento</label><p class="mb-0">{% if entrada.requerimiento %}REQ-{{ entrada.requerimiento.numero }}{% else %}—{% endif %}</p></div>
+      <div class="col-sm-3"><label class="text-muted small">Requerimiento</label><p class="mb-0">{% if entrada.requerimiento %}REQ{{ entrada.requerimiento.numero }}{% else %}—{% endif %}</p></div>
       <div class="col-sm-3"><label class="text-muted small">Descripción</label><p class="mb-0">{{ entrada.descripcion|default:"—" }}</p></div>
     </div>
   </div>

@@ -60,7 +60,7 @@
       <tbody>
         {% for d in detalles %}
         <tr style="cursor:pointer" onclick="window.location='{% url 'requerimientos:detalle' d.requerimiento.pk %}'">
-          <td class="fw-semibold" style="color:#2563eb">REQ-{{ d.requerimiento.numero }}</td>
+          <td class="fw-semibold" style="color:#2563eb">REQ{{ d.requerimiento.numero }}</td>
           <td style="font-size:.83rem">{{ d.requerimiento.fecha|date:"d/m/Y" }}</td>
           <td style="font-size:.83rem">{{ d.requerimiento.solicitante|default:"—" }}</td>
           <td>

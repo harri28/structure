@@ -970,8 +970,8 @@ def cot_imprimir(request, pk):
             except (InvalidOperation, ValueError):
                 continue
         log(request, 'EDITAR', 'Almacén',
-            f'Cantidades de COT-{cot.numero} actualizadas por {request.user.get_full_name() or request.user.username}')
-        messages.success(request, f'Cantidades de COT-{cot.numero} guardadas.')
+            f'Cantidades de COT{cot.numero} actualizadas por {request.user.get_full_name() or request.user.username}')
+        messages.success(request, f'Cantidades de COT{cot.numero} guardadas.')
         return redirect('almacen:cot_imprimir', pk=cot.pk)
 
     return render(request, 'almacen/cot_imprimir.html', {
@@ -1010,7 +1010,7 @@ def cot_crear(request, proyecto_id):
                     d.cotizacion = cot
                     _sync_insumo_snapshot(d)
             log(request, 'CREAR', 'Almacén',
-                f'Cotización COT-{cot.numero} creada en {proyecto.codigo}')
+                f'Cotización COT{cot.numero} creada en {proyecto.codigo}')
             messages.success(request, 'Cotización registrada.')
             return redirect('almacen:cot_detalle', pk=cot.pk)
     else:
@@ -1052,7 +1052,7 @@ def cot_desde_req(request, proyecto_id, req_pk):
         fecha=now().date(),
         proveedor='',
         estado='PENDIENTE',
-        observaciones=f'Solicitud de cotización generada desde REQ-{req.numero}',
+        observaciones=f'Solicitud de cotización generada desde REQ{req.numero}',
     )
 
     detalles = req.detalles.select_related('insumo').all()
@@ -1074,8 +1074,8 @@ def cot_desde_req(request, proyecto_id, req_pk):
     req.save(update_fields=['cotizacion_sistema'])
 
     log(request, 'CREAR', 'Almacén',
-        f'Cotización COT-{cot.numero} generada desde REQ-{req.numero} en {proyecto.codigo}')
-    messages.success(request, f'Solicitud de cotización COT-{cot.numero} generada.')
+        f'Cotización COT{cot.numero} generada desde REQ{req.numero} en {proyecto.codigo}')
+    messages.success(request, f'Solicitud de cotización COT{cot.numero} generada.')
     return redirect('almacen:cot_imprimir', pk=cot.pk)
 
 
@@ -1131,8 +1131,8 @@ def cot_rapida(request, proyecto_id):
             unidad=und.strip(),
         )
 
-    log(request, 'CREAR', 'Almacén', f'Cotización COT-{cot.numero} creada rápidamente en {proyecto.codigo}')
-    messages.success(request, f'Cotización COT-{cot.numero} registrada.')
+    log(request, 'CREAR', 'Almacén', f'Cotización COT{cot.numero} creada rápidamente en {proyecto.codigo}')
+    messages.success(request, f'Cotización COT{cot.numero} registrada.')
     return redirect('almacen:cot_detalle', pk=cot.pk)
 
 
@@ -1148,7 +1148,7 @@ def cot_editar(request, pk):
             for d in formset.save():
                 _sync_insumo_snapshot(d)
             log(request, 'EDITAR', 'Almacén',
-                f'Cotización COT-{cot.numero} editada en {proyecto.codigo}')
+                f'Cotización COT{cot.numero} editada en {proyecto.codigo}')
             messages.success(request, 'Cotización actualizada.')
             return redirect('almacen:cot_detalle', pk=cot.pk)
     else:
@@ -1164,7 +1164,7 @@ def cot_eliminar(request, pk):
     cot = get_object_or_404(Cotizacion, pk=pk)
     proyecto = cot.proyecto
     if request.method == 'POST':
-        ref = f'COT-{cot.numero}'
+        ref = f'COT{cot.numero}'
         cot.delete()
         log(request, 'ELIMINAR', 'Almacén', f'Cotización {ref} eliminada en {proyecto.codigo}')
         messages.success(request, 'Cotización eliminada.')

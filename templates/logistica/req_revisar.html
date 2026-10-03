@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% load l10n %}
-{% block title %}Revisar REQ-{{ req.numero }}{% endblock %}
+{% block title %}Revisar REQ{{ req.numero }}{% endblock %}
 {% block nav_req_logistica %}active{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
 <li class="breadcrumb-item"><a href="{% url 'logistica:requerimientos_log' proyecto.pk %}">Ingreso de Requerimientos</a></li>
-<li class="breadcrumb-item active">REQ-{{ req.numero }}</li>
+<li class="breadcrumb-item active">REQ{{ req.numero }}</li>
 {% endblock %}
 
 {% block content %}
@@ -51,7 +51,7 @@
     <div class="row g-3">
       <div class="col-sm-2">
         <div class="text-muted" style="font-size:.75rem">N° Requerimiento</div>
-        <div class="fw-bold" style="font-size:1.05rem;color:#2563eb">REQ-{{ req.numero }}</div>
+        <div class="fw-bold" style="font-size:1.05rem;color:#2563eb">REQ{{ req.numero }}</div>
       </div>
       <div class="col-sm-2">
         <div class="text-muted" style="font-size:.75rem">Fecha</div>
@@ -77,7 +77,7 @@
       {% for c in cots %}
       <a href="{% url 'almacen:cot_imprimir' c.pk %}" target="_blank"
          class="badge bg-light text-dark border" style="font-size:.75rem;padding:.4em .7em;text-decoration:none">
-        <i class="bi bi-receipt me-1 text-success"></i>COT-{{ c.numero }}
+        <i class="bi bi-receipt me-1 text-success"></i>COT{{ c.numero }}
         {% if c.proveedor %}<span class="text-muted">· {{ c.proveedor|truncatechars:30 }}</span>{% endif %}
       </a>
       {% endfor %}
@@ -252,7 +252,7 @@
       <div class="modal-content">
         <div class="modal-header py-2">
           <h6 class="modal-title" style="font-size:.9rem">
-            <i class="bi bi-x-circle text-danger me-1"></i>Anular REQ-{{ req.numero }}
+            <i class="bi bi-x-circle text-danger me-1"></i>Anular REQ{{ req.numero }}
           </h6>
           <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
         </div>
@@ -284,7 +284,7 @@
       <div class="modal-content">
         <div class="modal-header py-2">
           <h6 class="modal-title" style="font-size:.9rem">
-            <i class="bi bi-arrow-counterclockwise text-primary me-1"></i>Recuperar REQ-{{ req.numero }}
+            <i class="bi bi-arrow-counterclockwise text-primary me-1"></i>Recuperar REQ{{ req.numero }}
           </h6>
           <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
         </div>

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Solicitud de Cotización COT-{{ cot.numero }}</title>
+  <title>Solicitud de Cotización COT{{ cot.numero }}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -246,9 +246,9 @@
     </div>
     <div class="cab-numero">
       <div class="label">N° Cotización</div>
-      <div class="numero">COT-{{ cot.numero }}</div>
+      <div class="numero">COT{{ cot.numero }}</div>
       {% if cot.requerimiento_origen %}
-      <div class="origen">Origen: REQ-{{ cot.requerimiento_origen.numero }}</div>
+      <div class="origen">Origen: REQ{{ cot.requerimiento_origen.numero }}</div>
       {% endif %}
       <div class="fecha">Fecha: {{ cot.fecha|date:"d/m/Y" }}</div>
     </div>
@@ -331,7 +331,7 @@
 
   <div class="pie">
     Solicitud de cotización generada por el sistema — {{ empresa.razon_social|default:"" }} — {{ cot.fecha|date:"d/m/Y" }}
-    {% if cot.requerimiento_origen %} · Origen: REQ-{{ cot.requerimiento_origen.numero }}{% endif %}
+    {% if cot.requerimiento_origen %} · Origen: REQ{{ cot.requerimiento_origen.numero }}{% endif %}
   </div>
 
 </div>

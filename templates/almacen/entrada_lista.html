@@ -44,7 +44,7 @@
           </td>
           <td>{{ e.fecha|date:"d/m/Y" }}</td>
           <td>{{ e.proveedor|default:"—" }}</td>
-          <td>{% if e.requerimiento %}<code>REQ-{{ e.requerimiento.numero }}</code>{% else %}—{% endif %}</td>
+          <td>{% if e.requerimiento %}<code>REQ{{ e.requerimiento.numero }}</code>{% else %}—{% endif %}</td>
           <td>
             <span class="badge rounded-1
               {% if e.estado == 'ACEPTADO' %}bg-success

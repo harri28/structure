@@ -120,16 +120,16 @@ def crear(request, proyecto_id):
                     _sync_snapshot(d)
             tipo_txt = 'Ajuste' if modo_ajuste else 'Requerimiento'
             log(request, 'CREAR', 'Requerimientos',
-                f'REQ-{req.numero} ({tipo_txt}) {"enviado" if req.estado == "ENVIADO" else "guardado como borrador"} en {proyecto.codigo}')
+                f'REQ{req.numero} ({tipo_txt}) {"enviado" if req.estado == "ENVIADO" else "guardado como borrador"} en {proyecto.codigo}')
             if req.estado == 'ENVIADO':
                 notificar(
-                    f'Nuevo {tipo_txt.lower()} REQ-{req.numero}',
+                    f'Nuevo {tipo_txt.lower()} REQ{req.numero}',
                     mensaje=f'Enviado por {request.user.get_full_name() or request.user.username} — {proyecto.codigo}. Pendiente en Logística.',
                     tipo='warning' if modo_ajuste else 'info',
                 )
-                messages.success(request, f'{tipo_txt} REQ-{req.numero} enviado a Logística.')
+                messages.success(request, f'{tipo_txt} REQ{req.numero} enviado a Logística.')
             else:
-                messages.success(request, f'{tipo_txt} REQ-{req.numero} guardado como borrador.')
+                messages.success(request, f'{tipo_txt} REQ{req.numero} guardado como borrador.')
             return redirect('requerimientos:detalle', pk=req.pk)
     else:
         form = RequerimientoForm(proyecto=proyecto, initial={
@@ -205,13 +205,13 @@ def solicitar(request, proyecto_id):
                     d.requerimiento = req
                     _sync_snapshot(d)
             log(request, 'CREAR', 'Requerimientos',
-                f'REQ-{req.numero} solicitado por {request.user.get_full_name() or request.user.username} en {proyecto.codigo}')
+                f'REQ{req.numero} solicitado por {request.user.get_full_name() or request.user.username} en {proyecto.codigo}')
             notificar(
-                f'Nueva solicitud REQ-{req.numero}',
+                f'Nueva solicitud REQ{req.numero}',
                 mensaje=f'Solicitada por {request.user.get_full_name() or request.user.username} — {proyecto.codigo}. Pendiente en Bandeja de Entrada.',
                 tipo='info',
             )
-            messages.success(request, f'Solicitud REQ-{req.numero} enviada al Administrador de Obra.')
+            messages.success(request, f'Solicitud REQ{req.numero} enviada al Administrador de Obra.')
             return redirect('requerimientos:lista', proyecto_id=proyecto_id)
     else:
         # Cargo del Almacenero: viene de su PerfilUsuario.cargo; si está vacío,
@@ -260,7 +260,7 @@ def editar(request, pk):
                 origen = 'solicitud del Almacén' if req.estado == 'SOLICITADO' else 'borrador propio'
                 updated.estado = 'ENVIADO'
                 notificar(
-                    f'Requerimiento REQ-{req.numero} enviado a Logística',
+                    f'Requerimiento REQ{req.numero} enviado a Logística',
                     mensaje=f'Enviado por {request.user.get_full_name() or request.user.username} — {proyecto.codigo} (desde {origen}).',
                     tipo='info',
                 )
@@ -270,7 +270,7 @@ def editar(request, pk):
             for d in formset.save():
                 _sync_snapshot(d)
             log(request, 'EDITAR', 'Requerimientos',
-                f'REQ-{req.numero} editado en {proyecto.codigo}')
+                f'REQ{req.numero} editado en {proyecto.codigo}')
             messages.success(request, 'Requerimiento actualizado.')
             return redirect('requerimientos:detalle', pk=req.pk)
     else:
@@ -293,13 +293,13 @@ def enviar(request, pk):
         req.save(update_fields=['estado'])
         origen = 'solicitud del Almacén' if estado_previo == 'SOLICITADO' else 'borrador propio'
         log(request, 'EDITAR', 'Requerimientos',
-            f'REQ-{req.numero} enviado a Logística por {request.user.get_full_name() or request.user.username} (desde {origen})')
+            f'REQ{req.numero} enviado a Logística por {request.user.get_full_name() or request.user.username} (desde {origen})')
         notificar(
-            f'Nuevo requerimiento REQ-{req.numero}',
+            f'Nuevo requerimiento REQ{req.numero}',
             mensaje=f'Enviado por {request.user.get_full_name() or request.user.username} — {req.proyecto.codigo}. Pendiente en Logística.',
             tipo='info',
         )
-        messages.success(request, f'REQ-{req.numero} enviado a Logística.')
+        messages.success(request, f'REQ{req.numero} enviado a Logística.')
     return redirect('requerimientos:detalle', pk=req.pk)
 
 
@@ -311,13 +311,13 @@ def aprobar(request, pk):
         req.estado = 'APROBADO'
         req.save()
         log(request, 'EDITAR', 'Requerimientos',
-            f'REQ-{req.numero} aprobado por {request.user.get_full_name() or request.user.username}')
+            f'REQ{req.numero} aprobado por {request.user.get_full_name() or request.user.username}')
         notificar(
-            f'Requerimiento REQ-{req.numero} aprobado',
+            f'Requerimiento REQ{req.numero} aprobado',
             mensaje=f'Aprobado por {request.user.get_full_name() or request.user.username} en Logística.',
             tipo='success',
         )
-        messages.success(request, f'Requerimiento REQ-{req.numero} aprobado.')
+        messages.success(request, f'Requerimiento REQ{req.numero} aprobado.')
     next_url = request.POST.get('next', '')
     return redirect(next_url or 'requerimientos:detalle', pk=req.pk) if not next_url else redirect(next_url)
 
@@ -407,7 +407,7 @@ def eliminar(request, pk):
         num = req.numero
         req.delete()
         log(request, 'ELIMINAR', 'Requerimientos',
-            f'REQ-{num} eliminado de {proyecto.codigo}')
+            f'REQ{num} eliminado de {proyecto.codigo}')
         messages.success(request, 'Requerimiento eliminado.')
         return redirect('requerimientos:lista', proyecto_id=proyecto.pk)
     return render(request, 'requerimientos/confirmar_eliminar.html', {

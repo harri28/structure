@@ -21,7 +21,7 @@
           <option value="">— Seleccionar requerimiento —</option>
           {% for r in reqs_aprobados %}
           <option value="{{ r.pk }}" data-numero="{{ r.numero }}" data-solicitante="{{ r.solicitante }}">
-            REQ-{{ r.numero }} — {{ r.solicitante|default:"Sin solicitante" }} ({{ r.detalles.count }} ítems)
+            REQ{{ r.numero }} — {{ r.solicitante|default:"Sin solicitante" }} ({{ r.detalles.count }} ítems)
           </option>
           {% endfor %}
         </select>
@@ -156,7 +156,7 @@
 
           if (tf) tf.value = items.length;
           hidden.value = pk;
-          badge.textContent = 'REQ-' + opt.dataset.numero;
+          badge.textContent = 'REQ' + opt.dataset.numero;
           badge.classList.remove('d-none');
           if (opt.dataset.solicitante) {
             document.getElementById('campo-destino').value = opt.dataset.solicitante;

@@ -63,7 +63,7 @@ class Requerimiento(models.Model):
         unique_together = ['proyecto', 'numero']
 
     def __str__(self):
-        return f'REQ-{self.numero} | {self.proyecto.codigo}'
+        return f'REQ{self.numero} | {self.proyecto.codigo}'
 
 
 class DetalleRequerimiento(models.Model):

@@ -68,7 +68,7 @@
             <a href="{% url 'logistica:req_revisar_log' proyecto.pk c.requerimiento_origen_id %}"
                class="badge bg-light text-dark border text-decoration-none"
                style="font-size:.7rem;padding:.3em .6em">
-              <i class="bi bi-link-45deg me-1 text-primary"></i>REQ-{{ c.requerimiento_origen.numero }}
+              <i class="bi bi-link-45deg me-1 text-primary"></i>REQ{{ c.requerimiento_origen.numero }}
             </a>
             {% else %}<span class="text-muted">—</span>{% endif %}
           </td>
