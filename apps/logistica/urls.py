@@ -27,6 +27,7 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/requerimientos/',                       views.requerimientos_log,  name='requerimientos_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/consolidados/',          views.consolidados_log,    name='consolidados_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/historial/',             views.historial_log,       name='historial_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/anulados/',              views.anulados_log,        name='anulados_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/',              views.req_detalle_log,    name='req_detalle_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/revisar/',      views.req_revisar_log,    name='req_revisar_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/anular/',       views.req_anular_log,     name='req_anular_log'),

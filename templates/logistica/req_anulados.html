@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
-{% block title %}R. Consolidados — {{ proyecto.codigo }}{% endblock %}
+{% block title %}Anulados — {{ proyecto.codigo }}{% endblock %}
 {% block nav_req_logistica %}active{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
-<li class="breadcrumb-item active">Ingreso de Requerimientos</li>
+<li class="breadcrumb-item active">Anulados</li>
 {% endblock %}
 
 {% block content %}
@@ -14,21 +14,21 @@
       <i class="bi bi-chevron-left"></i> Ingreso de Requerimientos
     </a>
     <h4 class="mt-1 d-flex align-items-center gap-2">
-      <i class="bi bi-layer-forward" style="color:#2563eb"></i>
-      Requerimientos Consolidados
+      <i class="bi bi-x-circle" style="color:#dc2626"></i>
+      Requerimientos anulados
     </h4>
-    <div class="text-muted">Requerimientos aprobados por logística</div>
+    <div class="text-muted">Requerimientos anulados. Ábrelos para recuperarlos y volver a revisarlos</div>
     <div class="submodule-chips mt-2">
       <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="s-chip">
         <i class="bi bi-list-ul me-1"></i>Ingreso de Requerimientos
       </a>
-      <a href="{% url 'logistica:consolidados_log' proyecto.pk %}" class="s-chip active">
+      <a href="{% url 'logistica:consolidados_log' proyecto.pk %}" class="s-chip">
         <i class="bi bi-layer-forward me-1"></i>R. Consolidados
       </a>
       <a href="{% url 'logistica:historial_log' proyecto.pk %}" class="s-chip">
         <i class="bi bi-clock-history me-1"></i>Historial
       </a>
-      <a href="{% url 'logistica:anulados_log' proyecto.pk %}" class="s-chip">
+      <a href="{% url 'logistica:anulados_log' proyecto.pk %}" class="s-chip active">
         <i class="bi bi-x-circle me-1"></i>Anulados
       </a>
     </div>
@@ -45,36 +45,40 @@
           <th>Tipo</th>
           <th>Solicitante</th>
           <th>Estado</th>
+          <th style="text-align:center">Ítems</th>
           <th>Observaciones</th>
-          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for r in requerimientos %}
-        <tr style="cursor:pointer"
+        <tr class="req-row" style="cursor:pointer"
             onclick="window.location.href='{% url 'logistica:req_revisar_log' proyecto.pk r.pk %}'">
           <td class="fw-semibold">REQ-{{ r.numero }}</td>
           <td>{{ r.fecha|date:"d/m/Y" }}</td>
           <td>{{ r.get_tipo_display }}</td>
           <td>{{ r.solicitante|default:"—" }}</td>
           <td>
-            <span class="badge rounded-1 {% if r.estado == 'APROBADO' %}bg-info{% else %}bg-warning text-dark{% endif %}">
+            <span class="badge rounded-1
+              {% if r.estado == 'EN_REVISION' %}bg-warning text-dark
+              {% elif r.estado == 'ANULADO' %}bg-danger
+              {% elif r.estado == 'APROBADO' %}bg-info
+              {% elif r.estado == 'PARCIAL' %}bg-warning text-dark
+              {% else %}bg-secondary{% endif %}">
               {{ r.get_estado_display }}
             </span>
           </td>
-          <td class="text-muted" style="font-size:.82rem">{{ r.observaciones|default:"—"|truncatechars:60 }}</td>
-          <td onclick="event.stopPropagation()">
-            <a href="{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}" class="btn-tbl" title="Ver detalle">
-              <i class="bi bi-eye"></i>
-            </a>
+          <td style="text-align:center">
+            <span class="badge rounded-pill bg-primary"
+                  style="font-size:.7rem;padding:.25em .6em">{{ r.detalles.count }}</span>
           </td>
+          <td class="text-muted" style="font-size:.82rem">{{ r.observaciones|default:"—"|truncatechars:60 }}</td>
         </tr>
         {% empty %}
         <tr>
           <td colspan="7">
             <div class="empty-state py-5">
               <i class="bi bi-inbox d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
-              <p class="text-muted">No hay requerimientos consolidados aún</p>
+              <p class="text-muted">No hay requerimientos anulados</p>
             </div>
           </td>
         </tr>
@@ -83,4 +87,5 @@
     </table>
   </div>
 </div>
+
 {% endblock %}

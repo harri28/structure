@@ -237,7 +237,7 @@
       </a>
       {% if permisos.puede_revisar_reqs_log %}
       <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:requerimientos_log' or vn == 'logistica:req_revisar_log' or vn == 'logistica:req_detalle_log' or vn == 'logistica:consolidados_log' or vn == 'logistica:historial_log' %}active{% endif %}">
+         class="sb-link {% if vn == 'logistica:requerimientos_log' or vn == 'logistica:req_revisar_log' or vn == 'logistica:req_detalle_log' or vn == 'logistica:consolidados_log' or vn == 'logistica:historial_log' or vn == 'logistica:anulados_log' %}active{% endif %}">
         <i class="bi bi-file-earmark-text"></i> Ingreso de Requerimientos
         {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
       </a>

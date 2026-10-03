@@ -313,6 +313,20 @@ def historial_log(request, proyecto_id):
     })
 
 
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
+def anulados_log(request, proyecto_id):
+    from apps.requerimientos.models import Requerimiento
+    proyecto = _get_proyecto(proyecto_id)
+    requerimientos = (Requerimiento.objects
+                      .filter(proyecto=proyecto, estado='ANULADO')
+                      .order_by('-fecha', '-numero'))
+    return render(request, 'logistica/req_anulados.html', {
+        'proyecto':       proyecto,
+        'requerimientos': requerimientos,
+    })
+
+
 def _backfill_codigos(detalles, proyecto):
     """Rellena d.codigo desde el presupuesto cuando está vacío, y persiste el cambio."""
     from apps.requerimientos.models import DetalleRequerimiento
