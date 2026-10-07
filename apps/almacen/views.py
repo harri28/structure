@@ -1352,34 +1352,123 @@ def cot_editar(request, pk):
 
 @requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
 def cot_aprobar(request, pk):
-    """Marca la cotización como APROBADA (la tienda/propuesta fue aceptada)."""
-    cot = get_object_or_404(Cotizacion, pk=pk)
+    """Aprueba la cotización procesando la respuesta real del proveedor.
+
+    Espera del POST, por cada DetalleCotizacion existente:
+      - cantidad_<pk>  (requerido salvo que la fila venga marcada para eliminar)
+      - precio_<pk>    (requerido salvo que la fila venga marcada para eliminar)
+      - eliminar_<pk>  (opcional; '1' quita el ítem de la cotización — su saldo
+                        vuelve al REQ)
+    Reglas:
+      - La cantidad final por ítem no puede ser mayor a la cantidad actualmente
+        persistida (lo solicitado al proveedor). Puede ser menor.
+      - Precio unitario > 0 obligatorio en ítems que quedan.
+      - Debe quedar al menos 1 ítem. Si quedarían 0, se exige usar Rechazar.
+    """
+    from decimal import InvalidOperation
+    cot = get_object_or_404(Cotizacion.objects.prefetch_related('detalles'), pk=pk)
     if request.method != 'POST':
         return redirect('almacen:cot_detalle', pk=cot.pk)
     if cot.estado == 'APROBADA':
         messages.info(request, f'La cotización COT{cot.numero} ya estaba aprobada.')
-    else:
-        if cot.requerimiento_origen_id:
-            items = [{
-                'insumo_id': d.insumo_id,
-                'descripcion': d.descripcion,
-                'cantidad': d.cantidad,
-            } for d in cot.detalles.all()]
-            errores = _errores_contra_saldo(cot.requerimiento_origen, items, excluir_cot_pk=cot.pk)
-            if errores:
-                for e in errores:
-                    messages.error(request, e)
-                return redirect('almacen:cot_detalle', pk=cot.pk)
+        return redirect('almacen:cot_detalle', pk=cot.pk)
+    if cot.estado == 'RECHAZADA':
+        messages.error(request, f'COT{cot.numero} está rechazada: no se puede aprobar.')
+        return redirect('almacen:cot_detalle', pk=cot.pk)
+
+    detalles = list(cot.detalles.all())
+    if not detalles:
+        messages.error(request, 'La cotización no tiene ítems.')
+        return redirect('almacen:cot_detalle', pk=cot.pk)
+
+    cambios = []
+    eliminados = []
+    errores = []
+    for det in detalles:
+        if request.POST.get(f'eliminar_{det.pk}') == '1':
+            eliminados.append(det)
+            continue
+        cant_raw = request.POST.get(f'cantidad_{det.pk}', '').strip()
+        prec_raw = request.POST.get(f'precio_{det.pk}', '').strip()
+        rotulo = det.descripcion or (det.insumo.descripcion if det.insumo_id else f'ítem #{det.pk}')
+        try:
+            cantidad = Decimal(cant_raw) if cant_raw else Decimal('0')
+        except InvalidOperation:
+            errores.append(f'{rotulo}: cantidad inválida.')
+            continue
+        try:
+            precio = Decimal(prec_raw) if prec_raw else Decimal('0')
+        except InvalidOperation:
+            errores.append(f'{rotulo}: precio unitario inválido.')
+            continue
+        if cantidad <= 0:
+            errores.append(f'{rotulo}: la cantidad debe ser mayor a 0 (o usá "Quitar").')
+            continue
+        if cantidad > det.cantidad:
+            errores.append(f'{rotulo}: la cantidad aprobada ({cantidad}) no puede superar la solicitada ({det.cantidad}).')
+            continue
+        if precio <= 0:
+            errores.append(f'{rotulo}: el precio unitario es obligatorio.')
+            continue
+        cambios.append((det, cantidad, precio))
+
+    if not cambios and detalles:
+        errores.append('No queda ningún ítem para aprobar. Si el proveedor no atiende nada, usá Rechazar cotización.')
+
+    if errores:
+        for e in errores:
+            messages.error(request, e)
+        return redirect('almacen:cot_detalle', pk=cot.pk)
+
+    from django.db import transaction
+    with transaction.atomic():
+        for det in eliminados:
+            det.delete()
+        for det, cant, prec in cambios:
+            fields = []
+            if det.cantidad != cant:
+                det.cantidad = cant
+                fields.append('cantidad')
+            if det.precio_unitario != prec:
+                det.precio_unitario = prec
+                fields.append('precio_unitario')
+            if fields:
+                det.save(update_fields=fields)
         cot.estado = 'APROBADA'
         cot.save(update_fields=['estado'])
-        log(request, 'EDITAR', 'Almacén',
-            f'Cotización COT{cot.numero} aprobada en {cot.proyecto.codigo}')
-        if cot.requerimiento_origen_id:
-            from apps.logistica.views import _recalcular_estado_req
-            _recalcular_estado_req(cot.requerimiento_origen)
-        messages.success(request, f'Cotización COT{cot.numero} aprobada.')
+
+    log(request, 'EDITAR', 'Almacén',
+        f'Cotización COT{cot.numero} aprobada en {cot.proyecto.codigo}')
+    if cot.requerimiento_origen_id:
+        from apps.logistica.views import _recalcular_estado_req
+        _recalcular_estado_req(cot.requerimiento_origen)
+    messages.success(request, f'Cotización COT{cot.numero} aprobada.')
     if request.POST.get('volver') == 'lista':
         return redirect('almacen:cot_lista', proyecto_id=cot.proyecto_id)
+    return redirect('almacen:cot_detalle', pk=cot.pk)
+
+
+@requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')
+def cot_rechazar(request, pk):
+    """Rechaza la cotización completa (el proveedor no atiende). El saldo entero
+    de los ítems vuelve al REQ para que se puedan generar otras cotizaciones."""
+    cot = get_object_or_404(Cotizacion, pk=pk)
+    if request.method != 'POST':
+        return redirect('almacen:cot_detalle', pk=cot.pk)
+    if cot.estado == 'RECHAZADA':
+        messages.info(request, f'La cotización COT{cot.numero} ya estaba rechazada.')
+        return redirect('almacen:cot_detalle', pk=cot.pk)
+    if cot.estado == 'APROBADA':
+        messages.error(request, f'COT{cot.numero} está aprobada: no se puede rechazar directamente. Eliminala si querés deshacerla.')
+        return redirect('almacen:cot_detalle', pk=cot.pk)
+    cot.estado = 'RECHAZADA'
+    cot.save(update_fields=['estado'])
+    log(request, 'EDITAR', 'Almacén',
+        f'Cotización COT{cot.numero} rechazada en {cot.proyecto.codigo}')
+    if cot.requerimiento_origen_id:
+        from apps.logistica.views import _recalcular_estado_req
+        _recalcular_estado_req(cot.requerimiento_origen)
+    messages.success(request, f'Cotización COT{cot.numero} rechazada. El saldo vuelve al REQ.')
     return redirect('almacen:cot_detalle', pk=cot.pk)
 
 
