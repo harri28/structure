@@ -40,19 +40,24 @@ No duplica el esquema de modelos — se enfoca en el **por qué** y el **cómo**
 ### Estados del Requerimiento
 
 ```
-BORRADOR → ENVIADO → EN_REVISION → APROBADO / PARCIAL → ATENDIDO
+BORRADOR → ENVIADO → EN_REVISION → APROBADO → COTIZADO → ATENDIDO
+                                 → PARCIAL              → PARCIAL
                                  → ANULADO
 ```
 
 | Estado | Descripción |
 |--------|-------------|
 | `BORRADOR` | Creado pero no enviado a logística |
+| `SOLICITADO` | Reservado para el flujo Opción B (Almacenero → Admin de Obra, §10). No usado hoy. |
 | `ENVIADO` | Enviado, pendiente de revisión. En logística se muestra como **"Nuevo"** |
 | `EN_REVISION` | Logística lo abrió y está evaluando |
 | `APROBADO` | Todas las cantidades aprobadas por logística |
-| `PARCIAL` | Alguna cantidad aprobada fue menor a la requerida |
-| `ATENDIDO` | Materiales físicamente entregados |
+| `COTIZADO` | Todas las cotizaciones APROBADAS cubren lo aprobado por ítem; aún no se emitió(aron) guía(s). Marcador intermedio entre APROBADO y ATENDIDO. Badge púrpura (`.bg-cotizado` en `main.css`). |
+| `PARCIAL` | Dos semánticas convivientes: alguna cantidad aprobada fue menor a la requerida, O algo salió en guías pero no todo. |
+| `ATENDIDO` | Materiales físicamente despachados (hay guías EN_TRANSITO/ENTREGADO que cubren todo lo aprobado por ítem) |
 | `ANULADO` | Cancelado |
+
+El estado se recalcula automáticamente (helper `_recalcular_estado_req` en `apps/logistica/views.py`) al: aprobar cotización, eliminar cotización APROBADA, rechazar cotización, emitir guía, anular guía. Prioridad: `ATENDIDO` > `PARCIAL` > `COTIZADO` > `APROBADO`.
 
 ### Formulario de Requerimiento — columnas clave
 
@@ -83,7 +88,7 @@ Vista informativa (solo lectura) que consolida el estado de cada insumo del pres
 | Columna | Fórmula / Fuente | Descripción |
 |---------|-----------------|-------------|
 | **PRESUPUESTADO** | `InsumoPresupuesto.cantidad_total` | Cantidad original del presupuesto. Solo informativo, nunca cambia. |
-| **SOLICITADO** | Suma de `DetalleRequerimiento.cantidad_aprobada` donde `requerimiento.estado IN (APROBADO, PARCIAL, ATENDIDO)` | Lo que logística aprobó. Se activa al hacer clic en "Aprobar requerimiento". |
+| **SOLICITADO** | Suma de `DetalleRequerimiento.cantidad_aprobada` donde `requerimiento.estado IN (APROBADO, COTIZADO, PARCIAL, ATENDIDO)` | Lo que logística aprobó. Se activa al hacer clic en "Aprobar requerimiento". |
 | **ATENDIDO** | Suma de `DetalleRequerimiento.cantidad_aprobada` donde `requerimiento.estado = ATENDIDO` | Lo que ya fue despachado físicamente (guía generada). Se activa al hacer clic en "Guardar y generar guía". |
 | **SALDO** | `PRESUPUESTADO − ATENDIDO` | Cantidad presupuestada aún no despachada. |
 
@@ -94,7 +99,7 @@ Vista informativa (solo lectura) que consolida el estado de cada insumo del pres
 
 ### Estados incluidos en el consolidado
 
-Solo se incluyen requerimientos en estados: `ENVIADO`, `EN_REVISION`, `APROBADO`, `PARCIAL`, `ATENDIDO`.
+Solo se incluyen requerimientos en estados: `ENVIADO`, `EN_REVISION`, `APROBADO`, `COTIZADO`, `PARCIAL`, `ATENDIDO`.
 Los `BORRADOR` y `ANULADO` se excluyen.
 
 ### Historial por insumo
@@ -135,6 +140,13 @@ Cuando logística abre un requerimiento (ya sea desde la vista de detalle o desd
 
 **No se requiere cotización** para aprobar un requerimiento.
 
+### Columna "Aprobado" por ítem (vista Revisión del REQ)
+
+En la tabla "Cantidades a aprobar" de `req_revisar.html`, además de `Cant. requerida` y `Cant. a aprobar`, aparece una columna informativa **"Aprobado"** por ítem. Es la suma de `DetalleCotizacion.cantidad` sobre cotizaciones APROBADAS del REQ para ese insumo (helper `_clave_item_cot` del almacén). Colores:
+- Verde con ícono `✓` → cubre o supera el objetivo (`cantidad_aprobada` o `cantidad_requerida`).
+- Naranja → cubierto parcialmente.
+- "—" en gris → sin cotizaciones aprobadas.
+
 ### Historial de revisión logística
 
 Modelo `HistorialRevisionReq` en `apps/requerimientos/models.py`. Registra cada vez que logística elimina o agrega un ítem durante la revisión.
@@ -155,6 +167,80 @@ El historial es visible en:
 - Vista de detalle logística (`req_detalle.html`)
 - Vista de detalle del jefe de obra (`requerimientos/detalle.html`)
 
+### Flujo completo de cotizaciones (crear / editar / aprobar / rechazar)
+
+Las cotizaciones viven en `apps/almacen` pero su flujo operativo lo maneja Logística.
+
+#### Crear cotización desde el REQ (modal "Crear Cotizaciones" / "Generar cotización")
+
+Desde la vista de Revisión del REQ (`req_revisar.html`), el botón "Crear Cotizaciones" (si ya hay otras) o "Generar cotización" (si es la primera) abre el modal `#modal-cotizar`. Características:
+
+- **Título del modal** con badge del próximo N° COT (previsualización, no editable).
+- **Datos del proveedor** (opcionales): razón social, RUC/DNI, dirección, teléfono.
+- **Buscador SUNAT/RENIEC** al lado del input RUC/DNI (lupa azul) → reusa el endpoint `maquinaria:consulta_doc` (Factiliza). Autocompleta razón social + dirección.
+- **Tabla de ítems** del REQ con saldo cotizable restante > 0 cada uno:
+  - Columna "Cantidad" editable, tope en el saldo cotizable (`min(cantidad_aprobada, saldo)`).
+  - Columna "Saldo" informativa.
+  - Botón "Quitar" por fila (JS); el reset del modal (`show.bs.modal`) restaura la tabla al estado inicial.
+- Al confirmar, `cot_desde_req` crea la cotización en `PENDIENTE` y **redirige al REQ** (no al detalle de la COT). La COT aparece en el bloque "Cotizaciones generadas" del REQ.
+
+#### Aprobación de la cotización — edición inline en el detalle
+
+En `cot_detalle.html`, cuando la cotización está en `PENDIENTE`:
+
+- La tabla "Materiales Cotizados" es **editable inline**: cantidad (`≤ solicitada`, no se puede subir) + **precio unitario obligatorio**.
+- Subtotales y total se recalculan en vivo con JS.
+- Botón **papelera** por fila → marca el ítem para eliminar al confirmar (`eliminar_<pk>=1`).
+- Botón **"Aprobar cotización"** (verde) = submit del form que persiste cantidades y precios, elimina los marcados y pasa la COT a `APROBADA`.
+- Botón **"Rechazar cotización"** (rojo) abre un modal de confirmación que llama a `cot_rechazar`.
+- Botón experimental **"Ver cotización"** (ícono ojo) abre un offcanvas lateral derecho con los datos del proveedor y las cantidades cotizadas tal como están persistidas — sirve de referencia mientras aprobás. Bloque marcado con `{% comment %}EXPERIMENTAL{% endcomment %}` para que se pueda remover fácil.
+
+Reglas del `cot_aprobar`:
+- `cantidad > 0`, `cantidad ≤ cantidad_actual_del_detalle` (no se puede subir).
+- `precio_unitario > 0` obligatorio.
+- Si quedan 0 ítems → bloquea con mensaje pidiendo usar Rechazar.
+- **Validación cruzada de saldo**: `Σ cantidades por aprobar en ESTA COT + Σ ya aprobadas en OTRAS COT del mismo REQ ≤ cantidad_aprobada del detalle del REQ`. Si falla, bloquea con mensaje tipo *"<ítem>: cantidad X supera el saldo cotizable (Y)."*.
+- Tras aprobar, llama a `_recalcular_estado_req` → el REQ puede pasar a `COTIZADO` si todas las cotizaciones aprobadas cubren todo lo aprobado por ítem.
+
+`cot_rechazar` (nuevo): pasa la COT a `RECHAZADA` y recalcula el REQ. Como las RECHAZADAS no cuentan en el saldo cotizable, todo el saldo vuelve al REQ.
+
+En `APROBADA`/`RECHAZADA` la tabla se muestra como **texto fijo** (sin inputs).
+
+#### Numeración de cotizaciones
+
+Formato: espeja el N° del REQ. Primera COT del REQ001 → `COT001`. Segunda → `COT001-2`. Tercera → `COT001-3`. Etc. (Ver `cot_desde_req` en `apps/almacen/views.py`.) Lógica implementada hace tiempo (commits `881b1ed`, `5916573`) — se mantiene vigente. La vista `_siguiente_numero_cot` también existe para cotizaciones libres sin REQ (correlativo global del proyecto), usada por `cot_crear` y `cot_rapida`.
+
+#### Validación de saldo cotizable (en 4 puntos)
+
+El saldo cotizable por ítem del REQ es:
+
+```
+saldo = DetalleRequerimiento.cantidad_aprobada
+      − Σ DetalleCotizacion.cantidad en cotizaciones APROBADAS del mismo REQ
+```
+
+Las COT `PENDIENTE` y `RECHAZADA` **no** se cuentan (así se pueden tener varias cotizaciones en PENDIENTE de distintos proveedores por el mismo saldo, para elegir cuál aprobás).
+
+Helpers: `_saldo_cotizable(req, excluir_cot_pk)` y `_errores_contra_saldo(req, items, excluir_cot_pk)` en `apps/almacen/views.py`.
+
+Validación aplicada en:
+
+| Vista | Qué valida |
+|---|---|
+| `cot_desde_req` | Al crear la cotización, cada ítem no supera el saldo del REQ. |
+| `cot_crear` | Idem si tiene `requerimiento_origen`. |
+| `cot_editar` | Idem (excluyendo esta misma COT del cálculo). |
+| `cot_aprobar` | Validación cruzada al aprobar (ver arriba). |
+
+**Nota**: la validación es **por REQ**, no global por insumo. Un insumo puede estar en 2 REQs distintos y cada REQ tiene su cuenta independiente de cotizaciones. El control global del insumo se hace recién al emitir guía (ver sección siguiente).
+
+#### Lista de cotizaciones (`cot_lista`)
+
+- Agrupada por REQ de origen (plegable) + grupo "Sin requerimiento".
+- Columnas: `N° COT · Fecha · Proveedor · Insumos (badge con count) · Estado (text-end) · Total · acciones`.
+- Buscador live por N° COT, proveedor, REQ, códigos y descripciones de insumos.
+- El botón "Registrar Cotización" fue removido del header (el modal `#modalCotRapida` queda en el HTML por si se reactiva).
+
 ### Flujo de generación de Guía de Remisión (por cotizaciones aprobadas)
 
 La guía ya **no** nace del requerimiento: sale de una o varias **cotizaciones aprobadas**.
@@ -172,15 +258,20 @@ La guía ya **no** nace del requerimiento: sale de una o varias **cotizaciones a
 
 **Una cotización solo puede despacharse una vez.** Si la guía se **anula** (desde el detalle) o se **elimina**, el stock descontado se devuelve (sin pasar de `cantidad_total`), la cotización vuelve a estar disponible y se recalcula el requerimiento. Una guía anulada con cotizaciones **no se puede reactivar**: se genera una nueva.
 
-#### Estado del requerimiento según lo despachado
+#### Estado del requerimiento según cotizaciones y despachos
 
-Se compara, por insumo (o por descripción si el ítem no tiene insumo), la `cantidad_aprobada` del requerimiento contra la suma de lo despachado en guías `EN_TRANSITO`/`ENTREGADO` de sus cotizaciones:
+Se compara, por insumo (o por descripción si el ítem no tiene insumo), la `cantidad_aprobada` del requerimiento contra:
+- `despachado` = suma de `DetalleCotizacion.cantidad` cuya cotización está `APROBADA` **y** en una guía `EN_TRANSITO`/`ENTREGADO`.
+- `cotizado` = suma de `DetalleCotizacion.cantidad` cuya cotización está `APROBADA` (sin importar si tiene guía).
+
+Reglas (helper `_recalcular_estado_req`):
 
 | Situación | Estado |
 |-----------|--------|
-| Todo lo aprobado ya salió en guías | `ATENDIDO` |
-| Salió algo, pero falta | `PARCIAL` (Atendido Parcial) |
-| No ha salido nada | `APROBADO` (o `PARCIAL` si se aprobó menos de lo requerido) |
+| `despachado` cubre todo lo aprobado | `ATENDIDO` |
+| `despachado > 0` pero falta | `PARCIAL` (Atendido Parcial) |
+| `cotizado` cubre todo pero aún no hay guías | `COTIZADO` |
+| Nada cotizado o parcial sin despacho | `APROBADO` (o `PARCIAL` si se aprobó menos de lo requerido) |
 
 Por eso `PARCIAL` significa dos cosas: aprobado con menos cantidad, o despachado a medias. La pestaña **Por atender** (Logística → Ingreso de Requerimientos) lista los requerimientos en `PARCIAL`.
 
@@ -193,9 +284,22 @@ El correlativo es por proyecto y por año; se toma el mayor número existente co
 
 ### Guías de Remisión — flujo en lista
 
+- **Lista unificada** (una sola tabla, sin pestañas). Se removieron las chips "En cola / Enviados" — todas las guías del proyecto aparecen juntas, el estado se distingue por el badge de la columna "Estado".
 - Columnas **Origen** y **Destino** separadas.
 - Cada fila es clickable y abre la vista de impresión A4 en pestaña nueva (`/logistica/guia/<pk>/imprimir/`).
 - Estados: `PENDIENTE` (amarillo) → `EN_TRANSITO` (azul) → `ENTREGADO` (verde) / `ANULADO` (rojo).
+
+### Botón "← Ingreso de Requerimientos" removido en sub-pestañas
+
+En las vistas de Logística → Ingreso de Requerimientos, las sub-pestañas (`Por atender`, `R. Consolidados`, `Anulados`, `Historial`) ya no muestran el botón "← Ingreso de Requerimientos" al tope. La navegación hacia la pantalla principal se cubre con el breadcrumb y las chips de pestañas.
+
+El banner `alert-info` ("Este requerimiento ya fue aprobado/atendido/anulado...") en la vista de Revisión también fue removido. El estado se refleja en el badge del título.
+
+### Vista de impresión de cotización (`cot_imprimir`)
+
+- Datos del proveedor pre-populados con los que se cargaron al generar la cotización (razón social, RUC/DNI, dirección, teléfono).
+- Columna "Cantidad" en texto fijo (ya no es input editable). El valor viene de `DetalleCotizacion.cantidad` persistido.
+- Se removieron del header del detalle de cotización los botones "Imprimir A4", "Editar", "Eliminar" (ya no se usan en el flujo nuevo).
 
 ### Guías de Remisión — vista de impresión A4
 
