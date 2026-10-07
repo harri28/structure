@@ -14,8 +14,8 @@ from .models import (
     Trabajador, DocumentoTrabajador,
 )
 from .forms import (
-    TipoPersonalForm, MaquinariaForm, CuadrillaForm,
-    IntegranteCuadrillaForm, RegistroMaquinariaForm, ParteForm,
+    TipoPersonalForm, MaquinariaForm, CuadrillaForm, AgregarIntegranteForm,
+    RegistroMaquinariaForm, ParteForm,
     TrabajadorForm, DocumentoTrabajadorForm,
 )
 from config.permisos import requiere, proyecto_visible
@@ -159,66 +159,78 @@ def maquinaria_eliminar(request, pk):
         'cancel_args': [pid] if pid else []})
 
 
-# ── Cuadrillas ────────────────────────────────────────────────────────
-
-@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
-def cuadrilla_lista(request):
-    cuadrillas = Cuadrilla.objects.prefetch_related('integrantes__tipo_personal').all()
-    return render(request, 'maquinaria/cuadrilla_lista.html', {'cuadrillas': cuadrillas})
-
+# ── Cuadrillas (Frentes de trabajo) ───────────────────────────────────
 
 @requiere('puede_gestionar_maquinaria')
-def cuadrilla_crear(request):
-    form = CuadrillaForm(request.POST or None)
+@proyecto_visible
+def cuadrilla_crear(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    form     = CuadrillaForm(proyecto=proyecto, data=request.POST or None)
     if form.is_valid():
-        cuadrilla = form.save()
-        messages.success(request, 'Cuadrilla creada. Ahora agrega los integrantes.')
+        cuadrilla          = form.save(commit=False)
+        cuadrilla.proyecto = proyecto
+        cuadrilla.save()
+        messages.success(request, f'Cuadrilla "{cuadrilla.nombre}" creada. Ahora agrega el personal.')
         return redirect('maquinaria:cuadrilla_detalle', pk=cuadrilla.pk)
-    return render(request, 'maquinaria/cuadrilla_form.html', {'form': form, 'titulo': 'Nueva Cuadrilla'})
+    return render(request, 'maquinaria/cuadrilla_form.html', {
+        'form': form, 'proyecto': proyecto, 'titulo': 'Nueva cuadrilla / frente',
+    })
 
 
 @requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 def cuadrilla_detalle(request, pk):
-    cuadrilla = get_object_or_404(Cuadrilla, pk=pk)
-    form = IntegranteCuadrillaForm(cuadrilla=cuadrilla)
+    cuadrilla = get_object_or_404(
+        Cuadrilla.objects.select_related('proyecto', 'capataz'),
+        pk=pk,
+    )
+    integrantes = (
+        cuadrilla.integrantes
+        .select_related('trabajador', 'trabajador__tipo_personal')
+    )
+    form = AgregarIntegranteForm(cuadrilla=cuadrilla)
     return render(request, 'maquinaria/cuadrilla_detalle.html', {
-        'cuadrilla': cuadrilla,
-        'form':      form,
+        'cuadrilla':   cuadrilla,
+        'proyecto':    cuadrilla.proyecto,
+        'integrantes': integrantes,
+        'form':        form,
     })
 
 
 @requiere('puede_gestionar_maquinaria')
 def cuadrilla_editar(request, pk):
-    obj  = get_object_or_404(Cuadrilla, pk=pk)
-    form = CuadrillaForm(request.POST or None, instance=obj)
+    obj  = get_object_or_404(Cuadrilla.objects.select_related('proyecto'), pk=pk)
+    form = CuadrillaForm(proyecto=obj.proyecto, data=request.POST or None, instance=obj)
     if form.is_valid():
         form.save()
         messages.success(request, 'Cuadrilla actualizada.')
         return redirect('maquinaria:cuadrilla_detalle', pk=pk)
-    return render(request, 'maquinaria/cuadrilla_form.html', {'form': form, 'titulo': 'Editar Cuadrilla', 'obj': obj})
+    return render(request, 'maquinaria/cuadrilla_form.html', {
+        'form': form, 'proyecto': obj.proyecto, 'titulo': 'Editar cuadrilla', 'obj': obj,
+    })
 
 
 @requiere('puede_gestionar_maquinaria')
 def cuadrilla_eliminar(request, pk):
     obj = get_object_or_404(Cuadrilla, pk=pk)
+    proyecto_id = obj.proyecto_id
     if request.method == 'POST':
+        nombre = obj.nombre
         obj.delete()
-        messages.success(request, 'Cuadrilla eliminada.')
-        return redirect('maquinaria:cuadrilla_lista')
-    return render(request, 'maquinaria/confirmar_eliminar.html', {'obj': obj, 'tipo': 'Cuadrilla',
-        'cancel_url': 'maquinaria:cuadrilla_lista', 'cancel_args': []})
+        messages.success(request, f'Cuadrilla "{nombre}" eliminada.')
+    return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=cuadrilla")
 
 
 @requiere('puede_gestionar_maquinaria')
 def integrante_agregar(request, pk):
     cuadrilla = get_object_or_404(Cuadrilla, pk=pk)
     if request.method == 'POST':
-        form = IntegranteCuadrillaForm(cuadrilla=cuadrilla, data=request.POST)
+        form = AgregarIntegranteForm(cuadrilla, request.POST)
         if form.is_valid():
-            integrante = form.save(commit=False)
-            integrante.cuadrilla = cuadrilla
-            integrante.save()
-            messages.success(request, 'Integrante agregado.')
+            IntegranteCuadrilla.objects.create(
+                cuadrilla=cuadrilla,
+                trabajador=form.cleaned_data['trabajador'],
+            )
+            messages.success(request, 'Personal agregado a la cuadrilla.')
         else:
             messages.error(request, 'Error: ' + str(form.errors))
     return redirect('maquinaria:cuadrilla_detalle', pk=pk)
@@ -226,30 +238,15 @@ def integrante_agregar(request, pk):
 
 @requiere('puede_gestionar_maquinaria')
 def integrante_eliminar(request, pk):
-    integrante = get_object_or_404(IntegranteCuadrilla, pk=pk)
+    integrante   = get_object_or_404(IntegranteCuadrilla, pk=pk)
     cuadrilla_pk = integrante.cuadrilla_id
     if request.method == 'POST':
         integrante.delete()
-        messages.success(request, 'Integrante eliminado.')
+        messages.success(request, 'Personal retirado de la cuadrilla.')
     return redirect('maquinaria:cuadrilla_detalle', pk=cuadrilla_pk)
 
 
 # ── Personal de Obra (Trabajadores) ────────────────────────────────────
-
-@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
-@proyecto_visible
-def trabajador_lista(request, proyecto_id):
-    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    trabajadores = (
-        Trabajador.objects.filter(proyecto=proyecto)
-        .select_related('tipo_personal')
-        .prefetch_related('documentos')
-    )
-    return render(request, 'maquinaria/trabajador_lista.html', {
-        'proyecto':     proyecto,
-        'trabajadores': trabajadores,
-    })
-
 
 @requiere('puede_gestionar_maquinaria')
 @proyecto_visible
@@ -339,10 +336,17 @@ def registro_lista(request, proyecto_id):
         .filter(proyecto=proyecto)
         .select_related('tipo_personal')
     )
+    cuadrillas = (
+        Cuadrilla.objects
+        .filter(proyecto=proyecto)
+        .select_related('capataz')
+        .annotate(n_integrantes=Count('integrantes'))
+    )
     tab = request.GET.get('tab', 'cuadrilla')
     return render(request, 'maquinaria/registro_lista.html', {
         'proyecto':     proyecto,
         'trabajadores': trabajadores,
+        'cuadrillas':   cuadrillas,
         'tab_activa':   'personal' if tab == 'personal' else 'cuadrilla',
     })
 

@@ -61,30 +61,51 @@ class MaquinariaForm(forms.ModelForm):
 class CuadrillaForm(forms.ModelForm):
     class Meta:
         model  = Cuadrilla
-        fields = ['nombre', 'descripcion', 'activo']
+        fields = ['nombre', 'descripcion', 'capataz', 'ubicacion',
+                  'fecha_inicio', 'fecha_fin', 'activo']
         widgets = {
-            'nombre':      forms.TextInput(attrs={'class': 'form-control'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'activo':      forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'nombre':       forms.TextInput(attrs={'class': 'form-control',
+                                'placeholder': 'Ej: Frente A - Movimiento de tierras'}),
+            'descripcion':  forms.Textarea(attrs={'class': 'form-control', 'rows': 2,
+                                'placeholder': 'Alcance, tareas, notas del frente'}),
+            'capataz':      forms.Select(attrs={'class': 'form-select'}),
+            'ubicacion':    forms.TextInput(attrs={'class': 'form-control',
+                                'placeholder': 'Ej: Torre A nivel 3, acceso norte'}),
+            'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_fin':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'activo':       forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
-
-class IntegranteCuadrillaForm(forms.ModelForm):
-    class Meta:
-        model  = IntegranteCuadrilla
-        fields = ['tipo_personal', 'cantidad']
-        widgets = {
-            'tipo_personal': forms.Select(attrs={'class': 'form-select'}),
-            'cantidad':      forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0.01'}),
-        }
-
-    def __init__(self, cuadrilla=None, *args, **kwargs):
+    def __init__(self, proyecto=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if cuadrilla:
-            ya = cuadrilla.integrantes.values_list('tipo_personal_id', flat=True)
-            self.fields['tipo_personal'].queryset = TipoPersonal.objects.filter(activo=True).exclude(pk__in=ya)
-        else:
-            self.fields['tipo_personal'].queryset = TipoPersonal.objects.filter(activo=True)
+        qs = Trabajador.objects.filter(activo=True)
+        if proyecto:
+            qs = qs.filter(proyecto=proyecto)
+        self.fields['capataz'].queryset    = qs
+        self.fields['capataz'].empty_label = '— Sin capataz asignado —'
+        self.fields['capataz'].required    = False
+        for name in ['descripcion', 'ubicacion', 'fecha_inicio', 'fecha_fin']:
+            self.fields[name].required = False
+
+
+class AgregarIntegranteForm(forms.Form):
+    """Form para añadir un Trabajador a una Cuadrilla."""
+    trabajador = forms.ModelChoiceField(
+        queryset=Trabajador.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Trabajador',
+        empty_label='— Selecciona un trabajador —',
+    )
+
+    def __init__(self, cuadrilla, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        ya_asignados = cuadrilla.integrantes.values_list('trabajador_id', flat=True)
+        self.fields['trabajador'].queryset = (
+            Trabajador.objects
+            .filter(proyecto=cuadrilla.proyecto, activo=True)
+            .exclude(pk__in=ya_asignados)
+            .order_by('apellidos', 'nombres')
+        )
 
 
 class TrabajadorForm(forms.ModelForm):

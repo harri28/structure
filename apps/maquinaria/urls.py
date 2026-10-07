@@ -19,17 +19,15 @@ urlpatterns = [
     path('catalogo/<int:pk>/eliminar/',            views.maquinaria_eliminar, name='maquinaria_eliminar'),
     path('catalogo/consulta-doc/',                 views.consulta_documento,  name='consulta_doc'),
 
-    # Cuadrillas (catálogo global)
-    path('cuadrillas/',                            views.cuadrilla_lista,    name='cuadrilla_lista'),
-    path('cuadrillas/nueva/',                      views.cuadrilla_crear,    name='cuadrilla_crear'),
+    # Cuadrillas — Frentes de trabajo (por proyecto)
+    path('proyecto/<int:proyecto_id>/cuadrillas/nueva/', views.cuadrilla_crear,    name='cuadrilla_crear'),
     path('cuadrillas/<int:pk>/',                   views.cuadrilla_detalle,  name='cuadrilla_detalle'),
     path('cuadrillas/<int:pk>/editar/',            views.cuadrilla_editar,   name='cuadrilla_editar'),
     path('cuadrillas/<int:pk>/eliminar/',          views.cuadrilla_eliminar, name='cuadrilla_eliminar'),
     path('cuadrillas/<int:pk>/integrante/agregar/', views.integrante_agregar, name='integrante_agregar'),
     path('cuadrillas/integrante/<int:pk>/eliminar/', views.integrante_eliminar, name='integrante_eliminar'),
 
-    # Personal de Obra / Trabajadores (por proyecto)
-    path('proyecto/<int:proyecto_id>/personal/',           views.trabajador_lista,  name='trabajador_lista'),
+    # Personal de Obra / Trabajadores (por proyecto; lista en registro_lista?tab=personal)
     path('proyecto/<int:proyecto_id>/personal/nuevo/',     views.trabajador_crear,  name='trabajador_crear'),
     path('personal/<int:pk>/',                             views.trabajador_detalle, name='trabajador_detalle'),
     path('personal/<int:pk>/editar/',                      views.trabajador_editar,  name='trabajador_editar'),

@@ -1,84 +1,163 @@
 {% extends 'base.html' %}
 {% block title %}{{ cuadrilla.nombre }}{% endblock %}
-{% block nav_cuadrillas_admin %}active{% endblock %}
+{% block nav_reg_cuadrilla %}active{% endblock %}
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{% url 'maquinaria:cuadrilla_lista' %}">Cuadrillas</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=cuadrilla">Cuadrilla</a></li>
 <li class="breadcrumb-item active">{{ cuadrilla.nombre }}</li>
 {% endblock %}
 
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center">
-  <div>
-    <a href="{% url 'maquinaria:cuadrilla_lista' %}" class="btn-back"><i class="bi bi-chevron-left"></i> Cuadrillas</a>
-    <h4><i class="bi bi-people me-2"></i>{{ cuadrilla.nombre }}</h4>
-    {% if cuadrilla.descripcion %}<div class="text-muted">{{ cuadrilla.descripcion }}</div>{% endif %}
-  </div>
-  <a href="{% url 'maquinaria:cuadrilla_editar' cuadrilla.pk %}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-pencil me-1"></i>Editar
+<div class="page-header">
+  <a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=cuadrilla" class="btn-back">
+    <i class="bi bi-chevron-left"></i> Cuadrilla
   </a>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h4><i class="bi bi-diagram-3 me-2"></i>{{ cuadrilla.nombre }}</h4>
+      <div class="text-muted">{{ proyecto.codigo }} — {{ proyecto.nombre }}</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'maquinaria:cuadrilla_editar' cuadrilla.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-pencil me-1"></i>Editar
+      </a>
+      <form method="post" action="{% url 'maquinaria:cuadrilla_eliminar' cuadrilla.pk %}"
+            onsubmit="return confirm('¿Eliminar la cuadrilla {{ cuadrilla.nombre }}?')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          <i class="bi bi-trash me-1"></i>Eliminar
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
 
 <div class="row g-3">
-  <div class="col-lg-6">
+  {# ─── Info card ─────────────────────────────── #}
+  <div class="col-lg-4">
     <div class="card">
-      <div class="card-header">Integrantes</div>
-      <div class="card-body p-0">
-        <table class="table-modern">
-          <thead><tr><th>Categoría</th><th class="text-end">Cantidad</th><th class="text-end">S/./h (parcial)</th><th></th></tr></thead>
+      <div class="card-header"><i class="bi bi-info-circle me-1"></i>Datos del frente</div>
+      <div class="card-body">
+        <table class="table table-sm mb-0" style="font-size:.85rem">
           <tbody>
-          {% for i in cuadrilla.integrantes.all %}
-          <tr>
-            <td>
-              <div class="fw-semibold">{{ i.tipo_personal.nombre }}</div>
-              <small class="text-muted">{{ i.tipo_personal.codigo }} · S/. {{ i.tipo_personal.costo_hora|miles }}/h</small>
-            </td>
-            <td class="text-end fw-semibold">{{ i.cantidad }}</td>
-            <td class="text-end text-muted">{{ i.costo_parcial_hora|miles }}</td>
-            <td>
-              <form method="post" action="{% url 'maquinaria:integrante_eliminar' i.pk %}" style="display:inline">
-                {% csrf_token %}
-                <button type="submit" class="btn-tbl text-danger" title="Eliminar"><i class="bi bi-x-lg"></i></button>
-              </form>
-            </td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="4" class="text-center text-muted py-3">Sin integrantes — agrega uno abajo</td></tr>
-          {% endfor %}
-          </tbody>
-          {% if cuadrilla.integrantes.exists %}
-          <tfoot>
-            <tr style="background:#f8fafc">
-              <td class="fw-bold">Total</td>
-              <td class="text-end fw-bold">{{ cuadrilla.hh_por_hora }} HH/h</td>
-              <td class="text-end fw-bold">S/. {{ cuadrilla.costo_hora|miles }}/h</td>
-              <td></td>
+            <tr>
+              <th class="text-muted fw-normal" style="width:40%">Capataz</th>
+              <td>{{ cuadrilla.capataz.nombre_completo|default:"—" }}</td>
             </tr>
-          </tfoot>
-          {% endif %}
+            <tr>
+              <th class="text-muted fw-normal">Ubicación</th>
+              <td>{{ cuadrilla.ubicacion|default:"—" }}</td>
+            </tr>
+            <tr>
+              <th class="text-muted fw-normal">Inicio</th>
+              <td>{{ cuadrilla.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
+            </tr>
+            <tr>
+              <th class="text-muted fw-normal">Fin</th>
+              <td>{{ cuadrilla.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+            </tr>
+            <tr>
+              <th class="text-muted fw-normal">Estado</th>
+              <td>
+                {% if cuadrilla.activo %}
+                  <span class="badge bg-success-subtle text-success">Activa</span>
+                {% else %}
+                  <span class="badge bg-secondary">Inactiva</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <th class="text-muted fw-normal">Integrantes</th>
+              <td class="fw-semibold">{{ integrantes|length }}</td>
+            </tr>
+          </tbody>
         </table>
+        {% if cuadrilla.descripcion %}
+        <hr>
+        <div class="text-muted" style="font-size:.84rem">{{ cuadrilla.descripcion|linebreaksbr }}</div>
+        {% endif %}
       </div>
     </div>
   </div>
 
-  <div class="col-lg-6">
+  {# ─── Integrantes ───────────────────────────── #}
+  <div class="col-lg-8">
     <div class="card">
-      <div class="card-header">Agregar Integrante</div>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-people me-1"></i>Personal asignado ({{ integrantes|length }})</span>
+      </div>
       <div class="card-body">
-        <form method="post" action="{% url 'maquinaria:integrante_agregar' cuadrilla.pk %}">
+        {# Form para agregar #}
+        <form method="post" action="{% url 'maquinaria:integrante_agregar' cuadrilla.pk %}"
+              class="d-flex gap-2 align-items-end mb-3 flex-wrap">
           {% csrf_token %}
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Tipo de Personal</label>
-            {{ form.tipo_personal }}
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Cantidad</label>
-            {{ form.cantidad }}
-            <div class="form-text">Puede ser decimal. Ej: 0.1 Capataz + 1 Operario + 4 Peones</div>
+          <div style="min-width:280px;flex:1">
+            <label class="form-label" style="font-size:.78rem">Agregar trabajador</label>
+            {{ form.trabajador }}
           </div>
           <button type="submit" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i>Agregar
+            <i class="bi bi-person-plus me-1"></i>Agregar
           </button>
         </form>
+
+        {# Tabla integrantes #}
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0" style="font-size:.86rem">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Nombre</th>
+                <th>DNI</th>
+                <th>Cargo</th>
+                <th>Teléfono</th>
+                <th>Alta</th>
+                <th class="text-end"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in integrantes %}
+              <tr>
+                <td style="width:36px">
+                  {% if i.trabajador.foto %}
+                    <img src="{{ i.trabajador.foto.url }}" alt=""
+                         style="width:30px;height:30px;border-radius:50%;object-fit:cover">
+                  {% else %}
+                    <div style="width:30px;height:30px;border-radius:50%;background:#eff6ff;
+                                display:flex;align-items:center;justify-content:center">
+                      <i class="bi bi-person-fill" style="color:#2563eb;font-size:.75rem"></i>
+                    </div>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="{% url 'maquinaria:trabajador_detalle' i.trabajador.pk %}"
+                     class="fw-semibold text-decoration-none" style="color:var(--text)">
+                    {{ i.trabajador.apellidos }}, {{ i.trabajador.nombres }}
+                  </a>
+                </td>
+                <td>{{ i.trabajador.dni|default:"—" }}</td>
+                <td>{{ i.trabajador.tipo_personal.nombre|default:"—" }}</td>
+                <td>{{ i.trabajador.telefono|default:"—" }}</td>
+                <td class="text-muted">{{ i.fecha_alta|date:"d/m/Y" }}</td>
+                <td class="text-end">
+                  <form method="post" action="{% url 'maquinaria:integrante_eliminar' i.pk %}"
+                        onsubmit="return confirm('¿Retirar a {{ i.trabajador.nombre_completo }} de esta cuadrilla?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-tbl text-danger" title="Retirar de la cuadrilla">
+                      <i class="bi bi-person-dash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                  <i class="bi bi-people" style="font-size:1.6rem;opacity:.3;display:block;margin-bottom:.3rem"></i>
+                  Esta cuadrilla no tiene personal asignado todavía.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

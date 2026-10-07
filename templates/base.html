@@ -211,10 +211,6 @@
       <i class="bi bi-truck"></i> Maquinaria
     </a>
 
-    <a href="{% url 'maquinaria:cuadrilla_lista' %}"
-       class="sb-link {% block nav_cuadrillas_admin %}{% endblock %}">
-      <i class="bi bi-diagram-3"></i> Gestionar Cuadrillas
-    </a>
     {% endif %}
   </div>
 
@@ -247,6 +243,14 @@
         <i class="bi bi-send"></i> Guías de Remisión
       </a>
       {% endif %}
+      <a href="#" class="sb-link">
+        <i class="bi bi-bar-chart-line"></i> Reportes
+        {# BOTÓN TEMPORAL "Nuevo+" — eliminar este <span> cuando ya no se necesite #}
+        <span class="ms-auto" style="background:#16a34a;color:#fff;font-size:.6rem;
+                                     padding:.2em .5em;border-radius:4px;line-height:1.2">
+          Nuevo+
+        </span>
+      </a>
     </div>
 
     {% if permisos.puede_gestionar_almacen_log %}
@@ -322,6 +326,14 @@
           <i class="bi bi-gear-wide-connected"></i> Control Maq. y Equipos
         </a>
         {% endif %}
+        <a href="#" class="sb-link sb-sublink">
+          <i class="bi bi-bar-chart-line"></i> Reportes
+          {# BOTÓN TEMPORAL "Nuevo+" — eliminar este <span> cuando ya no se necesite #}
+          <span class="ms-auto" style="background:#16a34a;color:#fff;font-size:.6rem;
+                                       padding:.2em .5em;border-radius:4px;line-height:1.2">
+            Nuevo+
+          </span>
+        </a>
       </div>
     </div>
     {% endif %}

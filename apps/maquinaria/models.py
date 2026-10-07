@@ -95,9 +95,19 @@ class Maquinaria(models.Model):
 
 
 class Cuadrilla(models.Model):
-    nombre      = models.CharField(max_length=200)
-    descripcion = models.TextField(blank=True)
-    activo      = models.BooleanField(default=True)
+    proyecto     = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='cuadrillas')
+    nombre       = models.CharField('Nombre del frente', max_length=200)
+    descripcion  = models.TextField('Descripción', blank=True)
+    capataz      = models.ForeignKey(
+        'Trabajador', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='cuadrillas_a_cargo',
+        verbose_name='Capataz / Responsable',
+    )
+    ubicacion    = models.CharField('Ubicación / Zona de obra', max_length=200, blank=True)
+    fecha_inicio = models.DateField('Fecha de inicio', null=True, blank=True)
+    fecha_fin    = models.DateField('Fecha de fin',   null=True, blank=True)
+    activo       = models.BooleanField(default=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name        = 'Cuadrilla'
@@ -107,17 +117,16 @@ class Cuadrilla(models.Model):
     def __str__(self):
         return self.nombre
 
+    def total_integrantes(self):
+        return self.integrantes.count()
+
     def hh_por_hora(self):
-        """Personas-hora por cada hora trabajada (suma de cantidades de integrantes)."""
-        return sum((i.cantidad for i in self.integrantes.all()), Decimal('0'))
+        """Personas-hora por cada hora: un integrante = 1."""
+        return Decimal(self.integrantes.count())
 
     def costo_hora(self):
-        """Costo total por hora de la cuadrilla completa."""
-        return sum(
-            (i.cantidad * i.tipo_personal.costo_hora
-             for i in self.integrantes.select_related('tipo_personal').all()),
-            Decimal('0')
-        )
+        """Costo por hora pendiente de rediseño."""
+        return Decimal('0')
 
 
 SEXO_CHOICES = [
@@ -260,20 +269,18 @@ class DocumentoTrabajador(models.Model):
 
 
 class IntegranteCuadrilla(models.Model):
-    cuadrilla      = models.ForeignKey(Cuadrilla, on_delete=models.CASCADE, related_name='integrantes')
-    tipo_personal  = models.ForeignKey(TipoPersonal, on_delete=models.CASCADE)
-    cantidad       = models.DecimalField(max_digits=6, decimal_places=2, default=1)
+    cuadrilla   = models.ForeignKey(Cuadrilla, on_delete=models.CASCADE, related_name='integrantes')
+    trabajador  = models.ForeignKey(Trabajador, on_delete=models.CASCADE, related_name='membresias')
+    fecha_alta  = models.DateField(auto_now_add=True)
 
     class Meta:
         verbose_name        = 'Integrante de Cuadrilla'
         verbose_name_plural = 'Integrantes de Cuadrilla'
-        unique_together     = ['cuadrilla', 'tipo_personal']
+        unique_together     = ['cuadrilla', 'trabajador']
+        ordering            = ['trabajador__apellidos', 'trabajador__nombres']
 
     def __str__(self):
-        return f'{self.cantidad} × {self.tipo_personal}'
-
-    def costo_parcial_hora(self):
-        return self.cantidad * self.tipo_personal.costo_hora
+        return str(self.trabajador)
 
 
 class RegistroDiario(models.Model):
