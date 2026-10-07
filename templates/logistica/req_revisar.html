@@ -230,8 +230,7 @@
     <i class="bi bi-x-circle me-1"></i>Anular requerimiento
   </button>
   <button type="button" class="btn btn-success btn-sm"
-          data-bs-toggle="modal" data-bs-target="#modal-cotizar"
-          {% if not items_para_cotizar %}disabled title="Todos los ítems ya están completamente cotizados"{% endif %}>
+          data-bs-toggle="modal" data-bs-target="#modal-cotizar">
     <i class="bi bi-receipt me-1"></i>{% if req.cotizaciones_origen.count %}Generar otra cotización{% else %}Generar cotización{% endif %}
   </button>
   {% elif req.estado == 'ANULADO' %}
@@ -334,9 +333,8 @@
   </div>
 </div>
 
-{% if items_para_cotizar %}
 <!-- Modal: generar cotización (seleccionar / quitar ítems) -->
-<div class="modal fade" id="modal-cotizar" tabindex="-1">
+<div class="modal fade" id="modal-cotizar" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl">
     <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk req.pk %}" id="form-cotizar">
       {% csrf_token %}
@@ -346,9 +344,10 @@
             <i class="bi bi-receipt text-success me-1"></i>
             Generar cotización desde REQ{{ req.numero }}
           </h6>
-          <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+          <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body">
+          {% if items_para_cotizar %}
           <div class="text-muted mb-2" style="font-size:.78rem">
             Quitá los ítems que no incluyas en esta cotización. La cantidad propuesta ya está topada al saldo cotizable restante.
           </div>
@@ -395,10 +394,18 @@
           <div class="small text-muted mt-2" id="cot-sin-items" style="display:none">
             No queda ningún ítem seleccionado. Reabrí el modal para empezar de nuevo.
           </div>
+          {% else %}
+          <div class="alert alert-info mb-0 py-2" style="font-size:.85rem">
+            <i class="bi bi-info-circle me-1"></i>
+            Todos los ítems de este requerimiento ya están completamente cotizados. No queda saldo por cotizar.
+          </div>
+          <input type="hidden" name="item_count" id="cot-item-count" value="0">
+          {% endif %}
         </div>
         <div class="modal-footer py-2">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-success btn-sm" id="btn-generar-cot">
+          <button type="submit" class="btn btn-success btn-sm" id="btn-generar-cot"
+                  {% if not items_para_cotizar %}disabled{% endif %}>
             <i class="bi bi-receipt me-1"></i>Generar cotización
           </button>
         </div>
@@ -406,7 +413,6 @@
     </form>
   </div>
 </div>
-{% endif %}
 {% endif %}
 {% endblock %}
 
@@ -647,6 +653,7 @@
   var modal = document.getElementById('modal-cotizar');
   if (!modal) return;
   var tbody = modal.querySelector('#tabla-cot-items tbody');
+  if (!tbody) return;  // modal se muestra pero sin ítems para cotizar
   var count = modal.querySelector('#cot-item-count');
   var btnSubmit = modal.querySelector('#btn-generar-cot');
   var aviso = modal.querySelector('#cot-sin-items');
