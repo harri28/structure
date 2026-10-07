@@ -1249,7 +1249,7 @@ def cot_desde_req(request, proyecto_id, req_pk):
     log(request, 'CREAR', 'Almacén',
         f'Cotización COT{cot.numero} generada desde REQ{req.numero} en {proyecto.codigo}')
     messages.success(request, f'Cotización COT{cot.numero} generada.')
-    return redirect('almacen:cot_detalle', pk=cot.pk)
+    return redirect('logistica:req_revisar_log', proyecto_id=proyecto.pk, pk=req.pk)
 
 
 @requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')

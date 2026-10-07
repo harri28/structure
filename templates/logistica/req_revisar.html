@@ -231,7 +231,7 @@
   </button>
   <button type="button" class="btn btn-success btn-sm"
           data-bs-toggle="modal" data-bs-target="#modal-cotizar">
-    <i class="bi bi-receipt me-1"></i>{% if req.cotizaciones_origen.count %}Generar otra cotización{% else %}Generar cotización{% endif %}
+    <i class="bi bi-receipt me-1"></i>{% if req.cotizaciones_origen.count %}Crear Cotizaciones{% else %}Generar cotización{% endif %}
   </button>
   {% elif req.estado == 'ANULADO' %}
   <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-recuperar">
