@@ -701,12 +701,39 @@ def req_revisar_log(request, proyecto_id, pk):
         return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)
 
     historial = req.historial_revision.select_related('insumo', 'usuario').all()
+
+    # Ítems candidatos para una nueva cotización desde este REQ: cantidad sugerida =
+    # min(cantidad_aprobada, saldo cotizable restante). Se filtran los que ya están
+    # completamente cotizados (saldo = 0). Solo tiene sentido cuando el REQ ya fue aprobado.
+    items_para_cotizar = []
+    if req.estado in ('APROBADO', 'COTIZADO', 'PARCIAL'):
+        from apps.almacen.views import _saldo_cotizable, _clave_item_cot
+        saldos = _saldo_cotizable(req)
+        for det in detalles:
+            if not det.cantidad_aprobada or det.cantidad_aprobada <= 0:
+                continue
+            k = _clave_item_cot(det.insumo_id, det.descripcion)
+            saldo = saldos.get(k, Decimal('0'))
+            if saldo <= 0:
+                continue
+            sugerida = min(det.cantidad_aprobada, saldo)
+            items_para_cotizar.append({
+                'det_pk': det.pk,
+                'insumo_id': det.insumo_id or '',
+                'codigo': det.codigo or (det.insumo.codigo if det.insumo_id else ''),
+                'descripcion': det.descripcion or (det.insumo.descripcion if det.insumo_id else ''),
+                'unidad': det.unidad or (det.insumo.unidad if det.insumo_id and det.insumo.unidad else ''),
+                'cantidad': sugerida,
+                'saldo': saldo,
+            })
+
     return render(request, 'logistica/req_revisar.html', {
         'proyecto': proyecto,
         'req':      req,
         'detalles': detalles,
         'historial': historial,
         'editable': editable,
+        'items_para_cotizar': items_para_cotizar,
     })
 
 

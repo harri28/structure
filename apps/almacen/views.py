@@ -1156,25 +1156,60 @@ def cot_desde_req(request, proyecto_id, req_pk):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     req = get_object_or_404(Requerimiento, pk=req_pk, proyecto=proyecto)
 
-    # Pre-calcular ítems candidatos y validar contra el saldo cotizable del REQ
-    detalles = req.detalles.select_related('insumo').all()
+    # Pre-calcular ítems candidatos. Dos modos:
+    #   (a) El POST trae una selección personalizada del modal "Generar cotización"
+    #       (item_count + item_insumo_<i> + item_cantidad_<i> + item_desc_<i> + item_unidad_<i>).
+    #       Pueden haberse quitado ítems o editado cantidades.
+    #   (b) Fallback: usar todos los ítems del REQ con sus cantidades aprobadas.
     items_candidatos = []
-    for d in detalles:
-        if not d.descripcion and not d.insumo:
-            continue
-        cantidad = d.cantidad_aprobada if d.cantidad_aprobada is not None else d.cantidad_requerida
-        items_candidatos.append({
-            'insumo': d.insumo,
-            'insumo_id': d.insumo_id,
-            'descripcion': d.descripcion or (d.insumo.descripcion if d.insumo else ''),
-            'cantidad': cantidad,
-            'unidad': d.unidad,
-        })
+    item_count = request.POST.get('item_count', '').strip()
+    if item_count.isdigit() and int(item_count) > 0:
+        for i in range(int(item_count)):
+            desc = request.POST.get(f'item_desc_{i}', '').strip()
+            cant_raw = request.POST.get(f'item_cantidad_{i}', '').strip()
+            if not desc or not cant_raw:
+                continue
+            try:
+                cantidad = Decimal(cant_raw)
+            except Exception:
+                continue
+            if cantidad <= 0:
+                continue
+            insumo_raw = request.POST.get(f'item_insumo_{i}', '').strip()
+            insumo = None
+            insumo_id = None
+            if insumo_raw.isdigit():
+                insumo_id = int(insumo_raw)
+                insumo = InsumoPresupuesto.objects.filter(pk=insumo_id).first()
+            items_candidatos.append({
+                'insumo': insumo,
+                'insumo_id': insumo_id,
+                'descripcion': desc,
+                'cantidad': cantidad,
+                'unidad': request.POST.get(f'item_unidad_{i}', '').strip(),
+            })
+    else:
+        for d in req.detalles.select_related('insumo').all():
+            if not d.descripcion and not d.insumo:
+                continue
+            cantidad = d.cantidad_aprobada if d.cantidad_aprobada is not None else d.cantidad_requerida
+            items_candidatos.append({
+                'insumo': d.insumo,
+                'insumo_id': d.insumo_id,
+                'descripcion': d.descripcion or (d.insumo.descripcion if d.insumo else ''),
+                'cantidad': cantidad,
+                'unidad': d.unidad,
+            })
+
+    if not items_candidatos:
+        messages.error(request, 'Debés incluir al menos un ítem en la cotización.')
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=req.pk)
+
     errores = _errores_contra_saldo(req, items_candidatos)
     if errores:
         for e in errores:
             messages.error(request, e)
-        return redirect('almacen:cot_lista', proyecto_id=proyecto_id)
+        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=req.pk)
 
     base = str(req.numero)
     cots_previas = req.cotizaciones_origen.count()
@@ -1210,8 +1245,8 @@ def cot_desde_req(request, proyecto_id, req_pk):
 
     log(request, 'CREAR', 'Almacén',
         f'Cotización COT{cot.numero} generada desde REQ{req.numero} en {proyecto.codigo}')
-    messages.success(request, f'Solicitud de cotización COT{cot.numero} generada.')
-    return redirect('almacen:cot_imprimir', pk=cot.pk)
+    messages.success(request, f'Cotización COT{cot.numero} generada.')
+    return redirect('almacen:cot_detalle', pk=cot.pk)
 
 
 @requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')

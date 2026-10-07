@@ -229,11 +229,9 @@
   <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modal-anular">
     <i class="bi bi-x-circle me-1"></i>Anular requerimiento
   </button>
-  <button type="submit"
-          formaction="{% url 'almacen:cot_desde_req' proyecto.pk req.pk %}"
-          formmethod="post"
-          formnovalidate
-          class="btn btn-success btn-sm">
+  <button type="button" class="btn btn-success btn-sm"
+          data-bs-toggle="modal" data-bs-target="#modal-cotizar"
+          {% if not items_para_cotizar %}disabled title="Todos los ítems ya están completamente cotizados"{% endif %}>
     <i class="bi bi-receipt me-1"></i>{% if req.cotizaciones_origen.count %}Generar otra cotización{% else %}Generar cotización{% endif %}
   </button>
   {% elif req.estado == 'ANULADO' %}
@@ -335,6 +333,80 @@
     </div>
   </div>
 </div>
+
+{% if items_para_cotizar %}
+<!-- Modal: generar cotización (seleccionar / quitar ítems) -->
+<div class="modal fade" id="modal-cotizar" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk req.pk %}" id="form-cotizar">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h6 class="modal-title" style="font-size:.95rem">
+            <i class="bi bi-receipt text-success me-1"></i>
+            Generar cotización desde REQ{{ req.numero }}
+          </h6>
+          <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-muted mb-2" style="font-size:.78rem">
+            Quitá los ítems que no incluyas en esta cotización. La cantidad propuesta ya está topada al saldo cotizable restante.
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0" id="tabla-cot-items">
+              <thead class="table-light">
+                <tr>
+                  <th style="width:70px">Código</th>
+                  <th>Descripción</th>
+                  <th style="width:70px">Und</th>
+                  <th style="width:130px" class="text-end">Cantidad</th>
+                  <th style="width:110px" class="text-end">Saldo</th>
+                  <th style="width:60px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for it in items_para_cotizar %}
+                <tr data-row-idx="{{ forloop.counter0 }}">
+                  <td class="small text-muted">{{ it.codigo|default:"—" }}</td>
+                  <td style="font-size:.85rem">{{ it.descripcion }}</td>
+                  <td class="small">{{ it.unidad|default:"—" }}</td>
+                  <td class="text-end">
+                    <input type="number" step="0.0001" min="0.0001"
+                           max="{{ it.saldo|unlocalize }}"
+                           value="{{ it.cantidad|unlocalize }}"
+                           class="form-control form-control-sm text-end cot-cantidad"
+                           name="item_cantidad_{{ forloop.counter0 }}">
+                    <input type="hidden" name="item_desc_{{ forloop.counter0 }}" value="{{ it.descripcion }}">
+                    <input type="hidden" name="item_unidad_{{ forloop.counter0 }}" value="{{ it.unidad }}">
+                    <input type="hidden" name="item_insumo_{{ forloop.counter0 }}" value="{{ it.insumo_id }}">
+                  </td>
+                  <td class="text-end small text-muted">{{ it.saldo|floatformat:4 }}</td>
+                  <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-cot" title="Quitar">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <input type="hidden" name="item_count" id="cot-item-count" value="{{ items_para_cotizar|length }}">
+          <div class="small text-muted mt-2" id="cot-sin-items" style="display:none">
+            No queda ningún ítem seleccionado. Reabrí el modal para empezar de nuevo.
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success btn-sm" id="btn-generar-cot">
+            <i class="bi bi-receipt me-1"></i>Generar cotización
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endif %}
 {% endblock %}
 
@@ -567,6 +639,62 @@
       }
     });
     if (tieneError) e.preventDefault();
+  });
+})();
+
+// ── Modal: generar cotización — quitar filas y re-indexar ──────────────
+(function () {
+  var modal = document.getElementById('modal-cotizar');
+  if (!modal) return;
+  var tbody = modal.querySelector('#tabla-cot-items tbody');
+  var count = modal.querySelector('#cot-item-count');
+  var btnSubmit = modal.querySelector('#btn-generar-cot');
+  var aviso = modal.querySelector('#cot-sin-items');
+
+  function reindex() {
+    var rows = tbody.querySelectorAll('tr');
+    rows.forEach(function (tr, i) {
+      tr.setAttribute('data-row-idx', i);
+      tr.querySelectorAll('input[name^="item_"]').forEach(function (inp) {
+        inp.name = inp.name.replace(/_\d+$/, '_' + i);
+      });
+    });
+    count.value = rows.length;
+    if (rows.length === 0) {
+      btnSubmit.disabled = true;
+      aviso.style.display = '';
+    } else {
+      btnSubmit.disabled = false;
+      aviso.style.display = 'none';
+    }
+  }
+
+  tbody.addEventListener('click', function (e) {
+    var btn = e.target.closest('.btn-quitar-cot');
+    if (!btn) return;
+    var tr = btn.closest('tr');
+    if (tr) tr.remove();
+    reindex();
+  });
+
+  // Validación inline de cantidad vs máximo (saldo)
+  tbody.addEventListener('input', function (e) {
+    if (!e.target.classList.contains('cot-cantidad')) return;
+    var val = parseFloat(e.target.value);
+    var max = parseFloat(e.target.max);
+    if (isNaN(val) || val <= 0 || val > max) {
+      e.target.classList.add('is-invalid');
+    } else {
+      e.target.classList.remove('is-invalid');
+    }
+  });
+
+  modal.querySelector('#form-cotizar').addEventListener('submit', function (e) {
+    var invalid = tbody.querySelectorAll('.cot-cantidad.is-invalid');
+    var rows = tbody.querySelectorAll('tr');
+    if (rows.length === 0 || invalid.length) {
+      e.preventDefault();
+    }
   });
 })();
 </script>
