@@ -1,6 +1,6 @@
 import django.db.models.deletion
 import django.utils.timezone
-from django.db import migrations, models
+from django.db import connection, migrations, models
 
 
 def wipe_cuadrillas(apps, schema_editor):
@@ -9,9 +9,19 @@ def wipe_cuadrillas(apps, schema_editor):
     Cuadrilla           = apps.get_model('maquinaria', 'Cuadrilla')
     IntegranteCuadrilla.objects.all().delete()
     Cuadrilla.objects.all().delete()
+    # Fuerza los triggers FK pendientes para que ALTER TABLE no falle con
+    # "cannot ALTER TABLE because it has pending trigger events" en PostgreSQL.
+    if connection.vendor == 'postgresql':
+        with connection.cursor() as cursor:
+            cursor.execute('SET CONSTRAINTS ALL IMMEDIATE')
 
 
 class Migration(migrations.Migration):
+
+    # PostgreSQL rechaza ALTER TABLE si en la misma transacción quedan triggers
+    # FK pendientes del RunPython. Al desactivar atomic cada operación corre en
+    # su propia transacción, lo que vacía esos triggers entre pasos.
+    atomic = False
 
     dependencies = [
         ('maquinaria', '0011_trabajador_perfil_completo'),
