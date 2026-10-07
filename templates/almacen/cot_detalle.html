@@ -168,6 +168,17 @@ offcanvas + el botón "Ver cotización" del header.
     <div class="px-3 py-2 small text-muted border-bottom">
       Cantidades solicitadas al generar esta cotización. Son solo referencia; no editan nada.
     </div>
+    <div class="px-3 py-2 border-bottom" style="background:#f9fafb;font-size:.78rem">
+      <div class="text-uppercase text-muted mb-2" style="font-size:.68rem;letter-spacing:.04em;font-weight:600">
+        <i class="bi bi-building me-1"></i>Proveedor cotizado
+      </div>
+      <div class="d-flex flex-column gap-1">
+        <div><span class="text-muted" style="width:72px;display:inline-block">Razón social:</span> <span class="fw-semibold">{{ cot.proveedor|default:"—" }}</span></div>
+        <div><span class="text-muted" style="width:72px;display:inline-block">RUC / DNI:</span> <span class="fw-semibold">{{ cot.ruc|default:"—" }}</span></div>
+        <div><span class="text-muted" style="width:72px;display:inline-block">Dirección:</span> <span>{{ cot.direccion|default:"—" }}</span></div>
+        <div><span class="text-muted" style="width:72px;display:inline-block">Teléfono:</span> <span>{{ cot.celular|default:"—" }}</span></div>
+      </div>
+    </div>
     <table class="table table-sm mb-0" style="font-size:.85rem">
       <thead class="table-light">
         <tr>
