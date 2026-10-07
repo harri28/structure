@@ -28,19 +28,6 @@
   </div>
 </div>
 
-{% if not editable %}
-<div class="alert alert-info d-flex align-items-center py-2 mb-3" style="font-size:.85rem">
-  <i class="bi bi-info-circle me-2"></i>
-  {% if req.estado == 'ANULADO' %}
-    Este requerimiento fue <strong>anulado</strong>. Podés recuperarlo para volver a revisarlo.
-  {% elif req.estado == 'ATENDIDO' %}
-    Este requerimiento ya fue <strong>atendido</strong>. Solo visualización.
-  {% else %}
-    Este requerimiento ya fue <strong>{{ req.get_estado_display|lower }}</strong>. Para modificarlo primero debés anularlo y luego recuperarlo.
-  {% endif %}
-</div>
-{% endif %}
-
 <form method="post" id="form-revision">
 {% csrf_token %}
 <input type="hidden" name="nuevo_count" id="nuevo-count" value="0">
