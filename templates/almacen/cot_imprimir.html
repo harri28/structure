@@ -223,7 +223,6 @@
   <a href="{% if cot.requerimiento_origen_id %}{% url 'logistica:req_revisar_log' proyecto.pk cot.requerimiento_origen_id %}{% else %}{% url 'almacen:cot_detalle' cot.pk %}{% endif %}" class="btn btn-back">← Volver</a>
   <a href="{% url 'almacen:cot_lista' proyecto.pk %}" class="btn btn-back">☰ Cotizaciones</a>
   <div class="barra-acciones-derecha">
-    <button type="submit" class="btn btn-save">💾 Guardar cantidades</button>
     <button type="button" class="btn btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
   </div>
 </div>
@@ -261,21 +260,21 @@
       <div class="fila-datos">
         <div class="dato wide">
           <label>Razón Social del proveedor</label>
-          <span>—</span>
+          <span>{{ cot.proveedor|default:"—" }}</span>
         </div>
         <div class="dato mid">
-          <label>RUC</label>
-          <span>—</span>
+          <label>RUC / DNI</label>
+          <span>{{ cot.ruc|default:"—" }}</span>
         </div>
       </div>
       <div class="fila-datos">
         <div class="dato wide">
-          <label>Jr.</label>
-          <span>—</span>
+          <label>Dirección</label>
+          <span>{{ cot.direccion|default:"—" }}</span>
         </div>
         <div class="dato mid">
-          <label>Condiciones de pago</label>
-          <span>—</span>
+          <label>Teléfono</label>
+          <span>{{ cot.celular|default:"—" }}</span>
         </div>
       </div>
     </div>
@@ -301,10 +300,7 @@
           <td class="left">{% if d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</td>
           <td class="left">{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
           <td class="center">{{ d.unidad|default:"—" }}</td>
-          <td class="center">
-            <input type="number" name="cantidad_{{ d.pk }}" class="cant"
-                   value="{{ d.cantidad|floatformat:2 }}" step="0.01" min="0">
-          </td>
+          <td class="center" style="font-weight:600">{{ d.cantidad|floatformat:2 }}</td>
           <td class="num col-precio">—</td>
           <td class="num col-precio">—</td>
         </tr>
