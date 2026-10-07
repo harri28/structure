@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 {% block title %}COT{{ cot.numero }}{% endblock %}
 {% block nav_cot %}active{% endblock %}
 {% block breadcrumb %}
@@ -66,14 +67,14 @@
           {% if cot.estado == 'PENDIENTE' %}
           <td class="text-end">
             <input type="number" step="0.0001" min="0.0001"
-                   max="{{ d.cantidad }}" value="{{ d.cantidad }}"
+                   max="{{ d.cantidad|unlocalize }}" value="{{ d.cantidad|unlocalize }}"
                    class="form-control form-control-sm text-end cot-cantidad"
                    style="font-size:.8rem;padding:.2rem .4rem;max-width:110px;margin-left:auto"
-                   name="cantidad_{{ d.pk }}" data-max="{{ d.cantidad }}">
+                   name="cantidad_{{ d.pk }}" data-max="{{ d.cantidad|unlocalize }}">
           </td>
           <td class="text-end">
             <input type="number" step="0.01" min="0.01"
-                   value="{% if d.precio_unitario > 0 %}{{ d.precio_unitario }}{% endif %}"
+                   value="{% if d.precio_unitario > 0 %}{{ d.precio_unitario|unlocalize }}{% endif %}"
                    class="form-control form-control-sm text-end cot-precio"
                    style="font-size:.8rem;padding:.2rem .4rem;max-width:110px;margin-left:auto"
                    name="precio_{{ d.pk }}" placeholder="0.00" required>
