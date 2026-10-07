@@ -88,6 +88,7 @@
           <th style="width:70px">Und</th>
           <th style="width:120px" class="text-end">Cant. requerida</th>
           <th style="width:150px" class="text-center">Cant. a aprobar</th>
+          <th style="width:110px" class="text-end" title="Cantidad cubierta por cotizaciones aprobadas">Aprobado</th>
           <th style="width:44px"></th>
         </tr>
       </thead>
@@ -112,6 +113,17 @@
                    {% if not editable %}readonly{% else %}required{% endif %}>
             <div class="invalid-feedback text-start" style="font-size:.72rem"></div>
           </td>
+          <td class="text-end" style="font-size:.83rem">
+            {% with obj=d.cantidad_aprobada|default:d.cantidad_requerida %}
+            {% if d.cot_aprobada <= 0 %}
+              <span class="text-muted">—</span>
+            {% elif d.cot_aprobada >= obj %}
+              <span class="fw-semibold text-success" title="Cubierto totalmente"><i class="bi bi-check2-circle me-1"></i>{{ d.cot_aprobada|floatformat:4 }}</span>
+            {% else %}
+              <span class="fw-semibold" style="color:#d97706" title="Cubierto parcialmente">{{ d.cot_aprobada|floatformat:4 }}</span>
+            {% endif %}
+            {% endwith %}
+          </td>
           <td class="text-center">
             {% if editable %}
             <button type="button" class="btn btn-link p-0 btn-eliminar"
@@ -125,7 +137,7 @@
           </td>
         </tr>
         {% endif %}{% empty %}
-        <tr><td colspan="6" class="text-center py-4 text-muted">Sin ítems</td></tr>
+        <tr><td colspan="7" class="text-center py-4 text-muted">Sin ítems</td></tr>
         {% endfor %}
       </tbody>
     </table>

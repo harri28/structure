@@ -702,13 +702,28 @@ def req_revisar_log(request, proyecto_id, pk):
 
     historial = req.historial_revision.select_related('insumo', 'usuario').all()
 
+    # Suma de cantidad cotizada-y-aprobada por ítem (para la columna "Aprobado" de
+    # la tabla), independientemente del estado del REQ. Si no hay cotizaciones
+    # APROBADAS, queda en 0 para todos los ítems.
+    from apps.almacen.views import _clave_item_cot
+    from apps.almacen.models import DetalleCotizacion as _DetCot
+    sumas_cot_aprobada = {}
+    for d in _DetCot.objects.filter(
+            cotizacion__requerimiento_origen=req,
+            cotizacion__estado='APROBADA'):
+        k = _clave_item_cot(d.insumo_id, d.descripcion)
+        sumas_cot_aprobada[k] = sumas_cot_aprobada.get(k, Decimal('0')) + d.cantidad
+    for det in detalles:
+        k = _clave_item_cot(det.insumo_id, det.descripcion)
+        det.cot_aprobada = sumas_cot_aprobada.get(k, Decimal('0'))
+
     # Ítems candidatos para una nueva cotización desde este REQ: cantidad sugerida =
     # min(cantidad_aprobada, saldo cotizable restante). Se filtran los que ya están
     # completamente cotizados (saldo = 0). Solo tiene sentido cuando el REQ ya fue aprobado.
     items_para_cotizar = []
     siguiente_numero_cot = ''
     if req.estado in ('APROBADO', 'COTIZADO', 'PARCIAL'):
-        from apps.almacen.views import _saldo_cotizable, _clave_item_cot
+        from apps.almacen.views import _saldo_cotizable
         from apps.almacen.models import Cotizacion as _Cot
         saldos = _saldo_cotizable(req)
         for det in detalles:
