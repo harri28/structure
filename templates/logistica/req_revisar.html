@@ -658,6 +658,18 @@
   var btnSubmit = modal.querySelector('#btn-generar-cot');
   var aviso = modal.querySelector('#cot-sin-items');
 
+  // Snapshot del tbody original para restaurar en cada apertura del modal:
+  // si el usuario quita filas y después cancela, la próxima vez debe ver la
+  // lista completa de nuevo.
+  var tbodyInicial = tbody.innerHTML;
+  var countInicial = count.value;
+  modal.addEventListener('show.bs.modal', function () {
+    tbody.innerHTML = tbodyInicial;
+    count.value = countInicial;
+    btnSubmit.disabled = false;
+    aviso.style.display = 'none';
+  });
+
   function reindex() {
     var rows = tbody.querySelectorAll('tr');
     rows.forEach(function (tr, i) {
