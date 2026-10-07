@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block title %}COT{{ cot.numero }}{% endblock %}
 {% block nav_cot %}active{% endblock %}
 {% block breadcrumb %}
@@ -16,18 +16,14 @@
     <a href="{% url 'almacen:cot_lista' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-arrow-left me-1"></i>Volver a cotizaciones
     </a>
-    <a href="{% url 'almacen:cot_imprimir' cot.pk %}" target="_blank" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-printer me-1"></i>Imprimir A4
-    </a>
-    <a href="{% url 'almacen:cot_editar' cot.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
-    <a href="{% url 'almacen:cot_eliminar' cot.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
   </div>
 </div>
+
 <div class="card mb-3">
   <div class="card-body">
     <div class="row g-2">
       <div class="col-sm-3"><label class="text-muted small">Fecha</label><p class="mb-0 fw-semibold">{{ cot.fecha|date:"d/m/Y" }}</p></div>
-      <div class="col-sm-4"><label class="text-muted small">Razón social</label><p class="mb-0">{{ cot.proveedor }}</p></div>
+      <div class="col-sm-4"><label class="text-muted small">Razón social</label><p class="mb-0">{{ cot.proveedor|default:"—" }}</p></div>
       <div class="col-sm-3"><label class="text-muted small">RUC</label><p class="mb-0">{{ cot.ruc|default:"—" }}</p></div>
       <div class="col-sm-4"><label class="text-muted small">Dirección</label><p class="mb-0">{{ cot.direccion|default:"—" }}</p></div>
       <div class="col-sm-3"><label class="text-muted small">Celular</label><p class="mb-0">{{ cot.celular|default:"—" }}</p></div>
@@ -37,113 +33,84 @@
     </div>
   </div>
 </div>
+
+{% if cot.estado == 'PENDIENTE' %}
+<form method="post" action="{% url 'almacen:cot_aprobar' cot.pk %}" id="form-aprobar-cot">
+  {% csrf_token %}
+{% endif %}
+
 <div class="card">
-  <div class="card-header d-flex justify-content-between">
+  <div class="card-header d-flex justify-content-between align-items-center">
     <span>Materiales Cotizados</span>
-    <strong>Total: S/. {{ cot.total|floatformat:2 }}</strong>
+    <strong>Total: S/. <span id="cot-total">{{ cot.total|floatformat:2 }}</span></strong>
   </div>
   <div class="card-body p-0">
-    <table class="table table-sm mb-0">
-      <thead><tr><th>Código</th><th>Descripción</th><th class="text-end">Cantidad</th><th>Unidad</th><th class="text-end">P.U. (S/.)</th><th class="text-end">Subtotal (S/.)</th></tr></thead>
+    <table class="table table-sm mb-0 align-middle" id="tabla-cot">
+      <thead>
+        <tr>
+          <th style="width:60px">Código</th>
+          <th>Descripción</th>
+          <th style="width:70px">Unidad</th>
+          <th style="width:140px" class="text-end">Cantidad</th>
+          <th style="width:140px" class="text-end">P.U. (S/.)</th>
+          <th style="width:120px" class="text-end">Subtotal (S/.)</th>
+          {% if cot.estado == 'PENDIENTE' %}<th style="width:44px"></th>{% endif %}
+        </tr>
+      </thead>
       <tbody>
         {% for d in cot.detalles.all %}
-        <tr>
-          <td><code>{% if d.insumo %}{{ d.insumo.codigo }}{% else %}—{% endif %}</code></td>
-          <td>{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
+        <tr data-det-pk="{{ d.pk }}">
+          <td><code style="font-size:.78rem">{% if d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</code></td>
+          <td style="font-size:.85rem">{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
+          <td class="small">{{ d.unidad|default:"—" }}</td>
+          {% if cot.estado == 'PENDIENTE' %}
+          <td class="text-end">
+            <input type="number" step="0.0001" min="0.0001"
+                   max="{{ d.cantidad }}" value="{{ d.cantidad }}"
+                   class="form-control form-control-sm text-end cot-cantidad"
+                   name="cantidad_{{ d.pk }}" data-max="{{ d.cantidad }}">
+          </td>
+          <td class="text-end">
+            <input type="number" step="0.01" min="0.01"
+                   value="{% if d.precio_unitario > 0 %}{{ d.precio_unitario }}{% endif %}"
+                   class="form-control form-control-sm text-end cot-precio"
+                   name="precio_{{ d.pk }}" placeholder="0.00" required>
+          </td>
+          <td class="text-end fw-semibold cot-subtotal">{{ d.subtotal|floatformat:2 }}</td>
+          <td class="text-center">
+            <button type="button" class="btn btn-sm btn-link p-0 btn-quitar-cot"
+                    style="color:#dc2626;font-size:1rem;line-height:1" title="Quitar (el saldo vuelve al REQ)">
+              <i class="bi bi-trash3"></i>
+            </button>
+            <input type="hidden" name="eliminar_{{ d.pk }}" value="0" class="cot-eliminar">
+          </td>
+          {% else %}
           <td class="text-end">{{ d.cantidad|floatformat:2 }}</td>
-          <td>{{ d.unidad }}</td>
           <td class="text-end">{{ d.precio_unitario|floatformat:2 }}</td>
           <td class="text-end fw-semibold">{{ d.subtotal|floatformat:2 }}</td>
+          {% endif %}
         </tr>
+        {% empty %}
+        <tr><td colspan="{% if cot.estado == 'PENDIENTE' %}7{% else %}6{% endif %}" class="text-center text-muted py-3">Sin ítems</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
 {% if cot.estado == 'PENDIENTE' %}
 <div class="d-flex gap-2 justify-content-end mt-3">
-  <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modal-rechazar-cot">
+  <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modal-rechazar-cot">
     <i class="bi bi-x-circle me-1"></i>Rechazar cotización
   </button>
-  <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modal-aprobar-cot">
+  <button type="submit" class="btn btn-success btn-sm" id="btn-aprobar-cot">
     <i class="bi bi-check-circle me-1"></i>Aprobar cotización
   </button>
 </div>
+</form>
 
-<!-- Modal: Aprobar cotización (respuesta del proveedor) -->
-<div class="modal fade" id="modal-aprobar-cot" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl">
-    <form method="post" action="{% url 'almacen:cot_aprobar' cot.pk %}" id="form-aprobar-cot">
-      {% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header py-2">
-          <h6 class="modal-title d-flex align-items-center gap-2" style="font-size:.95rem">
-            <i class="bi bi-check-circle text-success"></i>
-            Aprobar COT{{ cot.numero }} — Respuesta del proveedor
-          </h6>
-          <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        <div class="modal-body">
-          <div class="text-muted mb-2" style="font-size:.78rem">
-            Ajustá por ítem lo que el proveedor te confirmó. La cantidad no puede superar la solicitada; la diferencia vuelve al REQ para cotizar con otro proveedor. El precio unitario es obligatorio.
-          </div>
-          <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0" id="tabla-aprobar-cot">
-              <thead class="table-light">
-                <tr>
-                  <th style="width:70px">Código</th>
-                  <th>Descripción</th>
-                  <th style="width:70px">Und</th>
-                  <th style="width:130px" class="text-end">Cantidad</th>
-                  <th style="width:140px" class="text-end">P.U. (S/.)</th>
-                  <th style="width:60px"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for d in cot.detalles.all %}
-                <tr data-det-pk="{{ d.pk }}">
-                  <td class="small text-muted">{% if d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</td>
-                  <td style="font-size:.85rem">{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
-                  <td class="small">{{ d.unidad|default:"—" }}</td>
-                  <td class="text-end">
-                    <input type="number" step="0.0001" min="0.0001"
-                           max="{{ d.cantidad }}"
-                           value="{{ d.cantidad }}"
-                           class="form-control form-control-sm text-end cot-ap-cantidad"
-                           name="cantidad_{{ d.pk }}"
-                           data-max="{{ d.cantidad }}">
-                  </td>
-                  <td class="text-end">
-                    <input type="number" step="0.01" min="0.01"
-                           value=""
-                           class="form-control form-control-sm text-end cot-ap-precio"
-                           name="precio_{{ d.pk }}"
-                           placeholder="0.00" required>
-                  </td>
-                  <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-ap" title="Quitar (el saldo vuelve al REQ)">
-                      <i class="bi bi-x-lg"></i>
-                    </button>
-                    <input type="hidden" name="eliminar_{{ d.pk }}" value="0" class="cot-ap-eliminar">
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <div class="small text-muted mt-2" id="ap-sin-items" style="display:none">
-            Quitaste todos los ítems. Si el proveedor no atiende nada, usá <strong>Rechazar cotización</strong>.
-          </div>
-        </div>
-        <div class="modal-footer py-2">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-success btn-sm" id="btn-aprobar-cot-ok">
-            <i class="bi bi-check-circle me-1"></i>Confirmar aprobación
-          </button>
-        </div>
-      </div>
-    </form>
-  </div>
+<div class="small text-muted mt-2" id="cot-sin-items" style="display:none">
+  Quitaste todos los ítems. Si el proveedor no atiende nada, usá <strong>Rechazar cotización</strong>.
 </div>
 
 <!-- Modal: Rechazar cotización -->
@@ -178,57 +145,62 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if cot.estado == 'PENDIENTE' %}
 <script>
 (function () {
-  var modal = document.getElementById('modal-aprobar-cot');
-  if (!modal) return;
-  var tbody = modal.querySelector('#tabla-aprobar-cot tbody');
-  var aviso = modal.querySelector('#ap-sin-items');
-  var btnOk = modal.querySelector('#btn-aprobar-cot-ok');
-
-  // Snapshot para resetear en cada apertura (si el user quita y cancela, al volver debe ver todo).
-  var tbodyInicial = tbody.innerHTML;
+  var tabla = document.getElementById('tabla-cot');
+  if (!tabla) return;
+  var tbody = tabla.querySelector('tbody');
+  var btnOk = document.getElementById('btn-aprobar-cot');
+  var totalEl = document.getElementById('cot-total');
+  var avisoVacio = document.getElementById('cot-sin-items');
 
   function filasActivas() {
     return tbody.querySelectorAll('tr:not([data-eliminada="1"])');
   }
 
+  function recalcularTotal() {
+    var total = 0;
+    filasActivas().forEach(function (tr) {
+      var cant = parseFloat(tr.querySelector('.cot-cantidad').value) || 0;
+      var prec = parseFloat(tr.querySelector('.cot-precio').value) || 0;
+      var sub = cant * prec;
+      tr.querySelector('.cot-subtotal').textContent = sub.toFixed(2);
+      total += sub;
+    });
+    totalEl.textContent = total.toFixed(2);
+  }
+
   function refrescar() {
+    recalcularTotal();
     var activas = filasActivas();
     if (activas.length === 0) {
-      aviso.style.display = '';
+      avisoVacio.style.display = '';
       btnOk.disabled = true;
     } else {
-      aviso.style.display = 'none';
+      avisoVacio.style.display = 'none';
       btnOk.disabled = false;
     }
   }
 
-  modal.addEventListener('show.bs.modal', function () {
-    tbody.innerHTML = tbodyInicial;
-    btnOk.disabled = false;
-    aviso.style.display = 'none';
-  });
-
   tbody.addEventListener('click', function (e) {
-    var btn = e.target.closest('.btn-quitar-ap');
+    var btn = e.target.closest('.btn-quitar-cot');
     if (!btn) return;
     var tr = btn.closest('tr');
     if (!tr) return;
-    // Marcamos la fila como eliminada: ocultamos visualmente y seteamos el hidden
     tr.dataset.eliminada = '1';
     tr.style.display = 'none';
-    var hid = tr.querySelector('.cot-ap-eliminar');
+    var hid = tr.querySelector('.cot-eliminar');
     if (hid) hid.value = '1';
-    // Quitamos required del precio para que no bloquee el submit
-    var prec = tr.querySelector('.cot-ap-precio');
+    // Quitar required del precio para que no bloquee el submit
+    var prec = tr.querySelector('.cot-precio');
     if (prec) prec.required = false;
     refrescar();
   });
 
   tbody.addEventListener('input', function (e) {
     var inp = e.target;
-    if (inp.classList.contains('cot-ap-cantidad')) {
+    if (inp.classList.contains('cot-cantidad')) {
       var val = parseFloat(inp.value);
       var max = parseFloat(inp.dataset.max);
       if (isNaN(val) || val <= 0 || val > max) {
@@ -236,7 +208,7 @@
       } else {
         inp.classList.remove('is-invalid');
       }
-    } else if (inp.classList.contains('cot-ap-precio')) {
+    } else if (inp.classList.contains('cot-precio')) {
       var p = parseFloat(inp.value);
       if (isNaN(p) || p <= 0) {
         inp.classList.add('is-invalid');
@@ -244,16 +216,22 @@
         inp.classList.remove('is-invalid');
       }
     }
+    recalcularTotal();
   });
 
-  modal.querySelector('#form-aprobar-cot').addEventListener('submit', function (e) {
+  document.getElementById('form-aprobar-cot').addEventListener('submit', function (e) {
     if (filasActivas().length === 0) {
       e.preventDefault();
       return;
     }
-    var hayInvalid = modal.querySelectorAll('.is-invalid').length > 0;
-    if (hayInvalid) e.preventDefault();
+    if (tbody.querySelectorAll('.is-invalid').length > 0) {
+      e.preventDefault();
+    }
   });
+
+  // Inicializar total con lo que hay cargado
+  recalcularTotal();
 })();
 </script>
+{% endif %}
 {% endblock %}
