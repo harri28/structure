@@ -938,3 +938,10 @@ def control_maquinaria(request, proyecto_id):
 def abastecimiento(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
     return render(request, 'logistica/abastecimiento.html', {'proyecto': proyecto})
+
+
+@requiere('puede_ver_logistica')
+@proyecto_visible
+def reportes(request, proyecto_id):
+    proyecto = _get_proyecto(proyecto_id)
+    return render(request, 'logistica/reportes.html', {'proyecto': proyecto})
