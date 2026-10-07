@@ -341,14 +341,39 @@
       {% csrf_token %}
       <div class="modal-content">
         <div class="modal-header py-2">
-          <h6 class="modal-title" style="font-size:.95rem">
-            <i class="bi bi-receipt text-success me-1"></i>
+          <h6 class="modal-title d-flex align-items-center gap-2" style="font-size:.95rem">
+            <i class="bi bi-receipt text-success"></i>
             Generar cotización desde REQ{{ req.numero }}
+            {% if siguiente_numero_cot %}
+            <span class="badge bg-light text-dark border" style="font-size:.72rem;font-weight:600">
+              N° {{ siguiente_numero_cot }}
+            </span>
+            {% endif %}
           </h6>
           <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body">
           {% if items_para_cotizar %}
+          <!-- Datos del proveedor (opcionales — se pueden completar luego desde Editar cotización) -->
+          <div class="row g-2 mb-3" id="cot-proveedor-row">
+            <div class="col-md-5">
+              <label class="form-label mb-1" style="font-size:.72rem;color:#6b7280">Razón social del proveedor</label>
+              <input type="text" name="proveedor" maxlength="200" class="form-control form-control-sm cot-proveedor-input"
+                     placeholder="Ej. FERRETERÍA SAN JUAN E.I.R.L.">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label mb-1" style="font-size:.72rem;color:#6b7280">RUC / DNI</label>
+              <input type="text" name="ruc" maxlength="11" class="form-control form-control-sm cot-proveedor-input" placeholder="20…">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1" style="font-size:.72rem;color:#6b7280">Dirección</label>
+              <input type="text" name="direccion" maxlength="255" class="form-control form-control-sm cot-proveedor-input" placeholder="Jr. / Av.">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label mb-1" style="font-size:.72rem;color:#6b7280">Teléfono</label>
+              <input type="text" name="celular" maxlength="20" class="form-control form-control-sm cot-proveedor-input" placeholder="9…">
+            </div>
+          </div>
           <div class="text-muted mb-2" style="font-size:.78rem">
             Quitá los ítems que no incluyas en esta cotización. La cantidad propuesta ya está topada al saldo cotizable restante.
           </div>
@@ -660,7 +685,7 @@
 
   // Snapshot del tbody original para restaurar en cada apertura del modal:
   // si el usuario quita filas y después cancela, la próxima vez debe ver la
-  // lista completa de nuevo.
+  // lista completa de nuevo. También limpiamos los inputs de proveedor.
   var tbodyInicial = tbody.innerHTML;
   var countInicial = count.value;
   modal.addEventListener('show.bs.modal', function () {
@@ -668,6 +693,10 @@
     count.value = countInicial;
     btnSubmit.disabled = false;
     aviso.style.display = 'none';
+    modal.querySelectorAll('.cot-proveedor-input').forEach(function (inp) {
+      inp.value = '';
+      inp.classList.remove('is-invalid');
+    });
   });
 
   function reindex() {

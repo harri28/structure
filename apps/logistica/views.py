@@ -706,8 +706,10 @@ def req_revisar_log(request, proyecto_id, pk):
     # min(cantidad_aprobada, saldo cotizable restante). Se filtran los que ya están
     # completamente cotizados (saldo = 0). Solo tiene sentido cuando el REQ ya fue aprobado.
     items_para_cotizar = []
+    siguiente_numero_cot = ''
     if req.estado in ('APROBADO', 'COTIZADO', 'PARCIAL'):
         from apps.almacen.views import _saldo_cotizable, _clave_item_cot
+        from apps.almacen.models import Cotizacion as _Cot
         saldos = _saldo_cotizable(req)
         for det in detalles:
             if not det.cantidad_aprobada or det.cantidad_aprobada <= 0:
@@ -726,6 +728,14 @@ def req_revisar_log(request, proyecto_id, pk):
                 'cantidad': sugerida,
                 'saldo': saldo,
             })
+        # Previsualización del próximo N° COT (misma lógica que cot_desde_req).
+        base = str(req.numero)
+        cots_previas = req.cotizaciones_origen.count()
+        numero = base if cots_previas == 0 else f'{base}-{cots_previas + 1}'
+        while _Cot.objects.filter(proyecto=proyecto, numero=numero).exists():
+            cots_previas += 1
+            numero = f'{base}-{cots_previas + 1}'
+        siguiente_numero_cot = f'COT{numero}'
 
     return render(request, 'logistica/req_revisar.html', {
         'proyecto': proyecto,
@@ -734,6 +744,7 @@ def req_revisar_log(request, proyecto_id, pk):
         'historial': historial,
         'editable': editable,
         'items_para_cotizar': items_para_cotizar,
+        'siguiente_numero_cot': siguiente_numero_cot,
     })
 
 

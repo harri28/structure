@@ -1224,7 +1224,10 @@ def cot_desde_req(request, proyecto_id, req_pk):
         requerimiento_origen=req,
         numero=numero,
         fecha=now().date(),
-        proveedor='',
+        proveedor=request.POST.get('proveedor', '').strip()[:200],
+        ruc=request.POST.get('ruc', '').strip()[:11],
+        direccion=request.POST.get('direccion', '').strip()[:255],
+        celular=request.POST.get('celular', '').strip()[:20],
         estado='PENDIENTE',
         observaciones=f'Solicitud de cotización generada desde REQ{req.numero}',
     )
