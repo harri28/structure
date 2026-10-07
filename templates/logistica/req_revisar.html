@@ -362,7 +362,14 @@
             </div>
             <div class="col-md-2">
               <label class="form-label mb-1" style="font-size:.72rem;color:#6b7280">RUC / DNI</label>
-              <input type="text" name="ruc" maxlength="11" class="form-control form-control-sm cot-proveedor-input" placeholder="20…">
+              <div class="d-flex gap-1">
+                <input type="text" name="ruc" maxlength="11" class="form-control form-control-sm cot-proveedor-input" placeholder="20…" id="cot-ruc-input">
+                <button type="button" id="btn-buscar-ruc-cot" class="btn btn-primary btn-sm d-flex align-items-center justify-content-center"
+                        style="width:32px;flex-shrink:0;padding:0" title="Buscar RUC/DNI en SUNAT">
+                  <i class="bi bi-search"></i>
+                </button>
+              </div>
+              <div id="cot-ruc-msg" style="font-size:.72rem;margin-top:.2rem;display:none"></div>
             </div>
             <div class="col-md-3">
               <label class="form-label mb-1" style="font-size:.72rem;color:#6b7280">Dirección</label>
@@ -696,6 +703,8 @@
       inp.value = '';
       inp.classList.remove('is-invalid');
     });
+    var rucMsg = document.getElementById('cot-ruc-msg');
+    if (rucMsg) rucMsg.style.display = 'none';
   });
 
   function reindex() {
@@ -742,6 +751,62 @@
     if (rows.length === 0 || invalid.length) {
       e.preventDefault();
     }
+  });
+})();
+
+// ── Buscador SUNAT/RENIEC en el modal "Generar cotización" ────────────
+(function () {
+  var btn    = document.getElementById('btn-buscar-ruc-cot');
+  var iRuc   = document.getElementById('cot-ruc-input');
+  if (!btn || !iRuc) return;
+  var iRazon = document.querySelector('#modal-cotizar input[name="proveedor"]');
+  var iDir   = document.querySelector('#modal-cotizar input[name="direccion"]');
+  var msg    = document.getElementById('cot-ruc-msg');
+
+  function getCsrf() {
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function showMsg(text, ok) {
+    msg.textContent = text;
+    msg.style.color = ok ? '#16a34a' : '#dc2626';
+    msg.style.display = 'block';
+  }
+
+  btn.addEventListener('click', function () {
+    var numero = (iRuc.value || '').trim();
+    if (numero.length !== 8 && numero.length !== 11) {
+      showMsg('DNI = 8 dígitos, RUC = 11 dígitos.', false);
+      return;
+    }
+    msg.style.display = 'none';
+    btn.disabled = true;
+    var iconoOriginal = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.85rem;height:.85rem"></span>';
+
+    fetch("{% url 'maquinaria:consulta_doc' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ numero: numero }),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.ok) { showMsg(d.error || 'No encontrado.', false); return; }
+      if (d.razon_social && iRazon) iRazon.value = d.razon_social;
+      if (d.direccion && iDir)      iDir.value   = d.direccion;
+      showMsg('Datos autocompletados desde SUNAT.', true);
+    })
+    .catch(function (err) {
+      showMsg('Error al consultar el servicio: ' + (err && err.message ? err.message : err), false);
+    })
+    .finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = iconoOriginal;
+    });
   });
 })();
 </script>
