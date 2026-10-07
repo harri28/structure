@@ -15,20 +15,6 @@
   </a>
 </div>
 
-<!-- Chips: En cola / Enviados -->
-<div class="card mb-3">
-  <div class="card-body py-2">
-    <div class="submodule-chips">
-      <a href="?tab=cola" class="s-chip {% if tab == 'cola' %}active{% endif %}">
-        <i class="bi bi-hourglass-split me-1"></i>En cola
-      </a>
-      <a href="?tab=enviados" class="s-chip {% if tab == 'enviados' %}active{% endif %}">
-        <i class="bi bi-send-check me-1"></i>Enviados
-      </a>
-    </div>
-  </div>
-</div>
-
 <div class="card">
   <div class="card-body p-0">
     <table class="table table-sm table-hover mb-0">
@@ -86,11 +72,7 @@
         {% empty %}
         <tr>
           <td colspan="9" class="text-center py-4 text-muted">
-            {% if tab == 'enviados' %}
-              No hay guías enviadas todavía.
-            {% else %}
-              No hay guías en cola. Aprobá un requerimiento para generar una.
-            {% endif %}
+            No hay guías registradas todavía. Generá una desde una cotización aprobada.
           </td>
         </tr>
         {% endfor %}

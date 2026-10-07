@@ -63,19 +63,12 @@ def dashboard(request, proyecto_id):
 @requiere('puede_gestionar_logistica')
 @proyecto_visible
 def guia_lista(request, proyecto_id):
-    proyecto  = _get_proyecto(proyecto_id)
-    tab = request.GET.get('tab', 'cola')  # 'cola' | 'enviados'
+    proyecto = _get_proyecto(proyecto_id)
     qs = (GuiaRemision.objects.filter(proyecto=proyecto)
           .select_related('transportista', 'requerimiento'))
-    if tab == 'enviados':
-        qs = qs.filter(estado__in=['EN_TRANSITO', 'ENTREGADO'])
-    else:
-        tab = 'cola'
-        qs = qs.filter(estado='PENDIENTE')
     return render(request, 'logistica/guia_lista.html', {
-        'proyecto':  proyecto,
-        'guias':     qs,
-        'tab':       tab,
+        'proyecto': proyecto,
+        'guias':    qs,
     })
 
 
