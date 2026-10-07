@@ -17,7 +17,7 @@
     <a href="{% url 'almacen:cot_lista' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-arrow-left me-1"></i>Volver a cotizaciones
     </a>
-    {# ── EXPERIMENTAL (eliminar bloque + offcanvas al pie si no se usa) ── #}
+    {% comment %}EXPERIMENTAL: botón + offcanvas al pie se pueden eliminar si no se usa.{% endcomment %}
     <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="offcanvas" data-bs-target="#offcanvas-ver-cot" title="Ver las cantidades que se cotizaron originalmente">
       <i class="bi bi-eye me-1"></i>Ver cotización
     </button>
@@ -150,12 +150,13 @@
 </div>
 {% endif %}
 
-{# ─────────── EXPERIMENTAL: panel lateral "Ver cotización" ───────────
-   Panel offcanvas que despliega desde la derecha mostrando las cantidades
-   cotizadas tal como están persistidas (sirve de referencia MIENTRAS la
-   cotización está PENDIENTE y aún no se apretó "Aprobar"). Si no se
-   quiere, borrar este bloque + el botón "Ver cotización" del header.
-   ──────────────────────────────────────────────────────────────────── #}
+{% comment %}
+EXPERIMENTAL: panel lateral "Ver cotización".
+Offcanvas que despliega desde la derecha mostrando las cantidades cotizadas tal
+como están persistidas (sirve de referencia MIENTRAS la cotización está
+PENDIENTE y aún no se apretó "Aprobar"). Para quitarlo: borrar este bloque
+offcanvas + el botón "Ver cotización" del header.
+{% endcomment %}
 <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-ver-cot" aria-labelledby="offcanvas-ver-cot-label" style="width:420px">
   <div class="offcanvas-header border-bottom">
     <h6 class="offcanvas-title mb-0" id="offcanvas-ver-cot-label">
@@ -193,7 +194,7 @@
     </table>
   </div>
 </div>
-{# ─────────── /EXPERIMENTAL ─────────── #}
+{% comment %}/EXPERIMENTAL{% endcomment %}
 {% endblock %}
 
 {% block extra_js %}
