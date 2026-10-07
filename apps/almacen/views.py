@@ -1420,6 +1420,23 @@ def cot_aprobar(request, pk):
             messages.error(request, e)
         return redirect('almacen:cot_detalle', pk=cot.pk)
 
+    # Validación cruzada contra el saldo del REQ: con las cantidades que están por
+    # aprobarse acá + las ya aprobadas en OTRAS cotizaciones de este mismo REQ, no
+    # se puede superar la cantidad_aprobada del detalle del requerimiento.
+    if cot.requerimiento_origen_id:
+        items_a_aprobar = [{
+            'insumo_id': det.insumo_id,
+            'descripcion': det.descripcion,
+            'cantidad': cant,
+        } for det, cant, _prec in cambios]
+        errores_saldo = _errores_contra_saldo(
+            cot.requerimiento_origen, items_a_aprobar, excluir_cot_pk=cot.pk,
+        )
+        if errores_saldo:
+            for e in errores_saldo:
+                messages.error(request, e)
+            return redirect('almacen:cot_detalle', pk=cot.pk)
+
     from django.db import transaction
     with transaction.atomic():
         for det in eliminados:
