@@ -18,6 +18,7 @@ ESTADOS_REQ = [
     ('ENVIADO', 'Enviado a Logística'),
     ('EN_REVISION', 'En revisión'),
     ('APROBADO', 'Aprobado'),
+    ('COTIZADO', 'Cotizado'),
     ('ATENDIDO', 'Atendido'),
     ('PARCIAL', 'Atendido Parcial'),
     ('ANULADO', 'Anulado'),

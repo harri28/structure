@@ -81,6 +81,7 @@
               {% elif r.estado == 'ATENDIDO' %}bg-success
               {% elif r.estado == 'ANULADO' %}bg-danger
               {% elif r.estado == 'APROBADO' %}bg-info
+              {% elif r.estado == 'COTIZADO' %}bg-cotizado
               {% elif r.estado == 'PARCIAL' %}bg-warning text-dark
               {% else %}bg-secondary{% endif %}">
               {% if r.estado == 'ENVIADO' %}Nuevo{% else %}{{ r.get_estado_display }}{% endif %}

@@ -827,3 +827,6 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .form-compact table.table th,
 .form-compact table.table td { font-size: .76rem !important; padding: .35rem .5rem; }
 .form-compact .btn { font-size: .82rem; padding: .35rem .7rem; }
+
+/* Badge para el estado COTIZADO del requerimiento (púrpura, distinto de APROBADO/ATENDIDO) */
+.bg-cotizado { background-color: #6f42c1 !important; color: #fff !important; }

@@ -180,11 +180,12 @@ def _clave_item(insumo_id, descripcion):
 
 
 def _recalcular_estado_req(req):
-    """Estado del requerimiento según lo ya despachado en guías (vía cotizaciones):
-    todo lo aprobado salió -> ATENDIDO; salió algo -> PARCIAL (Atendido Parcial);
-    nada salió -> vuelve al estado de aprobación (APROBADO / PARCIAL si se aprobó menos)."""
+    """Estado del requerimiento según cotizaciones aprobadas y guías despachadas:
+    todo salió en guías -> ATENDIDO; salió algo -> PARCIAL; todas las cotizaciones
+    APROBADAS cubren lo aprobado sin aún haber guía -> COTIZADO; en otro caso vuelve
+    al estado de aprobación (APROBADO / PARCIAL si se aprobó menos de lo requerido)."""
     from apps.almacen.models import DetalleCotizacion
-    if req.estado not in ('APROBADO', 'PARCIAL', 'ATENDIDO'):
+    if req.estado not in ('APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO'):
         return
     aprobado = {}
     aprobado_total_igual_requerido = True
@@ -204,12 +205,23 @@ def _recalcular_estado_req(req):
         k = _clave_item(d.insumo_id, d.descripcion)
         despachado[k] = despachado.get(k, Decimal('0')) + d.cantidad
 
-    hay_despacho = any(v > 0 for v in despachado.values())
-    completo = bool(aprobado) and all(despachado.get(k, Decimal('0')) >= v for k, v in aprobado.items())
-    if completo:
+    cotizado = {}
+    for d in DetalleCotizacion.objects.filter(
+            cotizacion__requerimiento_origen=req,
+            cotizacion__estado='APROBADA'):
+        k = _clave_item(d.insumo_id, d.descripcion)
+        cotizado[k] = cotizado.get(k, Decimal('0')) + d.cantidad
+
+    hay_despacho   = any(v > 0 for v in despachado.values())
+    todo_despachado = bool(aprobado) and all(despachado.get(k, Decimal('0')) >= v for k, v in aprobado.items())
+    todo_cotizado   = bool(aprobado) and all(cotizado.get(k,   Decimal('0')) >= v for k, v in aprobado.items())
+
+    if todo_despachado:
         nuevo = 'ATENDIDO'
     elif hay_despacho:
         nuevo = 'PARCIAL'
+    elif todo_cotizado:
+        nuevo = 'COTIZADO'
     else:
         nuevo = 'APROBADO' if aprobado_total_igual_requerido else 'PARCIAL'
     if nuevo != req.estado:

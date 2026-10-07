@@ -99,6 +99,7 @@
               {% elif r.estado == 'ATENDIDO' %}bg-success
               {% elif r.estado == 'BORRADOR' %}bg-secondary
               {% elif r.estado == 'APROBADO' %}bg-info
+              {% elif r.estado == 'COTIZADO' %}bg-cotizado
               {% elif r.estado == 'ANULADO' %}bg-danger
               {% else %}bg-warning text-dark{% endif %}">
               {{ r.get_estado_display }}

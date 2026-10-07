@@ -55,6 +55,7 @@
                 {% elif req.estado == 'ATENDIDO' %}bg-success
                 {% elif req.estado == 'BORRADOR' %}bg-secondary
                 {% elif req.estado == 'APROBADO' %}bg-info
+                {% elif req.estado == 'COTIZADO' %}bg-cotizado
                 {% elif req.estado == 'ANULADO' %}bg-danger
                 {% else %}bg-warning text-dark{% endif %}">
                 {{ req.get_estado_display }}

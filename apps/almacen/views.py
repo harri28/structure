@@ -33,6 +33,57 @@ def _sync_insumo_snapshot(detalle):
     detalle.save()
 
 
+def _clave_item_cot(insumo_id, descripcion):
+    return ('i', insumo_id) if insumo_id else ('d', (descripcion or '').strip().lower())
+
+
+def _saldo_cotizable(req, excluir_cot_pk=None):
+    """{clave_item: saldo_cotizable} para los ítems APROBADOS de un REQ.
+    saldo = cantidad_aprobada − Σ cantidad en cotizaciones APROBADAS del mismo REQ
+    (excluyendo opcionalmente una cotización — útil al editar/aprobar la propia)."""
+    saldos = {}
+    for det in req.detalles.all():
+        if det.cantidad_aprobada and det.cantidad_aprobada > 0:
+            k = _clave_item_cot(det.insumo_id, det.descripcion)
+            saldos[k] = saldos.get(k, Decimal('0')) + det.cantidad_aprobada
+    qs = DetalleCotizacion.objects.filter(
+        cotizacion__requerimiento_origen=req,
+        cotizacion__estado='APROBADA',
+    )
+    if excluir_cot_pk:
+        qs = qs.exclude(cotizacion_id=excluir_cot_pk)
+    for d in qs:
+        k = _clave_item_cot(d.insumo_id, d.descripcion)
+        if k in saldos:
+            saldos[k] -= d.cantidad
+    return saldos
+
+
+def _errores_contra_saldo(req, items, excluir_cot_pk=None):
+    """items = iterable de dicts con keys insumo_id / descripcion / cantidad.
+    Devuelve lista de mensajes de error (vacía si todo OK). Los ítems que no
+    corresponden a un detalle aprobado del REQ no se validan (p.ej. ítems sueltos)."""
+    saldos = _saldo_cotizable(req, excluir_cot_pk)
+    errores = []
+    # Agrupar cantidades propuestas por clave (dos filas con el mismo insumo suman)
+    propuesto = {}
+    rotulo = {}
+    for it in items:
+        k = _clave_item_cot(it.get('insumo_id'), it.get('descripcion'))
+        if k not in saldos:
+            continue
+        cant = it.get('cantidad') or Decimal('0')
+        if not isinstance(cant, Decimal):
+            cant = Decimal(str(cant))
+        propuesto[k] = propuesto.get(k, Decimal('0')) + cant
+        rotulo.setdefault(k, it.get('descripcion') or f'insumo #{it.get("insumo_id")}')
+    for k, cant in propuesto.items():
+        saldo = saldos[k]
+        if cant > saldo:
+            errores.append(f'{rotulo[k]}: cantidad {cant} supera el saldo cotizable ({saldo}).')
+    return errores
+
+
 @requiere('puede_ver_almacen')
 @proyecto_visible
 def dashboard(request, proyecto_id):
@@ -1054,6 +1105,21 @@ def cot_crear(request, proyecto_id):
         form = CotizacionForm(post)
         formset = DetalleCotizacionFormSet(request.POST, prefix='detalles')
         if form.is_valid() and formset.is_valid():
+            cot_tmp = form.save(commit=False)
+            req_origen = cot_tmp.requerimiento_origen
+            if req_origen:
+                items = [{
+                    'insumo_id': f.cleaned_data.get('insumo').pk if f.cleaned_data.get('insumo') else None,
+                    'descripcion': f.cleaned_data.get('descripcion', ''),
+                    'cantidad': f.cleaned_data.get('cantidad') or Decimal('0'),
+                } for f in formset if f.cleaned_data and not f.cleaned_data.get('DELETE')]
+                errores = _errores_contra_saldo(req_origen, items)
+                if errores:
+                    for e in errores:
+                        messages.error(request, e)
+                    return render(request, 'almacen/cot_form.html', {
+                        'form': form, 'formset': formset, 'proyecto': proyecto, 'titulo': 'Nueva Cotización',
+                    })
             cot = form.save(commit=False)
             cot.proyecto = proyecto
             cot.save()
@@ -1090,6 +1156,26 @@ def cot_desde_req(request, proyecto_id, req_pk):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     req = get_object_or_404(Requerimiento, pk=req_pk, proyecto=proyecto)
 
+    # Pre-calcular ítems candidatos y validar contra el saldo cotizable del REQ
+    detalles = req.detalles.select_related('insumo').all()
+    items_candidatos = []
+    for d in detalles:
+        if not d.descripcion and not d.insumo:
+            continue
+        cantidad = d.cantidad_aprobada if d.cantidad_aprobada is not None else d.cantidad_requerida
+        items_candidatos.append({
+            'insumo': d.insumo,
+            'insumo_id': d.insumo_id,
+            'descripcion': d.descripcion or (d.insumo.descripcion if d.insumo else ''),
+            'cantidad': cantidad,
+            'unidad': d.unidad,
+        })
+    errores = _errores_contra_saldo(req, items_candidatos)
+    if errores:
+        for e in errores:
+            messages.error(request, e)
+        return redirect('almacen:cot_lista', proyecto_id=proyecto_id)
+
     base = str(req.numero)
     cots_previas = req.cotizaciones_origen.count()
     numero = base if cots_previas == 0 else f'{base}-{cots_previas + 1}'
@@ -1108,18 +1194,14 @@ def cot_desde_req(request, proyecto_id, req_pk):
         observaciones=f'Solicitud de cotización generada desde REQ{req.numero}',
     )
 
-    detalles = req.detalles.select_related('insumo').all()
-    for d in detalles:
-        if not d.descripcion and not d.insumo:
-            continue
-        cantidad = d.cantidad_aprobada if d.cantidad_aprobada is not None else d.cantidad_requerida
+    for it in items_candidatos:
         DetalleCotizacion.objects.create(
             cotizacion=cot,
-            insumo=d.insumo,
-            descripcion=d.descripcion or (d.insumo.descripcion if d.insumo else ''),
-            cantidad=cantidad,
+            insumo=it['insumo'],
+            descripcion=it['descripcion'],
+            cantidad=it['cantidad'],
             precio_unitario=Decimal('0'),
-            unidad=d.unidad,
+            unidad=it['unidad'],
         )
 
     # Mantener req.cotizacion_sistema apuntando a la última creada (compat con flujos previos)
@@ -1197,11 +1279,29 @@ def cot_editar(request, pk):
         form = CotizacionForm(request.POST, instance=cot)
         formset = DetalleCotizacionFormSet(request.POST, instance=cot, prefix='detalles')
         if form.is_valid() and formset.is_valid():
+            cot_tmp = form.save(commit=False)
+            req_origen = cot_tmp.requerimiento_origen
+            if req_origen:
+                items = [{
+                    'insumo_id': f.cleaned_data.get('insumo').pk if f.cleaned_data.get('insumo') else None,
+                    'descripcion': f.cleaned_data.get('descripcion', ''),
+                    'cantidad': f.cleaned_data.get('cantidad') or Decimal('0'),
+                } for f in formset if f.cleaned_data and not f.cleaned_data.get('DELETE')]
+                errores = _errores_contra_saldo(req_origen, items, excluir_cot_pk=cot.pk)
+                if errores:
+                    for e in errores:
+                        messages.error(request, e)
+                    return render(request, 'almacen/cot_form.html', {
+                        'form': form, 'formset': formset, 'proyecto': proyecto, 'titulo': 'Editar Cotización',
+                    })
             form.save()
             for d in formset.save():
                 _sync_insumo_snapshot(d)
             log(request, 'EDITAR', 'Almacén',
                 f'Cotización COT{cot.numero} editada en {proyecto.codigo}')
+            if cot.estado == 'APROBADA' and cot.requerimiento_origen_id:
+                from apps.logistica.views import _recalcular_estado_req
+                _recalcular_estado_req(cot.requerimiento_origen)
             messages.success(request, 'Cotización actualizada.')
             return redirect('almacen:cot_detalle', pk=cot.pk)
     else:
@@ -1221,10 +1321,24 @@ def cot_aprobar(request, pk):
     if cot.estado == 'APROBADA':
         messages.info(request, f'La cotización COT{cot.numero} ya estaba aprobada.')
     else:
+        if cot.requerimiento_origen_id:
+            items = [{
+                'insumo_id': d.insumo_id,
+                'descripcion': d.descripcion,
+                'cantidad': d.cantidad,
+            } for d in cot.detalles.all()]
+            errores = _errores_contra_saldo(cot.requerimiento_origen, items, excluir_cot_pk=cot.pk)
+            if errores:
+                for e in errores:
+                    messages.error(request, e)
+                return redirect('almacen:cot_detalle', pk=cot.pk)
         cot.estado = 'APROBADA'
         cot.save(update_fields=['estado'])
         log(request, 'EDITAR', 'Almacén',
             f'Cotización COT{cot.numero} aprobada en {cot.proyecto.codigo}')
+        if cot.requerimiento_origen_id:
+            from apps.logistica.views import _recalcular_estado_req
+            _recalcular_estado_req(cot.requerimiento_origen)
         messages.success(request, f'Cotización COT{cot.numero} aprobada.')
     if request.POST.get('volver') == 'lista':
         return redirect('almacen:cot_lista', proyecto_id=cot.proyecto_id)
@@ -1237,7 +1351,12 @@ def cot_eliminar(request, pk):
     proyecto = cot.proyecto
     if request.method == 'POST':
         ref = f'COT{cot.numero}'
+        req_origen = cot.requerimiento_origen
+        era_aprobada = cot.estado == 'APROBADA'
         cot.delete()
+        if req_origen and era_aprobada:
+            from apps.logistica.views import _recalcular_estado_req
+            _recalcular_estado_req(req_origen)
         log(request, 'ELIMINAR', 'Almacén', f'Cotización {ref} eliminada en {proyecto.codigo}')
         messages.success(request, 'Cotización eliminada.')
         return redirect('almacen:cot_lista', proyecto_id=proyecto.pk)
