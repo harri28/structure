@@ -131,9 +131,7 @@
               <th>Cargo</th>
               <th>Teléfono</th>
               <th>Experiencia</th>
-              <th>Licencia</th>
-              <th>Maq. pesada</th>
-              <th>CV</th>
+              <th class="text-center">CV</th>
               <th></th>
             </tr>
           </thead>
@@ -161,24 +159,11 @@
               <td>{{ t.tipo_personal.nombre|default:"—" }}</td>
               <td>{{ t.telefono|default:"—" }}</td>
               <td>{% if t.anios_experiencia %}{{ t.anios_experiencia }} años{% else %}—{% endif %}</td>
-              <td>
-                {% if t.tiene_licencia %}
-                  <span class="badge bg-success-subtle text-success">{{ t.licencia_categoria|default:"Sí" }}</span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if t.opera_maquinaria_pesada %}
-                  <i class="bi bi-check-circle-fill text-success"></i>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-              <td>
+              <td class="text-center">
                 {% if t.cv %}
-                  <a href="{{ t.cv.url }}" target="_blank" class="btn-tbl" title="Descargar CV">
-                    <i class="bi bi-file-earmark-pdf"></i>
+                  <a href="{{ t.cv.url }}" target="_blank" title="Abrir CV ({{ t.cv.name|cut:'trabajadores/cv/' }})"
+                     style="color:#dc2626;font-size:1.25rem;text-decoration:none">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
                   </a>
                 {% else %}
                   <span class="text-muted">—</span>
@@ -202,7 +187,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="10" class="text-center py-5 text-muted">
+              <td colspan="8" class="text-center py-5 text-muted">
                 <i class="bi bi-people" style="font-size:2rem;opacity:.25;display:block;margin-bottom:.5rem"></i>
                 No hay personal registrado todavía.
                 <div class="mt-2">
