@@ -1,73 +1,289 @@
 {% extends 'base.html' %}
 {% block title %}{{ titulo }}{% endblock %}
-{% block nav_cuadrillas_admin %}active{% endblock %}
+{% block nav_reg_cuadrilla %}active{% endblock %}
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{% url 'maquinaria:cuadrilla_lista' %}">Cuadrillas</a></li>
-<li class="breadcrumb-item"><a href="{% url 'maquinaria:trabajador_lista' proyecto.pk %}">Personal de Obra</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=personal">Cuadrilla</a></li>
+<li class="breadcrumb-item"><a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=personal">Personal</a></li>
 <li class="breadcrumb-item active">{{ titulo }}</li>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <a href="{% url 'maquinaria:trabajador_lista' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Personal de Obra</a>
+  <a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=personal" class="btn-back">
+    <i class="bi bi-chevron-left"></i> Personal
+  </a>
   <h4><i class="bi bi-person-vcard me-2"></i>{{ titulo }}</h4>
+  <div class="text-muted">{{ proyecto.codigo }} — {{ proyecto.nombre }}</div>
 </div>
 
-<div class="card form-compact" style="max-width:680px">
-  <div class="card-body">
-    <form method="post" enctype="multipart/form-data">
-      {% csrf_token %}
+<form method="post" enctype="multipart/form-data" class="form-compact">
+  {% csrf_token %}
+
+  {# ─── Datos personales ────────────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-person me-1"></i>Datos personales</div>
+    <div class="card-body">
       <div class="row g-3">
         <div class="col-md-6">
-          <label class="form-label">Nombres</label>
+          <label class="form-label">Nombres <span class="text-danger">*</span></label>
           {{ form.nombres }}
         </div>
         <div class="col-md-6">
-          <label class="form-label">Apellidos</label>
+          <label class="form-label">Apellidos <span class="text-danger">*</span></label>
           {{ form.apellidos }}
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label">DNI</label>
           {{ form.dni }}
         </div>
+        <div class="col-md-3">
+          <label class="form-label">Fecha de nacimiento</label>
+          {{ form.fecha_nacimiento }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Sexo</label>
+          {{ form.sexo }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Estado civil</label>
+          {{ form.estado_civil }}
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Lugar de nacimiento</label>
+          {{ form.lugar_nacimiento }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Contacto ──────────────────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-telephone me-1"></i>Contacto</div>
+    <div class="card-body">
+      <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label">Cargo</label>
-          {{ form.tipo_personal }}
+          <label class="form-label">Teléfono principal</label>
+          {{ form.telefono }}
         </div>
         <div class="col-md-4">
-          <label class="form-label">Teléfono</label>
-          {{ form.telefono }}
+          <label class="form-label">Teléfono alternativo</label>
+          {{ form.telefono2 }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Correo electrónico</label>
+          {{ form.email }}
         </div>
         <div class="col-12">
           <label class="form-label">Dirección</label>
           {{ form.direccion }}
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Fecha de nacimiento</label>
-          {{ form.fecha_nacimiento }}
+        <div class="col-md-4">
+          <label class="form-label">Distrito</label>
+          {{ form.distrito }}
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
+          <label class="form-label">Provincia</label>
+          {{ form.provincia }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Departamento</label>
+          {{ form.departamento }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Contacto de emergencia ────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-shield-plus me-1"></i>Contacto de emergencia</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label">Nombre completo</label>
+          {{ form.emergencia_nombre }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Parentesco</label>
+          {{ form.emergencia_parentesco }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Teléfono</label>
+          {{ form.emergencia_telefono }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Experiencia laboral ──────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-briefcase me-1"></i>Datos laborales y experiencia</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label">Cargo / Puesto</label>
+          {{ form.tipo_personal }}
+        </div>
+        <div class="col-md-4">
           <label class="form-label">Fecha de ingreso a obra</label>
           {{ form.fecha_ingreso }}
         </div>
-        <div class="col-md-8">
-          <label class="form-label">Foto</label>
-          {{ form.foto }}
+        <div class="col-md-3">
+          <label class="form-label">Años de experiencia</label>
+          {{ form.anios_experiencia }}
         </div>
-        <div class="col-md-4 d-flex align-items-end">
+        <div class="col-12">
+          <label class="form-label">Experiencia (empresas, obras, cargos anteriores)</label>
+          {{ form.experiencia_descripcion }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Habilidades ──────────────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-tools me-1"></i>Habilidades y oficios</div>
+    <div class="card-body">
+      <label class="form-label">Habilidades</label>
+      {{ form.habilidades }}
+      <small class="form-text text-muted">{{ form.habilidades.help_text }}</small>
+    </div>
+  </div>
+
+  {# ─── Licencia de conducir ─────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-car-front me-1"></i>Licencia de conducir</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3 d-flex align-items-end">
           <div class="form-check mb-2">
-            {{ form.activo }}
-            <label class="form-check-label">Activo</label>
+            {{ form.tiene_licencia }}
+            <label class="form-check-label" for="{{ form.tiene_licencia.id_for_label }}">Tiene licencia</label>
           </div>
         </div>
+        <div class="col-md-3">
+          <label class="form-label">Categoría</label>
+          {{ form.licencia_categoria }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">N° de licencia</label>
+          {{ form.licencia_numero }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Vencimiento</label>
+          {{ form.licencia_vencimiento }}
+        </div>
       </div>
-      <div class="d-flex gap-2 mt-4">
-        <button type="submit" class="btn btn-primary">
-          {% if obj %}Guardar cambios{% else %}Registrar y continuar a documentos{% endif %}
-        </button>
-        <a href="{% url 'maquinaria:trabajador_lista' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
-      </div>
-    </form>
+    </div>
   </div>
-</div>
+
+  {# ─── Maquinaria pesada ────────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-truck me-1"></i>Maquinaria pesada</div>
+    <div class="card-body">
+      <div class="form-check mb-2">
+        {{ form.opera_maquinaria_pesada }}
+        <label class="form-check-label" for="{{ form.opera_maquinaria_pesada.id_for_label }}">
+          Opera maquinaria pesada
+        </label>
+      </div>
+      <label class="form-label">Maquinaria que opera</label>
+      {{ form.maquinas_opera }}
+      <small class="form-text text-muted">{{ form.maquinas_opera.help_text }}</small>
+    </div>
+  </div>
+
+  {# ─── Seguridad social ─────────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-shield-check me-1"></i>Seguridad social y pagos</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Régimen de pensiones</label>
+          {{ form.regimen_pension }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">CUSPP</label>
+          {{ form.cuspp }}
+        </div>
+        <div class="col-md-4 d-flex align-items-end gap-3">
+          <div class="form-check mb-2">
+            {{ form.tiene_essalud }}
+            <label class="form-check-label" for="{{ form.tiene_essalud.id_for_label }}">EsSalud</label>
+          </div>
+          <div class="form-check mb-2">
+            {{ form.tiene_sctr }}
+            <label class="form-check-label" for="{{ form.tiene_sctr.id_for_label }}">SCTR</label>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Banco</label>
+          {{ form.banco }}
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Cuenta CCI</label>
+          {{ form.cuenta_cci }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Archivos ─────────────────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-paperclip me-1"></i>Archivos</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Foto</label>
+          {{ form.foto }}
+          {% if obj and obj.foto %}
+            <small class="form-text text-muted">Actual: {{ obj.foto.name|cut:"trabajadores/fotos/" }}</small>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">CV (PDF o Word)</label>
+          {{ form.cv }}
+          {% if obj and obj.cv %}
+            <small class="form-text text-muted">
+              Actual: <a href="{{ obj.cv.url }}" target="_blank">{{ obj.cv.name|cut:"trabajadores/cv/" }}</a>
+            </small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Observaciones ────────────────────────────────── #}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-chat-left-text me-1"></i>Observaciones</div>
+    <div class="card-body">
+      {{ form.observaciones }}
+      <div class="form-check mt-3">
+        {{ form.activo }}
+        <label class="form-check-label" for="{{ form.activo.id_for_label }}">Trabajador activo</label>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Acciones ────────────────────────────────────── #}
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>
+      {% if obj %}Guardar cambios{% else %}Registrar personal{% endif %}
+    </button>
+    <a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=personal" class="btn btn-outline-secondary">
+      Cancelar
+    </a>
+  </div>
+
+  {% if form.errors %}
+  <div class="alert alert-danger">
+    <strong>Revisa los campos:</strong>
+    <ul class="mb-0">
+      {% for field, errors in form.errors.items %}
+        <li>{{ field }}: {{ errors|join:", " }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</form>
 {% endblock %}

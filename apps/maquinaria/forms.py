@@ -2,7 +2,7 @@ from datetime import date
 from django import forms
 from .models import (
     TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla,
-    RegistroDiario, RegistroMaquinaria, Liquidacion,
+    RegistroMaquinaria, Liquidacion,
     Trabajador, DocumentoTrabajador,
 )
 
@@ -91,30 +91,98 @@ class TrabajadorForm(forms.ModelForm):
     class Meta:
         model  = Trabajador
         fields = [
-            'nombres', 'apellidos', 'dni', 'tipo_personal',
-            'telefono', 'direccion', 'fecha_nacimiento', 'fecha_ingreso',
-            'foto', 'activo',
+            # Datos personales
+            'nombres', 'apellidos', 'dni', 'fecha_nacimiento',
+            'sexo', 'estado_civil', 'lugar_nacimiento',
+            # Contacto
+            'telefono', 'telefono2', 'email',
+            'direccion', 'distrito', 'provincia', 'departamento',
+            # Emergencia
+            'emergencia_nombre', 'emergencia_parentesco', 'emergencia_telefono',
+            # Laboral
+            'tipo_personal', 'fecha_ingreso',
+            'anios_experiencia', 'experiencia_descripcion',
+            # Habilidades
+            'habilidades',
+            # Licencia
+            'tiene_licencia', 'licencia_categoria', 'licencia_numero', 'licencia_vencimiento',
+            # Maquinaria pesada
+            'opera_maquinaria_pesada', 'maquinas_opera',
+            # Seguridad social
+            'regimen_pension', 'cuspp', 'tiene_essalud', 'tiene_sctr',
+            'banco', 'cuenta_cci',
+            # Archivos
+            'foto', 'cv',
+            # Observaciones
+            'observaciones',
+            # Control
+            'activo',
         ]
         widgets = {
-            'nombres':           forms.TextInput(attrs={'class': 'form-control'}),
-            'apellidos':         forms.TextInput(attrs={'class': 'form-control'}),
-            'dni':               forms.TextInput(attrs={'class': 'form-control', 'maxlength': 15, 'inputmode': 'numeric', 'placeholder': 'DNI'}),
-            'tipo_personal':     forms.Select(attrs={'class': 'form-select'}),
-            'telefono':          forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 987654321'}),
-            'direccion':         forms.TextInput(attrs={'class': 'form-control'}),
+            # Datos personales
+            'nombres':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Juan Carlos'}),
+            'apellidos':         forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Pérez García'}),
+            'dni':               forms.TextInput(attrs={'class': 'form-control', 'maxlength': 15, 'inputmode': 'numeric', 'placeholder': '8 dígitos'}),
             'fecha_nacimiento':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'fecha_ingreso':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'foto':              forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'activo':            forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'sexo':              forms.Select(attrs={'class': 'form-select'}),
+            'estado_civil':      forms.Select(attrs={'class': 'form-select'}),
+            'lugar_nacimiento':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Cajamarca'}),
+            # Contacto
+            'telefono':          forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'tel', 'placeholder': '9XXXXXXXX'}),
+            'telefono2':         forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'tel', 'placeholder': 'Opcional'}),
+            'email':             forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}),
+            'direccion':         forms.TextInput(attrs={'class': 'form-control'}),
+            'distrito':          forms.TextInput(attrs={'class': 'form-control'}),
+            'provincia':         forms.TextInput(attrs={'class': 'form-control'}),
+            'departamento':      forms.TextInput(attrs={'class': 'form-control'}),
+            # Emergencia
+            'emergencia_nombre':     forms.TextInput(attrs={'class': 'form-control'}),
+            'emergencia_parentesco': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Esposa, hermano, madre...'}),
+            'emergencia_telefono':   forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'tel'}),
+            # Laboral
+            'tipo_personal':         forms.Select(attrs={'class': 'form-select'}),
+            'fecha_ingreso':         forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'anios_experiencia':     forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 70, 'placeholder': 'Ej: 5'}),
+            'experiencia_descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3,
+                                        'placeholder': 'Empresas, obras, cargos anteriores...'}),
+            # Habilidades
+            'habilidades':           forms.Textarea(attrs={'class': 'form-control', 'rows': 3,
+                                        'placeholder': 'Ej: albañilería, encofrado, soldadura 6G, operador grúa torre...'}),
+            # Licencia
+            'tiene_licencia':        forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'licencia_categoria':    forms.Select(attrs={'class': 'form-select'}),
+            'licencia_numero':       forms.TextInput(attrs={'class': 'form-control'}),
+            'licencia_vencimiento':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            # Maquinaria pesada
+            'opera_maquinaria_pesada': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'maquinas_opera':          forms.Textarea(attrs={'class': 'form-control', 'rows': 2,
+                                          'placeholder': 'Ej: retroexcavadora, cargador frontal, volquete...'}),
+            # Seguridad social
+            'regimen_pension':       forms.Select(attrs={'class': 'form-select'}),
+            'cuspp':                 forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Si aplica (AFP)'}),
+            'tiene_essalud':         forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'tiene_sctr':            forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'banco':                 forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'BCP, BBVA, Interbank...'}),
+            'cuenta_cci':            forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'maxlength': 25,
+                                       'placeholder': '20 dígitos'}),
+            # Archivos
+            'foto':                  forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'cv':                    forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx'}),
+            # Observaciones
+            'observaciones':         forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            # Control
+            'activo':                forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['tipo_personal'].queryset    = TipoPersonal.objects.filter(activo=True)
-        self.fields['tipo_personal'].required    = False
         self.fields['tipo_personal'].empty_label = '— Sin cargo asignado —'
-        for f in ['dni', 'telefono', 'direccion', 'fecha_nacimiento', 'fecha_ingreso', 'foto']:
-            self.fields[f].required = False
+        # Solo nombres y apellidos son obligatorios; el resto es opcional
+        obligatorios = {'nombres', 'apellidos'}
+        for name, field in self.fields.items():
+            if name not in obligatorios:
+                field.required = False
 
 
 class DocumentoTrabajadorForm(forms.ModelForm):
@@ -125,36 +193,6 @@ class DocumentoTrabajadorForm(forms.ModelForm):
             'nombre':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: CV, DNI, Certificado SCTR, Antecedentes...'}),
             'archivo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
-
-
-class RegistroDiarioForm(forms.ModelForm):
-    class Meta:
-        model  = RegistroDiario
-        fields = ['fecha', 'partida', 'cuadrilla', 'horas', 'observacion']
-        widgets = {
-            'fecha':       forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'partida':     forms.Select(attrs={'class': 'form-select'}),
-            'cuadrilla':   forms.Select(attrs={'class': 'form-select'}),
-            'horas':       forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'min': '0'}),
-            'observacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-        }
-
-    def __init__(self, proyecto=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if not self.instance.pk:
-            self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
-        from django.db.models import Count
-        from apps.presupuesto.models import Partida
-        if proyecto:
-            self.fields['partida'].queryset = (
-                Partida.objects
-                .annotate(n_hijos=Count('hijos'))
-                .filter(presupuesto__proyecto=proyecto, n_hijos=0)
-                .order_by('orden')
-            )
-        self.fields['partida'].required  = False
-        self.fields['partida'].empty_label = '— Sin partida —'
-        self.fields['cuadrilla'].queryset = Cuadrilla.objects.filter(activo=True)
 
 
 class RegistroMaquinariaForm(forms.ModelForm):

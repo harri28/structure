@@ -1,5 +1,6 @@
 import json
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.contrib import messages
 from django.conf import settings
 from django.db.models import Sum, Count, Min, Max, Q
@@ -14,7 +15,7 @@ from .models import (
 )
 from .forms import (
     TipoPersonalForm, MaquinariaForm, CuadrillaForm,
-    IntegranteCuadrillaForm, RegistroDiarioForm, RegistroMaquinariaForm, ParteForm,
+    IntegranteCuadrillaForm, RegistroMaquinariaForm, ParteForm,
     TrabajadorForm, DocumentoTrabajadorForm,
 )
 from config.permisos import requiere, proyecto_visible
@@ -259,10 +260,10 @@ def trabajador_crear(request, proyecto_id):
         trabajador = form.save(commit=False)
         trabajador.proyecto = proyecto
         trabajador.save()
-        messages.success(request, 'Trabajador registrado. Ahora puedes subir su CV y documentos.')
-        return redirect('maquinaria:trabajador_detalle', pk=trabajador.pk)
+        messages.success(request, f'{trabajador.nombre_completo()} registrado correctamente.')
+        return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=personal")
     return render(request, 'maquinaria/trabajador_form.html', {
-        'form': form, 'proyecto': proyecto, 'titulo': 'Nuevo Trabajador',
+        'form': form, 'proyecto': proyecto, 'titulo': 'Nuevo personal',
     })
 
 
@@ -284,10 +285,10 @@ def trabajador_editar(request, pk):
     form = TrabajadorForm(request.POST or None, request.FILES or None, instance=trabajador)
     if form.is_valid():
         form.save()
-        messages.success(request, 'Trabajador actualizado.')
-        return redirect('maquinaria:trabajador_detalle', pk=pk)
+        messages.success(request, 'Datos actualizados.')
+        return redirect(f"{reverse('maquinaria:registro_lista', args=[trabajador.proyecto_id])}?tab=personal")
     return render(request, 'maquinaria/trabajador_form.html', {
-        'form': form, 'proyecto': trabajador.proyecto, 'titulo': 'Editar Trabajador', 'obj': trabajador,
+        'form': form, 'proyecto': trabajador.proyecto, 'titulo': 'Editar personal', 'obj': trabajador,
     })
 
 
@@ -296,11 +297,10 @@ def trabajador_eliminar(request, pk):
     obj = get_object_or_404(Trabajador, pk=pk)
     proyecto_id = obj.proyecto_id
     if request.method == 'POST':
+        nombre = obj.nombre_completo()
         obj.delete()
-        messages.success(request, 'Trabajador eliminado.')
-        return redirect('maquinaria:trabajador_lista', proyecto_id=proyecto_id)
-    return render(request, 'maquinaria/confirmar_eliminar.html', {'obj': obj, 'tipo': 'Trabajador',
-        'cancel_url': 'maquinaria:trabajador_detalle', 'cancel_args': [pk]})
+        messages.success(request, f'{nombre} eliminado.')
+    return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=personal")
 
 
 @requiere('puede_gestionar_maquinaria')
@@ -328,65 +328,23 @@ def documento_eliminar(request, pk):
     return redirect('maquinaria:trabajador_detalle', pk=trabajador_pk)
 
 
-# ── Registros Diarios (Cuadrilla) ─────────────────────────────────────
+# ── Cuadrilla (Cuadrilla En desarrollo + Personal activo) ─────────────
 
 @requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 @proyecto_visible
 def registro_lista(request, proyecto_id):
-    proyecto  = get_object_or_404(Proyecto, pk=proyecto_id)
-    registros = (RegistroDiario.objects
-                 .filter(proyecto=proyecto)
-                 .select_related('cuadrilla', 'partida')
-                 .prefetch_related('cuadrilla__integrantes'))
-    total_hh  = sum(r.horas_hombre() for r in registros)
+    proyecto     = get_object_or_404(Proyecto, pk=proyecto_id)
+    trabajadores = (
+        Trabajador.objects
+        .filter(proyecto=proyecto)
+        .select_related('tipo_personal')
+    )
+    tab = request.GET.get('tab', 'cuadrilla')
     return render(request, 'maquinaria/registro_lista.html', {
-        'proyecto':  proyecto,
-        'registros': registros,
-        'total_hh':  total_hh,
+        'proyecto':     proyecto,
+        'trabajadores': trabajadores,
+        'tab_activa':   'personal' if tab == 'personal' else 'cuadrilla',
     })
-
-
-@requiere('puede_gestionar_maquinaria')
-@proyecto_visible
-def registro_crear(request, proyecto_id):
-    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    form     = RegistroDiarioForm(proyecto=proyecto, data=request.POST or None)
-    if form.is_valid():
-        reg = form.save(commit=False)
-        reg.proyecto = proyecto
-        reg.save()
-        messages.success(request, 'Registro guardado.')
-        return redirect('maquinaria:registro_lista', proyecto_id=proyecto_id)
-    return render(request, 'maquinaria/registro_form.html', {
-        'form':    form,
-        'proyecto': proyecto,
-        'titulo':  'Nuevo Registro de Cuadrilla',
-    })
-
-
-@requiere('puede_gestionar_maquinaria')
-def registro_editar(request, pk):
-    registro = get_object_or_404(RegistroDiario, pk=pk)
-    form     = RegistroDiarioForm(proyecto=registro.proyecto, data=request.POST or None, instance=registro)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Registro actualizado.')
-        return redirect('maquinaria:registro_lista', proyecto_id=registro.proyecto_id)
-    return render(request, 'maquinaria/registro_form.html', {
-        'form':    form,
-        'proyecto': registro.proyecto,
-        'titulo':  'Editar Registro de Cuadrilla',
-    })
-
-
-@requiere('puede_gestionar_maquinaria')
-def registro_eliminar(request, pk):
-    registro     = get_object_or_404(RegistroDiario, pk=pk)
-    proyecto_id  = registro.proyecto_id
-    if request.method == 'POST':
-        registro.delete()
-        messages.success(request, 'Registro eliminado.')
-    return redirect('maquinaria:registro_lista', proyecto_id=proyecto_id)
 
 
 # ── Registros Maquinaria ──────────────────────────────────────────────

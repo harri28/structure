@@ -12,7 +12,6 @@ urlpatterns = [
     path('<int:pk>/',                                      views.detalle,         name='detalle'),
     path('<int:pk>/editar/',                               views.editar,          name='editar'),
     path('<int:pk>/eliminar/',                             views.eliminar,        name='eliminar'),
-    path('<int:pk>/personal/',                             views.personal,        name='personal'),
     path('<int:pk>/equipo/agregar/',                       views.miembro_agregar, name='miembro_agregar'),
     path('<int:pk>/equipo/<int:usuario_id>/quitar/',       views.miembro_quitar,      name='miembro_quitar'),
     path('<int:pk>/restablecer/',                          views.proyecto_restablecer, name='restablecer'),

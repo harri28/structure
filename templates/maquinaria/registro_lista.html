@@ -1,55 +1,164 @@
-﻿{% extends 'base.html' %}
-{% block title %}Registro de Cuadrilla{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Cuadrilla{% endblock %}
 {% block nav_reg_cuadrilla %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'maquinaria:dashboard' proyecto.pk %}">Maquinaria</a></li>
-<li class="breadcrumb-item active">Registro de Cuadrilla</li>
+<li class="breadcrumb-item active">Cuadrilla</li>
 {% endblock %}
 
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center">
-  <div>
-    <a href="{% url 'maquinaria:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Maquinaria</a>
-    <h4><i class="bi bi-people-fill me-2"></i>Registro de Cuadrilla</h4>
-    <div class="text-muted">Total acumulado: <strong>{{ total_hh }} HH</strong></div>
-  </div>
-  <a href="{% url 'maquinaria:registro_crear' proyecto.pk %}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Nuevo Registro
-  </a>
+<div class="page-header">
+  <a href="{% url 'maquinaria:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Maquinaria</a>
+  <h4><i class="bi bi-people-fill me-2"></i>Cuadrilla</h4>
+  <div class="text-muted">{{ proyecto.codigo }} — {{ proyecto.nombre }}</div>
 </div>
 
-<div class="card">
-  <div class="card-body p-0">
-    <table class="table-modern">
-      <thead>
-        <tr><th>Fecha</th><th>Cuadrilla</th><th class="text-end">Horas</th><th class="text-end">HH</th><th>Partida</th><th>Obs.</th><th></th></tr>
-      </thead>
-      <tbody>
-      {% for r in registros %}
-      <tr>
-        <td>{{ r.fecha|date:"d/m/Y" }}</td>
-        <td>
-          <div class="fw-semibold">{{ r.cuadrilla }}</div>
-        </td>
-        <td class="text-end">{{ r.horas }}</td>
-        <td class="text-end fw-semibold" style="color:#0ea5e9">{{ r.horas_hombre }}</td>
-        <td class="text-muted">
-          {% if r.partida %}{{ r.partida.codigo }} — {{ r.partida.nombre|truncatechars:40 }}{% else %}—{% endif %}
-        </td>
-        <td class="text-muted">{{ r.observacion|truncatechars:30|default:"—" }}</td>
-        <td class="d-flex gap-1">
-          <a href="{% url 'maquinaria:registro_editar' r.pk %}" class="btn-tbl"><i class="bi bi-pencil"></i></a>
-          <form method="post" action="{% url 'maquinaria:registro_eliminar' r.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn-tbl text-danger" onclick="return confirm('¿Eliminar este registro?')"><i class="bi bi-trash"></i></button>
-          </form>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="7" class="text-center text-muted py-4">Sin registros</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+<ul class="nav nav-tabs mb-3" id="cuadrillaTabs" role="tablist" style="border-bottom:1px solid #e5e7eb">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {% if tab_activa == 'cuadrilla' %}active{% endif %}"
+            id="tab-cuadrilla" data-bs-toggle="tab" data-bs-target="#pane-cuadrilla"
+            type="button" role="tab" aria-controls="pane-cuadrilla"
+            aria-selected="{% if tab_activa == 'cuadrilla' %}true{% else %}false{% endif %}">
+      <i class="bi bi-people-fill me-1"></i>Cuadrilla
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {% if tab_activa == 'personal' %}active{% endif %}"
+            id="tab-personal" data-bs-toggle="tab" data-bs-target="#pane-personal"
+            type="button" role="tab" aria-controls="pane-personal"
+            aria-selected="{% if tab_activa == 'personal' %}true{% else %}false{% endif %}">
+      <i class="bi bi-person-badge me-1"></i>Personal
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+  {# ─── Tab Cuadrilla (En desarrollo) ─────────────── #}
+  <div class="tab-pane fade {% if tab_activa == 'cuadrilla' %}show active{% endif %}"
+       id="pane-cuadrilla" role="tabpanel" aria-labelledby="tab-cuadrilla">
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-tools" style="font-size:3rem;color:#9ca3af;display:block;margin-bottom:1rem"></i>
+        <h5 class="text-muted mb-2">En desarrollo</h5>
+        <p class="text-muted mb-0" style="max-width:480px;margin:0 auto">
+          Registros de cuadrilla — este módulo se está rediseñando.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Tab Personal ───────────────────────────────── #}
+  <div class="tab-pane fade {% if tab_activa == 'personal' %}show active{% endif %}"
+       id="pane-personal" role="tabpanel" aria-labelledby="tab-personal">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="text-muted">
+        <strong>{{ trabajadores|length }}</strong> registrado{{ trabajadores|length|pluralize:"s" }}
+      </div>
+      <a href="{% url 'maquinaria:trabajador_crear' proyecto.pk %}" class="btn btn-primary">
+        <i class="bi bi-person-plus me-1"></i>Nuevo personal
+      </a>
+    </div>
+
+    <div class="card">
+      <div class="card-body p-0">
+        <table class="table-modern">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Nombre</th>
+              <th>DNI</th>
+              <th>Cargo</th>
+              <th>Teléfono</th>
+              <th>Experiencia</th>
+              <th>Licencia</th>
+              <th>Maq. pesada</th>
+              <th>CV</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for t in trabajadores %}
+            <tr>
+              <td style="width:40px">
+                {% if t.foto %}
+                  <img src="{{ t.foto.url }}" alt=""
+                       style="width:34px;height:34px;border-radius:50%;object-fit:cover">
+                {% else %}
+                  <div style="width:34px;height:34px;border-radius:50%;background:#eff6ff;
+                              display:flex;align-items:center;justify-content:center">
+                    <i class="bi bi-person-fill" style="color:#2563eb"></i>
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                <div class="fw-semibold">{{ t.apellidos }}, {{ t.nombres }}</div>
+                {% if not t.activo %}
+                  <span class="text-muted" style="font-size:.72rem">Inactivo</span>
+                {% endif %}
+              </td>
+              <td>{{ t.dni|default:"—" }}</td>
+              <td>{{ t.tipo_personal.nombre|default:"—" }}</td>
+              <td>{{ t.telefono|default:"—" }}</td>
+              <td>{% if t.anios_experiencia %}{{ t.anios_experiencia }} años{% else %}—{% endif %}</td>
+              <td>
+                {% if t.tiene_licencia %}
+                  <span class="badge bg-success-subtle text-success">{{ t.licencia_categoria|default:"Sí" }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if t.opera_maquinaria_pesada %}
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if t.cv %}
+                  <a href="{{ t.cv.url }}" target="_blank" class="btn-tbl" title="Descargar CV">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                  </a>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="d-flex gap-1">
+                <a href="{% url 'maquinaria:trabajador_detalle' t.pk %}" class="btn-tbl" title="Ver">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{% url 'maquinaria:trabajador_editar' t.pk %}" class="btn-tbl" title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form method="post" action="{% url 'maquinaria:trabajador_eliminar' t.pk %}"
+                      onsubmit="return confirm('¿Eliminar a {{ t.nombres }} {{ t.apellidos }}?')">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-tbl text-danger" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="10" class="text-center py-5 text-muted">
+                <i class="bi bi-people" style="font-size:2rem;opacity:.25;display:block;margin-bottom:.5rem"></i>
+                No hay personal registrado todavía.
+                <div class="mt-2">
+                  <a href="{% url 'maquinaria:trabajador_crear' proyecto.pk %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-person-plus me-1"></i>Registrar el primer personal
+                  </a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 {% endblock %}

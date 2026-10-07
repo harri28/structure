@@ -37,11 +37,8 @@ urlpatterns = [
     path('personal/<int:pk>/documento/agregar/',           views.documento_agregar,  name='documento_agregar'),
     path('personal/documento/<int:pk>/eliminar/',          views.documento_eliminar, name='documento_eliminar'),
 
-    # Registros Diarios de Cuadrilla (por proyecto)
+    # Cuadrilla — En desarrollo (solo entrada; registros_crear/editar/eliminar retirados)
     path('proyecto/<int:proyecto_id>/registros/',         views.registro_lista,   name='registro_lista'),
-    path('proyecto/<int:proyecto_id>/registros/nuevo/',   views.registro_crear,   name='registro_crear'),
-    path('registros/<int:pk>/editar/',                    views.registro_editar,  name='registro_editar'),
-    path('registros/<int:pk>/eliminar/',                  views.registro_eliminar, name='registro_eliminar'),
 
     # Página principal de Maquinaria (lista de máquinas del proyecto)
     path('proyecto/<int:proyecto_id>/equipos/',                          views.maq_principal,           name='maq_principal'),

@@ -120,23 +120,117 @@ class Cuadrilla(models.Model):
         )
 
 
+SEXO_CHOICES = [
+    ('M', 'Masculino'),
+    ('F', 'Femenino'),
+]
+
+ESTADO_CIVIL_CHOICES = [
+    ('SOLTERO',     'Soltero/a'),
+    ('CASADO',      'Casado/a'),
+    ('CONVIVIENTE', 'Conviviente'),
+    ('DIVORCIADO',  'Divorciado/a'),
+    ('VIUDO',       'Viudo/a'),
+]
+
+LICENCIA_CATEGORIAS = [
+    ('A-I',    'A-I  (Autos particulares)'),
+    ('A-IIA',  'A-IIa (Taxi)'),
+    ('A-IIB',  'A-IIb (Transporte interurbano)'),
+    ('A-IIIA', 'A-IIIa (Transporte interprovincial)'),
+    ('A-IIIB', 'A-IIIb (Transporte mercancías pesado)'),
+    ('A-IIIC', 'A-IIIc (Carga especial)'),
+    ('B-I',    'B-I (Motos lineales)'),
+    ('B-IIA',  'B-IIa (Mototaxi)'),
+    ('B-IIB',  'B-IIb (Motocarga)'),
+    ('B-IIC',  'B-IIc (Motocicleta carga)'),
+]
+
+REGIMEN_PENSION_CHOICES = [
+    ('NINGUNO',  'No afiliado'),
+    ('ONP',      'ONP'),
+    ('INTEGRA',  'AFP Integra'),
+    ('PRIMA',    'AFP Prima'),
+    ('HABITAT',  'AFP Habitat'),
+    ('PROFUTURO','AFP Profuturo'),
+]
+
+
 class Trabajador(models.Model):
     proyecto     = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='trabajadores')
-    nombres      = models.CharField(max_length=150)
-    apellidos    = models.CharField(max_length=150)
-    dni          = models.CharField('DNI', max_length=15, blank=True)
+
+    # — Datos personales —
+    nombres          = models.CharField(max_length=150)
+    apellidos        = models.CharField(max_length=150)
+    dni              = models.CharField('DNI', max_length=15, blank=True)
+    fecha_nacimiento = models.DateField('Fecha de nacimiento', null=True, blank=True)
+    sexo             = models.CharField('Sexo', max_length=1, choices=SEXO_CHOICES, blank=True)
+    estado_civil     = models.CharField('Estado civil', max_length=15, choices=ESTADO_CIVIL_CHOICES, blank=True)
+    lugar_nacimiento = models.CharField('Lugar de nacimiento', max_length=150, blank=True)
+
+    # — Contacto —
+    telefono     = models.CharField('Teléfono', max_length=20, blank=True)
+    telefono2    = models.CharField('Teléfono alternativo', max_length=20, blank=True)
+    email        = models.EmailField('Correo electrónico', blank=True)
+    direccion    = models.CharField('Dirección', max_length=300, blank=True)
+    distrito     = models.CharField('Distrito', max_length=80, blank=True)
+    provincia    = models.CharField('Provincia', max_length=80, blank=True)
+    departamento = models.CharField('Departamento', max_length=80, blank=True)
+
+    # — Contacto de emergencia —
+    emergencia_nombre     = models.CharField('Contacto de emergencia', max_length=150, blank=True)
+    emergencia_parentesco = models.CharField('Parentesco', max_length=50, blank=True)
+    emergencia_telefono   = models.CharField('Teléfono de emergencia', max_length=20, blank=True)
+
+    # — Laboral —
     tipo_personal = models.ForeignKey(
         TipoPersonal, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='trabajadores',
         verbose_name='Cargo',
     )
-    telefono          = models.CharField('Teléfono', max_length=20, blank=True)
-    direccion         = models.CharField('Dirección', max_length=300, blank=True)
-    fecha_nacimiento  = models.DateField('Fecha de nacimiento', null=True, blank=True)
-    fecha_ingreso     = models.DateField('Fecha de ingreso a obra', null=True, blank=True)
-    foto              = models.ImageField('Foto', upload_to='trabajadores/fotos/', blank=True)
-    activo            = models.BooleanField(default=True)
-    created_at        = models.DateTimeField(auto_now_add=True)
+    fecha_ingreso           = models.DateField('Fecha de ingreso a obra', null=True, blank=True)
+    anios_experiencia       = models.PositiveIntegerField('Años de experiencia', null=True, blank=True)
+    experiencia_descripcion = models.TextField('Experiencia laboral (empresas, obras, cargos)', blank=True)
+
+    # — Habilidades y oficios —
+    habilidades = models.TextField(
+        'Habilidades y oficios',
+        blank=True,
+        help_text='Albañilería, carpintería, encofrado, fierrería, soldadura, electricidad, gasfitería, etc.',
+    )
+
+    # — Licencia de conducir —
+    tiene_licencia      = models.BooleanField('¿Tiene licencia de conducir?', default=False)
+    licencia_categoria  = models.CharField('Categoría', max_length=10, choices=LICENCIA_CATEGORIAS, blank=True)
+    licencia_numero     = models.CharField('N° de licencia', max_length=30, blank=True)
+    licencia_vencimiento = models.DateField('Vencimiento de licencia', null=True, blank=True)
+
+    # — Maquinaria pesada —
+    opera_maquinaria_pesada = models.BooleanField('¿Opera maquinaria pesada?', default=False)
+    maquinas_opera          = models.TextField(
+        'Maquinaria que opera', blank=True,
+        help_text='Ej: retroexcavadora, cargador frontal, volquete, rodillo, grúa.',
+    )
+
+    # — Seguridad social / Pagos —
+    regimen_pension = models.CharField('Régimen de pensiones', max_length=15, choices=REGIMEN_PENSION_CHOICES, blank=True)
+    cuspp           = models.CharField('CUSPP', max_length=20, blank=True)
+    tiene_essalud   = models.BooleanField('EsSalud', default=False)
+    tiene_sctr      = models.BooleanField('SCTR vigente', default=False)
+    banco           = models.CharField('Banco', max_length=50, blank=True)
+    cuenta_cci      = models.CharField('CCI (20 dígitos)', max_length=25, blank=True)
+
+    # — Archivos —
+    foto = models.ImageField('Foto', upload_to='trabajadores/fotos/', blank=True)
+    cv   = models.FileField('CV', upload_to='trabajadores/cv/', blank=True)
+
+    # — Observaciones —
+    observaciones = models.TextField('Observaciones', blank=True)
+
+    # — Control —
+    activo     = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name        = 'Trabajador'

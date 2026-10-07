@@ -214,17 +214,6 @@ def detalle(request, pk):
     })
 
 
-@requiere('puede_gestionar_personal')
-def personal(request, pk):
-    proyecto = get_object_or_404(Proyecto, pk=pk)
-    miembros = proyecto.miembros.select_related('usuario__perfil__rol').all()
-    ids_miembros = miembros.values_list('usuario_id', flat=True)
-    usuarios_disponibles = User.objects.exclude(pk__in=ids_miembros).order_by('first_name', 'username')
-    return render(request, 'proyectos/personal.html', {
-        'proyecto':             proyecto,
-        'miembros':             miembros,
-        'usuarios_disponibles': usuarios_disponibles,
-    })
 
 
 def _siguiente_codigo_proyecto():
@@ -300,7 +289,7 @@ def miembro_agregar(request, pk):
                 messages.success(request, f'{usuario.get_full_name() or usuario.username} agregado al equipo.')
             else:
                 messages.warning(request, 'Ese usuario ya es miembro del proyecto.')
-    return redirect('proyectos:personal', pk=pk)
+    return redirect('proyectos:detalle', pk=pk)
 
 
 @requiere('puede_administrar_usuarios')
@@ -309,7 +298,7 @@ def miembro_quitar(request, pk, usuario_id):
     if request.method == 'POST':
         ProyectoMiembro.objects.filter(proyecto=proyecto, usuario_id=usuario_id).delete()
         messages.success(request, 'Miembro removido del proyecto.')
-    return redirect('proyectos:personal', pk=pk)
+    return redirect('proyectos:detalle', pk=pk)
 
 
 @requiere('puede_eliminar_proyectos')
