@@ -56,13 +56,14 @@
       <thead>
         <tr>
           <th style="width:9%">N° REQ</th>
-          <th style="width:10%">Fecha</th>
+          <th style="width:8%">Fecha</th>
+          <th style="width:6%">Hora</th>
           <th style="width:9%">Tipo</th>
-          <th style="width:23%">Solicitante</th>
+          <th style="width:21%">Solicitante</th>
           <th style="width:13%">Estado</th>
           <th style="width:11%;text-align:center">Cotizaciones</th>
           <th style="width:7%;text-align:center">Ítems</th>
-          <th style="width:18%">Observaciones</th>
+          <th style="width:16%">Observaciones</th>
         </tr>
       </thead>
       <tbody>
@@ -72,6 +73,7 @@
             onclick="window.location.href='{% if r.estado == 'ENVIADO' or r.estado == 'EN_REVISION' or r.estado == 'APROBADO' or r.estado == 'PARCIAL' %}{% url 'logistica:req_revisar_log' proyecto.pk r.pk %}{% else %}{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}{% endif %}'">
           <td class="fw-semibold">REQ{{ r.numero }}</td>
           <td>{{ r.fecha|date:"d/m/Y" }}</td>
+          <td>{{ r.created_at|time:"H:i" }}</td>
           <td>{{ r.get_tipo_display }}</td>
           <td>{{ r.solicitante|default:"—" }}</td>
           <td>
