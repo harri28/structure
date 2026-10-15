@@ -699,24 +699,36 @@ def consulta_documento(request):
         }, status=404)
 
     data = body.get('data') or {}
+    nombres          = (data.get('nombres') or '').strip()
+    apellido_paterno = (data.get('apellido_paterno') or '').strip()
+    apellido_materno = (data.get('apellido_materno') or '').strip()
+
     if tipo == 'ruc':
         razon = (data.get('nombre_o_razon_social') or '').strip()
     else:
-        razon = ' '.join(filter(None, [
-            data.get('nombres') or '',
-            data.get('apellido_paterno') or '',
-            data.get('apellido_materno') or '',
-        ])).strip()
+        razon = ' '.join(filter(None, [nombres, apellido_paterno, apellido_materno])).strip()
 
     direccion = (data.get('direccion') or '').strip()
-    ubigeo = data.get('ubigeo_sunat') or ''
+    ubigeo    = data.get('ubigeo_sunat') or ''
     if ubigeo == '-':
         ubigeo = ''
 
     return JsonResponse({
         'ok': True,
         'tipo': tipo,
+        # Para clientes antiguos (cot_form, req_revisar, maquinaria_form)
         'razon_social': razon,
-        'direccion': direccion,
-        'ubigeo': ubigeo,
+        'direccion':    direccion,
+        'ubigeo':       ubigeo,
+        # Campos extra para el form de Trabajador (y futuros usos)
+        'nombres':          nombres,
+        'apellido_paterno': apellido_paterno,
+        'apellido_materno': apellido_materno,
+        'apellidos':        (apellido_paterno + ' ' + apellido_materno).strip(),
+        'departamento':     (data.get('departamento') or '').strip(),
+        'provincia':        (data.get('provincia') or '').strip(),
+        'distrito':         (data.get('distrito') or '').strip(),
+        # Estos solo vienen si el plan de Factiliza los expone; si no, string vacío
+        'fecha_nacimiento': (data.get('fecha_nacimiento') or '').strip(),
+        'sexo':             (data.get('sexo') or '').strip(),
     })

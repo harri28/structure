@@ -32,11 +32,18 @@
           <label class="form-label">Apellidos <span class="text-danger">*</span></label>
           {{ form.apellidos }}
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label class="form-label">DNI</label>
-          {{ form.dni }}
+          <div class="input-group">
+            {{ form.dni }}
+            <button type="button" id="btn-buscar-dni" class="btn btn-outline-primary btn-sm"
+                    title="Autocompletar desde RENIEC">
+              <i class="bi bi-search me-1"></i>Buscar
+            </button>
+          </div>
+          <small id="dni-msg" class="form-text" style="display:none"></small>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label">Fecha de nacimiento</label>
           {{ form.fecha_nacimiento }}
         </div>
@@ -286,4 +293,97 @@
   </div>
   {% endif %}
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var btn   = document.getElementById('btn-buscar-dni');
+  var iDni  = document.querySelector('[name="dni"]');
+  var msg   = document.getElementById('dni-msg');
+  if (!btn || !iDni) return;
+
+  var fields = {
+    nombres:          document.querySelector('[name="nombres"]'),
+    apellidos:        document.querySelector('[name="apellidos"]'),
+    direccion:        document.querySelector('[name="direccion"]'),
+    distrito:         document.querySelector('[name="distrito"]'),
+    provincia:        document.querySelector('[name="provincia"]'),
+    departamento:     document.querySelector('[name="departamento"]'),
+    fecha_nacimiento: document.querySelector('[name="fecha_nacimiento"]'),
+    sexo:             document.querySelector('[name="sexo"]'),
+  };
+
+  function getCsrf() {
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function showMsg(text, ok) {
+    msg.textContent = text;
+    msg.style.color = ok ? '#16a34a' : '#dc2626';
+    msg.style.display = 'block';
+  }
+  function clearMsg() { msg.style.display = 'none'; }
+
+  function setIfEmpty(el, value) {
+    if (!el || !value) return;
+    if (!el.value || el.value.trim() === '') el.value = value;
+  }
+
+  function doSearch() {
+    var numero = (iDni.value || '').trim();
+    if (!/^\d{8}$/.test(numero)) {
+      showMsg('El DNI debe tener 8 dígitos.', false);
+      return;
+    }
+    clearMsg();
+    btn.disabled = true;
+    var original = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.85rem;height:.85rem"></span>';
+
+    fetch("{% url 'maquinaria:consulta_doc' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ numero: numero }),
+    })
+    .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+    .then(function (res) {
+      var d = res.data || {};
+      if (!d.ok) {
+        showMsg(d.error || 'No se encontró el DNI.', false);
+        return;
+      }
+      setIfEmpty(fields.nombres,          d.nombres);
+      setIfEmpty(fields.apellidos,        d.apellidos);
+      setIfEmpty(fields.direccion,        d.direccion);
+      setIfEmpty(fields.distrito,         d.distrito);
+      setIfEmpty(fields.provincia,        d.provincia);
+      setIfEmpty(fields.departamento,     d.departamento);
+      setIfEmpty(fields.fecha_nacimiento, d.fecha_nacimiento);
+      if (fields.sexo && d.sexo && !fields.sexo.value) {
+        var s = d.sexo.toUpperCase().charAt(0);
+        if (s === 'M' || s === 'F') fields.sexo.value = s;
+      }
+      showMsg('Datos autocompletados desde RENIEC. Puedes editarlos si es necesario.', true);
+    })
+    .catch(function (err) {
+      console.error('Consulta DNI error:', err);
+      showMsg('Error al consultar: ' + (err && err.message ? err.message : err), false);
+    })
+    .finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    });
+  }
+
+  btn.addEventListener('click', doSearch);
+  iDni.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+  });
+})();
+</script>
 {% endblock %}
