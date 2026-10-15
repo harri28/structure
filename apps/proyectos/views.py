@@ -311,7 +311,10 @@ def proyecto_restablecer(request, pk):
     from apps.requerimientos.models import Requerimiento, DetalleRequerimiento
     from apps.almacen.models import Entrada, Salida, Cotizacion, OrdenCompra
     from apps.logistica.models import GuiaRemision
-    from apps.maquinaria.models import RegistroDiario, RegistroMaquinaria, Liquidacion
+    from apps.maquinaria.models import (
+        RegistroDiario, RegistroMaquinaria, Liquidacion,
+        Trabajador, DocumentoTrabajador, Cuadrilla, IntegranteCuadrilla, Asistencia,
+    )
     from apps.presupuesto.models import Presupuesto, Partida
     from apps.registro.models import Notificacion, RegistroAccion
 
@@ -364,11 +367,32 @@ def proyecto_restablecer(request, pk):
             'descripcion': 'Guías de remisión generadas',
             'count': _count(GuiaRemision.objects.filter(proyecto=proyecto)),
         },
+        'personal': {
+            'nombre': 'Personal (Trabajadores)',
+            'icono': 'bi-person-badge',
+            'color': '#14b8a6',
+            'descripcion': 'Trabajadores de obra + documentos adjuntos (CV, SCTR, etc.). Al borrar también se eliminan sus asignaciones a cuadrillas y marcas de asistencia.',
+            'count': _count(Trabajador.objects.filter(proyecto=proyecto)),
+        },
+        'cuadrillas': {
+            'nombre': 'Cuadrillas',
+            'icono': 'bi-diagram-3',
+            'color': '#2563eb',
+            'descripcion': 'Frentes de trabajo del proyecto y asignaciones de personal',
+            'count': _count(Cuadrilla.objects.filter(proyecto=proyecto)),
+        },
+        'asistencia': {
+            'nombre': 'Asistencia',
+            'icono': 'bi-calendar-check',
+            'color': '#0891b2',
+            'descripcion': 'Marcas de asistencia diaria del personal (Presente/Falta/Tardanza/etc.)',
+            'count': _count(Asistencia.objects.filter(trabajador__proyecto=proyecto)),
+        },
         'maquinaria': {
             'nombre': 'Maquinaria',
             'icono': 'bi-truck',
             'color': '#ec4899',
-            'descripcion': 'Registros diarios de maquinaria y cuadrilla',
+            'descripcion': 'Registros diarios de maquinaria y liquidaciones',
             'count': _count(RegistroDiario.objects.filter(proyecto=proyecto)) + _count(RegistroMaquinaria.objects.filter(proyecto=proyecto)),
         },
         'notificaciones': {
@@ -442,6 +466,20 @@ def proyecto_restablecer(request, pk):
         if 'guias' in seleccionados:
             GuiaRemision.objects.filter(proyecto=proyecto).delete()
             eliminados.append('Guías de Remisión')
+
+        if 'personal' in seleccionados:
+            # Cascada: borra DocumentoTrabajador, IntegranteCuadrilla y Asistencia asociados
+            Trabajador.objects.filter(proyecto=proyecto).delete()
+            eliminados.append('Personal (Trabajadores)')
+
+        if 'cuadrillas' in seleccionados:
+            # Cascada: borra IntegranteCuadrilla
+            Cuadrilla.objects.filter(proyecto=proyecto).delete()
+            eliminados.append('Cuadrillas')
+
+        if 'asistencia' in seleccionados:
+            Asistencia.objects.filter(trabajador__proyecto=proyecto).delete()
+            eliminados.append('Asistencia')
 
         if 'maquinaria' in seleccionados:
             RegistroDiario.objects.filter(proyecto=proyecto).delete()
