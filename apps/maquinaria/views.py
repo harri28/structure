@@ -342,12 +342,12 @@ def registro_lista(request, proyecto_id):
         .select_related('capataz')
         .annotate(n_integrantes=Count('integrantes'))
     )
-    tab = request.GET.get('tab', 'cuadrilla')
+    tab = request.GET.get('tab', 'personal')
     return render(request, 'maquinaria/registro_lista.html', {
         'proyecto':     proyecto,
         'trabajadores': trabajadores,
         'cuadrillas':   cuadrillas,
-        'tab_activa':   'personal' if tab == 'personal' else 'cuadrilla',
+        'tab_activa':   'cuadrilla' if tab == 'cuadrilla' else 'personal',
     })
 
 

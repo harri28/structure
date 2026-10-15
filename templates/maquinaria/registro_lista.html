@@ -15,19 +15,19 @@
 
 <ul class="nav nav-tabs mb-3" id="cuadrillaTabs" role="tablist" style="border-bottom:1px solid #e5e7eb">
   <li class="nav-item" role="presentation">
-    <button class="nav-link {% if tab_activa == 'cuadrilla' %}active{% endif %}"
-            id="tab-cuadrilla" data-bs-toggle="tab" data-bs-target="#pane-cuadrilla"
-            type="button" role="tab" aria-controls="pane-cuadrilla"
-            aria-selected="{% if tab_activa == 'cuadrilla' %}true{% else %}false{% endif %}">
-      <i class="bi bi-people-fill me-1"></i>Cuadrilla
-    </button>
-  </li>
-  <li class="nav-item" role="presentation">
     <button class="nav-link {% if tab_activa == 'personal' %}active{% endif %}"
             id="tab-personal" data-bs-toggle="tab" data-bs-target="#pane-personal"
             type="button" role="tab" aria-controls="pane-personal"
             aria-selected="{% if tab_activa == 'personal' %}true{% else %}false{% endif %}">
       <i class="bi bi-person-badge me-1"></i>Personal
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {% if tab_activa == 'cuadrilla' %}active{% endif %}"
+            id="tab-cuadrilla" data-bs-toggle="tab" data-bs-target="#pane-cuadrilla"
+            type="button" role="tab" aria-controls="pane-cuadrilla"
+            aria-selected="{% if tab_activa == 'cuadrilla' %}true{% else %}false{% endif %}">
+      <i class="bi bi-people-fill me-1"></i>Cuadrilla
     </button>
   </li>
 </ul>
