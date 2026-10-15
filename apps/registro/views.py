@@ -49,6 +49,92 @@ def lista(request):
     })
 
 
+# ── Auditoría (solo superadmin) ────────────────────────────────────
+
+def _es_superadmin(user):
+    if user.is_superuser:
+        return True
+    try:
+        return bool(user.perfil.rol and user.perfil.rol.es_superadmin)
+    except AttributeError:
+        return False
+
+
+def auditoria(request):
+    """Vista de auditoría enfocada en seguridad: logins, logouts, intentos fallidos, IPs.
+
+    Solo accesible por superadmin (superuser o rol es_superadmin).
+    """
+    from django.shortcuts import redirect
+    from django.db.models import Count, Q
+    from django.utils import timezone
+    from datetime import timedelta
+
+    if not _es_superadmin(request.user):
+        return redirect('proyectos:dashboard')
+
+    qs = RegistroAccion.objects.select_related('usuario').all()
+
+    # ── Filtros ──
+    accion_sel  = request.GET.get('accion', '')
+    usuario_sel = request.GET.get('usuario', '')
+    ip_sel      = request.GET.get('ip', '').strip()
+    fecha_desde = request.GET.get('desde', '')
+    fecha_hasta = request.GET.get('hasta', '')
+    solo_sesion = request.GET.get('sesion', '')  # '1' = solo LOGIN/LOGOUT/LOGIN_FAIL
+
+    if solo_sesion == '1':
+        qs = qs.filter(accion__in=['LOGIN', 'LOGOUT', 'LOGIN_FAIL'])
+    if accion_sel:
+        qs = qs.filter(accion=accion_sel)
+    if usuario_sel:
+        qs = qs.filter(usuario__username=usuario_sel)
+    if ip_sel:
+        qs = qs.filter(ip=ip_sel)
+    if fecha_desde:
+        qs = qs.filter(fecha__date__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(fecha__date__lte=fecha_hasta)
+
+    # ── Stats de seguridad (últimas 24h) ──
+    desde_24h = timezone.now() - timedelta(hours=24)
+    base_24h  = RegistroAccion.objects.filter(fecha__gte=desde_24h)
+    stats = {
+        'logins_ok':   base_24h.filter(accion='LOGIN').count(),
+        'logouts':     base_24h.filter(accion='LOGOUT').count(),
+        'logins_fail': base_24h.filter(accion='LOGIN_FAIL').count(),
+        'ips_unicas':  base_24h.exclude(ip__isnull=True).values('ip').distinct().count(),
+    }
+    # IPs con más intentos fallidos (últimas 24h)
+    top_fail_ips = (
+        base_24h.filter(accion='LOGIN_FAIL')
+        .exclude(ip__isnull=True)
+        .values('ip')
+        .annotate(n=Count('id'))
+        .order_by('-n')[:5]
+    )
+
+    paginator = Paginator(qs, 50)
+    page = paginator.get_page(request.GET.get('page', 1))
+
+    usuarios = User.objects.filter(is_active=True).order_by('username')
+
+    return render(request, 'registro/auditoria.html', {
+        'page_obj':     page,
+        'acciones':     ACCIONES,
+        'usuarios':     usuarios,
+        'accion_sel':   accion_sel,
+        'usuario_sel':  usuario_sel,
+        'ip_sel':       ip_sel,
+        'fecha_desde':  fecha_desde,
+        'fecha_hasta':  fecha_hasta,
+        'solo_sesion':  solo_sesion,
+        'stats':        stats,
+        'top_fail_ips': top_fail_ips,
+        'total':        qs.count(),
+    })
+
+
 # ── Notificaciones ────────────────────────────────────────────────
 
 def notif_json(request):

@@ -1,15 +1,40 @@
-def log(request, accion, modulo, descripcion):
-    """Registra una acción del usuario en el sistema."""
-    from .models import RegistroAccion
+def _ip_from_request(request):
+    """Devuelve la IP del cliente, respetando X-Forwarded-For si viene de un proxy."""
     ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
     if ip and ',' in ip:
         ip = ip.split(',')[0].strip()
+    return ip or None
+
+
+def _ua_from_request(request, limit=500):
+    """User-Agent, truncado para evitar entradas gigantescas."""
+    ua = (request.META.get('HTTP_USER_AGENT') or '').strip()
+    return ua[:limit]
+
+
+def log(request, accion, modulo, descripcion):
+    """Registra una acción del usuario en el sistema (actividad + auditoría)."""
+    from .models import RegistroAccion
     RegistroAccion.objects.create(
         usuario=request.user if request.user.is_authenticated else None,
         accion=accion,
         modulo=modulo,
         descripcion=descripcion,
-        ip=ip or None,
+        ip=_ip_from_request(request),
+        user_agent=_ua_from_request(request),
+    )
+
+
+def log_evento(usuario, accion, modulo, descripcion, ip=None, user_agent=''):
+    """Variante del log sin `request` — para usar desde signals o tareas asíncronas."""
+    from .models import RegistroAccion
+    RegistroAccion.objects.create(
+        usuario=usuario,
+        accion=accion,
+        modulo=modulo,
+        descripcion=descripcion,
+        ip=ip,
+        user_agent=(user_agent or '')[:500],
     )
 
 

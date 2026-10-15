@@ -5,6 +5,7 @@ app_name = 'registro'
 
 urlpatterns = [
     path('', views.lista, name='lista'),
+    path('auditoria/', views.auditoria, name='auditoria'),
 
     # Notificaciones (AJAX)
     path('notif/json/',          views.notif_json,      name='notif_json'),

@@ -364,6 +364,12 @@
     </a>
     {% endif %}
 
+    {% if user.is_superuser or permisos.es_superadmin %}
+    <a href="{% url 'registro:auditoria' %}" class="sb-link {% block nav_auditoria %}{% endblock %}">
+      <i class="bi bi-shield-lock"></i> Auditoría
+    </a>
+    {% endif %}
+
     {% if permisos.puede_configurar_empresa or permisos.puede_administrar_usuarios or permisos.puede_administrar_roles %}
     <div class="sb-module-row">
       <a href="{% url 'configuracion:hub' %}" class="sb-link {% block nav_config_hub %}{% endblock %}">

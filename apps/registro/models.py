@@ -10,14 +10,16 @@ TIPOS_NOTIF = [
 ]
 
 ACCIONES = [
-    ('CREAR',    'Crear'),
-    ('EDITAR',   'Editar'),
-    ('ELIMINAR', 'Eliminar'),
-    ('IMPORTAR', 'Importar'),
-    ('APROBAR',  'Aprobar'),
-    ('ANULAR',   'Anular'),
-    ('LOGIN',    'Iniciar sesión'),
-    ('OTRO',     'Otro'),
+    ('CREAR',      'Crear'),
+    ('EDITAR',     'Editar'),
+    ('ELIMINAR',   'Eliminar'),
+    ('IMPORTAR',   'Importar'),
+    ('APROBAR',    'Aprobar'),
+    ('ANULAR',     'Anular'),
+    ('LOGIN',      'Iniciar sesión'),
+    ('LOGOUT',     'Cerrar sesión'),
+    ('LOGIN_FAIL', 'Intento fallido de login'),
+    ('OTRO',       'Otro'),
 ]
 
 MODULOS = [
@@ -40,11 +42,18 @@ class RegistroAccion(models.Model):
     modulo      = models.CharField(max_length=50, choices=MODULOS, default='Otro')
     descripcion = models.TextField()
     ip          = models.GenericIPAddressField(null=True, blank=True)
+    user_agent  = models.TextField('User-Agent', blank=True)
 
     class Meta:
         verbose_name        = 'Registro de Acción'
         verbose_name_plural = 'Registro de Actividad'
         ordering            = ['-fecha']
+        indexes = [
+            models.Index(fields=['-fecha']),
+            models.Index(fields=['accion', '-fecha']),
+            models.Index(fields=['usuario', '-fecha']),
+            models.Index(fields=['ip']),
+        ]
 
     def __str__(self):
         user = self.usuario.username if self.usuario else 'Sistema'
