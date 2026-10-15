@@ -49,10 +49,10 @@ class RegistroAccion(models.Model):
         verbose_name_plural = 'Registro de Actividad'
         ordering            = ['-fecha']
         indexes = [
-            models.Index(fields=['-fecha']),
-            models.Index(fields=['accion', '-fecha']),
-            models.Index(fields=['usuario', '-fecha']),
-            models.Index(fields=['ip']),
+            models.Index(fields=['-fecha'],              name='registro_fecha_idx'),
+            models.Index(fields=['accion', '-fecha'],    name='registro_accion_idx'),
+            models.Index(fields=['usuario', '-fecha'],   name='registro_usuario_idx'),
+            models.Index(fields=['ip'],                  name='registro_ip_idx'),
         ]
 
     def __str__(self):
