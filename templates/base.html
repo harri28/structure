@@ -98,6 +98,9 @@
          class="sb-link sb-sublink {% block nav_pres_insumos %}{% endblock %}">
         <i class="bi bi-boxes"></i> Insumos
       </a>
+      {# Adicionales y Deductivos — ocultos a pedido del usuario (hasta la fecha sin uso). #}
+      {# El backend sigue intacto. Para restaurar: eliminar el if 0 / endif que envuelven los <a> de abajo. #}
+      {% if 0 %}
       <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}#adicionales"
          class="sb-link sb-sublink {% block nav_pres_adicionales %}{% endblock %}">
         <i class="bi bi-plus-circle" style="color:#16a34a"></i> Adicionales
@@ -106,6 +109,7 @@
          class="sb-link sb-sublink {% block nav_pres_deductivos %}{% endblock %}">
         <i class="bi bi-dash-circle" style="color:#dc2626"></i> Deductivos
       </a>
+      {% endif %}
       <a href="{% url 'presupuesto:importar' proyecto_activo.presupuesto.pk %}"
          class="sb-link sb-sublink {% block nav_pres_importar %}{% endblock %}">
         <i class="bi bi-upload"></i> Importar
