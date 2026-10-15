@@ -57,6 +57,9 @@
     <a href="{% url 'configuracion:reporte_lista' %}" class="sb-link {% block nav_reportes %}{% endblock %}">
       <i class="bi bi-flag"></i> Reportes
     </a>
+    <a href="{% url 'registro:auditoria' %}" class="sb-link {% block nav_auditoria_sa %}{% endblock %}">
+      <i class="bi bi-shield-lock"></i> Auditoría
+    </a>
   </div>
 
   {% else %}
