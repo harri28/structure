@@ -30,6 +30,14 @@
       <i class="bi bi-people-fill me-1"></i>Cuadrilla
     </button>
   </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {% if tab_activa == 'asistencia' %}active{% endif %}"
+            id="tab-asistencia" data-bs-toggle="tab" data-bs-target="#pane-asistencia"
+            type="button" role="tab" aria-controls="pane-asistencia"
+            aria-selected="{% if tab_activa == 'asistencia' %}true{% else %}false{% endif %}">
+      <i class="bi bi-calendar-check me-1"></i>Asistencia
+    </button>
+  </li>
 </ul>
 
 <div class="tab-content">
@@ -204,5 +212,131 @@
     </div>
 
   </div>
+
+  {# ─── Tab Asistencia ──────────────────────────────── #}
+  <div class="tab-pane fade {% if tab_activa == 'asistencia' %}show active{% endif %}"
+       id="pane-asistencia" role="tabpanel" aria-labelledby="tab-asistencia">
+
+    {# Toolbar: selector de periodo + fecha de referencia #}
+    <form method="get" class="d-flex gap-2 align-items-end mb-3 flex-wrap">
+      <input type="hidden" name="tab" value="asistencia">
+      <div>
+        <label class="form-label mb-1" style="font-size:.72rem;text-transform:uppercase;color:#64748b">Período</label>
+        <select name="periodo" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="diario"    {% if asist_periodo == 'diario' %}selected{% endif %}>Diario</option>
+          <option value="semanal"   {% if asist_periodo == 'semanal' %}selected{% endif %}>Semanal (Lun–Dom)</option>
+          <option value="quincenal" {% if asist_periodo == 'quincenal' %}selected{% endif %}>Quincenal (15 días)</option>
+          <option value="mensual"   {% if asist_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label mb-1" style="font-size:.72rem;text-transform:uppercase;color:#64748b">Fecha de referencia</label>
+        <input type="date" name="inicio" value="{{ asist_inicio|date:'Y-m-d' }}" class="form-control form-control-sm">
+      </div>
+      <button type="submit" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-search me-1"></i>Ver
+      </button>
+      <div class="text-muted ms-auto" style="font-size:.82rem">
+        Rango: <strong>{{ asist_inicio|date:"d/m/Y" }}</strong> → <strong>{{ asist_fin|date:"d/m/Y" }}</strong>
+        · {{ asist_fechas|length }} día{{ asist_fechas|length|pluralize:"s" }}
+      </div>
+    </form>
+
+    {# Form masivo de guardado #}
+    <form method="post" action="{% url 'maquinaria:asistencia_guardar' proyecto.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="periodo" value="{{ asist_periodo }}">
+      <input type="hidden" name="inicio"  value="{{ asist_inicio|date:'Y-m-d' }}">
+
+      <div class="card">
+        <div class="card-body p-0" style="overflow-x:auto">
+          <table class="table-modern" style="min-width:100%">
+            <thead>
+              <tr>
+                <th style="min-width:220px;position:sticky;left:0;background:#f8fafc;z-index:2">Trabajador</th>
+                {% for f in asist_fechas %}
+                  <th class="text-center" style="min-width:62px">
+                    <div style="font-size:.6rem;text-transform:uppercase;color:#64748b">{{ f|date:"D" }}</div>
+                    <div style="font-size:.78rem">{{ f|date:"d/m" }}</div>
+                  </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+            {% for row in asist_filas %}
+              <tr>
+                <td class="fw-semibold" style="position:sticky;left:0;background:#fff;z-index:1">
+                  {{ row.trab.apellidos }}, {{ row.trab.nombres }}
+                </td>
+                {% for e in row.estados %}
+                  <td class="text-center" style="padding:.25rem">
+                    <select name="estado__{{ row.trab.pk }}__{{ e.iso }}"
+                            class="form-select form-select-sm asist-cell"
+                            data-current="{{ e.estado }}"
+                            style="font-size:.72rem;min-width:52px;padding:.2rem .4rem">
+                      <option value=""   {% if e.estado == '' %}selected{% endif %}>—</option>
+                      <option value="P"  {% if e.estado == 'P' %}selected{% endif %}>P</option>
+                      <option value="F"  {% if e.estado == 'F' %}selected{% endif %}>F</option>
+                      <option value="T"  {% if e.estado == 'T' %}selected{% endif %}>T</option>
+                      <option value="PM" {% if e.estado == 'PM' %}selected{% endif %}>Pm</option>
+                      <option value="D"  {% if e.estado == 'D' %}selected{% endif %}>D</option>
+                      <option value="FE" {% if e.estado == 'FE' %}selected{% endif %}>Fe</option>
+                    </select>
+                  </td>
+                {% endfor %}
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="{{ asist_fechas|length|add:1 }}" class="text-center py-5 text-muted">
+                  <i class="bi bi-people" style="font-size:2rem;opacity:.25;display:block;margin-bottom:.5rem"></i>
+                  No hay personal activo registrado todavía.
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="mt-3 d-flex gap-2 align-items-center flex-wrap">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar asistencia
+        </button>
+        <div class="text-muted" style="font-size:.74rem">
+          <strong>P</strong>=Presente ·
+          <strong>F</strong>=Falta ·
+          <strong>T</strong>=Tardanza ·
+          <strong>Pm</strong>=Permiso ·
+          <strong>D</strong>=Descanso ·
+          <strong>Fe</strong>=Feriado ·
+          <strong>—</strong>=Sin marcar
+        </div>
+      </div>
+    </form>
+  </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  // Colorea los <select> de asistencia según su valor para lectura rápida
+  var COLORES = {
+    P:  '#dcfce7',  // verde pálido
+    F:  '#fee2e2',  // rojo pálido
+    T:  '#fef3c7',  // amarillo pálido
+    PM: '#dbeafe',  // azul pálido
+    D:  '#f1f5f9',  // gris
+    FE: '#f3e8ff',  // morado pálido
+  };
+  function pintar(sel) {
+    sel.style.background = COLORES[sel.value] || '';
+  }
+  document.querySelectorAll('select.asist-cell').forEach(function (s) {
+    pintar(s);
+    s.addEventListener('change', function () { pintar(s); });
+  });
+})();
+</script>
 {% endblock %}

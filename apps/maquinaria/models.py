@@ -268,6 +268,40 @@ class DocumentoTrabajador(models.Model):
         return f'{self.nombre} — {self.trabajador}'
 
 
+class Asistencia(models.Model):
+    PRESENTE = 'P'
+    FALTA    = 'F'
+    TARDANZA = 'T'
+    PERMISO  = 'PM'
+    DESCANSO = 'D'
+    FERIADO  = 'FE'
+
+    ESTADO_CHOICES = [
+        (PRESENTE, 'Presente'),
+        (FALTA,    'Falta'),
+        (TARDANZA, 'Tardanza'),
+        (PERMISO,  'Permiso'),
+        (DESCANSO, 'Descanso'),
+        (FERIADO,  'Feriado'),
+    ]
+
+    trabajador  = models.ForeignKey(Trabajador, on_delete=models.CASCADE, related_name='asistencias')
+    fecha       = models.DateField()
+    estado      = models.CharField(max_length=2, choices=ESTADO_CHOICES, default=PRESENTE)
+    observacion = models.CharField(max_length=200, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = 'Asistencia'
+        verbose_name_plural = 'Asistencias'
+        unique_together     = ['trabajador', 'fecha']
+        ordering            = ['-fecha', 'trabajador__apellidos']
+
+    def __str__(self):
+        return f'{self.trabajador} — {self.fecha} ({self.get_estado_display()})'
+
+
 class IntegranteCuadrilla(models.Model):
     cuadrilla   = models.ForeignKey(Cuadrilla, on_delete=models.CASCADE, related_name='integrantes')
     trabajador  = models.ForeignKey(Trabajador, on_delete=models.CASCADE, related_name='membresias')

@@ -11,7 +11,7 @@ from apps.proyectos.models import Proyecto
 from .models import (
     TipoPersonal, Maquinaria, Cuadrilla, IntegranteCuadrilla,
     RegistroDiario, RegistroMaquinaria, Liquidacion,
-    Trabajador, DocumentoTrabajador,
+    Trabajador, DocumentoTrabajador, Asistencia,
 )
 from .forms import (
     TipoPersonalForm, MaquinariaForm, CuadrillaForm, AgregarIntegranteForm,
@@ -327,6 +327,36 @@ def documento_eliminar(request, pk):
 
 # ── Cuadrilla (Cuadrilla En desarrollo + Personal activo) ─────────────
 
+def _rango_asistencia(periodo, inicio_str):
+    """Devuelve (periodo_norm, inicio, fin, fechas[])."""
+    from datetime import date, timedelta
+    import calendar as _calendar
+    hoy = date.today()
+    try:
+        inicio = date.fromisoformat(inicio_str) if inicio_str else hoy
+    except (ValueError, TypeError):
+        inicio = hoy
+
+    if periodo == 'diario':
+        fin = inicio
+    elif periodo == 'quincenal':
+        fin = inicio + timedelta(days=14)
+    elif periodo == 'mensual':
+        inicio = inicio.replace(day=1)
+        _, ult = _calendar.monthrange(inicio.year, inicio.month)
+        fin = inicio.replace(day=ult)
+    else:
+        periodo = 'semanal'
+        inicio = inicio - timedelta(days=inicio.weekday())  # lunes
+        fin = inicio + timedelta(days=6)
+
+    fechas, d = [], inicio
+    while d <= fin:
+        fechas.append(d)
+        d += timedelta(days=1)
+    return periodo, inicio, fin, fechas
+
+
 @requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
 @proyecto_visible
 def registro_lista(request, proyecto_id):
@@ -342,13 +372,97 @@ def registro_lista(request, proyecto_id):
         .select_related('capataz')
         .annotate(n_integrantes=Count('integrantes'))
     )
+
     tab = request.GET.get('tab', 'personal')
+    if tab == 'cuadrilla':
+        tab_activa = 'cuadrilla'
+    elif tab == 'asistencia':
+        tab_activa = 'asistencia'
+    else:
+        tab_activa = 'personal'
+
+    # ── Datos específicos del tab Asistencia ──
+    periodo, inicio, fin, fechas = _rango_asistencia(
+        request.GET.get('periodo', 'semanal'),
+        request.GET.get('inicio', ''),
+    )
+    trabajadores_asist = trabajadores.filter(activo=True).order_by('apellidos', 'nombres')
+    asistencias_qs = Asistencia.objects.filter(
+        trabajador__proyecto=proyecto,
+        fecha__gte=inicio,
+        fecha__lte=fin,
+    )
+    estados_map = {}
+    for a in asistencias_qs:
+        estados_map.setdefault(a.trabajador_id, {})[a.fecha.isoformat()] = a.estado
+    filas_asistencia = []
+    for t in trabajadores_asist:
+        estados_t = estados_map.get(t.pk, {})
+        filas_asistencia.append({
+            'trab':    t,
+            'estados': [{'fecha': f, 'iso': f.isoformat(), 'estado': estados_t.get(f.isoformat(), '')}
+                        for f in fechas],
+        })
+
     return render(request, 'maquinaria/registro_lista.html', {
-        'proyecto':     proyecto,
-        'trabajadores': trabajadores,
-        'cuadrillas':   cuadrillas,
-        'tab_activa':   'cuadrilla' if tab == 'cuadrilla' else 'personal',
+        'proyecto':         proyecto,
+        'trabajadores':     trabajadores,
+        'cuadrillas':       cuadrillas,
+        'tab_activa':       tab_activa,
+        # Asistencia
+        'asist_periodo':    periodo,
+        'asist_inicio':     inicio,
+        'asist_fin':        fin,
+        'asist_fechas':     fechas,
+        'asist_filas':      filas_asistencia,
     })
+
+
+@requiere('puede_gestionar_maquinaria')
+@proyecto_visible
+@require_POST
+def asistencia_guardar(request, proyecto_id):
+    from datetime import date as _date
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    validos  = {code for code, _ in Asistencia.ESTADO_CHOICES}
+    trab_ids_proyecto = set(
+        Trabajador.objects.filter(proyecto=proyecto).values_list('pk', flat=True)
+    )
+    cambios = 0
+    for key, value in request.POST.items():
+        if not key.startswith('estado__'):
+            continue
+        parts = key.split('__')
+        if len(parts) != 3:
+            continue
+        _, trab_id_str, fecha_iso = parts
+        try:
+            trab_id = int(trab_id_str)
+            fecha   = _date.fromisoformat(fecha_iso)
+        except (ValueError, TypeError):
+            continue
+        if trab_id not in trab_ids_proyecto:
+            continue
+        if value == '':
+            # Vacío → eliminar marca si existe
+            borradas, _ = Asistencia.objects.filter(trabajador_id=trab_id, fecha=fecha).delete()
+            if borradas:
+                cambios += 1
+            continue
+        if value not in validos:
+            continue
+        Asistencia.objects.update_or_create(
+            trabajador_id=trab_id, fecha=fecha,
+            defaults={'estado': value},
+        )
+        cambios += 1
+    messages.success(request, f'Asistencia guardada ({cambios} marcas).')
+    periodo = request.POST.get('periodo', 'semanal')
+    inicio  = request.POST.get('inicio', '')
+    return redirect(
+        f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}"
+        f"?tab=asistencia&periodo={periodo}&inicio={inicio}"
+    )
 
 
 # ── Registros Maquinaria ──────────────────────────────────────────────

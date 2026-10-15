@@ -35,8 +35,9 @@ urlpatterns = [
     path('personal/<int:pk>/documento/agregar/',           views.documento_agregar,  name='documento_agregar'),
     path('personal/documento/<int:pk>/eliminar/',          views.documento_eliminar, name='documento_eliminar'),
 
-    # Cuadrilla — En desarrollo (solo entrada; registros_crear/editar/eliminar retirados)
-    path('proyecto/<int:proyecto_id>/registros/',         views.registro_lista,   name='registro_lista'),
+    # Cuadrilla / Personal / Asistencia — página con tabs
+    path('proyecto/<int:proyecto_id>/registros/',           views.registro_lista,       name='registro_lista'),
+    path('proyecto/<int:proyecto_id>/asistencia/guardar/',  views.asistencia_guardar,   name='asistencia_guardar'),
 
     # Página principal de Maquinaria (lista de máquinas del proyecto)
     path('proyecto/<int:proyecto_id>/equipos/',                          views.maq_principal,           name='maq_principal'),
