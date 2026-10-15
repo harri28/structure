@@ -53,6 +53,7 @@ htmlcov/
 .vscode/
 .idea/
 .claude/
+CLAUDE.md
 *.swp
 *.swo
 *~
@@ -87,3 +88,12 @@ collected-static/
 *.bak
 *.tmp
 *.orig
+
+# ── Archivos personales / notas de setup (no versionar) ──────────
+MIGRACION_NUEVO_DISCO.md
+inted.jpg
+# Imágenes sueltas en el raíz (los sprites/estáticos del app viven en static/)
+/*.jpg
+/*.jpeg
+/*.png
+/*.gif
