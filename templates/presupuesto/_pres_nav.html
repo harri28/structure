@@ -25,6 +25,9 @@
       <i class="bi bi-boxes me-1"></i>Insumos
     </a>
   </li>
+  {# Adicionales y Deductivos — pestañas ocultas a pedido del usuario (sin uso). #}
+  {# Para restaurar: eliminar el if 0 / endif que envuelven los dos <li> de abajo. #}
+  {% if 0 %}
   <li class="nav-item">
     <a class="nav-link {% if active_tab == 'adicionales' %}active{% endif %}"
        href="{% url 'presupuesto:lista' proyecto.pk %}#adicionales">
@@ -37,6 +40,7 @@
       <i class="bi bi-dash-circle me-1" style="color:#dc2626"></i>Deductivos
     </a>
   </li>
+  {% endif %}
   <li class="nav-item">
     {% if presupuesto %}
     <a class="nav-link {% if active_tab == 'importar' %}active{% endif %}"
