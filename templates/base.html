@@ -70,12 +70,6 @@
        class="sb-link {% block nav_dashboard_user %}{% endblock %}">
       <i class="bi bi-grid-1x2"></i> Dashboard
     </a>
-    {% if proyecto_activo %}
-    <a href="{% url 'proyectos:indicadores' proyecto_activo.pk %}"
-       class="sb-link {% block nav_indicadores %}{% endblock %}">
-      <i class="bi bi-graph-up"></i> Indicadores
-    </a>
-    {% endif %}
     {% endif %}
   </div>
   {% if proyecto_activo %}

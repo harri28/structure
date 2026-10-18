@@ -214,13 +214,6 @@ def detalle(request, pk):
     })
 
 
-@requiere('puede_ver_dashboard')
-def indicadores(request, pk):
-    """Panel de indicadores del proyecto (placeholder — en desarrollo)."""
-    proyecto = get_object_or_404(Proyecto, pk=pk)
-    return render(request, 'proyectos/indicadores.html', {'proyecto': proyecto})
-
-
 def _siguiente_codigo_proyecto():
     existentes = Proyecto.objects.filter(codigo__startswith='PRY-').values_list('codigo', flat=True)
     nums = []
