@@ -335,7 +335,7 @@ def aprobar(request, pk):
 @proyecto_visible
 def vs_atenciones(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL', 'ATENDIDO']
+    estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO']
     detalles = (DetalleRequerimiento.objects
                 .filter(requerimiento__proyecto=proyecto,
                         requerimiento__estado__in=estados_incluidos)
@@ -365,7 +365,7 @@ def vs_atenciones(request, proyecto_id):
                 'observaciones': '',
                 'insumo_id': det.insumo_id,
             }
-        if det.requerimiento.estado in ['APROBADO', 'PARCIAL', 'ATENDIDO']:
+        if det.requerimiento.estado in ['APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO']:
             consolidado[key]['solicitado'] += det.cantidad_aprobada or Decimal('0')
         if det.requerimiento.estado == 'ATENDIDO':
             consolidado[key]['atendido'] += det.cantidad_aprobada or Decimal('0')
@@ -389,7 +389,7 @@ def vs_atenciones(request, proyecto_id):
 @proyecto_visible
 def vs_atenciones_insumo(request, proyecto_id, insumo_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL', 'ATENDIDO']
+    estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO']
     detalles = (DetalleRequerimiento.objects
                 .filter(insumo_id=insumo_id,
                         requerimiento__proyecto=proyecto,
