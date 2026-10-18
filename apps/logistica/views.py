@@ -287,7 +287,7 @@ def guia_crear(request, proyecto_id):
         'items': [{
             'descripcion': _descripcion_item(d),
             'unidad': _unidad_item(d),
-            'cantidad': str(d.cantidad.quantize(Decimal('0.001')).normalize()),
+            'cantidad': '{:f}'.format(d.cantidad.quantize(Decimal('0.001')).normalize()),
         } for d in c.detalles.all()],
     } for c in disponibles]
 
