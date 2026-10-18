@@ -33,14 +33,15 @@
       </thead>
       <tbody>
         {% for g in guias %}
-        <tr>
+        <tr style="cursor:pointer" onclick="window.location.href='{% url 'logistica:guia_detalle' g.pk %}'">
           <td class="fw-bold" style="color:#2563eb">
             {{ g.numero }}
             {% if g.requerimiento %}
             <div style="margin-top:2px">
               <a href="{% url 'logistica:req_revisar_log' proyecto.pk g.requerimiento_id %}"
                  class="badge bg-light text-dark border text-decoration-none"
-                 style="font-size:.65rem;font-weight:normal;padding:.2em .5em">
+                 style="font-size:.65rem;font-weight:normal;padding:.2em .5em"
+                 onclick="event.stopPropagation()">
                 <i class="bi bi-link-45deg text-primary"></i>REQ{{ g.requerimiento.numero }}
               </a>
             </div>
@@ -63,7 +64,8 @@
           <td class="text-center">
             {% if g.estado != 'PENDIENTE' %}
             <a href="{% url 'logistica:guia_imprimir' g.pk %}" target="_blank"
-               title="Ver PDF" style="color:#2563eb;font-size:1.1rem;line-height:1">
+               title="Ver PDF" style="color:#2563eb;font-size:1.1rem;line-height:1"
+               onclick="event.stopPropagation()">
               <i class="bi bi-journal-text"></i>
             </a>
             {% endif %}
