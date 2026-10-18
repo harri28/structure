@@ -89,7 +89,7 @@ Vista informativa (solo lectura) que consolida el estado de cada insumo del pres
 |---------|-----------------|-------------|
 | **PRESUPUESTADO** | `InsumoPresupuesto.cantidad_total` | Cantidad original del presupuesto. Solo informativo, nunca cambia. |
 | **SOLICITADO** | Suma de `DetalleRequerimiento.cantidad_aprobada` donde `requerimiento.estado IN (APROBADO, COTIZADO, PARCIAL, ATENDIDO)` | Lo que logística aprobó. Se activa al hacer clic en "Aprobar requerimiento". |
-| **ATENDIDO** | Suma de `DetalleRequerimiento.cantidad_aprobada` donde `requerimiento.estado = ATENDIDO` | Lo que ya fue despachado físicamente (guía generada). Se activa al hacer clic en "Guardar y generar guía". |
+| **ATENDIDO** (col "Atendido y despachado") | Suma de `DetalleCotizacion.cantidad` donde `cotizacion.estado = APROBADA` **y** `cotizacion.guias_remision.estado IN (EN_TRANSITO, ENTREGADO)`. Guías `ANULADAS` quedan fuera. | Lo realmente despachado en guías vivas. Se incrementa al clickear "Guardar y Generar Guía" en Logística; se restablece automáticamente si la guía se anula. |
 | **SALDO** | `PRESUPUESTADO − ATENDIDO` | Cantidad presupuestada aún no despachada. |
 
 **Regla de color del SALDO:**
@@ -288,6 +288,7 @@ El correlativo es por proyecto y por año; se toma el mayor número existente co
 - Columnas **Origen** y **Destino** separadas.
 - Cada fila es clickable y abre la vista de impresión A4 en pestaña nueva (`/logistica/guia/<pk>/imprimir/`).
 - Estados: `PENDIENTE` (amarillo) → `EN_TRANSITO` (azul) → `ENTREGADO` (verde) / `ANULADO` (rojo).
+- **Transición a `ENTREGADO`**: ocurre **automáticamente** cuando el Almacenero aprieta "Registrar guía" en Almacén → Guías → detalle de la guía (vista `entrada_crear` en modo guía, `apps/almacen/views.py`). Antes se hacía desde la card "Cambiar Estado" del detalle de guía, pero esa card fue removida — ya no hay botones manuales de transición de estado. Mientras el Almacenero no registre la guía, queda en `EN_TRANSITO`.
 
 ### Botón "← Ingreso de Requerimientos" removido en sub-pestañas
 
@@ -748,6 +749,13 @@ Sin el CAST, PostgreSQL ordena lexicográficamente y da `1, 10, 100, 11, 2, 20, 
    - Al submit Guardar → solo se crean `DetalleEntrada` de las filas con
      `applied=1`. El resto se ignora
    - Trazabilidad: `Entrada.guia = guia` (OneToOne)
+7. **Transición de la guía a `ENTREGADO`**: ocurre cuando el Almacenero
+   presiona "Registrar guía" (botón verde final del modo guía de `entrada_crear`)
+   y ya hay una `Entrada` asociada a la guía (vía `entrada_aplicar_item`).
+   Antes la transición dependía de la card manual "Cambiar Estado" del detalle
+   de guía — esa card fue removida. Mientras el Almacenero no confirme la
+   recepción, la guía queda en `EN_TRANSITO`. Se loguea como `EDITAR` en
+   `RegistroAccion`, módulo "Logística".
 
 ### Reglas de validación de cantidad
 Al ingresar cantidad en un ítem (comparada contra `guia.detalle.cantidad`):
@@ -774,3 +782,69 @@ que descuenta Logística al despachar).
 - **Rechazo de guía** — hoy si Cantidad > Despachada solo se bloquea Aplicar.
   No hay flujo para "rechazar la guía" formalmente. `Entrada.estado='RECHAZADO'`
   existe en el modelo pero no está expuesto en la UI actual.
+
+---
+
+## 17. Módulo Personal (Trabajadores de obra)
+
+**Propósito.** Registrar al personal de obra (albañiles, operadores, electricistas, gasfiteros, etc.) que **no interactúa con el sistema** — distinto de los `User`/`ProyectoMiembro` que son usuarios internos. Modelo `apps/maquinaria/models.py → Trabajador`, por proyecto.
+
+**Dónde vive la UI.** Página Cuadrilla (`maquinaria:registro_lista`), pestaña **Personal** (default). La antigua entrada "Personal" del sidebar y la vista `proyectos:personal` (que confundía trabajadores de obra con miembros del sistema) fueron eliminadas en octubre 2026.
+
+**Qué se guarda.** Datos personales (nombres, apellidos, DNI, fecha nac., sexo, estado civil, lugar nac.), contacto (dos teléfonos, email, dirección + distrito/provincia/departamento), contacto de emergencia (nombre + parentesco + teléfono), laboral (cargo = `TipoPersonal`, fecha de ingreso, años de experiencia, descripción), **habilidades y oficios** como texto libre (porque un albañil, un electricista y un operador no comparten el mismo set de checkboxes útiles), licencia de conducir (opcional + categoría A-I … B-IIc + nº + vencimiento), operación de maquinaria pesada (opcional), seguridad social (régimen AFP/ONP, CUSPP, EsSalud, SCTR, banco, CCI), foto, **CV** (PDF/Word), observaciones y flag `activo`.
+
+**Único obligatorio: nombres + apellidos.** Todo lo demás es `blank=True` para permitir alta rápida y completar luego.
+
+**Autollenado por DNI (RENIEC vía Factiliza).** El input DNI del formulario tiene un botón **Buscar** (o Enter en el input) que llama a `maquinaria:consulta_doc` (endpoint existente, reusa el token Factiliza compartido con cotizaciones y maquinaria). Autollena: Nombres, Apellidos, Dirección, Distrito, Provincia, Departamento, y — si el plan de Factiliza lo expone — Fecha de nacimiento y Sexo. **Todos los campos quedan editables**: el JS solo rellena si están vacíos (función `setIfEmpty`), para no pisar correcciones manuales al re-buscar.
+
+**Tabla del tab Personal.** Muestra solo lo transversal a cualquier oficio: foto · Nombres · DNI · Cargo · Teléfono · Experiencia · **CV** (ícono PDF rojo clickeable que abre el archivo en pestaña nueva) · acciones (ver/editar/eliminar). Licencia y Maq. pesada **no aparecen** en la tabla porque son excluyentes de ciertos oficios y confunden al leer — siguen en el formulario para completarlos cuando aplican.
+
+**Documentos adjuntos.** El modelo `DocumentoTrabajador` permite subir N archivos arbitrarios (SCTR escaneado, DNI, antecedentes, certificados) desde la vista `trabajador_detalle`, independiente del `cv` dedicado del modelo `Trabajador`.
+
+**Reutilización del endpoint consulta_doc.** El mismo endpoint `maquinaria:consulta_doc` sirve a 4 formularios: alta de personal, cotizaciones, revisar requerimiento y maquinaria. Devuelve además de `razon_social/direccion/ubigeo` (compat anterior), los campos nuevos `nombres/apellido_paterno/apellido_materno/apellidos/departamento/provincia/distrito/fecha_nacimiento/sexo`. Mantener esa compat al modificar.
+
+---
+
+## 18. Módulo Cuadrilla (Frentes de trabajo)
+
+**Propósito.** Agrupar al personal en frentes de trabajo del proyecto. Una Cuadrilla es un grupo nominal con capataz, ubicación, fechas y lista de trabajadores asignados — **no** una abstracción tarifaria.
+
+**Rediseño de octubre 2026.** Antes era un catálogo **global** con integrantes abstractos (`TipoPersonal` + `cantidad` decimal) para calcular HH y costo/hora. Hoy es **por proyecto** con integrantes = `Trabajador` específicos. La migración `0012_cuadrilla_frente_de_trabajo` **borra** las cuadrillas e integrantes previos (empezar limpio) y agrega los campos nuevos. Los métodos `hh_por_hora()` y `costo_hora()` quedan como stubs (`count()` e `Decimal('0')` respectivamente) hasta que se rediseñe el cálculo de costo de mano de obra.
+
+**Campos de Cuadrilla.** `proyecto` (FK), `nombre`, `descripcion`, `capataz` (FK Trabajador opcional, se filtra solo a trabajadores del mismo proyecto), `ubicacion` (texto libre: "Torre A nivel 3", etc.), `fecha_inicio`, `fecha_fin`, `activo`.
+
+**`IntegranteCuadrilla`.** Modelo intermedio con `cuadrilla` + `trabajador` (unique_together) + `fecha_alta` (auto). Un trabajador puede estar en **múltiples** cuadrillas simultáneamente (no se bloquea la pertenencia múltiple — útil si rota entre frentes el mismo día).
+
+**UI.** Página Cuadrilla → pestaña Cuadrilla (segunda). Tarjetas con nombre, ubicación, capataz, badge "N personal" y rango de fechas. Dentro del detalle: info del frente a la izquierda, lista de integrantes a la derecha con form inline para agregar personal (filtra trabajadores del proyecto, excluye los ya asignados) y botón "Retirar" por integrante.
+
+**Migración 0012 — nota operativa.** La migración usa `atomic = False` + `SET CONSTRAINTS ALL IMMEDIATE` después del wipe. Esto porque PostgreSQL rechaza `ALTER TABLE` si en la misma transacción quedan triggers FK pendientes de un `DELETE` previo (error: "cannot ALTER TABLE because it has pending trigger events"). No cambiar.
+
+---
+
+## 19. Módulo Asistencia
+
+**Propósito.** Control de asistencia del personal de obra por proyecto, con vista matricial editable.
+
+**Dónde vive.** Página Cuadrilla → pestaña **Asistencia** (tercera, después de Personal y Cuadrilla).
+
+**Modelo** `apps/maquinaria/models.py → Asistencia`: `trabajador` + `fecha` (unique_together), `estado` en {`P`=Presente, `F`=Falta, `T`=Tardanza, `PM`=Permiso, `D`=Descanso, `FE`=Feriado}, `observacion`, timestamps. Scope-por-proyecto se deriva vía `trabajador.proyecto`.
+
+**Períodos soportados.** El helper `_rango_asistencia(periodo, inicio)` en `apps/maquinaria/views.py` traduce:
+- **Diario** → 1 día (la fecha de referencia).
+- **Semanal** → de **lunes a domingo** de la semana que contiene la fecha (ISO weekday, no US). La fecha de referencia se corre al lunes.
+- **Quincenal** → 15 días a partir de la fecha de referencia (no de la quincena calendario; el usuario elige el rango).
+- **Mensual** → mes completo. La fecha de referencia se corre al día 1 y el fin se calcula con `calendar.monthrange`.
+
+**UI matricial.** Filas = trabajadores **activos** del proyecto (ordenados por apellidos+nombres); columnas = días del rango; celdas = `<select>` compacto con los 6 estados + "—" (sin marcar). La primera columna (nombre) y la fila de header son `position: sticky` para que no se pierdan al hacer scroll horizontal en vista mensual. JS pinta cada celda según su estado (verde = Presente, rojo = Falta, amarillo = Tardanza, azul = Permiso, gris = Descanso, morado = Feriado) para lectura rápida.
+
+**Guardado en bulk.** El form submit a `maquinaria:asistencia_guardar` manda todas las celdas con claves `estado__<trabajador_id>__<YYYY-MM-DD>`. La vista parsea, valida (trabajador debe pertenecer al proyecto, estado debe estar en el enum) y hace `update_or_create` por celda. **Celda vacía ("—") elimina la marca** si existía. Después del guardado redirige a la misma vista con los mismos `periodo` + `inicio` para preservar el contexto.
+
+**Qué NO hace (pendientes).** No calcula ni muestra totales de HH/HM a partir de la asistencia; no cruza con `Cuadrilla` para marcar asistencia por frente; no genera reportes exportables; no bloquea edición de fechas pasadas; no tiene control de permisos (hoy depende solo de `puede_gestionar_maquinaria`).
+
+---
+
+## 20. Módulo Reportes (Logística) — placeholder
+
+**Estado:** vista `logistica:reportes` existe pero solo renderiza una tarjeta "En desarrollo". La URL es `proyecto/<id>/reportes/` y aparece en el sidebar de Logística (ambos layouts, plano y anidado) con un badge temporal verde **"Nuevo+"** envuelto en comentarios `{# BOTÓN TEMPORAL #}` para que sea fácil de eliminar cuando ya no se necesite destacar.
+
+**Permiso:** usa `puede_ver_logistica` (reutiliza el permiso existente; no se creó uno dedicado para no inflar `GRUPOS_PERMISOS`).

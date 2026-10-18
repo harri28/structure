@@ -585,6 +585,12 @@ def entrada_crear(request, proyecto_id):
             # Guardar acá es idempotente — solo redirige a la Entrada creada.
             entrada = Entrada.objects.filter(guia=guia).first()
             if entrada:
+                # Confirmación de recepción por el Almacenero → la guía pasa a ENTREGADO.
+                if guia.estado != 'ENTREGADO':
+                    guia.estado = 'ENTREGADO'
+                    guia.save(update_fields=['estado'])
+                    log(request, 'EDITAR', 'Logística',
+                        f'Guía {guia.numero} marcada como ENTREGADO por el Almacenero ({request.user.get_full_name() or request.user.username})')
                 messages.success(request, f'Entrada de Guía {guia.numero} guardada.')
                 return redirect('almacen:entrada_detalle', pk=entrada.pk)
             else:

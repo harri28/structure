@@ -334,6 +334,7 @@ def aprobar(request, pk):
 @requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos')
 @proyecto_visible
 def vs_atenciones(request, proyecto_id):
+    from apps.almacen.models import DetalleCotizacion
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO']
     detalles = (DetalleRequerimiento.objects
@@ -367,10 +368,21 @@ def vs_atenciones(request, proyecto_id):
             }
         if det.requerimiento.estado in ['APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO']:
             consolidado[key]['solicitado'] += det.cantidad_aprobada or Decimal('0')
-        if det.requerimiento.estado == 'ATENDIDO':
-            consolidado[key]['atendido'] += det.cantidad_aprobada or Decimal('0')
         if det.observacion:
             consolidado[key]['observaciones'] = det.observacion
+
+    # "Atendido y despachado" = Σ DetalleCotizacion.cantidad de cotizaciones APROBADAS
+    # cuya guía está EN_TRANSITO o ENTREGADO (ANULADA queda fuera, por eso al anular
+    # una guía la cantidad se restablece sola).
+    despachados = (DetalleCotizacion.objects
+                   .filter(cotizacion__proyecto=proyecto,
+                           cotizacion__estado='APROBADA',
+                           cotizacion__guias_remision__estado__in=('EN_TRANSITO', 'ENTREGADO'))
+                   .distinct())
+    for d in despachados:
+        key = ('insumo', d.insumo_id) if d.insumo_id else ('desc', d.descripcion or '—')
+        if key in consolidado:
+            consolidado[key]['atendido'] += d.cantidad
 
     filas = []
     for item in consolidado.values():
