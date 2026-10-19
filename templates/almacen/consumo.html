@@ -94,7 +94,7 @@
           <td colspan="6">
             <div class="empty-state">
               <i class="bi bi-graph-up-arrow d-block"></i>
-              <p>Sin consumo registrado{% if tipo_sel or desde or hasta %} con los filtros aplicados{% endif %}. Registra <a href="{% url 'almacen:salida_crear' proyecto.pk %}">salidas</a> de material.</p>
+              <p>Sin consumo registrado{% if tipo_sel or desde or hasta %} con los filtros aplicados{% endif %}. Registra <a href="{% url 'almacen:salida_lista' proyecto.pk %}">atenciones</a> desde Atenciones / Salidas.</p>
             </div>
           </td>
         </tr>

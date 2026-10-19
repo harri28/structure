@@ -15,7 +15,6 @@ from .models import (
 )
 from .forms import (
     EntradaForm, DetalleEntradaFormSet,
-    SalidaForm, DetalleSalidaFormSet,
     CotizacionForm, DetalleCotizacionFormSet,
     OrdenCompraForm, DetalleOrdenCompraFormSet,
 )
@@ -927,70 +926,6 @@ def atencion_crear(request, proyecto_id):
 def salida_detalle(request, pk):
     salida = get_object_or_404(Salida, pk=pk)
     return render(request, 'almacen/salida_detalle.html', {'salida': salida, 'proyecto': salida.proyecto})
-
-
-@requiere('puede_gestionar_salidas')
-@proyecto_visible
-def salida_crear(request, proyecto_id):
-    from apps.requerimientos.models import Requerimiento as Req
-    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
-    reqs_aprobados = proyecto.requerimientos.filter(estado='APROBADO')
-    if request.method == 'POST':
-        form = SalidaForm(request.POST)
-        formset = DetalleSalidaFormSet(request.POST, prefix='detalles')
-        if form.is_valid() and formset.is_valid():
-            salida = form.save(commit=False)
-            salida.proyecto = proyecto
-            req_id = request.POST.get('requerimiento_id')
-            if req_id:
-                try:
-                    req = Req.objects.get(pk=req_id, proyecto=proyecto)
-                    salida.requerimiento = req
-                except Req.DoesNotExist:
-                    pass
-            salida.save()
-            for f in formset:
-                if f.cleaned_data and not f.cleaned_data.get('DELETE'):
-                    d = f.save(commit=False)
-                    d.salida = salida
-                    _sync_insumo_snapshot(d)
-            if salida.requerimiento:
-                salida.requerimiento.estado = 'ATENDIDO'
-                salida.requerimiento.save()
-            log(request, 'CREAR', 'Almacén',
-                f'Salida SAL-{salida.numero} registrada en {proyecto.codigo}')
-            messages.success(request, 'Salida registrada.')
-            return redirect('almacen:salida_detalle', pk=salida.pk)
-    else:
-        form = SalidaForm()
-        formset = DetalleSalidaFormSet(prefix='detalles')
-    return render(request, 'almacen/salida_form.html', {
-        'form': form, 'formset': formset, 'proyecto': proyecto,
-        'titulo': 'Nueva Salida', 'reqs_aprobados': reqs_aprobados,
-    })
-
-
-@requiere('puede_gestionar_salidas')
-def salida_editar(request, pk):
-    salida = get_object_or_404(Salida, pk=pk)
-    proyecto = salida.proyecto
-    if request.method == 'POST':
-        form = SalidaForm(request.POST, instance=salida)
-        formset = DetalleSalidaFormSet(request.POST, instance=salida, prefix='detalles')
-        if form.is_valid() and formset.is_valid():
-            form.save()
-            for d in formset.save():
-                _sync_insumo_snapshot(d)
-            log(request, 'EDITAR', 'Almacén',
-                f'Salida SAL-{salida.numero} editada en {proyecto.codigo}')
-            messages.success(request, 'Salida actualizada.')
-            return redirect('almacen:salida_detalle', pk=salida.pk)
-    else:
-        form = SalidaForm(instance=salida)
-        formset = DetalleSalidaFormSet(instance=salida, prefix='detalles')
-    return render(request, 'almacen/salida_form.html', {
-        'form': form, 'formset': formset, 'proyecto': proyecto, 'titulo': 'Editar Salida',
-    })
 
 
 @requiere('puede_gestionar_salidas')
