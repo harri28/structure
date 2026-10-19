@@ -29,7 +29,6 @@
           <th>Proveedor</th>
           <th>Requerimiento</th>
           <th>Estado</th>
-          <th class="text-end">Total (S/.)</th>
           <th></th>
         </tr>
       </thead>
@@ -53,7 +52,6 @@
               {{ e.get_estado_display }}
             </span>
           </td>
-          <td class="text-end fw-semibold">S/. {{ e.total|floatformat:2 }}</td>
           <td class="d-flex gap-1 align-items-center">
             <a href="{% url 'almacen:entrada_detalle' e.pk %}" class="btn-tbl"><i class="bi bi-eye"></i></a>
             {% if not e.guia %}
@@ -62,7 +60,7 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-center py-4 text-muted">Sin entradas registradas</td></tr>
+        <tr><td colspan="6" class="text-center py-4 text-muted">Sin entradas registradas</td></tr>
         {% endfor %}
       </tbody>
     </table>
