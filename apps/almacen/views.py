@@ -488,7 +488,10 @@ def entrada_aplicar_item(request, proyecto_id, guia_pk):
         except (ValueError, InsumoPresupuesto.DoesNotExist):
             pass
 
-    # Get or create Entrada (OneToOne con la guía)
+    # Get or create Entrada (OneToOne con la guía).
+    # Al venir de guía, la Entrada se crea directamente ACEPTADO: el acto de
+    # "Registrar guía" ya es la aceptación física por el Almacenero — no hay
+    # un paso posterior de aceptar/rechazar en la lista de Entradas.
     entrada = Entrada.objects.filter(guia=guia).first()
     if not entrada:
         entrada = Entrada.objects.create(
@@ -501,6 +504,7 @@ def entrada_aplicar_item(request, proyecto_id, guia_pk):
             fecha=date.today(),
             proveedor=guia.conductor or (guia.transportista.razon_social if guia.transportista else ''),
             descripcion=guia.motivo_texto,
+            estado='ACEPTADO',
         )
         log(request, 'CREAR', 'Almacén',
             f'Entrada iniciada desde Guía {guia.numero} en {proyecto.codigo}')
