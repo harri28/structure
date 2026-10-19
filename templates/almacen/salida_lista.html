@@ -84,7 +84,7 @@
           <div class="row g-2 mb-2">
             <div class="col-sm-3">
               <label class="form-label fw-semibold">Código</label>
-              <input type="text" id="at-codigo" class="form-control" readonly style="background:#f8fafc">
+              <p id="at-codigo" class="form-control-plaintext fw-bold mb-0" style="color:#2563eb;min-height:38px;display:flex;align-items:center">—</p>
             </div>
             <div class="col-sm-6 position-relative">
               <label class="form-label fw-semibold">Descripción <span class="text-danger">*</span></label>
@@ -93,22 +93,16 @@
             </div>
             <div class="col-sm-3">
               <label class="form-label fw-semibold">Unidad</label>
-              <input type="text" id="at-unidad" class="form-control" readonly style="background:#f8fafc">
+              <p id="at-unidad" class="form-control-plaintext mb-0" style="min-height:38px;display:flex;align-items:center">—</p>
             </div>
           </div>
 
           <div class="row g-2 mb-2">
-            <div class="col-sm-4">
-              <label class="form-label fw-semibold">N° de Guía</label>
-              <select id="at-guia" class="form-select">
-                <option value="">— (sin guía) —</option>
-              </select>
-            </div>
-            <div class="col-sm-4">
+            <div class="col-sm-6">
               <label class="form-label fw-semibold">Fecha</label>
               <input type="date" id="at-fecha" class="form-control" value="{% now 'Y-m-d' %}">
             </div>
-            <div class="col-sm-4">
+            <div class="col-sm-6">
               <label class="form-label fw-semibold">Stock disponible</label>
               <input type="text" id="at-stock" class="form-control" readonly style="background:#f8fafc">
             </div>
@@ -126,17 +120,9 @@
           </div>
 
           <div class="row g-2 mb-2">
-            <div class="col-sm-4">
+            <div class="col-sm-6">
               <label class="form-label fw-semibold">Cantidad <span class="text-danger">*</span></label>
-              <input type="number" id="at-cantidad" class="form-control" step="0.01" min="0.01" placeholder="0.00">
-            </div>
-            <div class="col-sm-4">
-              <label class="form-label fw-semibold">Parcial (S/.) <span class="text-danger">*</span></label>
-              <input type="number" id="at-parcial" class="form-control" step="0.01" min="0" placeholder="0.00">
-            </div>
-            <div class="col-sm-4">
-              <label class="form-label fw-semibold">P.U (calculado)</label>
-              <input type="text" id="at-pu" class="form-control" readonly style="background:#eff6ff;font-weight:600">
+              <input type="number" id="at-cantidad" class="form-control" step="1" min="1" placeholder="0">
             </div>
           </div>
 
@@ -163,7 +149,6 @@
 <script>
 (function () {
   var URL_INSUMOS  = "{% url 'almacen:api_insumos_buscar' proyecto.pk %}";
-  var URL_GUIAS    = "{% url 'almacen:api_insumo_guias' proyecto.pk %}";
   var URL_CREAR    = "{% url 'almacen:atencion_crear' proyecto.pk %}";
 
   var iResult   = document.getElementById('at-resultados');
@@ -172,13 +157,10 @@
   var iDesc     = document.getElementById('at-descripcion');
   var iUnidad   = document.getElementById('at-unidad');
   var iStock    = document.getElementById('at-stock');
-  var iGuia     = document.getElementById('at-guia');
   var iFecha    = document.getElementById('at-fecha');
   var iProv     = document.getElementById('at-proveedor');
   var iFact     = document.getElementById('at-factura');
   var iCant     = document.getElementById('at-cantidad');
-  var iParc     = document.getElementById('at-parcial');
-  var iPU       = document.getElementById('at-pu');
   var iObs      = document.getElementById('at-observaciones');
   var iMsg      = document.getElementById('at-msg');
   var btnSave   = document.getElementById('btn-guardar-atencion');
@@ -197,10 +179,9 @@
 
   function resetForm() {
     iInsumoId.value = '';
-    iCodigo.value = ''; iDesc.value = ''; iUnidad.value = ''; iStock.value = '';
-    iGuia.innerHTML = '<option value="">— (sin guía) —</option>';
+    iCodigo.textContent = '—'; iDesc.value = ''; iUnidad.textContent = '—'; iStock.value = '';
     iProv.value = ''; iFact.value = '';
-    iCant.value = ''; iParc.value = ''; iPU.value = ''; iObs.value = '';
+    iCant.value = ''; iObs.value = '';
     clearMsg();
     var hoy = new Date().toISOString().slice(0, 10);
     iFecha.value = hoy;
@@ -211,10 +192,9 @@
   iDesc.addEventListener('input', function () {
     // Si el usuario está tipeando, invalidamos el insumo elegido para forzar re-selección
     iInsumoId.value = '';
-    iCodigo.value = '';
-    iUnidad.value = '';
+    iCodigo.textContent = '—';
+    iUnidad.textContent = '—';
     iStock.value = '';
-    iGuia.innerHTML = '<option value="">— (sin guía) —</option>';
 
     clearTimeout(buscarTimer);
     var q = iDesc.value.trim();
@@ -247,12 +227,11 @@
           el.addEventListener('click', function () {
             if (!it.seleccionable) return;
             iInsumoId.value = it.id;
-            iCodigo.value   = it.codigo;
-            iDesc.value     = it.descripcion;
-            iUnidad.value   = it.unidad;
-            iStock.value    = it.stock_almacen + ' ' + it.unidad;
+            iCodigo.textContent = it.codigo || '—';
+            iDesc.value         = it.descripcion;
+            iUnidad.textContent = it.unidad || '—';
+            iStock.value        = it.stock_almacen + ' ' + it.unidad;
             iResult.style.display = 'none';
-            cargarGuias(it.id);
           });
           iResult.appendChild(el);
         });
@@ -268,40 +247,13 @@
     }
   });
 
-  function cargarGuias(insumoId) {
-    fetch(URL_GUIAS + '?insumo=' + insumoId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-    .then(function (r) { return r.json(); })
-    .then(function (d) {
-      iGuia.innerHTML = '<option value="">— (sin guía) —</option>';
-      if (d.ok && d.items) {
-        d.items.forEach(function (g) {
-          var opt = document.createElement('option');
-          opt.value = g.id;
-          opt.textContent = g.numero + ' (' + g.fecha + ')';
-          iGuia.appendChild(opt);
-        });
-      }
-    });
-  }
-
-  // P.U autocalculado
-  function recalcPU() {
-    var c = parseFloat(iCant.value);
-    var p = parseFloat(iParc.value);
-    if (isNaN(c) || c <= 0 || isNaN(p) || p < 0) { iPU.value = ''; return; }
-    iPU.value = (p / c).toFixed(4);
-  }
-  iCant.addEventListener('input', recalcPU);
-  iParc.addEventListener('input', recalcPU);
-
   // Reset al abrir el modal
   modalEl.addEventListener('show.bs.modal', resetForm);
 
   // Submit
   btnSave.addEventListener('click', function () {
     if (!iInsumoId.value) { showMsg('Debés seleccionar un material.', false); return; }
-    if (!iCant.value || parseFloat(iCant.value) <= 0) { showMsg('Cantidad debe ser mayor a 0.', false); return; }
-    if (!iParc.value) { showMsg('Ingresá el parcial.', false); return; }
+    if (!iCant.value || parseInt(iCant.value, 10) <= 0) { showMsg('Cantidad debe ser mayor a 0.', false); return; }
     clearMsg();
     btnSave.disabled = true;
     var htmlOrig = btnSave.innerHTML;
@@ -309,12 +261,10 @@
 
     var payload = {
       insumo_id:   iInsumoId.value,
-      guia_id:     iGuia.value || null,
       fecha:       iFecha.value,
       proveedor:   iProv.value,
       factura:     iFact.value,
       cantidad:    iCant.value,
-      parcial:     iParc.value,
       observaciones: iObs.value,
     };
 
