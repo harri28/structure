@@ -768,6 +768,30 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .btn-topbar { padding: .22rem .5rem; }
 }
 
+/* Tablas: scroll horizontal en mobile cuando desborden el card-body */
+@media (max-width: 768px) {
+  .card-body:has(> table.table-modern),
+  .card-body:has(> table.table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .card-body:has(> table.table-modern)::-webkit-scrollbar,
+  .card-body:has(> table.table)::-webkit-scrollbar { height: 4px; }
+  .card-body:has(> table.table-modern)::-webkit-scrollbar-thumb,
+  .card-body:has(> table.table)::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+  }
+  /* Encoger un poco la fuente de la tabla para aprovechar espacio */
+  .card-body > table.table-modern,
+  .card-body > table.table { font-size: .78rem; }
+  .card-body > table.table-modern th,
+  .card-body > table.table-modern td,
+  .card-body > table.table th,
+  .card-body > table.table td { white-space: nowrap; }
+}
+
 /* Submodule nav (Stock / Consumo / Entradas / Salidas, etc.) con scroll horizontal en mobile */
 @media (max-width: 768px) {
   .submodule-nav-wrap {
