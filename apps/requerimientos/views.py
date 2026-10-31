@@ -335,8 +335,41 @@ def consolidar_vs_atenciones(proyecto):
     """Helper reusable: devuelve filas consolidadas de Req vs Atenciones para un proyecto.
 
     Usado por `requerimientos.vs_atenciones` y `logistica.vs_atenciones_log`.
+
+    Reglas:
+    - Si un DetalleRequerimiento no tiene FK a insumo pero su descripción o código
+      coincide con un InsumoPresupuesto del proyecto, se consolida en la MISMA fila
+      del insumo presupuestado (evita filas duplicadas por el mismo material).
+    - Saldo = Presupuestado − Atendido si Presupuestado > 0;
+             Solicitado − Atendido si Presupuestado = 0 (ítem ad-hoc sin presupuesto).
     """
     from apps.almacen.models import DetalleCotizacion
+    from apps.presupuesto.models import InsumoPresupuesto
+
+    # Índice de insumos del presupuesto por descripción/código (case-insensitive) para resolver
+    # DetalleRequerimiento ad-hoc que coinciden por texto con un insumo presupuestado.
+    presup_por_desc = {}
+    presup_por_codigo = {}
+    for ins in InsumoPresupuesto.objects.filter(presupuesto__proyecto=proyecto):
+        if ins.descripcion:
+            presup_por_desc[ins.descripcion.strip().lower()] = ins
+        if ins.codigo:
+            presup_por_codigo[str(ins.codigo).strip().lower()] = ins
+
+    def resolver_insumo(det_insumo, desc, codigo):
+        """Devuelve el InsumoPresupuesto a usar para agrupar, resolviendo matches por texto."""
+        if det_insumo:
+            return det_insumo
+        if codigo:
+            ins = presup_por_codigo.get(str(codigo).strip().lower())
+            if ins:
+                return ins
+        if desc:
+            ins = presup_por_desc.get(desc.strip().lower())
+            if ins:
+                return ins
+        return None
+
     estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO']
     detalles = (DetalleRequerimiento.objects
                 .filter(requerimiento__proyecto=proyecto,
@@ -345,14 +378,15 @@ def consolidar_vs_atenciones(proyecto):
 
     consolidado = {}
     for det in detalles:
-        key = ('insumo', det.insumo_id) if det.insumo_id else ('desc', det.descripcion or det.codigo or '—')
+        ins = resolver_insumo(det.insumo, det.descripcion, det.codigo)
+        key = ('insumo', ins.pk) if ins else ('desc', det.descripcion or det.codigo or '—')
         if key not in consolidado:
-            if det.insumo:
-                codigo      = det.insumo.codigo or det.codigo or '—'
-                descripcion = det.insumo.descripcion
-                unidad      = det.insumo.unidad or det.unidad
-                tipo        = det.insumo.get_tipo_display() if hasattr(det.insumo, 'get_tipo_display') else ''
-                original    = det.insumo.cantidad_total or Decimal('0')
+            if ins:
+                codigo      = ins.codigo or det.codigo or '—'
+                descripcion = ins.descripcion
+                unidad      = ins.unidad or det.unidad
+                tipo        = ins.get_tipo_display() if hasattr(ins, 'get_tipo_display') else ''
+                original    = ins.cantidad_total or Decimal('0')
             else:
                 codigo      = det.codigo or '—'
                 descripcion = det.descripcion
@@ -365,7 +399,7 @@ def consolidar_vs_atenciones(proyecto):
                 'original': original,
                 'solicitado': Decimal('0'), 'atendido': Decimal('0'),
                 'observaciones': '',
-                'insumo_id': det.insumo_id,
+                'insumo_id': ins.pk if ins else None,
             }
         if det.requerimiento.estado in ['APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO']:
             consolidado[key]['solicitado'] += det.cantidad_aprobada or Decimal('0')
@@ -378,14 +412,21 @@ def consolidar_vs_atenciones(proyecto):
                            cotizacion__guias_remision__estado__in=('EN_TRANSITO', 'ENTREGADO'))
                    .distinct())
     for d in despachados:
-        key = ('insumo', d.insumo_id) if d.insumo_id else ('desc', d.descripcion or '—')
+        # También intenta resolver despachos sin FK vía descripción, para que el "Atendido"
+        # caiga en la misma fila del insumo presupuestado cuando aplique.
+        ins = resolver_insumo(d.insumo, d.descripcion, None)
+        key = ('insumo', ins.pk) if ins else ('desc', d.descripcion or '—')
         if key in consolidado:
             consolidado[key]['atendido'] += d.cantidad
 
     filas = []
     for item in consolidado.values():
         item['presupuestado'] = item['original']
-        item['saldo'] = item['original'] - item['atendido']
+        # Saldo condicional: usa Presupuestado si > 0, sino Solicitado (para ítems ad-hoc).
+        if item['original'] > 0:
+            item['saldo'] = item['original'] - item['atendido']
+        else:
+            item['saldo'] = item['solicitado'] - item['atendido']
         filas.append(item)
     filas.sort(key=lambda x: x['codigo'])
     return filas
