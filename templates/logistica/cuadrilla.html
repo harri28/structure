@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Cuadrilla — {{ proyecto.codigo }}{% endblock %}
+{% block nav_logistica %}active{% endblock %}
+{% block nav_log_cuadrilla %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
+<li class="breadcrumb-item active">Cuadrilla</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="bi bi-people-fill me-2"></i>Cuadrilla</h4>
+  <div class="text-muted" style="font-size:.84rem">
+    Vista de solo lectura — la edición vive en el área del Administrador de Obra.
+  </div>
+</div>
+
+{# ─── Personal del proyecto ─── #}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:#f9fafb">
+    <span class="fw-semibold" style="font-size:.9rem"><i class="bi bi-person-badge me-1"></i>Personal</span>
+    <span class="text-muted" style="font-size:.78rem">{{ trabajadores|length }} trabajador{{ trabajadores|length|pluralize:"es" }}</span>
+  </div>
+  <div class="card-body p-0">
+    {% if trabajadores %}
+    <table class="table-modern" style="font-size:.82rem">
+      <thead>
+        <tr>
+          <th style="min-width:180px">Nombre</th>
+          <th style="width:100px">DNI</th>
+          <th style="min-width:140px">Tipo</th>
+          <th style="width:120px">Teléfono</th>
+          <th style="width:80px" class="text-center">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in trabajadores %}
+        <tr>
+          <td class="fw-semibold">{{ t.apellidos }}, {{ t.nombres }}</td>
+          <td style="color:#6b7280">{{ t.dni|default:"—" }}</td>
+          <td>{{ t.tipo_personal.nombre|default:"—" }}</td>
+          <td style="color:#6b7280">{{ t.telefono|default:"—" }}</td>
+          <td class="text-center">
+            {% if t.activo %}
+            <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.68rem">Activo</span>
+            {% else %}
+            <span class="badge bg-secondary" style="font-size:.68rem">Inactivo</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-4 text-muted" style="font-size:.85rem">Sin personal registrado.</div>
+    {% endif %}
+  </div>
+</div>
+
+{# ─── Cuadrillas / frentes de trabajo ─── #}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:#f9fafb">
+    <span class="fw-semibold" style="font-size:.9rem"><i class="bi bi-people-fill me-1"></i>Frentes de trabajo</span>
+    <span class="text-muted" style="font-size:.78rem">{{ cuadrillas|length }} cuadrilla{{ cuadrillas|length|pluralize:"s" }}</span>
+  </div>
+  <div class="card-body p-0">
+    {% if cuadrillas %}
+    <table class="table-modern" style="font-size:.82rem">
+      <thead>
+        <tr>
+          <th style="min-width:180px">Frente</th>
+          <th style="min-width:180px">Capataz</th>
+          <th style="min-width:150px">Ubicación</th>
+          <th style="width:100px" class="text-end">Integrantes</th>
+          <th style="width:110px">Inicio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cuadrillas %}
+        <tr>
+          <td class="fw-semibold">{{ c.nombre }}</td>
+          <td>{% if c.capataz %}{{ c.capataz.apellidos }}, {{ c.capataz.nombres }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td style="color:#6b7280">{{ c.ubicacion|default:"—" }}</td>
+          <td class="text-end fw-semibold" style="color:#2563eb">{{ c.n_integrantes }}</td>
+          <td style="color:#6b7280">{{ c.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-4 text-muted" style="font-size:.85rem">Sin cuadrillas registradas.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

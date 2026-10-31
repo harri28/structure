@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Maquinaria — {{ proyecto.codigo }}{% endblock %}
+{% block nav_logistica %}active{% endblock %}
+{% block nav_log_maquinaria %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
+<li class="breadcrumb-item active">Maquinaria</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="bi bi-truck me-2"></i>Maquinaria</h4>
+  <div class="text-muted" style="font-size:.84rem">
+    {{ maquinas|length }} equipo{{ maquinas|length|pluralize:"s" }} · Total acumulado:
+    <strong>{{ total_hm_proyecto|floatformat:1 }} HM</strong> · Vista de solo lectura.
+  </div>
+</div>
+
+{% if maquinas %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-modern" style="font-size:.82rem">
+      <thead>
+        <tr>
+          <th style="width:80px">Código</th>
+          <th style="min-width:200px">Nombre</th>
+          <th style="width:130px">Tipo</th>
+          <th style="width:100px">Marca</th>
+          <th style="width:100px">Placa</th>
+          <th style="width:140px">Modalidad</th>
+          <th style="min-width:150px">Propietario</th>
+          <th style="min-width:150px">Operador</th>
+          <th style="width:90px" class="text-end">HM acum.</th>
+          <th style="width:70px" class="text-end">Turnos</th>
+          <th style="width:80px" class="text-center">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in maquinas %}
+        <tr>
+          <td><span class="fw-bold" style="font-size:.82rem;color:#2563eb">{{ m.codigo }}</span></td>
+          <td>
+            <div class="fw-semibold" style="font-size:.85rem">{{ m.nombre }}</div>
+            {% if m.modelo %}<div style="font-size:.74rem;color:#9ca3af">{{ m.modelo }}</div>{% endif %}
+          </td>
+          <td>{{ m.get_tipo_equipo_display|default:"—" }}</td>
+          <td style="color:#6b7280">{{ m.marca|default:"—" }}</td>
+          <td style="color:#6b7280">{{ m.placa|default:"—" }}</td>
+          <td style="font-size:.78rem;color:#6b7280">{{ m.get_modalidad_costo_display|default:"—" }}</td>
+          <td>{{ m.propietario_razon_social|default:"—" }}</td>
+          <td>{{ m.operador|default:"—" }}</td>
+          <td class="text-end fw-semibold" style="color:#2563eb">{{ m.total_hm|default:0|floatformat:1 }}</td>
+          <td class="text-end" style="color:#6b7280">{{ m.n_turnos|default:0 }}</td>
+          <td class="text-center">
+            {% if m.activo %}
+            <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.68rem">Activo</span>
+            {% else %}
+            <span class="badge bg-secondary" style="font-size:.68rem">Inactivo</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-truck d-block mb-3" style="font-size:2.5rem;opacity:.3"></i>
+  <div class="fw-semibold mb-1">Sin maquinaria registrada</div>
+  <div style="font-size:.82rem">El Administrador de Obra puede dar de alta los equipos desde su panel.</div>
+</div>
+{% endif %}
+{% endblock %}

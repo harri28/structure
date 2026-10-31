@@ -42,4 +42,8 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/abastecimiento/',     views.abastecimiento,     name='abastecimiento'),
     path('proyecto/<int:proyecto_id>/reportes/',           views.reportes,           name='reportes'),
     path('proyecto/<int:proyecto_id>/vs-atenciones/',      views.vs_atenciones_log,  name='vs_atenciones'),
+
+    # Vistas read-only de Cuadrilla y Maquinaria (replica para Logística; sin edición)
+    path('proyecto/<int:proyecto_id>/cuadrilla/',          views.cuadrilla_log,      name='cuadrilla'),
+    path('proyecto/<int:proyecto_id>/maquinaria/',         views.maquinaria_log,     name='maquinaria'),
 ]

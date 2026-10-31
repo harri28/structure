@@ -953,3 +953,53 @@ def vs_atenciones_log(request, proyecto_id):
         'proyecto': proyecto,
         'filas': consolidar_vs_atenciones(proyecto),
     })
+
+
+@requiere('puede_ver_logistica')
+@proyecto_visible
+def cuadrilla_log(request, proyecto_id):
+    """Vista read-only de Personal y Cuadrillas del proyecto (replica para Logística)."""
+    from django.db.models import Count
+    from apps.maquinaria.models import Trabajador, Cuadrilla
+    proyecto = _get_proyecto(proyecto_id)
+    trabajadores = (
+        Trabajador.objects
+        .filter(proyecto=proyecto)
+        .select_related('tipo_personal')
+        .order_by('apellidos', 'nombres')
+    )
+    cuadrillas = (
+        Cuadrilla.objects
+        .filter(proyecto=proyecto)
+        .select_related('capataz')
+        .annotate(n_integrantes=Count('integrantes'))
+        .order_by('nombre')
+    )
+    return render(request, 'logistica/cuadrilla.html', {
+        'proyecto':     proyecto,
+        'trabajadores': trabajadores,
+        'cuadrillas':   cuadrillas,
+    })
+
+
+@requiere('puede_ver_logistica')
+@proyecto_visible
+def maquinaria_log(request, proyecto_id):
+    """Vista read-only del catálogo de Maquinaria con uso en el proyecto (replica para Logística)."""
+    from django.db.models import Sum, Count, Q
+    from apps.maquinaria.models import Maquinaria, RegistroMaquinaria
+    proyecto = _get_proyecto(proyecto_id)
+    maquinas = (
+        Maquinaria.objects.filter(activo=True)
+        .annotate(
+            total_hm=Sum('registromaquinaria__horas', filter=Q(registromaquinaria__proyecto=proyecto)),
+            n_turnos=Count('registromaquinaria', filter=Q(registromaquinaria__proyecto=proyecto)),
+        )
+        .order_by('codigo')
+    )
+    total_hm_proyecto = RegistroMaquinaria.objects.filter(proyecto=proyecto).aggregate(t=Sum('horas'))['t'] or 0
+    return render(request, 'logistica/maquinaria.html', {
+        'proyecto':          proyecto,
+        'maquinas':          maquinas,
+        'total_hm_proyecto': total_hm_proyecto,
+    })

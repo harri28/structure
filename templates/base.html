@@ -256,6 +256,14 @@
         <i class="bi bi-bar-chart-steps"></i> Req. vs Atenciones
       </a>
       {% endif %}
+      <a href="{% url 'logistica:cuadrilla' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:cuadrilla' %}active{% endif %}">
+        <i class="bi bi-people-fill"></i> Cuadrilla
+      </a>
+      <a href="{% url 'logistica:maquinaria' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:maquinaria' %}active{% endif %}">
+        <i class="bi bi-truck"></i> Maquinaria
+      </a>
       <a href="{% url 'logistica:reportes' proyecto_activo.pk %}"
          class="sb-link {% if vn == 'logistica:reportes' %}active{% endif %}">
         <i class="bi bi-bar-chart-line"></i> Reportes
@@ -346,6 +354,14 @@
           <i class="bi bi-bar-chart-steps"></i> Req. vs Atenciones
         </a>
         {% endif %}
+        <a href="{% url 'logistica:cuadrilla' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_log_cuadrilla %}{% endblock %}">
+          <i class="bi bi-people-fill"></i> Cuadrilla
+        </a>
+        <a href="{% url 'logistica:maquinaria' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_log_maquinaria %}{% endblock %}">
+          <i class="bi bi-truck"></i> Maquinaria
+        </a>
         <a href="{% url 'logistica:reportes' proyecto_activo.pk %}"
            class="sb-link sb-sublink {% block nav_log_reportes %}{% endblock %}">
           <i class="bi bi-bar-chart-line"></i> Reportes
