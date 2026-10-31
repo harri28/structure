@@ -89,7 +89,7 @@ class Salida(models.Model):
         ordering = ['-fecha']
 
     def __str__(self):
-        return f'SAL-{self.numero} | {self.proyecto.codigo}'
+        return f'SLD-{self.numero} | {self.proyecto.codigo}'
 
     def total(self):
         return sum(d.subtotal() for d in self.detalles.all())

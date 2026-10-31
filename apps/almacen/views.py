@@ -356,7 +356,7 @@ def kardex(request, proyecto_id, insumo_id):
         movimientos.append({
             'fecha':      d.salida.fecha,
             'tipo':       'SALIDA',
-            'referencia': f'SAL-{d.salida.numero}',
+            'referencia': f'SLD-{d.salida.numero}',
             'detalle':    d.salida.destino or '—',
             'entrada':    None,
             'salida':     d.cantidad,
@@ -771,9 +771,20 @@ def salida_lista(request, proyecto_id):
         .select_related('salida', 'insumo', 'guia')
         .order_by('-salida__fecha', '-salida__created_at', '-pk')
     )
+
+    # Preview del siguiente correlativo (SLD-NNNN) para el modal "Nueva Atención"
+    from django.db.models import Max
+    ult = proyecto.salidas.aggregate(m=Max('numero'))['m']
+    try:
+        siguiente_num = int(ult or '0') + 1
+    except (ValueError, TypeError):
+        siguiente_num = (proyecto.salidas.count() or 0) + 1
+    siguiente_sld = f'SLD-{str(siguiente_num).zfill(4)}'
+
     return render(request, 'almacen/salida_lista.html', {
         'proyecto': proyecto,
         'detalles': detalles,
+        'siguiente_sld': siguiente_sld,
     })
 
 
@@ -913,7 +924,7 @@ def atencion_crear(request, proyecto_id):
     # El signal post_save de DetalleSalida ya descuenta stock_almacen del insumo.
 
     log(request, 'CREAR', 'Almacén',
-        f'Atención SAL-{salida.numero}: {cantidad} {insumo.unidad} de {insumo.codigo} - {insumo.descripcion[:40]}')
+        f'Atención SLD-{salida.numero}: {cantidad} {insumo.unidad} de {insumo.codigo} - {insumo.descripcion[:40]}')
 
     return JsonResponse({
         'ok': True,
@@ -933,7 +944,7 @@ def salida_eliminar(request, pk):
     salida = get_object_or_404(Salida, pk=pk)
     proyecto = salida.proyecto
     if request.method == 'POST':
-        ref = f'SAL-{salida.numero}'
+        ref = f'SLD-{salida.numero}'
         salida.delete()
         log(request, 'ELIMINAR', 'Almacén', f'Salida {ref} eliminada en {proyecto.codigo}')
         messages.success(request, 'Salida eliminada.')

@@ -30,13 +30,12 @@
   </div>
 </div>
 <div class="card">
-  <div class="card-header d-flex justify-content-between">
+  <div class="card-header">
     <span>Materiales Recibidos</span>
-    <strong>Total: S/. {{ entrada.total|floatformat:2 }}</strong>
   </div>
   <div class="card-body p-0">
     <table class="table table-sm mb-0">
-      <thead><tr><th>Código</th><th>Descripción</th><th class="text-end">Cantidad</th><th>Unidad</th><th class="text-end">P.U. (S/.)</th><th class="text-end">Subtotal (S/.)</th></tr></thead>
+      <thead><tr><th>Código</th><th>Descripción</th><th class="text-end">Cantidad</th><th>Unidad</th></tr></thead>
       <tbody>
         {% for d in entrada.detalles.all %}
         <tr>
@@ -44,8 +43,6 @@
           <td>{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
           <td class="text-end">{{ d.cantidad|floatformat:2 }}</td>
           <td>{{ d.unidad }}</td>
-          <td class="text-end">{{ d.precio_unitario|floatformat:2 }}</td>
-          <td class="text-end fw-semibold">{{ d.subtotal|floatformat:2 }}</td>
         </tr>
         {% endfor %}
       </tbody>

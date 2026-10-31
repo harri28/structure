@@ -72,7 +72,10 @@
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header py-2">
-        <h5 class="modal-title" style="font-size:.95rem"><i class="bi bi-plus-lg me-1"></i>Nueva Atención</h5>
+        <h5 class="modal-title d-flex align-items-center gap-2" style="font-size:.95rem">
+          <i class="bi bi-plus-lg"></i>Nueva Atención
+          <span id="at-numero" class="badge rounded-pill" style="background:#eef2ff;color:#2563eb;font-weight:700;font-size:.78rem">{{ siguiente_sld }}</span>
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
