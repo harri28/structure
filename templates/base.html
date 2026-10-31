@@ -448,7 +448,7 @@
   </button>
   {% if proyecto_activo %}
   <span class="topbar-badge">
-    <i class="bi bi-folder-fill me-1"></i>{{ proyecto_activo.codigo }} — {{ proyecto_activo.nombre }}
+    <i class="bi bi-folder-fill me-1"></i>{{ proyecto_activo.codigo }}<span class="topbar-proj-name"> — {{ proyecto_activo.nombre }}</span>
   </span>
   {% if rol_actual %}
   <span class="role-chip"><i class="bi bi-person-badge"></i>{{ rol_actual.nombre }}</span>
@@ -495,7 +495,7 @@
                   display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <i class="bi bi-person-fill" style="color:#fff;font-size:.75rem"></i>
       </div>
-      <span style="font-weight:600;color:#374151;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+      <span class="topbar-user-name" style="font-weight:600;color:#374151;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
         {{ user.get_full_name|default:user.username }}
       </span>
     </a>

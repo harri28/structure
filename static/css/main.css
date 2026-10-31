@@ -747,6 +747,27 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   #main, #topbar { margin-left: 0; }
 }
 
+/* Topbar en tablet vertical / mobile landscape: nombre de proyecto con ellipsis */
+@media (max-width: 768px) {
+  #topbar { padding: 0 .75rem; gap: .5rem; }
+  .topbar-badge {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .topbar-user-name { max-width: 80px; }
+}
+
+/* Topbar en celular: solo código de proyecto, sin nombre de usuario ni role-chip */
+@media (max-width: 576px) {
+  #topbar { padding: 0 .5rem; gap: .35rem; }
+  .topbar-proj-name { display: none; }
+  .role-chip { display: none; }
+  .topbar-user-name { display: none; }
+  .topbar-badge { max-width: none; padding: .18rem .5rem; }
+  .btn-topbar { padding: .22rem .5rem; }
+}
+
 /* ── Filtros de estado (req-chip) ────────────────────────────────── */
 .req-chip {
   cursor: pointer;
