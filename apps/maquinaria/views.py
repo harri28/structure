@@ -758,11 +758,20 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
         if maq:
             return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq.pk)
         return redirect('maquinaria:maq_principal', proyecto_id=proyecto_id)
+    # Último horómetro de salida registrado para esta máquina (si existe)
+    ultimo_horometro = None
+    if maquinaria_fija:
+        from django.db.models import Max
+        ultimo_horometro = RegistroMaquinaria.objects.filter(
+            maquinaria=maquinaria_fija
+        ).aggregate(m=Max('hora_salida'))['m']
+
     return render(request, 'maquinaria/maq_registro_form.html', {
-        'form':            form,
-        'proyecto':        proyecto,
-        'maquinaria_fija': maquinaria_fija,
-        'titulo':          f'Nuevo Turno — {maquinaria_fija.nombre} ({maquinaria_fija.codigo})' if maquinaria_fija else 'Nuevo Registro de Maquinaria',
+        'form':             form,
+        'proyecto':         proyecto,
+        'maquinaria_fija':  maquinaria_fija,
+        'ultimo_horometro': ultimo_horometro,
+        'titulo':           f'Nuevo Turno — {maquinaria_fija.nombre} ({maquinaria_fija.codigo})' if maquinaria_fija else 'Nuevo Registro de Maquinaria',
     })
 
 
@@ -791,11 +800,23 @@ def maq_registro_editar(request, pk):
             return redirect('maquinaria:maq_detalle_maquinaria',
                             proyecto_id=registro.proyecto_id, maq_pk=registro.maquinaria_id)
         return redirect('maquinaria:maq_principal', proyecto_id=registro.proyecto_id)
+    # Último horómetro de salida de otros registros de la misma máquina (excluye el actual)
+    ultimo_horometro = None
+    if registro.maquinaria_id:
+        from django.db.models import Max
+        ultimo_horometro = (
+            RegistroMaquinaria.objects
+            .filter(maquinaria_id=registro.maquinaria_id)
+            .exclude(pk=registro.pk)
+            .aggregate(m=Max('hora_salida'))['m']
+        )
+
     return render(request, 'maquinaria/maq_registro_form.html', {
-        'form':     form,
-        'proyecto': registro.proyecto,
-        'titulo':   'Editar Registro de Maquinaria',
-        'registro': registro,
+        'form':             form,
+        'proyecto':         registro.proyecto,
+        'titulo':           'Editar Registro de Maquinaria',
+        'registro':         registro,
+        'ultimo_horometro': ultimo_horometro,
     })
 
 

@@ -60,6 +60,12 @@
             <div class="col-6">
               <label class="form-label fw-semibold">Horómetro entrada</label>
               {{ form.hora_entrada }}
+              {% if ultimo_horometro is not None %}
+              <div class="text-muted mt-1" style="font-size:.78rem" id="hint-ultimo-horometro"
+                   data-ultimo="{{ ultimo_horometro }}">
+                <i class="bi bi-info-circle me-1"></i>Último horómetro de salida: <strong>{{ ultimo_horometro }}</strong>. La entrada debe ser mayor.
+              </div>
+              {% endif %}
               {% for e in form.hora_entrada.errors %}<div class="text-danger mt-1" style="font-size:.83rem">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-6">
@@ -119,6 +125,22 @@ const salida  = document.querySelector('[name$="hora_salida"]');
 const preview = document.getElementById('horas-preview');
 const previewTxt = document.getElementById('horas-preview-txt');
 
+// Último horómetro de salida registrado para esta máquina (del context del server)
+const hint = document.getElementById('hint-ultimo-horometro');
+const ULTIMO_HOROMETRO = hint ? parseFloat(hint.getAttribute('data-ultimo')) : NaN;
+
+function validarEntrada() {
+  if (!entrada || entrada.value === '') { entrada.setCustomValidity(''); return; }
+  const he = parseFloat(entrada.value);
+  if (isNaN(he)) { entrada.setCustomValidity(''); return; }
+  if (!isNaN(ULTIMO_HOROMETRO) && he <= ULTIMO_HOROMETRO) {
+    entrada.setCustomValidity('El horómetro de entrada debe ser mayor a ' + ULTIMO_HOROMETRO + ' (último registrado para esta máquina).');
+    entrada.reportValidity();
+  } else {
+    entrada.setCustomValidity('');
+  }
+}
+
 function validarRango() {
   if (!entrada || !salida) return;
   if (entrada.value === '' || salida.value === '') { salida.setCustomValidity(''); return; }
@@ -134,6 +156,7 @@ function validarRango() {
 }
 
 function calcularHoras() {
+  validarEntrada();
   validarRango();
   if (!entrada || !salida || entrada.value === '' || salida.value === '') { preview.style.display = 'none'; return; }
   const he = parseFloat(entrada.value);
@@ -144,7 +167,13 @@ function calcularHoras() {
   previewTxt.textContent = diff.toFixed(2);
   preview.style.display = 'block';
 }
-if (entrada) { entrada.addEventListener('change', calcularHoras); entrada.addEventListener('input', validarRango); }
-if (salida)  { salida.addEventListener('change', calcularHoras);  salida.addEventListener('input', validarRango); }
+if (entrada) {
+  entrada.addEventListener('change', calcularHoras);
+  entrada.addEventListener('input', function () { validarEntrada(); validarRango(); });
+}
+if (salida)  {
+  salida.addEventListener('change', calcularHoras);
+  salida.addEventListener('input', validarRango);
+}
 </script>
 {% endblock %}
