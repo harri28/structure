@@ -768,6 +768,32 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .btn-topbar { padding: .22rem .5rem; }
 }
 
+/* Submodule nav (Stock / Consumo / Entradas / Salidas, etc.) con scroll horizontal en mobile */
+@media (max-width: 768px) {
+  .submodule-nav-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    margin-bottom: .5rem;
+  }
+  .submodule-nav-wrap::-webkit-scrollbar { height: 4px; }
+  .submodule-nav-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+  .submodule-nav-wrap > .nav-tabs {
+    flex-wrap: nowrap;
+    width: max-content;
+    min-width: 100%;
+  }
+  .submodule-nav-wrap > .nav-tabs .nav-link {
+    white-space: nowrap;
+    padding: .35rem .6rem;
+    font-size: .8rem;
+  }
+  .submodule-nav-wrap > .submodule-chips {
+    flex-wrap: nowrap;
+    width: max-content;
+  }
+}
+
 /* ── Filtros de estado (req-chip) ────────────────────────────────── */
 .req-chip {
   cursor: pointer;
