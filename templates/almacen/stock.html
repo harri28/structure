@@ -79,7 +79,6 @@
           <th class="text-end">Entradas</th>
           <th class="text-end">Salidas</th>
           <th class="text-end">Stock Almacén</th>
-          <th></th>
         </tr>
       </thead>
       <tbody id="stock-tbody">
@@ -95,15 +94,10 @@
           <td class="text-end fw-bold {% if item.saldo > 0 %}text-success{% else %}text-muted{% endif %}">
             {{ item.saldo|floatformat:2 }}
           </td>
-          <td>
-            <a href="{% url 'almacen:kardex' proyecto.pk item.insumo.pk %}" class="btn-tbl" title="Kardex">
-              <i class="bi bi-clock-history"></i>
-            </a>
-          </td>
         </tr>
         {% empty %}
         <tr id="stock-empty-row">
-          <td colspan="9">
+          <td colspan="8">
             <div class="empty-state py-5 text-center">
               <i class="bi bi-archive d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
               {% if tiene_presupuesto %}
@@ -171,7 +165,7 @@
   function render(data) {
     // Filas
     if (data.items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state py-4 text-center">' +
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state py-4 text-center">' +
         '<i class="bi bi-search d-block" style="font-size:1.8rem;opacity:.2;margin-bottom:.4rem"></i>' +
         '<p class="text-muted mb-0">Ningún insumo coincide con la búsqueda.</p></div></td></tr>';
     } else {
@@ -185,7 +179,6 @@
           '<td class="text-end text-success fw-semibold">' + it.total_entrada + '</td>' +
           '<td class="text-end text-danger">' + it.total_salida + '</td>' +
           '<td class="text-end fw-bold ' + (it.saldo_pos ? 'text-success' : 'text-muted') + '">' + it.saldo + '</td>' +
-          '<td><a href="/almacen/proyecto/{{ proyecto.pk }}/kardex/' + it.pk + '/" class="btn-tbl" title="Kardex"><i class="bi bi-clock-history"></i></a></td>' +
           '</tr>';
       }).join('');
     }
