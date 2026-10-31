@@ -812,6 +812,28 @@ def api_insumos_buscar(request, proyecto_id):
 
 @requiere('puede_gestionar_salidas')
 @proyecto_visible
+def api_trabajadores_buscar(request, proyecto_id):
+    """Autocomplete de responsables (integrantes de alguna Cuadrilla del proyecto)."""
+    from apps.maquinaria.models import Trabajador
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    q = (request.GET.get('q') or '').strip()
+    qs = Trabajador.objects.filter(
+        proyecto=proyecto,
+        membresias__cuadrilla__proyecto=proyecto,
+    ).distinct()
+    if q:
+        qs = qs.filter(Q(nombres__icontains=q) | Q(apellidos__icontains=q) | Q(dni__icontains=q))
+    qs = qs.order_by('apellidos', 'nombres')[:20]
+    data = [{
+        'id':         t.pk,
+        'nombre':     f'{t.apellidos}, {t.nombres}'.strip(', '),
+        'dni':        t.dni or '',
+    } for t in qs]
+    return JsonResponse({'ok': True, 'items': data})
+
+
+@requiere('puede_gestionar_salidas')
+@proyecto_visible
 def api_insumo_guias(request, proyecto_id):
     """Devuelve las guías del proyecto asociadas a requerimientos que incluyen ese insumo.
     (DetalleGuia no tiene FK a insumo — la relación viaja por el Requerimiento)."""
@@ -910,12 +932,19 @@ def atencion_crear(request, proyecto_id):
         except ValueError:
             hora = None
 
+    trabajador = None
+    trabajador_id = body.get('trabajador_id')
+    if trabajador_id:
+        from apps.maquinaria.models import Trabajador
+        trabajador = Trabajador.objects.filter(pk=trabajador_id, proyecto=proyecto).first()
+
     salida = Salida.objects.create(
         proyecto=proyecto,
         numero=str(siguiente).zfill(4),
         fecha=fecha,
         hora=hora,
         responsable=(body.get('responsable') or '').strip()[:150],
+        trabajador=trabajador,
         proveedor=(body.get('proveedor') or '').strip(),
         factura=(body.get('factura') or '').strip(),
         observaciones=(body.get('observaciones') or '').strip(),

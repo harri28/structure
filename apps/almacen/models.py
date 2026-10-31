@@ -79,6 +79,10 @@ class Salida(models.Model):
     hora = models.TimeField(null=True, blank=True)
     destino = models.CharField(max_length=200, blank=True)
     responsable = models.CharField(max_length=150, blank=True)
+    trabajador = models.ForeignKey(
+        'maquinaria.Trabajador', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
     proveedor = models.CharField(max_length=200, blank=True)
     factura = models.CharField(max_length=50, blank=True)
     observaciones = models.TextField(blank=True)

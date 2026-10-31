@@ -84,9 +84,11 @@
               <label class="form-label fw-semibold">Código</label>
               <p id="at-codigo" class="form-control-plaintext fw-bold mb-0" data-default="{{ siguiente_sld }}" style="color:#2563eb;min-height:38px;display:flex;align-items:center">{{ siguiente_sld }}</p>
             </div>
-            <div class="col-sm-6">
+            <div class="col-sm-6 position-relative">
               <label class="form-label fw-semibold">Responsable</label>
-              <input type="text" id="at-responsable" class="form-control" placeholder="Nombre del que recibe">
+              <input type="hidden" id="at-trabajador-id">
+              <input type="text" id="at-responsable" class="form-control" autocomplete="off" placeholder="Nombre del que recibe">
+              <div id="at-resp-resultados" class="list-group position-absolute w-100 shadow" style="max-height:220px;overflow-y:auto;z-index:1080;display:none;background:#fff;border:1px solid #d1d5db;border-radius:.375rem"></div>
             </div>
           </div>
 
@@ -146,19 +148,22 @@
 {% block extra_js %}
 <script>
 (function () {
-  var URL_INSUMOS  = "{% url 'almacen:api_insumos_buscar' proyecto.pk %}";
-  var URL_CREAR    = "{% url 'almacen:atencion_crear' proyecto.pk %}";
+  var URL_INSUMOS       = "{% url 'almacen:api_insumos_buscar' proyecto.pk %}";
+  var URL_TRABAJADORES  = "{% url 'almacen:api_trabajadores_buscar' proyecto.pk %}";
+  var URL_CREAR         = "{% url 'almacen:atencion_crear' proyecto.pk %}";
 
-  var iResult   = document.getElementById('at-resultados');
-  var iInsumoId = document.getElementById('at-insumo-id');
-  var iCodigo   = document.getElementById('at-codigo');
-  var iDesc     = document.getElementById('at-descripcion');
-  var iUnidad   = document.getElementById('at-unidad');
-  var iStock    = document.getElementById('at-stock');
-  var iFecha    = document.getElementById('at-fecha');
-  var iHora     = document.getElementById('at-hora');
-  var iResp     = document.getElementById('at-responsable');
-  var iCant     = document.getElementById('at-cantidad');
+  var iResult      = document.getElementById('at-resultados');
+  var iInsumoId    = document.getElementById('at-insumo-id');
+  var iCodigo      = document.getElementById('at-codigo');
+  var iDesc        = document.getElementById('at-descripcion');
+  var iUnidad      = document.getElementById('at-unidad');
+  var iStock       = document.getElementById('at-stock');
+  var iFecha       = document.getElementById('at-fecha');
+  var iHora        = document.getElementById('at-hora');
+  var iResp        = document.getElementById('at-responsable');
+  var iTrabId      = document.getElementById('at-trabajador-id');
+  var iRespResult  = document.getElementById('at-resp-resultados');
+  var iCant        = document.getElementById('at-cantidad');
   var iObs      = document.getElementById('at-observaciones');
   var iMsg      = document.getElementById('at-msg');
   var btnSave   = document.getElementById('btn-guardar-atencion');
@@ -180,7 +185,7 @@
   function resetForm() {
     iInsumoId.value = '';
     iCodigo.textContent = CODIGO_DEFAULT; iDesc.value = ''; iUnidad.textContent = '—'; iStock.value = '';
-    iResp.value = '';
+    iResp.value = ''; iTrabId.value = ''; iRespResult.style.display = 'none';
     iCant.value = ''; iObs.value = '';
     clearMsg();
     var ahora = new Date();
@@ -239,10 +244,52 @@
     }, 250);
   });
 
-  // Cerrar dropdown al hacer click afuera
+  // Autocomplete de trabajadores — dispara sobre el input Responsable
+  var respTimer = null;
+  iResp.addEventListener('input', function () {
+    // Si el usuario está tipeando, invalidamos el FK para forzar re-selección (texto libre si no elige)
+    iTrabId.value = '';
+    clearTimeout(respTimer);
+    var q = iResp.value.trim();
+    if (q.length < 2) { iRespResult.style.display = 'none'; return; }
+    respTimer = setTimeout(function () {
+      fetch(URL_TRABAJADORES + '?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok || !d.items || d.items.length === 0) {
+          iRespResult.innerHTML = '<div class="list-group-item text-muted small">Sin coincidencias — se guardará como texto libre.</div>';
+          iRespResult.style.display = 'block'; return;
+        }
+        iRespResult.innerHTML = '';
+        d.items.forEach(function (it) {
+          var el = document.createElement('button');
+          el.type = 'button';
+          el.className = 'list-group-item list-group-item-action py-2';
+          el.style.fontSize = '.83rem';
+          el.innerHTML =
+            '<div class="d-flex justify-content-between">' +
+              '<div>' + it.nombre + '</div>' +
+              (it.dni ? '<div class="small text-muted">DNI: ' + it.dni + '</div>' : '') +
+            '</div>';
+          el.addEventListener('click', function () {
+            iTrabId.value = it.id;
+            iResp.value   = it.nombre;
+            iRespResult.style.display = 'none';
+          });
+          iRespResult.appendChild(el);
+        });
+        iRespResult.style.display = 'block';
+      });
+    }, 250);
+  });
+
+  // Cerrar dropdowns al hacer click afuera
   document.addEventListener('click', function (e) {
     if (!e.target.closest('#at-descripcion') && !e.target.closest('#at-resultados')) {
       iResult.style.display = 'none';
+    }
+    if (!e.target.closest('#at-responsable') && !e.target.closest('#at-resp-resultados')) {
+      iRespResult.style.display = 'none';
     }
   });
 
@@ -259,11 +306,12 @@
     btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando…';
 
     var payload = {
-      insumo_id:   iInsumoId.value,
-      fecha:       iFecha.value,
-      hora:        iHora.value,
-      responsable: iResp.value,
-      cantidad:    iCant.value,
+      insumo_id:     iInsumoId.value,
+      fecha:         iFecha.value,
+      hora:          iHora.value,
+      responsable:   iResp.value,
+      trabajador_id: iTrabId.value,
+      cantidad:      iCant.value,
       observaciones: iObs.value,
     };
 

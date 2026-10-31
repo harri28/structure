@@ -25,6 +25,7 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/salidas/', views.salida_lista, name='salida_lista'),
     path('proyecto/<int:proyecto_id>/atencion/crear/',       views.atencion_crear,     name='atencion_crear'),
     path('proyecto/<int:proyecto_id>/atencion/api/insumos/', views.api_insumos_buscar, name='api_insumos_buscar'),
+    path('proyecto/<int:proyecto_id>/atencion/api/trabajadores/', views.api_trabajadores_buscar, name='api_trabajadores_buscar'),
     path('proyecto/<int:proyecto_id>/atencion/api/guias/',   views.api_insumo_guias,   name='api_insumo_guias'),
     path('salidas/<int:pk>/', views.salida_detalle, name='salida_detalle'),
     path('salidas/<int:pk>/eliminar/', views.salida_eliminar, name='salida_eliminar'),
