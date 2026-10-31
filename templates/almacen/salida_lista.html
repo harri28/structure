@@ -28,8 +28,7 @@
             <th style="width:90px">Código</th>
             <th style="min-width:220px">Descripción</th>
             <th style="width:70px">Unidad</th>
-            <th style="min-width:130px">Proveedor</th>
-            <th style="width:100px">Factura</th>
+            <th style="min-width:140px">Responsable</th>
             <th style="width:110px">N° Guía</th>
             <th style="width:100px">Fecha S.</th>
             <th style="width:90px" class="text-end">Cantidad</th>
@@ -44,8 +43,7 @@
             <td><span class="fw-bold" style="font-size:.82rem;color:#2563eb">{{ d.insumo.codigo|default:"—" }}</span></td>
             <td style="font-size:.83rem">{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}</td>
             <td style="font-size:.82rem;color:#6b7280">{{ d.unidad|default:"—" }}</td>
-            <td style="font-size:.82rem">{{ d.salida.proveedor|default:"—" }}</td>
-            <td style="font-size:.82rem;color:#6b7280">{{ d.salida.factura|default:"—" }}</td>
+            <td style="font-size:.82rem">{{ d.salida.responsable|default:"—" }}</td>
             <td style="font-size:.82rem">{% if d.guia %}<code>{{ d.guia.numero }}</code>{% else %}—{% endif %}</td>
             <td style="font-size:.82rem;color:#6b7280">{{ d.salida.fecha|date:"d/m/Y" }}</td>
             <td class="text-end" style="font-size:.83rem">{{ d.cantidad|floatformat:2 }}</td>
@@ -55,7 +53,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="11" class="text-center py-5 text-muted">
+            <td colspan="10" class="text-center py-5 text-muted">
               <i class="bi bi-arrow-up-circle d-block mb-2" style="font-size:2rem;opacity:.3"></i>
               Sin atenciones registradas. Presioná <strong>Nueva Atención</strong> para empezar.
             </td>
@@ -82,18 +80,21 @@
           <input type="hidden" id="at-insumo-id">
 
           <div class="row g-2 mb-2">
-            <div class="col-sm-3">
+            <div class="col-sm-6">
               <label class="form-label fw-semibold">Código</label>
               <p id="at-codigo" class="form-control-plaintext fw-bold mb-0" data-default="{{ siguiente_sld }}" style="color:#2563eb;min-height:38px;display:flex;align-items:center">{{ siguiente_sld }}</p>
             </div>
-            <div class="col-sm-6 position-relative">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Responsable</label>
+              <input type="text" id="at-responsable" class="form-control" placeholder="Nombre del que recibe">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-12 position-relative">
               <label class="form-label fw-semibold">Material <span class="text-danger">*</span></label>
               <input type="text" id="at-descripcion" class="form-control" autocomplete="off" placeholder="Escribí para buscar material…">
               <div id="at-resultados" class="list-group position-absolute w-100 shadow" style="max-height:260px;overflow-y:auto;z-index:1080;display:none;background:#fff;border:1px solid #d1d5db;border-radius:.375rem"></div>
-            </div>
-            <div class="col-sm-3">
-              <label class="form-label fw-semibold">Unidad</label>
-              <p id="at-unidad" class="form-control-plaintext mb-0" style="min-height:38px;display:flex;align-items:center">—</p>
             </div>
           </div>
 
@@ -110,19 +111,12 @@
 
           <div class="row g-2 mb-2">
             <div class="col-sm-6">
-              <label class="form-label fw-semibold">Proveedor</label>
-              <input type="text" id="at-proveedor" class="form-control" placeholder="Nombre del proveedor">
-            </div>
-            <div class="col-sm-6">
-              <label class="form-label fw-semibold">Factura</label>
-              <input type="text" id="at-factura" class="form-control" placeholder="N° de factura">
-            </div>
-          </div>
-
-          <div class="row g-2 mb-2">
-            <div class="col-sm-6">
               <label class="form-label fw-semibold">Cantidad <span class="text-danger">*</span></label>
               <input type="number" id="at-cantidad" class="form-control" step="1" min="1" placeholder="0">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Unidad</label>
+              <p id="at-unidad" class="form-control-plaintext mb-0" style="min-height:38px;display:flex;align-items:center">—</p>
             </div>
           </div>
 
@@ -158,8 +152,7 @@
   var iUnidad   = document.getElementById('at-unidad');
   var iStock    = document.getElementById('at-stock');
   var iFecha    = document.getElementById('at-fecha');
-  var iProv     = document.getElementById('at-proveedor');
-  var iFact     = document.getElementById('at-factura');
+  var iResp     = document.getElementById('at-responsable');
   var iCant     = document.getElementById('at-cantidad');
   var iObs      = document.getElementById('at-observaciones');
   var iMsg      = document.getElementById('at-msg');
@@ -182,7 +175,7 @@
   function resetForm() {
     iInsumoId.value = '';
     iCodigo.textContent = CODIGO_DEFAULT; iDesc.value = ''; iUnidad.textContent = '—'; iStock.value = '';
-    iProv.value = ''; iFact.value = '';
+    iResp.value = '';
     iCant.value = ''; iObs.value = '';
     clearMsg();
     var hoy = new Date().toISOString().slice(0, 10);
@@ -262,8 +255,7 @@
     var payload = {
       insumo_id:   iInsumoId.value,
       fecha:       iFecha.value,
-      proveedor:   iProv.value,
-      factura:     iFact.value,
+      responsable: iResp.value,
       cantidad:    iCant.value,
       observaciones: iObs.value,
     };

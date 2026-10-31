@@ -906,6 +906,7 @@ def atencion_crear(request, proyecto_id):
         proyecto=proyecto,
         numero=str(siguiente).zfill(4),
         fecha=fecha,
+        responsable=(body.get('responsable') or '').strip()[:150],
         proveedor=(body.get('proveedor') or '').strip(),
         factura=(body.get('factura') or '').strip(),
         observaciones=(body.get('observaciones') or '').strip(),
