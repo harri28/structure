@@ -288,10 +288,10 @@ class RegistroMaquinariaForm(forms.ModelForm):
                 if self.instance.pk:
                     qs = qs.exclude(pk=self.instance.pk)
                 ultimo_salida = qs.aggregate(m=Max('hora_salida'))['m']
-                if ultimo_salida is not None and entrada <= ultimo_salida:
+                if ultimo_salida is not None and entrada < ultimo_salida:
                     self.add_error(
                         'hora_entrada',
-                        f'El horómetro de entrada debe ser mayor a {ultimo_salida} '
+                        f'El horómetro de entrada debe ser mayor o igual a {ultimo_salida} '
                         f'(último horómetro de salida registrado para esta máquina).'
                     )
         return cleaned

@@ -63,7 +63,7 @@
               {% if ultimo_horometro is not None %}
               <div class="text-muted mt-1" style="font-size:.78rem" id="hint-ultimo-horometro"
                    data-ultimo="{{ ultimo_horometro }}">
-                <i class="bi bi-info-circle me-1"></i>Último horómetro de salida: <strong>{{ ultimo_horometro }}</strong>. La entrada debe ser mayor.
+                <i class="bi bi-info-circle me-1"></i>Último horómetro de salida: <strong>{{ ultimo_horometro }}</strong>. La entrada debe ser mayor o igual.
               </div>
               {% endif %}
               {% for e in form.hora_entrada.errors %}<div class="text-danger mt-1" style="font-size:.83rem">{{ e }}</div>{% endfor %}
@@ -133,8 +133,8 @@ function validarEntrada() {
   if (!entrada || entrada.value === '') { entrada.setCustomValidity(''); return; }
   const he = parseFloat(entrada.value);
   if (isNaN(he)) { entrada.setCustomValidity(''); return; }
-  if (!isNaN(ULTIMO_HOROMETRO) && he <= ULTIMO_HOROMETRO) {
-    entrada.setCustomValidity('El horómetro de entrada debe ser mayor a ' + ULTIMO_HOROMETRO + ' (último registrado para esta máquina).');
+  if (!isNaN(ULTIMO_HOROMETRO) && he < ULTIMO_HOROMETRO) {
+    entrada.setCustomValidity('El horómetro de entrada debe ser mayor o igual a ' + ULTIMO_HOROMETRO + ' (último registrado para esta máquina).');
     entrada.reportValidity();
   } else {
     entrada.setCustomValidity('');
