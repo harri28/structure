@@ -109,24 +109,22 @@
                 <i class="bi bi-plus-lg"></i> Agregar material
               </button>
             </div>
-            <div class="card-body p-2">
-              <div class="table-responsive">
-                <table class="table table-sm mb-0" style="font-size:.82rem">
-                  <thead>
-                    <tr style="background:#f9fafb">
-                      <th style="width:28px">#</th>
-                      <th style="min-width:280px">Material <span class="text-danger">*</span></th>
-                      <th style="width:120px" class="text-end">Cantidad <span class="text-danger">*</span></th>
-                      <th style="width:70px">Unidad</th>
-                      <th style="width:120px" class="text-end">Stock</th>
-                      <th style="width:40px"></th>
-                    </tr>
-                  </thead>
-                  <tbody id="at-items-tbody">
-                    {# Las filas se insertan con JS. Al abrir el modal se crea la primera vacía. #}
-                  </tbody>
-                </table>
-              </div>
+            <div class="card-body p-2" style="overflow:visible">
+              <table class="table table-sm mb-0" style="font-size:.82rem">
+                <thead>
+                  <tr style="background:#f9fafb">
+                    <th style="width:28px">#</th>
+                    <th style="min-width:280px">Material <span class="text-danger">*</span></th>
+                    <th style="width:120px" class="text-end">Cantidad <span class="text-danger">*</span></th>
+                    <th style="width:70px">Unidad</th>
+                    <th style="width:120px" class="text-end">Stock</th>
+                    <th style="width:40px"></th>
+                  </tr>
+                </thead>
+                <tbody id="at-items-tbody">
+                  {# Las filas se insertan con JS. Al abrir el modal se crea la primera vacía. #}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -191,10 +189,10 @@
     tr.setAttribute('data-row-idx', idx);
     tr.innerHTML =
       '<td class="text-muted text-center" data-rownum>-</td>' +
-      '<td class="position-relative">' +
+      '<td>' +
         '<input type="hidden" class="at-item-insumo-id">' +
         '<input type="text" class="form-control form-control-sm at-item-desc" autocomplete="off" placeholder="Escribí para buscar material…">' +
-        '<div class="at-item-dropdown list-group position-absolute shadow" style="width:100%;max-height:260px;overflow-y:auto;z-index:1080;display:none;background:#fff;border:1px solid #d1d5db;border-radius:.375rem"></div>' +
+        '<div class="at-item-dropdown list-group shadow" style="position:fixed;max-height:260px;overflow-y:auto;z-index:2000;display:none;background:#fff;border:1px solid #d1d5db;border-radius:.375rem"></div>' +
       '</td>' +
       '<td><input type="number" class="form-control form-control-sm at-item-cant text-end" step="1" min="1" placeholder="0"></td>' +
       '<td class="text-muted at-item-unidad">—</td>' +
@@ -234,6 +232,13 @@
     var dropdown     = tr.querySelector('.at-item-dropdown');
     var removeBtn    = tr.querySelector('.at-item-remove');
 
+    function posicionarDropdown() {
+      var r = descInput.getBoundingClientRect();
+      dropdown.style.top   = (r.bottom + 2) + 'px';
+      dropdown.style.left  = r.left + 'px';
+      dropdown.style.width = r.width + 'px';
+    }
+
     var timer = null;
     descInput.addEventListener('input', function () {
       insumoHidden.value = '';
@@ -243,12 +248,14 @@
       clearTimeout(timer);
       var q = descInput.value.trim();
       if (q.length < 2) { dropdown.style.display = 'none'; return; }
+      posicionarDropdown();
       timer = setTimeout(function () {
         fetch(URL_INSUMOS + '?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (!d.ok || !d.items || d.items.length === 0) {
             dropdown.innerHTML = '<div class="list-group-item text-muted small">Sin resultados</div>';
+            posicionarDropdown();
             dropdown.style.display = 'block'; return;
           }
           // IDs ya elegidos en otras filas para marcarlos como no seleccionables
@@ -286,12 +293,23 @@
             });
             dropdown.appendChild(el);
           });
+          posicionarDropdown();
           dropdown.style.display = 'block';
         });
       }, 250);
     });
 
     removeBtn.addEventListener('click', function () { removeRow(tr); });
+  }
+
+  // Al scrollear el modal-body, cerrar dropdowns de material (quedarían flotando desalineados)
+  var modalBody = modalEl.querySelector('.modal-body');
+  if (modalBody) {
+    modalBody.addEventListener('scroll', function () {
+      Array.prototype.forEach.call(tbody.querySelectorAll('.at-item-dropdown'), function (dd) {
+        dd.style.display = 'none';
+      });
+    });
   }
 
   // ─── Reset / init ───────────────────────────────────────────
