@@ -72,10 +72,7 @@
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header py-2">
-        <h5 class="modal-title d-flex align-items-center gap-2" style="font-size:.95rem">
-          <i class="bi bi-plus-lg"></i>Nueva Atención
-          <span id="at-numero" class="badge rounded-pill" style="background:#eef2ff;color:#2563eb;font-weight:700;font-size:.78rem">{{ siguiente_sld }}</span>
-        </h5>
+        <h5 class="modal-title" style="font-size:.95rem"><i class="bi bi-plus-lg me-1"></i>Nueva Atención</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
@@ -87,7 +84,7 @@
           <div class="row g-2 mb-2">
             <div class="col-sm-3">
               <label class="form-label fw-semibold">Código</label>
-              <p id="at-codigo" class="form-control-plaintext fw-bold mb-0" style="color:#2563eb;min-height:38px;display:flex;align-items:center">—</p>
+              <p id="at-codigo" class="form-control-plaintext fw-bold mb-0" data-default="{{ siguiente_sld }}" style="color:#2563eb;min-height:38px;display:flex;align-items:center">{{ siguiente_sld }}</p>
             </div>
             <div class="col-sm-6 position-relative">
               <label class="form-label fw-semibold">Descripción <span class="text-danger">*</span></label>
@@ -180,9 +177,11 @@
   }
   function clearMsg() { iMsg.style.display = 'none'; iMsg.textContent = ''; }
 
+  var CODIGO_DEFAULT = iCodigo.getAttribute('data-default') || '—';
+
   function resetForm() {
     iInsumoId.value = '';
-    iCodigo.textContent = '—'; iDesc.value = ''; iUnidad.textContent = '—'; iStock.value = '';
+    iCodigo.textContent = CODIGO_DEFAULT; iDesc.value = ''; iUnidad.textContent = '—'; iStock.value = '';
     iProv.value = ''; iFact.value = '';
     iCant.value = ''; iObs.value = '';
     clearMsg();
@@ -195,7 +194,6 @@
   iDesc.addEventListener('input', function () {
     // Si el usuario está tipeando, invalidamos el insumo elegido para forzar re-selección
     iInsumoId.value = '';
-    iCodigo.textContent = '—';
     iUnidad.textContent = '—';
     iStock.value = '';
 
@@ -230,7 +228,6 @@
           el.addEventListener('click', function () {
             if (!it.seleccionable) return;
             iInsumoId.value = it.id;
-            iCodigo.textContent = it.codigo || '—';
             iDesc.value         = it.descripcion;
             iUnidad.textContent = it.unidad || '—';
             iStock.value        = it.stock_almacen + ' ' + it.unidad;
