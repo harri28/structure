@@ -823,7 +823,7 @@ def api_trabajadores_buscar(request, proyecto_id):
     ).distinct()
     if q:
         qs = qs.filter(Q(nombres__icontains=q) | Q(apellidos__icontains=q) | Q(dni__icontains=q))
-    qs = qs.order_by('apellidos', 'nombres')[:20]
+    qs = qs.order_by('apellidos', 'nombres')[:10]
     data = [{
         'id':         t.pk,
         'nombre':     f'{t.apellidos}, {t.nombres}'.strip(', '),
