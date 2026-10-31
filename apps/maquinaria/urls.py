@@ -32,6 +32,8 @@ urlpatterns = [
     path('personal/<int:pk>/',                             views.trabajador_detalle, name='trabajador_detalle'),
     path('personal/<int:pk>/editar/',                      views.trabajador_editar,  name='trabajador_editar'),
     path('personal/<int:pk>/eliminar/',                    views.trabajador_eliminar, name='trabajador_eliminar'),
+    path('personal/<int:pk>/dar-baja/',                    views.trabajador_dar_baja,  name='trabajador_dar_baja'),
+    path('personal/<int:pk>/reactivar/',                   views.trabajador_reactivar, name='trabajador_reactivar'),
     path('personal/<int:pk>/documento/agregar/',           views.documento_agregar,  name='documento_agregar'),
     path('personal/documento/<int:pk>/eliminar/',          views.documento_eliminar, name='documento_eliminar'),
 

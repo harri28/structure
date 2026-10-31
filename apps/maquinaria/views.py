@@ -291,6 +291,7 @@ def trabajador_editar(request, pk):
 
 @requiere('puede_gestionar_maquinaria')
 def trabajador_eliminar(request, pk):
+    """Legacy — Conservada por compatibilidad. El flujo nuevo usa dar de baja."""
     obj = get_object_or_404(Trabajador, pk=pk)
     proyecto_id = obj.proyecto_id
     if request.method == 'POST':
@@ -298,6 +299,28 @@ def trabajador_eliminar(request, pk):
         obj.delete()
         messages.success(request, f'{nombre} eliminado.')
     return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=personal")
+
+
+@requiere('puede_gestionar_maquinaria')
+def trabajador_dar_baja(request, pk):
+    obj = get_object_or_404(Trabajador, pk=pk)
+    proyecto_id = obj.proyecto_id
+    if request.method == 'POST':
+        obj.activo = False
+        obj.save(update_fields=['activo'])
+        messages.success(request, f'{obj.nombre_completo()} dado de baja.')
+    return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=personal")
+
+
+@requiere('puede_gestionar_maquinaria')
+def trabajador_reactivar(request, pk):
+    obj = get_object_or_404(Trabajador, pk=pk)
+    proyecto_id = obj.proyecto_id
+    if request.method == 'POST':
+        obj.activo = True
+        obj.save(update_fields=['activo'])
+        messages.success(request, f'{obj.nombre_completo()} reactivado.')
+    return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=inactivos")
 
 
 @requiere('puede_gestionar_maquinaria')
@@ -361,11 +384,13 @@ def _rango_asistencia(periodo, inicio_str):
 @proyecto_visible
 def registro_lista(request, proyecto_id):
     proyecto     = get_object_or_404(Proyecto, pk=proyecto_id)
-    trabajadores = (
+    trabajadores_all = (
         Trabajador.objects
         .filter(proyecto=proyecto)
         .select_related('tipo_personal')
     )
+    trabajadores            = trabajadores_all.filter(activo=True)
+    trabajadores_inactivos  = trabajadores_all.filter(activo=False).order_by('apellidos', 'nombres')
     cuadrillas = (
         Cuadrilla.objects
         .filter(proyecto=proyecto)
@@ -378,6 +403,8 @@ def registro_lista(request, proyecto_id):
         tab_activa = 'cuadrilla'
     elif tab == 'asistencia':
         tab_activa = 'asistencia'
+    elif tab == 'inactivos':
+        tab_activa = 'inactivos'
     else:
         tab_activa = 'personal'
 
@@ -405,16 +432,17 @@ def registro_lista(request, proyecto_id):
         })
 
     return render(request, 'maquinaria/registro_lista.html', {
-        'proyecto':         proyecto,
-        'trabajadores':     trabajadores,
-        'cuadrillas':       cuadrillas,
-        'tab_activa':       tab_activa,
+        'proyecto':                 proyecto,
+        'trabajadores':             trabajadores,
+        'trabajadores_inactivos':   trabajadores_inactivos,
+        'cuadrillas':               cuadrillas,
+        'tab_activa':               tab_activa,
         # Asistencia
-        'asist_periodo':    periodo,
-        'asist_inicio':     inicio,
-        'asist_fin':        fin,
-        'asist_fechas':     fechas,
-        'asist_filas':      filas_asistencia,
+        'asist_periodo':            periodo,
+        'asist_inicio':             inicio,
+        'asist_fin':                fin,
+        'asist_fechas':             fechas,
+        'asist_filas':              filas_asistencia,
     })
 
 
