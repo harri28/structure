@@ -450,25 +450,25 @@
             <table class="table table-sm mb-0 align-middle" style="font-size:.82rem">
               <thead style="background:#f9fafb">
                 <tr>
-                  <th style="width:70px;text-align:center">Presente</th>
                   <th style="min-width:180px">Trabajador</th>
                   <th style="min-width:140px">Cuadrilla</th>
                   <th style="min-width:200px">Observación</th>
+                  <th style="width:70px;text-align:center">Presente</th>
                 </tr>
               </thead>
               <tbody>
               {% for t in trabajadores %}
                 <tr>
-                  <td class="text-center">
-                    <div class="form-check d-inline-block m-0">
-                      <input type="checkbox" name="presente__{{ t.pk }}" class="form-check-input" checked>
-                    </div>
-                  </td>
                   <td class="fw-semibold">{{ t.apellidos }}, {{ t.nombres }}</td>
                   <td class="text-muted">{{ t.cuadrilla_nombre|default:"—" }}</td>
                   <td>
                     <input type="text" name="obs__{{ t.pk }}" maxlength="200"
                            class="form-control form-control-sm" placeholder="Opcional…">
+                  </td>
+                  <td class="text-center">
+                    <div class="form-check d-inline-block m-0">
+                      <input type="checkbox" name="presente__{{ t.pk }}" class="form-check-input" checked>
+                    </div>
                   </td>
                 </tr>
               {% empty %}
