@@ -119,7 +119,22 @@ const salida  = document.querySelector('[name$="hora_salida"]');
 const preview = document.getElementById('horas-preview');
 const previewTxt = document.getElementById('horas-preview-txt');
 
+function validarRango() {
+  if (!entrada || !salida) return;
+  if (entrada.value === '' || salida.value === '') { salida.setCustomValidity(''); return; }
+  const he = parseFloat(entrada.value);
+  const hs = parseFloat(salida.value);
+  if (isNaN(he) || isNaN(hs)) { salida.setCustomValidity(''); return; }
+  if (hs < he) {
+    salida.setCustomValidity('El horómetro de salida no puede ser menor al de entrada.');
+    salida.reportValidity();
+  } else {
+    salida.setCustomValidity('');
+  }
+}
+
 function calcularHoras() {
+  validarRango();
   if (!entrada || !salida || entrada.value === '' || salida.value === '') { preview.style.display = 'none'; return; }
   const he = parseFloat(entrada.value);
   const hs = parseFloat(salida.value);
@@ -129,7 +144,7 @@ function calcularHoras() {
   previewTxt.textContent = diff.toFixed(2);
   preview.style.display = 'block';
 }
-if (entrada) entrada.addEventListener('change', calcularHoras);
-if (salida)  salida.addEventListener('change', calcularHoras);
+if (entrada) { entrada.addEventListener('change', calcularHoras); entrada.addEventListener('input', validarRango); }
+if (salida)  { salida.addEventListener('change', calcularHoras);  salida.addEventListener('input', validarRango); }
 </script>
 {% endblock %}
