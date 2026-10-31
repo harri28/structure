@@ -48,12 +48,6 @@
       <div class="text-muted" style="font-size:.82rem">Insumos consumidos</div>
     </div>
   </div>
-  <div class="col-md-3">
-    <div class="card text-center py-3">
-      <div class="fw-bold text-danger" style="font-size:1.5rem">S/ {{ total_costo|floatformat:2 }}</div>
-      <div class="text-muted" style="font-size:.82rem">Costo total despachado</div>
-    </div>
-  </div>
 </div>
 {% endif %}
 
@@ -66,7 +60,6 @@
           <th>Tipo</th>
           <th>Unidad</th>
           <th class="text-end">Cantidad consumida</th>
-          <th class="text-end">Costo total (S/)</th>
           <th class="text-end">Despachos</th>
         </tr>
       </thead>
@@ -86,12 +79,11 @@
           </td>
           <td class="text-muted">{{ item.unidad }}</td>
           <td class="text-end fw-semibold">{{ item.total_cantidad|floatformat:4 }}</td>
-          <td class="text-end text-danger fw-semibold">{{ item.total_costo|floatformat:2 }}</td>
           <td class="text-end text-muted">{{ item.num_registros }}</td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6">
+          <td colspan="5">
             <div class="empty-state">
               <i class="bi bi-graph-up-arrow d-block"></i>
               <p>Sin consumo registrado{% if tipo_sel or desde or hasta %} con los filtros aplicados{% endif %}. Registra <a href="{% url 'almacen:salida_lista' proyecto.pk %}">atenciones</a> desde Atenciones / Salidas.</p>
@@ -100,15 +92,6 @@
         </tr>
         {% endfor %}
       </tbody>
-      {% if items %}
-      <tfoot>
-        <tr class="fw-bold">
-          <td colspan="4" class="text-end text-muted">Total costo despachado</td>
-          <td class="text-end text-danger">S/ {{ total_costo|floatformat:2 }}</td>
-          <td></td>
-        </tr>
-      </tfoot>
-      {% endif %}
     </table>
   </div>
 </div>
