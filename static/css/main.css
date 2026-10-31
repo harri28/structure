@@ -768,6 +768,52 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .btn-topbar { padding: .22rem .5rem; }
 }
 
+/* Modal Nueva Atención: filas de materiales apiladas como cards en celular */
+@media (max-width: 576px) {
+  .at-items-table { font-size: .83rem; }
+  .at-items-table thead { display: none; }
+  .at-items-table tbody { display: block; }
+  .at-items-table tr {
+    display: block;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: .5rem;
+    margin-bottom: .55rem;
+    background: #fff;
+    position: relative;
+  }
+  .at-items-table td {
+    display: block;
+    width: auto !important;
+    padding: .2rem 0;
+    text-align: left !important;
+    border: none;
+    white-space: normal;
+  }
+  .at-items-table th { white-space: normal; }
+  .at-items-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: .68rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    margin-bottom: .1rem;
+  }
+  .at-items-table td[data-label="#"]::before { content: "Fila"; }
+  /* Botón de quitar en la esquina superior derecha de cada card */
+  .at-items-table td:last-child {
+    position: absolute;
+    top: .25rem;
+    right: .25rem;
+    padding: 0;
+  }
+  .at-items-table td:last-child::before { display: none; }
+  /* Inputs numéricos alineados a la izquierda en mobile para que no queden pegados al borde */
+  .at-items-table .at-item-cant { text-align: left; }
+}
+
 /* Tablas: scroll horizontal en mobile cuando desborden el card-body */
 @media (max-width: 768px) {
   .card-body:has(> table.table-modern),

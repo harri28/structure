@@ -67,7 +67,7 @@
 
 {# ────────────── Modal Nueva Atención ────────────── #}
 <div class="modal fade" id="modalAtencion" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-sm-down">
     <div class="modal-content">
       <div class="modal-header py-2">
         <h5 class="modal-title" style="font-size:.95rem"><i class="bi bi-plus-lg me-1"></i>Nueva Atención</h5>
@@ -110,7 +110,7 @@
               </button>
             </div>
             <div class="card-body p-2" style="overflow:visible">
-              <table class="table table-sm mb-0" style="font-size:.82rem">
+              <table class="table table-sm mb-0 at-items-table" style="font-size:.82rem">
                 <thead>
                   <tr style="background:#f9fafb">
                     <th style="width:28px">#</th>
@@ -188,16 +188,16 @@
     var tr = document.createElement('tr');
     tr.setAttribute('data-row-idx', idx);
     tr.innerHTML =
-      '<td class="text-muted text-center" data-rownum>-</td>' +
-      '<td>' +
+      '<td class="text-muted text-center" data-rownum data-label="#">-</td>' +
+      '<td data-label="Material">' +
         '<input type="hidden" class="at-item-insumo-id">' +
         '<input type="text" class="form-control form-control-sm at-item-desc" autocomplete="off" placeholder="Escribí para buscar material…">' +
         '<div class="at-item-dropdown list-group shadow" style="position:fixed;max-height:260px;overflow-y:auto;z-index:2000;display:none;background:#fff;border:1px solid #d1d5db;border-radius:.375rem"></div>' +
       '</td>' +
-      '<td><input type="number" class="form-control form-control-sm at-item-cant text-end" step="1" min="1" placeholder="0"></td>' +
-      '<td class="text-muted at-item-unidad">—</td>' +
-      '<td class="text-end at-item-stock text-muted">—</td>' +
-      '<td class="text-center">' +
+      '<td data-label="Cantidad"><input type="number" class="form-control form-control-sm at-item-cant text-end" step="1" min="1" placeholder="0"></td>' +
+      '<td class="text-muted at-item-unidad" data-label="Unidad">—</td>' +
+      '<td class="text-end at-item-stock text-muted" data-label="Stock">—</td>' +
+      '<td class="text-center" data-label="">' +
         '<button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 at-item-remove" title="Quitar"><i class="bi bi-x"></i></button>' +
       '</td>';
     tbody.appendChild(tr);
