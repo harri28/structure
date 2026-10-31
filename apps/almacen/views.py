@@ -902,10 +902,19 @@ def atencion_crear(request, proyecto_id):
     except ValueError:
         fecha = _dt.date.today()
 
+    hora_str = (body.get('hora') or '').strip()
+    hora = None
+    if hora_str:
+        try:
+            hora = _dt.time.fromisoformat(hora_str)
+        except ValueError:
+            hora = None
+
     salida = Salida.objects.create(
         proyecto=proyecto,
         numero=str(siguiente).zfill(4),
         fecha=fecha,
+        hora=hora,
         responsable=(body.get('responsable') or '').strip()[:150],
         proveedor=(body.get('proveedor') or '').strip(),
         factura=(body.get('factura') or '').strip(),

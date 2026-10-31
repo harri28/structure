@@ -45,7 +45,7 @@
             <td style="font-size:.82rem;color:#6b7280">{{ d.unidad|default:"—" }}</td>
             <td style="font-size:.82rem">{{ d.salida.responsable|default:"—" }}</td>
             <td style="font-size:.82rem">{% if d.guia %}<code>{{ d.guia.numero }}</code>{% else %}—{% endif %}</td>
-            <td style="font-size:.82rem;color:#6b7280">{{ d.salida.fecha|date:"d/m/Y" }}</td>
+            <td style="font-size:.82rem;color:#6b7280">{{ d.salida.fecha|date:"d/m/Y" }}{% if d.salida.hora %} <span class="text-muted">{{ d.salida.hora|time:"H:i" }}</span>{% endif %}</td>
             <td class="text-end" style="font-size:.83rem">{{ d.cantidad|floatformat:2 }}</td>
             <td class="text-end" style="font-size:.83rem">{{ d.precio_unitario|floatformat:4 }}</td>
             <td class="text-end fw-semibold" style="font-size:.83rem">{{ d.subtotal|floatformat:2 }}</td>
@@ -99,9 +99,13 @@
           </div>
 
           <div class="row g-2 mb-2">
-            <div class="col-sm-6">
+            <div class="col-sm-3">
               <label class="form-label fw-semibold">Fecha</label>
               <input type="date" id="at-fecha" class="form-control" value="{% now 'Y-m-d' %}">
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label fw-semibold">Hora</label>
+              <input type="time" id="at-hora" class="form-control" value="{% now 'H:i' %}">
             </div>
             <div class="col-sm-6">
               <label class="form-label fw-semibold">Stock disponible</label>
@@ -152,6 +156,7 @@
   var iUnidad   = document.getElementById('at-unidad');
   var iStock    = document.getElementById('at-stock');
   var iFecha    = document.getElementById('at-fecha');
+  var iHora     = document.getElementById('at-hora');
   var iResp     = document.getElementById('at-responsable');
   var iCant     = document.getElementById('at-cantidad');
   var iObs      = document.getElementById('at-observaciones');
@@ -178,8 +183,9 @@
     iResp.value = '';
     iCant.value = ''; iObs.value = '';
     clearMsg();
-    var hoy = new Date().toISOString().slice(0, 10);
-    iFecha.value = hoy;
+    var ahora = new Date();
+    iFecha.value = ahora.toISOString().slice(0, 10);
+    iHora.value  = ahora.toTimeString().slice(0, 5);
   }
 
   // Autocomplete de insumos — dispara sobre el input Descripción
@@ -255,6 +261,7 @@
     var payload = {
       insumo_id:   iInsumoId.value,
       fecha:       iFecha.value,
+      hora:        iHora.value,
       responsable: iResp.value,
       cantidad:    iCant.value,
       observaciones: iObs.value,

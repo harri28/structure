@@ -76,6 +76,7 @@ class Salida(models.Model):
     requerimiento = models.ForeignKey(Requerimiento, null=True, blank=True, on_delete=models.SET_NULL, related_name='salidas')
     numero = models.CharField(max_length=20)
     fecha = models.DateField()
+    hora = models.TimeField(null=True, blank=True)
     destino = models.CharField(max_length=200, blank=True)
     responsable = models.CharField(max_length=150, blank=True)
     proveedor = models.CharField(max_length=200, blank=True)
