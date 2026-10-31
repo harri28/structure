@@ -440,41 +440,12 @@ def registro_lista(request, proyecto_id):
     else:
         tab_activa = 'personal'
 
-    # ── Datos específicos del tab Asistencia ──
-    periodo, inicio, fin, fechas = _rango_asistencia(
-        request.GET.get('periodo', 'semanal'),
-        request.GET.get('inicio', ''),
-    )
-    trabajadores_asist = trabajadores.filter(activo=True).order_by('apellidos', 'nombres')
-    asistencias_qs = Asistencia.objects.filter(
-        trabajador__proyecto=proyecto,
-        fecha__gte=inicio,
-        fecha__lte=fin,
-    )
-    estados_map = {}
-    for a in asistencias_qs:
-        estados_map.setdefault(a.trabajador_id, {})[a.fecha.isoformat()] = a.estado
-    filas_asistencia = []
-    for t in trabajadores_asist:
-        estados_t = estados_map.get(t.pk, {})
-        filas_asistencia.append({
-            'trab':    t,
-            'estados': [{'fecha': f, 'iso': f.isoformat(), 'estado': estados_t.get(f.isoformat(), '')}
-                        for f in fechas],
-        })
-
     return render(request, 'maquinaria/registro_lista.html', {
         'proyecto':                 proyecto,
         'trabajadores':             trabajadores,
         'trabajadores_inactivos':   trabajadores_inactivos,
         'cuadrillas':               cuadrillas,
         'tab_activa':               tab_activa,
-        # Asistencia
-        'asist_periodo':            periodo,
-        'asist_inicio':             inicio,
-        'asist_fin':                fin,
-        'asist_fechas':             fechas,
-        'asist_filas':              filas_asistencia,
     })
 
 
