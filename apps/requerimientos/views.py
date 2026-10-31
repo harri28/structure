@@ -331,11 +331,12 @@ def aprobar(request, pk):
     return redirect(next_url or 'requerimientos:detalle', pk=req.pk) if not next_url else redirect(next_url)
 
 
-@requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos')
-@proyecto_visible
-def vs_atenciones(request, proyecto_id):
+def consolidar_vs_atenciones(proyecto):
+    """Helper reusable: devuelve filas consolidadas de Req vs Atenciones para un proyecto.
+
+    Usado por `requerimientos.vs_atenciones` y `logistica.vs_atenciones_log`.
+    """
     from apps.almacen.models import DetalleCotizacion
-    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     estados_incluidos = ['ENVIADO', 'EN_REVISION', 'APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO']
     detalles = (DetalleRequerimiento.objects
                 .filter(requerimiento__proyecto=proyecto,
@@ -371,9 +372,6 @@ def vs_atenciones(request, proyecto_id):
         if det.observacion:
             consolidado[key]['observaciones'] = det.observacion
 
-    # "Atendido y despachado" = Σ DetalleCotizacion.cantidad de cotizaciones APROBADAS
-    # cuya guía está EN_TRANSITO o ENTREGADO (ANULADA queda fuera, por eso al anular
-    # una guía la cantidad se restablece sola).
     despachados = (DetalleCotizacion.objects
                    .filter(cotizacion__proyecto=proyecto,
                            cotizacion__estado='APROBADA',
@@ -390,10 +388,16 @@ def vs_atenciones(request, proyecto_id):
         item['saldo'] = item['original'] - item['atendido']
         filas.append(item)
     filas.sort(key=lambda x: x['codigo'])
+    return filas
 
+
+@requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos')
+@proyecto_visible
+def vs_atenciones(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     return render(request, 'requerimientos/vs_atenciones.html', {
         'proyecto': proyecto,
-        'filas': filas,
+        'filas': consolidar_vs_atenciones(proyecto),
     })
 
 

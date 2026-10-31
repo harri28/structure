@@ -250,6 +250,12 @@
         <i class="bi bi-send"></i> Guías de Remisión
       </a>
       {% endif %}
+      {% if permisos.puede_revisar_reqs_log %}
+      <a href="{% url 'logistica:vs_atenciones' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:vs_atenciones' %}active{% endif %}">
+        <i class="bi bi-bar-chart-steps"></i> Req. vs Atenciones
+      </a>
+      {% endif %}
       <a href="{% url 'logistica:reportes' proyecto_activo.pk %}"
          class="sb-link {% if vn == 'logistica:reportes' %}active{% endif %}">
         <i class="bi bi-bar-chart-line"></i> Reportes
@@ -332,6 +338,12 @@
         <a href="{% url 'logistica:control_maquinaria' proyecto_activo.pk %}"
            class="sb-link sb-sublink {% block nav_log_ctrl_maq %}{% endblock %}">
           <i class="bi bi-gear-wide-connected"></i> Control Maq. y Equipos
+        </a>
+        {% endif %}
+        {% if permisos.puede_revisar_reqs_log %}
+        <a href="{% url 'logistica:vs_atenciones' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% block nav_log_vs_atenciones %}{% endblock %}">
+          <i class="bi bi-bar-chart-steps"></i> Req. vs Atenciones
         </a>
         {% endif %}
         <a href="{% url 'logistica:reportes' proyecto_activo.pk %}"

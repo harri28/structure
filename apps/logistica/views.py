@@ -938,3 +938,18 @@ def abastecimiento(request, proyecto_id):
 def reportes(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
     return render(request, 'logistica/reportes.html', {'proyecto': proyecto})
+
+
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
+def vs_atenciones_log(request, proyecto_id):
+    """Réplica de Req vs Atenciones para el área de Logística.
+
+    Usa el helper `consolidar_vs_atenciones` de requerimientos para no duplicar lógica.
+    """
+    from apps.requerimientos.views import consolidar_vs_atenciones
+    proyecto = _get_proyecto(proyecto_id)
+    return render(request, 'logistica/vs_atenciones.html', {
+        'proyecto': proyecto,
+        'filas': consolidar_vs_atenciones(proyecto),
+    })

@@ -41,4 +41,5 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/control-maquinaria/', views.control_maquinaria, name='control_maquinaria'),
     path('proyecto/<int:proyecto_id>/abastecimiento/',     views.abastecimiento,     name='abastecimiento'),
     path('proyecto/<int:proyecto_id>/reportes/',           views.reportes,           name='reportes'),
+    path('proyecto/<int:proyecto_id>/vs-atenciones/',      views.vs_atenciones_log,  name='vs_atenciones'),
 ]
