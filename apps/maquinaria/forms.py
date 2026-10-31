@@ -342,3 +342,11 @@ class ParteForm(forms.ModelForm):
         else:
             self.fields['insumo'].queryset  = InsumoPresupuesto.objects.none()
             self.fields['partida'].queryset = Partida.objects.none()
+
+    def clean(self):
+        cleaned = super().clean()
+        entrada = cleaned.get('hora_entrada')
+        salida  = cleaned.get('hora_salida')
+        if entrada is not None and salida is not None and salida < entrada:
+            self.add_error('hora_salida', 'El horómetro de salida no puede ser menor al de entrada.')
+        return cleaned

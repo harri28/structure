@@ -778,7 +778,12 @@ def maq_registro_detalle(request, pk):
 @requiere('puede_gestionar_maquinaria')
 def maq_registro_editar(request, pk):
     registro = get_object_or_404(RegistroMaquinaria, pk=pk)
-    form     = RegistroMaquinariaForm(proyecto=registro.proyecto, data=request.POST or None, instance=registro)
+    form     = RegistroMaquinariaForm(
+        proyecto=registro.proyecto,
+        validar_horometro=True,
+        data=request.POST or None,
+        instance=registro,
+    )
     if form.is_valid():
         form.save()
         messages.success(request, 'Registro actualizado.')
