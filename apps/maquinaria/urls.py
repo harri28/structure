@@ -40,6 +40,7 @@ urlpatterns = [
     # Cuadrilla / Personal / Asistencia — página con tabs
     path('proyecto/<int:proyecto_id>/registros/',           views.registro_lista,       name='registro_lista'),
     path('proyecto/<int:proyecto_id>/asistencia/guardar/',  views.asistencia_guardar,   name='asistencia_guardar'),
+    path('proyecto/<int:proyecto_id>/asistencia/registrar/', views.asistencia_registrar_rapido, name='asistencia_registrar_rapido'),
 
     # Página principal de Maquinaria (lista de máquinas del proyecto)
     path('proyecto/<int:proyecto_id>/equipos/',                          views.maq_principal,           name='maq_principal'),

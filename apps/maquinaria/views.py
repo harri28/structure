@@ -398,6 +398,38 @@ def registro_lista(request, proyecto_id):
         .annotate(n_integrantes=Count('integrantes'))
     )
 
+    # ── Resumen asistencia del mes actual (por trabajador activo) ─────────
+    from datetime import date as _date
+    hoy = _date.today()
+    mes_inicio = hoy.replace(day=1)
+    asistencia_qs = Asistencia.objects.filter(
+        trabajador__proyecto=proyecto,
+        fecha__gte=mes_inicio,
+        fecha__lte=hoy,
+    )
+    conteo_mes = {}
+    for trab_id, estado in asistencia_qs.values_list('trabajador_id', 'estado'):
+        entry = conteo_mes.setdefault(trab_id, {'asistidas': 0, 'faltas': 0})
+        if estado == Asistencia.PRESENTE:
+            entry['asistidas'] += 1
+        elif estado == Asistencia.FALTA:
+            entry['faltas'] += 1
+
+    # Primera cuadrilla asociada por trabajador (si pertenece a varias, se muestra la primera)
+    cuadrilla_por_trab = {}
+    for ic in (IntegranteCuadrilla.objects
+               .filter(cuadrilla__proyecto=proyecto)
+               .select_related('cuadrilla')):
+        cuadrilla_por_trab.setdefault(ic.trabajador_id, ic.cuadrilla.nombre)
+
+    # Enriquecemos cada trabajador activo con atributos ad-hoc para el template
+    trabajadores = list(trabajadores.order_by('apellidos', 'nombres'))
+    for t in trabajadores:
+        datos = conteo_mes.get(t.pk, {'asistidas': 0, 'faltas': 0})
+        t.asistidas_mes = datos['asistidas']
+        t.faltas_mes    = datos['faltas']
+        t.cuadrilla_nombre = cuadrilla_por_trab.get(t.pk, '')
+
     tab = request.GET.get('tab', 'personal')
     if tab == 'cuadrilla':
         tab_activa = 'cuadrilla'
@@ -491,6 +523,43 @@ def asistencia_guardar(request, proyecto_id):
         f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}"
         f"?tab=asistencia&periodo={periodo}&inicio={inicio}"
     )
+
+
+@requiere('puede_gestionar_maquinaria')
+@proyecto_visible
+@require_POST
+def asistencia_registrar_rapido(request, proyecto_id):
+    """Guarda asistencia de una fecha para los trabajadores activos del proyecto.
+
+    POST esperado:
+        fecha              → yyyy-mm-dd
+        presente__<trab_id>→ 'on' si está marcado el checkbox (si no viene, es FALTA)
+        obs__<trab_id>     → observación por trabajador
+    """
+    from datetime import date as _date
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    fecha_str = (request.POST.get('fecha') or '').strip()
+    try:
+        fecha = _date.fromisoformat(fecha_str)
+    except (ValueError, TypeError):
+        messages.error(request, 'Fecha inválida.')
+        return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=asistencia")
+
+    trab_ids_activos = set(
+        Trabajador.objects.filter(proyecto=proyecto, activo=True).values_list('pk', flat=True)
+    )
+    cambios = 0
+    for trab_id in trab_ids_activos:
+        presente = request.POST.get(f'presente__{trab_id}') == 'on'
+        obs      = (request.POST.get(f'obs__{trab_id}') or '').strip()[:200]
+        estado = Asistencia.PRESENTE if presente else Asistencia.FALTA
+        Asistencia.objects.update_or_create(
+            trabajador_id=trab_id, fecha=fecha,
+            defaults={'estado': estado, 'observacion': obs},
+        )
+        cambios += 1
+    messages.success(request, f'Asistencia del {fecha.strftime("%d/%m/%Y")} guardada ({cambios} registros).')
+    return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=asistencia")
 
 
 # ── Registros Maquinaria ──────────────────────────────────────────────
