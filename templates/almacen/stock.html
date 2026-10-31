@@ -91,7 +91,7 @@
           <td class="text-end text-muted">{{ item.presupuestado|floatformat:2 }}</td>
           <td class="text-end text-success fw-semibold">{{ item.total_entrada|floatformat:2 }}</td>
           <td class="text-end text-danger">{{ item.total_salida|floatformat:2 }}</td>
-          <td class="text-end fw-bold {% if item.saldo > 0 %}text-success{% else %}text-muted{% endif %}">
+          <td class="text-end fw-semibold {% if item.saldo > 0 %}text-success{% else %}text-muted{% endif %}">
             {{ item.saldo|floatformat:2 }}
           </td>
         </tr>
@@ -178,7 +178,7 @@
           '<td class="text-end text-muted">' + it.presupuestado + '</td>' +
           '<td class="text-end text-success fw-semibold">' + it.total_entrada + '</td>' +
           '<td class="text-end text-danger">' + it.total_salida + '</td>' +
-          '<td class="text-end fw-bold ' + (it.saldo_pos ? 'text-success' : 'text-muted') + '">' + it.saldo + '</td>' +
+          '<td class="text-end fw-semibold ' + (it.saldo_pos ? 'text-success' : 'text-muted') + '">' + it.saldo + '</td>' +
           '</tr>';
       }).join('');
     }
