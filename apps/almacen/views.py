@@ -865,8 +865,9 @@ def api_insumo_guias(request, proyecto_id):
 @requiere('puede_gestionar_salidas')
 @proyecto_visible
 def atencion_crear(request, proyecto_id):
-    """Endpoint AJAX: crea una Salida con UN detalle (una Atención = un material)."""
+    """Endpoint AJAX: crea una Salida con N detalles (una Atención puede atender varios materiales)."""
     import json
+    from django.db import transaction
     if request.method != 'POST':
         return JsonResponse({'ok': False, 'error': 'Solo POST'}, status=405)
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
@@ -875,41 +876,41 @@ def atencion_crear(request, proyecto_id):
     except (ValueError, json.JSONDecodeError):
         return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
 
-    # Validación
-    insumo_id = body.get('insumo_id')
-    if not insumo_id:
-        return JsonResponse({'ok': False, 'error': 'Debe elegir un insumo'}, status=400)
-    try:
-        insumo = InsumoPresupuesto.objects.get(pk=insumo_id, presupuesto__proyecto=proyecto)
-    except InsumoPresupuesto.DoesNotExist:
-        return JsonResponse({'ok': False, 'error': 'Insumo no pertenece al proyecto'}, status=400)
+    # Items: lista de {insumo_id, cantidad}
+    items_raw = body.get('items') or []
+    if not isinstance(items_raw, list) or not items_raw:
+        return JsonResponse({'ok': False, 'error': 'Debe enviar al menos un material.'}, status=400)
 
-    try:
-        cantidad = Decimal(str(body.get('cantidad') or '0'))
-        parcial  = Decimal(str(body.get('parcial')  or '0'))
-    except Exception:
-        return JsonResponse({'ok': False, 'error': 'Cantidad/parcial inválidos'}, status=400)
-
-    if cantidad <= 0:
-        return JsonResponse({'ok': False, 'error': 'Cantidad debe ser > 0'}, status=400)
-    if cantidad > (insumo.stock_almacen or 0):
-        return JsonResponse({
-            'ok': False,
-            'error': f'Cantidad ({cantidad}) supera el stock disponible ({insumo.stock_almacen}).',
-        }, status=400)
-
-    precio_unitario = (parcial / cantidad) if cantidad else Decimal('0')
-
-    guia = None
-    guia_id = body.get('guia_id')
-    if guia_id:
-        from apps.logistica.models import GuiaRemision
+    # Validar cada ítem y construir lista normalizada
+    items = []
+    insumos_vistos = set()
+    for i, raw in enumerate(items_raw, start=1):
+        if not isinstance(raw, dict):
+            return JsonResponse({'ok': False, 'error': f'Fila {i}: formato inválido.'}, status=400)
+        insumo_id = raw.get('insumo_id')
+        if not insumo_id:
+            return JsonResponse({'ok': False, 'error': f'Fila {i}: debés elegir un material.'}, status=400)
+        if insumo_id in insumos_vistos:
+            return JsonResponse({'ok': False, 'error': f'Fila {i}: material repetido en la atención.'}, status=400)
+        insumos_vistos.add(insumo_id)
         try:
-            guia = GuiaRemision.objects.get(pk=guia_id, proyecto=proyecto)
-        except GuiaRemision.DoesNotExist:
-            pass
+            insumo = InsumoPresupuesto.objects.get(pk=insumo_id, presupuesto__proyecto=proyecto)
+        except InsumoPresupuesto.DoesNotExist:
+            return JsonResponse({'ok': False, 'error': f'Fila {i}: insumo no pertenece al proyecto.'}, status=400)
+        try:
+            cantidad = Decimal(str(raw.get('cantidad') or '0'))
+        except Exception:
+            return JsonResponse({'ok': False, 'error': f'Fila {i}: cantidad inválida.'}, status=400)
+        if cantidad <= 0:
+            return JsonResponse({'ok': False, 'error': f'Fila {i}: cantidad debe ser > 0.'}, status=400)
+        if cantidad > (insumo.stock_almacen or 0):
+            return JsonResponse({
+                'ok': False,
+                'error': f'Fila {i} ({insumo.codigo}): cantidad ({cantidad}) supera el stock ({insumo.stock_almacen}).',
+            }, status=400)
+        items.append({'insumo': insumo, 'cantidad': cantidad})
 
-    # Correlativo SAL-XXX interno (trazabilidad)
+    # Correlativo SLD-XXXX
     from django.db.models import Max
     ult = proyecto.salidas.aggregate(m=Max('numero'))['m']
     try:
@@ -938,37 +939,34 @@ def atencion_crear(request, proyecto_id):
         from apps.maquinaria.models import Trabajador
         trabajador = Trabajador.objects.filter(pk=trabajador_id, proyecto=proyecto).first()
 
-    salida = Salida.objects.create(
-        proyecto=proyecto,
-        numero=str(siguiente).zfill(4),
-        fecha=fecha,
-        hora=hora,
-        responsable=(body.get('responsable') or '').strip()[:150],
-        trabajador=trabajador,
-        proveedor=(body.get('proveedor') or '').strip(),
-        factura=(body.get('factura') or '').strip(),
-        observaciones=(body.get('observaciones') or '').strip(),
-    )
+    with transaction.atomic():
+        salida = Salida.objects.create(
+            proyecto=proyecto,
+            numero=str(siguiente).zfill(4),
+            fecha=fecha,
+            hora=hora,
+            responsable=(body.get('responsable') or '').strip()[:150],
+            trabajador=trabajador,
+            observaciones=(body.get('observaciones') or '').strip(),
+        )
+        for it in items:
+            DetalleSalida.objects.create(
+                salida=salida,
+                insumo=it['insumo'],
+                descripcion=it['insumo'].descripcion,
+                unidad=it['insumo'].unidad,
+                cantidad=it['cantidad'],
+                precio_unitario=Decimal('0.0000'),
+            )
+    # Los signals post_save de DetalleSalida descuentan stock_almacen de cada insumo.
 
-    detalle = DetalleSalida.objects.create(
-        salida=salida,
-        insumo=insumo,
-        guia=guia,
-        descripcion=insumo.descripcion,
-        unidad=insumo.unidad,
-        cantidad=cantidad,
-        precio_unitario=precio_unitario.quantize(Decimal('0.0001')),
-        observaciones=(body.get('observaciones_linea') or '').strip(),
-    )
-    # El signal post_save de DetalleSalida ya descuenta stock_almacen del insumo.
-
-    log(request, 'CREAR', 'Almacén',
-        f'Atención SLD-{salida.numero}: {cantidad} {insumo.unidad} de {insumo.codigo} - {insumo.descripcion[:40]}')
+    resumen = ', '.join(f"{it['cantidad']} {it['insumo'].unidad} de {it['insumo'].codigo}" for it in items)
+    log(request, 'CREAR', 'Almacén', f'Atención SLD-{salida.numero}: {resumen}'[:300])
 
     return JsonResponse({
         'ok': True,
-        'detalle_id': detalle.pk,
         'salida_numero': salida.numero,
+        'items': len(items),
     })
 
 

@@ -67,7 +67,7 @@
 
 {# ────────────── Modal Nueva Atención ────────────── #}
 <div class="modal fade" id="modalAtencion" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header py-2">
         <h5 class="modal-title" style="font-size:.95rem"><i class="bi bi-plus-lg me-1"></i>Nueva Atención</h5>
@@ -76,8 +76,6 @@
       <div class="modal-body">
         <form id="form-atencion" class="form-compact">
           {% csrf_token %}
-
-          <input type="hidden" id="at-insumo-id">
 
           <div class="row g-2 mb-2">
             <div class="col-sm-6">
@@ -93,36 +91,42 @@
           </div>
 
           <div class="row g-2 mb-2">
-            <div class="col-12 position-relative">
-              <label class="form-label fw-semibold">Material <span class="text-danger">*</span></label>
-              <input type="text" id="at-descripcion" class="form-control" autocomplete="off" placeholder="Escribí para buscar material…">
-              <div id="at-resultados" class="list-group position-absolute w-100 shadow" style="max-height:260px;overflow-y:auto;z-index:1080;display:none;background:#fff;border:1px solid #d1d5db;border-radius:.375rem"></div>
-            </div>
-          </div>
-
-          <div class="row g-2 mb-2">
-            <div class="col-sm-3">
+            <div class="col-sm-6">
               <label class="form-label fw-semibold">Fecha</label>
               <input type="date" id="at-fecha" class="form-control" value="{% now 'Y-m-d' %}">
             </div>
-            <div class="col-sm-3">
+            <div class="col-sm-6">
               <label class="form-label fw-semibold">Hora</label>
               <input type="time" id="at-hora" class="form-control" value="{% now 'H:i' %}">
             </div>
-            <div class="col-sm-6">
-              <label class="form-label fw-semibold">Stock disponible</label>
-              <input type="text" id="at-stock" class="form-control" readonly style="background:#f8fafc">
-            </div>
           </div>
 
-          <div class="row g-2 mb-2">
-            <div class="col-sm-6">
-              <label class="form-label fw-semibold">Cantidad <span class="text-danger">*</span></label>
-              <input type="number" id="at-cantidad" class="form-control" step="1" min="1" placeholder="0">
+          {# ─── Sección Materiales ─── #}
+          <div class="card mb-2" style="border:1px solid #e5e7eb;background:#fafbfc">
+            <div class="card-header d-flex justify-content-between align-items-center py-2" style="background:#f3f4f6">
+              <span class="fw-semibold" style="font-size:.85rem"><i class="bi bi-box-seam me-1"></i>Materiales a despachar</span>
+              <button type="button" id="btn-add-material" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size:.78rem">
+                <i class="bi bi-plus-lg"></i> Agregar material
+              </button>
             </div>
-            <div class="col-sm-6">
-              <label class="form-label fw-semibold">Unidad</label>
-              <p id="at-unidad" class="form-control-plaintext mb-0" style="min-height:38px;display:flex;align-items:center">—</p>
+            <div class="card-body p-2">
+              <div class="table-responsive">
+                <table class="table table-sm mb-0" style="font-size:.82rem">
+                  <thead>
+                    <tr style="background:#f9fafb">
+                      <th style="width:28px">#</th>
+                      <th style="min-width:280px">Material <span class="text-danger">*</span></th>
+                      <th style="width:120px" class="text-end">Cantidad <span class="text-danger">*</span></th>
+                      <th style="width:70px">Unidad</th>
+                      <th style="width:120px" class="text-end">Stock</th>
+                      <th style="width:40px"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="at-items-tbody">
+                    {# Las filas se insertan con JS. Al abrir el modal se crea la primera vacía. #}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -152,22 +156,18 @@
   var URL_TRABAJADORES  = "{% url 'almacen:api_trabajadores_buscar' proyecto.pk %}";
   var URL_CREAR         = "{% url 'almacen:atencion_crear' proyecto.pk %}";
 
-  var iResult      = document.getElementById('at-resultados');
-  var iInsumoId    = document.getElementById('at-insumo-id');
   var iCodigo      = document.getElementById('at-codigo');
-  var iDesc        = document.getElementById('at-descripcion');
-  var iUnidad      = document.getElementById('at-unidad');
-  var iStock       = document.getElementById('at-stock');
   var iFecha       = document.getElementById('at-fecha');
   var iHora        = document.getElementById('at-hora');
   var iResp        = document.getElementById('at-responsable');
   var iTrabId      = document.getElementById('at-trabajador-id');
   var iRespResult  = document.getElementById('at-resp-resultados');
-  var iCant        = document.getElementById('at-cantidad');
-  var iObs      = document.getElementById('at-observaciones');
-  var iMsg      = document.getElementById('at-msg');
-  var btnSave   = document.getElementById('btn-guardar-atencion');
-  var modalEl   = document.getElementById('modalAtencion');
+  var iObs         = document.getElementById('at-observaciones');
+  var iMsg         = document.getElementById('at-msg');
+  var tbody        = document.getElementById('at-items-tbody');
+  var btnAdd       = document.getElementById('btn-add-material');
+  var btnSave      = document.getElementById('btn-guardar-atencion');
+  var modalEl      = document.getElementById('modalAtencion');
 
   function getCsrf() {
     var m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -181,73 +181,138 @@
   function clearMsg() { iMsg.style.display = 'none'; iMsg.textContent = ''; }
 
   var CODIGO_DEFAULT = iCodigo.getAttribute('data-default') || '—';
+  var rowSeq = 0;
 
+  // ─── Fila de material ───────────────────────────────────────
+  function createRow() {
+    rowSeq += 1;
+    var idx = rowSeq;
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-row-idx', idx);
+    tr.innerHTML =
+      '<td class="text-muted text-center" data-rownum>-</td>' +
+      '<td class="position-relative">' +
+        '<input type="hidden" class="at-item-insumo-id">' +
+        '<input type="text" class="form-control form-control-sm at-item-desc" autocomplete="off" placeholder="Escribí para buscar material…">' +
+        '<div class="at-item-dropdown list-group position-absolute shadow" style="width:100%;max-height:260px;overflow-y:auto;z-index:1080;display:none;background:#fff;border:1px solid #d1d5db;border-radius:.375rem"></div>' +
+      '</td>' +
+      '<td><input type="number" class="form-control form-control-sm at-item-cant text-end" step="1" min="1" placeholder="0"></td>' +
+      '<td class="text-muted at-item-unidad">—</td>' +
+      '<td class="text-end at-item-stock text-muted">—</td>' +
+      '<td class="text-center">' +
+        '<button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 at-item-remove" title="Quitar"><i class="bi bi-x"></i></button>' +
+      '</td>';
+    tbody.appendChild(tr);
+    wireRow(tr);
+    renumber();
+    tr.querySelector('.at-item-desc').focus();
+    return tr;
+  }
+
+  function removeRow(tr) {
+    if (tbody.children.length <= 1) {
+      showMsg('Debe quedar al menos un material.', false);
+      return;
+    }
+    tr.remove();
+    renumber();
+  }
+
+  function renumber() {
+    Array.prototype.forEach.call(tbody.children, function (tr, i) {
+      var td = tr.querySelector('[data-rownum]');
+      if (td) td.textContent = i + 1;
+    });
+  }
+
+  function wireRow(tr) {
+    var insumoHidden = tr.querySelector('.at-item-insumo-id');
+    var descInput    = tr.querySelector('.at-item-desc');
+    var cantInput    = tr.querySelector('.at-item-cant');
+    var unidadCell   = tr.querySelector('.at-item-unidad');
+    var stockCell    = tr.querySelector('.at-item-stock');
+    var dropdown     = tr.querySelector('.at-item-dropdown');
+    var removeBtn    = tr.querySelector('.at-item-remove');
+
+    var timer = null;
+    descInput.addEventListener('input', function () {
+      insumoHidden.value = '';
+      unidadCell.textContent = '—';
+      stockCell.textContent = '—';
+      stockCell.setAttribute('data-stock', '');
+      clearTimeout(timer);
+      var q = descInput.value.trim();
+      if (q.length < 2) { dropdown.style.display = 'none'; return; }
+      timer = setTimeout(function () {
+        fetch(URL_INSUMOS + '?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.ok || !d.items || d.items.length === 0) {
+            dropdown.innerHTML = '<div class="list-group-item text-muted small">Sin resultados</div>';
+            dropdown.style.display = 'block'; return;
+          }
+          // IDs ya elegidos en otras filas para marcarlos como no seleccionables
+          var yaElegidos = {};
+          Array.prototype.forEach.call(tbody.querySelectorAll('.at-item-insumo-id'), function (h) {
+            if (h !== insumoHidden && h.value) yaElegidos[h.value] = true;
+          });
+          dropdown.innerHTML = '';
+          d.items.forEach(function (it) {
+            var el = document.createElement('button');
+            el.type = 'button';
+            el.className = 'list-group-item list-group-item-action py-2';
+            el.style.fontSize = '.83rem';
+            var yaUsado = yaElegidos[it.id];
+            if (!it.seleccionable || yaUsado) {
+              el.disabled = true;
+              el.style.opacity = '.45';
+              el.style.cursor = 'not-allowed';
+              el.title = yaUsado ? 'Ya está en otra fila' : 'Sin stock en almacén';
+            }
+            el.innerHTML =
+              '<div class="d-flex justify-content-between">' +
+                '<div><strong style="color:#2563eb">' + (it.codigo || '') + '</strong> · ' + it.descripcion + '</div>' +
+                '<div class="small text-muted">Stock: <strong>' + it.stock_almacen + '</strong> ' + it.unidad + '</div>' +
+              '</div>';
+            el.addEventListener('click', function () {
+              if (!it.seleccionable || yaUsado) return;
+              insumoHidden.value = it.id;
+              descInput.value    = it.descripcion;
+              unidadCell.textContent = it.unidad || '—';
+              stockCell.textContent  = it.stock_almacen + ' ' + it.unidad;
+              stockCell.setAttribute('data-stock', String(it.stock_almacen));
+              dropdown.style.display = 'none';
+              cantInput.focus();
+            });
+            dropdown.appendChild(el);
+          });
+          dropdown.style.display = 'block';
+        });
+      }, 250);
+    });
+
+    removeBtn.addEventListener('click', function () { removeRow(tr); });
+  }
+
+  // ─── Reset / init ───────────────────────────────────────────
   function resetForm() {
-    iInsumoId.value = '';
-    iCodigo.textContent = CODIGO_DEFAULT; iDesc.value = ''; iUnidad.textContent = '—'; iStock.value = '';
+    iCodigo.textContent = CODIGO_DEFAULT;
     iResp.value = ''; iTrabId.value = ''; iRespResult.style.display = 'none';
-    iCant.value = ''; iObs.value = '';
+    iObs.value = '';
+    tbody.innerHTML = '';
+    rowSeq = 0;
+    createRow();
     clearMsg();
     var ahora = new Date();
     iFecha.value = ahora.toISOString().slice(0, 10);
     iHora.value  = ahora.toTimeString().slice(0, 5);
   }
 
-  // Autocomplete de insumos — dispara sobre el input Descripción
-  var buscarTimer = null;
-  iDesc.addEventListener('input', function () {
-    // Si el usuario está tipeando, invalidamos el insumo elegido para forzar re-selección
-    iInsumoId.value = '';
-    iUnidad.textContent = '—';
-    iStock.value = '';
+  btnAdd.addEventListener('click', function () { createRow(); });
 
-    clearTimeout(buscarTimer);
-    var q = iDesc.value.trim();
-    if (q.length < 2) { iResult.style.display = 'none'; return; }
-    buscarTimer = setTimeout(function () {
-      fetch(URL_INSUMOS + '?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (!d.ok || !d.items || d.items.length === 0) {
-          iResult.innerHTML = '<div class="list-group-item text-muted small">Sin resultados</div>';
-          iResult.style.display = 'block'; return;
-        }
-        iResult.innerHTML = '';
-        d.items.forEach(function (it) {
-          var el = document.createElement('button');
-          el.type = 'button';
-          el.className = 'list-group-item list-group-item-action py-2';
-          el.style.fontSize = '.83rem';
-          if (!it.seleccionable) {
-            el.disabled = true;
-            el.style.opacity = '.45';
-            el.style.cursor  = 'not-allowed';
-            el.title = 'Sin stock en almacén';
-          }
-          el.innerHTML =
-            '<div class="d-flex justify-content-between">' +
-              '<div><strong style="color:#2563eb">' + (it.codigo || '') + '</strong> · ' + it.descripcion + '</div>' +
-              '<div class="small text-muted">Stock: <strong>' + it.stock_almacen + '</strong> ' + it.unidad + '</div>' +
-            '</div>';
-          el.addEventListener('click', function () {
-            if (!it.seleccionable) return;
-            iInsumoId.value = it.id;
-            iDesc.value         = it.descripcion;
-            iUnidad.textContent = it.unidad || '—';
-            iStock.value        = it.stock_almacen + ' ' + it.unidad;
-            iResult.style.display = 'none';
-          });
-          iResult.appendChild(el);
-        });
-        iResult.style.display = 'block';
-      });
-    }, 250);
-  });
-
-  // Autocomplete de trabajadores — dispara sobre el input Responsable
+  // ─── Autocomplete de trabajadores (Responsable) ─────────────
   var respTimer = null;
   iResp.addEventListener('input', function () {
-    // Si el usuario está tipeando, invalidamos el FK para forzar re-selección (texto libre si no elige)
     iTrabId.value = '';
     clearTimeout(respTimer);
     var q = iResp.value.trim();
@@ -285,34 +350,52 @@
 
   // Cerrar dropdowns al hacer click afuera
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('#at-descripcion') && !e.target.closest('#at-resultados')) {
-      iResult.style.display = 'none';
-    }
     if (!e.target.closest('#at-responsable') && !e.target.closest('#at-resp-resultados')) {
       iRespResult.style.display = 'none';
     }
+    Array.prototype.forEach.call(tbody.querySelectorAll('.at-item-dropdown'), function (dd) {
+      var tr = dd.closest('tr');
+      if (!tr) return;
+      if (!e.target.closest('tr') || e.target.closest('tr') !== tr) {
+        dd.style.display = 'none';
+      }
+    });
   });
 
   // Reset al abrir el modal
   modalEl.addEventListener('show.bs.modal', resetForm);
 
-  // Submit
+  // ─── Submit ─────────────────────────────────────────────────
   btnSave.addEventListener('click', function () {
-    if (!iInsumoId.value) { showMsg('Debés seleccionar un material.', false); return; }
-    if (!iCant.value || parseInt(iCant.value, 10) <= 0) { showMsg('Cantidad debe ser mayor a 0.', false); return; }
+    var items = [];
+    var errorItem = null;
+    Array.prototype.forEach.call(tbody.children, function (tr, i) {
+      if (errorItem) return;
+      var insumoId = tr.querySelector('.at-item-insumo-id').value;
+      var cant     = tr.querySelector('.at-item-cant').value;
+      var stockAttr = tr.querySelector('.at-item-stock').getAttribute('data-stock');
+      var stock = parseFloat(stockAttr || '0');
+      if (!insumoId) { errorItem = 'Fila ' + (i + 1) + ': debés seleccionar un material.'; return; }
+      var cnum = parseFloat(cant);
+      if (!cant || isNaN(cnum) || cnum <= 0) { errorItem = 'Fila ' + (i + 1) + ': cantidad debe ser mayor a 0.'; return; }
+      if (cnum > stock) { errorItem = 'Fila ' + (i + 1) + ': cantidad (' + cnum + ') supera el stock (' + stock + ').'; return; }
+      items.push({ insumo_id: insumoId, cantidad: cant });
+    });
+    if (errorItem) { showMsg(errorItem, false); return; }
+    if (items.length === 0) { showMsg('Agregá al menos un material.', false); return; }
+
     clearMsg();
     btnSave.disabled = true;
     var htmlOrig = btnSave.innerHTML;
     btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando…';
 
     var payload = {
-      insumo_id:     iInsumoId.value,
       fecha:         iFecha.value,
       hora:          iHora.value,
       responsable:   iResp.value,
       trabajador_id: iTrabId.value,
-      cantidad:      iCant.value,
       observaciones: iObs.value,
+      items:         items,
     };
 
     fetch(URL_CREAR, {
