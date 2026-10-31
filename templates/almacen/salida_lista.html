@@ -251,7 +251,7 @@
     iTrabId.value = '';
     clearTimeout(respTimer);
     var q = iResp.value.trim();
-    if (q.length < 2) { iRespResult.style.display = 'none'; return; }
+    if (q.length < 1) { iRespResult.style.display = 'none'; return; }
     respTimer = setTimeout(function () {
       fetch(URL_TRABAJADORES + '?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(function (r) { return r.json(); })
