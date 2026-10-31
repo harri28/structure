@@ -170,8 +170,9 @@ def cuadrilla_crear(request, proyecto_id):
         cuadrilla          = form.save(commit=False)
         cuadrilla.proyecto = proyecto
         cuadrilla.save()
-        messages.success(request, f'Cuadrilla "{cuadrilla.nombre}" creada. Ahora agrega el personal.')
-        return redirect('maquinaria:cuadrilla_detalle', pk=cuadrilla.pk)
+        messages.success(request, f'Cuadrilla "{cuadrilla.nombre}" creada.')
+        return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=cuadrilla")
+    # Fallback para GET o para POST inválido fuera del modal
     return render(request, 'maquinaria/cuadrilla_form.html', {
         'form': form, 'proyecto': proyecto, 'titulo': 'Nueva cuadrilla / frente',
     })

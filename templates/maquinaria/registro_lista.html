@@ -62,9 +62,9 @@
         <strong>{{ cuadrillas|length }}</strong> cuadrilla{{ cuadrillas|length|pluralize:"s" }}
         / frente{{ cuadrillas|length|pluralize:"s" }} de trabajo
       </div>
-      <a href="{% url 'maquinaria:cuadrilla_crear' proyecto.pk %}" class="btn btn-primary">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaCuadrilla">
         <i class="bi bi-plus-lg me-1"></i>Nueva cuadrilla
-      </a>
+      </button>
     </div>
 
     <div class="row g-3">
@@ -353,6 +353,71 @@
 
   </div>
 
+</div>
+
+{# ─── Modal Nueva Cuadrilla ─── #}
+<div class="modal fade" id="modalNuevaCuadrilla" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <form method="post" action="{% url 'maquinaria:cuadrilla_crear' proyecto.pk %}">
+        {% csrf_token %}
+        <div class="modal-header py-2">
+          <h5 class="modal-title" style="font-size:.95rem">
+            <i class="bi bi-diagram-3 me-1"></i>Nueva cuadrilla / frente
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body form-compact">
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Nombre del frente <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" class="form-control form-control-sm" required
+                     placeholder="Ej: Frente A - Movimiento de tierras">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea name="descripcion" rows="2" class="form-control form-control-sm"
+                        placeholder="Alcance, tareas, notas del frente"></textarea>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Capataz / Responsable</label>
+              <select name="capataz" class="form-select form-select-sm">
+                <option value="">— Sin capataz asignado —</option>
+                {% for t in trabajadores %}
+                <option value="{{ t.pk }}">{{ t.apellidos }}, {{ t.nombres }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Ubicación / Zona de obra</label>
+              <input type="text" name="ubicacion" class="form-control form-control-sm"
+                     placeholder="Ej: Torre A nivel 3, acceso norte">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">Fecha de inicio</label>
+              <input type="date" name="fecha_inicio" class="form-control form-control-sm">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">Fecha de fin</label>
+              <input type="date" name="fecha_fin" class="form-control form-control-sm">
+            </div>
+            <div class="col-sm-4 d-flex align-items-end">
+              <div class="form-check mb-2">
+                <input type="checkbox" name="activo" class="form-check-input" id="chk-cuadrilla-activa" checked>
+                <label class="form-check-label" for="chk-cuadrilla-activa">Cuadrilla activa</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check-lg me-1"></i>Crear cuadrilla
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 {# ─── Modal Registrar asistencia ─── #}
