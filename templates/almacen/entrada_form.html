@@ -100,7 +100,6 @@
       <input type="hidden" name="fecha"         value="{{ form.fecha.value|default:'' }}">
       <input type="hidden" name="requerimiento" value="{{ form.requerimiento.value|default:'' }}">
       <input type="hidden" name="proveedor"     value="{{ form.proveedor.value|default:'' }}">
-      <input type="hidden" name="descripcion"   value="{{ form.descripcion.value|default:'' }}">
       {% else %}
       {# Modo manual: inputs normales editables #}
       <div class="row g-3">
@@ -118,13 +117,9 @@
           <label class="form-label fw-semibold">Requerimiento (opcional)</label>
           {{ form.requerimiento }}
         </div>
-        <div class="col-md-6">
+        <div class="col-12">
           <label class="form-label fw-semibold">Proveedor</label>
           <input type="text" name="proveedor" value="{{ form.proveedor.value|default:'' }}" class="form-control">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">Descripción</label>
-          <input type="text" name="descripcion" value="{{ form.descripcion.value|default:'' }}" class="form-control">
         </div>
         <div class="col-12">
           <label class="form-label fw-semibold">Observaciones</label>

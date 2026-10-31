@@ -13,7 +13,7 @@ from apps.requerimientos.models import Requerimiento
 class EntradaForm(forms.ModelForm):
     class Meta:
         model = Entrada
-        fields = ['requerimiento', 'serie', 'numero_guia', 'fecha', 'proveedor', 'descripcion', 'observaciones']
+        fields = ['requerimiento', 'serie', 'numero_guia', 'fecha', 'proveedor', 'observaciones']
         widgets = {
             'fecha': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'observaciones': forms.Textarea(attrs={'rows': 2}),
