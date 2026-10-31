@@ -51,8 +51,8 @@
           <form method="post" action="{% url 'maquinaria:trabajador_dar_baja' trabajador.pk %}" class="m-0"
                 onsubmit="return confirm('¿Dar de baja a {{ trabajador.nombres }} {{ trabajador.apellidos }}?')">
             {% csrf_token %}
-            <button type="submit" class="btn btn-outline-warning btn-sm">
-              <i class="bi bi-person-dash me-1"></i>Dar de baja
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-slash-circle-fill me-1"></i>Dar de baja
             </button>
           </form>
           {% else %}

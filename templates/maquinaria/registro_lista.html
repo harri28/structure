@@ -198,8 +198,8 @@
                 <form method="post" action="{% url 'maquinaria:trabajador_dar_baja' t.pk %}"
                       onsubmit="return confirm('¿Dar de baja a {{ t.nombres }} {{ t.apellidos }}? Podrás reactivarlo desde la pestaña Inactivos.')">
                   {% csrf_token %}
-                  <button type="submit" class="btn-tbl text-warning" title="Dar de baja">
-                    <i class="bi bi-person-dash"></i>
+                  <button type="submit" class="btn-tbl text-danger" title="Dar de baja" style="font-size:1.15rem;line-height:1">
+                    <i class="bi bi-slash-circle-fill"></i>
                   </button>
                 </form>
               </td>
