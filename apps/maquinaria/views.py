@@ -86,16 +86,30 @@ def tipo_personal_eliminar(request, pk):
 @proyecto_visible
 @require_POST
 def cargo_crear_rapido(request, proyecto_id):
-    """Crea un TipoPersonal desde el modal de la pestaña Cargos y vuelve a la lista."""
-    codigo = (request.POST.get('codigo') or '').strip().upper()[:20]
+    """Crea un TipoPersonal desde el modal de la pestaña Cargos y vuelve a la lista.
+
+    El código se autogenera a partir del nombre (uppercase sin acentos, primeras letras;
+    con sufijo numérico si colisiona).
+    """
+    import unicodedata as _ud
     nombre = (request.POST.get('nombre') or '').strip()[:100]
-    if not codigo or not nombre:
-        messages.error(request, 'Código y nombre son obligatorios.')
-    elif TipoPersonal.objects.filter(codigo=codigo).exists():
-        messages.error(request, f'Ya existe un cargo con código "{codigo}".')
-    else:
-        TipoPersonal.objects.create(codigo=codigo, nombre=nombre, costo_hora=0, activo=True)
-        messages.success(request, f'Cargo "{nombre}" creado.')
+    if not nombre:
+        messages.error(request, 'El nombre del cargo es obligatorio.')
+        return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=cargos")
+    if TipoPersonal.objects.filter(nombre__iexact=nombre).exists():
+        messages.error(request, f'Ya existe un cargo con el nombre "{nombre}".')
+        return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=cargos")
+
+    base = _ud.normalize('NFKD', nombre).encode('ASCII', 'ignore').decode('ASCII')
+    base = ''.join(ch for ch in base.upper() if ch.isalnum())[:16] or 'CARGO'
+    codigo = base
+    n = 1
+    while TipoPersonal.objects.filter(codigo=codigo).exists():
+        n += 1
+        sufijo = str(n)
+        codigo = (base[: max(1, 20 - len(sufijo))]) + sufijo
+    TipoPersonal.objects.create(codigo=codigo, nombre=nombre, costo_hora=0, activo=True)
+    messages.success(request, f'Cargo "{nombre}" creado.')
     return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=cargos")
 
 

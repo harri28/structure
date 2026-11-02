@@ -204,6 +204,8 @@ class TrabajadorForm(forms.ModelForm):
                 field.required = False
         self.fields['tipo_personal'].queryset    = TipoPersonal.objects.filter(activo=True)
         self.fields['tipo_personal'].empty_label = '— Sin cargo asignado —'
+        # Mostrar solo el nombre en el dropdown (sin el código técnico)
+        self.fields['tipo_personal'].label_from_instance = lambda tp: tp.nombre
 
 
 class DocumentoTrabajadorForm(forms.ModelForm):

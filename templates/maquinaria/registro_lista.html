@@ -307,7 +307,6 @@
         <table class="table-modern" style="font-size:.82rem">
           <thead>
             <tr>
-              <th style="width:100px">Código</th>
               <th>Nombre</th>
               <th class="text-end" style="width:140px">Trabajadores</th>
               <th class="text-center" style="width:80px">Estado</th>
@@ -317,7 +316,6 @@
           <tbody>
           {% for c in cargos %}
             <tr>
-              <td><code style="color:#2563eb">{{ c.codigo }}</code></td>
               <td class="fw-semibold">{{ c.nombre }}</td>
               <td class="text-end {% if c.n_trabajadores %}fw-semibold{% else %}text-muted{% endif %}">{{ c.n_trabajadores }}</td>
               <td class="text-center">
@@ -345,7 +343,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="5" class="text-center py-4 text-muted">
+              <td colspan="4" class="text-center py-4 text-muted">
                 <i class="bi bi-briefcase" style="font-size:1.5rem;opacity:.25;display:block;margin-bottom:.4rem"></i>
                 Sin cargos registrados.
               </td>
@@ -542,18 +540,9 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body form-compact">
-          <div class="row g-2">
-            <div class="col-sm-4">
-              <label class="form-label fw-semibold">Código <span class="text-danger">*</span></label>
-              <input type="text" name="codigo" class="form-control form-control-sm" required
-                     maxlength="20" placeholder="Ej: OPER" style="text-transform:uppercase">
-            </div>
-            <div class="col-sm-8">
-              <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
-              <input type="text" name="nombre" class="form-control form-control-sm" required
-                     maxlength="100" placeholder="Ej: Operario">
-            </div>
-          </div>
+          <label class="form-label fw-semibold">Nombre del cargo <span class="text-danger">*</span></label>
+          <input type="text" name="nombre" class="form-control form-control-sm" required
+                 maxlength="100" placeholder="Ej: Operario">
         </div>
         <div class="modal-footer py-2">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
