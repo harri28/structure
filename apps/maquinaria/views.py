@@ -520,14 +520,14 @@ def asistencia_registrar_rapido(request, proyecto_id):
     trab_ids_activos = set(
         Trabajador.objects.filter(proyecto=proyecto, activo=True).values_list('pk', flat=True)
     )
+    obs_general = (request.POST.get('observaciones_generales') or '').strip()[:200]
     cambios = 0
     for trab_id in trab_ids_activos:
         presente = request.POST.get(f'presente__{trab_id}') == 'on'
-        obs      = (request.POST.get(f'obs__{trab_id}') or '').strip()[:200]
         estado = Asistencia.PRESENTE if presente else Asistencia.FALTA
         Asistencia.objects.update_or_create(
             trabajador_id=trab_id, fecha=fecha,
-            defaults={'estado': estado, 'observacion': obs},
+            defaults={'estado': estado, 'observacion': obs_general},
         )
         cambios += 1
     messages.success(request, f'Asistencia del {fecha.strftime("%d/%m/%Y")} guardada ({cambios} registros).')

@@ -483,7 +483,6 @@
                 <tr>
                   <th style="min-width:180px">Trabajador</th>
                   <th style="min-width:140px">Cuadrilla</th>
-                  <th style="min-width:200px">Observación</th>
                   <th style="width:70px;text-align:center">Presente</th>
                 </tr>
               </thead>
@@ -492,10 +491,6 @@
                 <tr>
                   <td class="fw-semibold">{{ t.apellidos }}, {{ t.nombres }}</td>
                   <td class="text-muted">{{ t.cuadrilla_nombre|default:"—" }}</td>
-                  <td>
-                    <input type="text" name="obs__{{ t.pk }}" maxlength="200"
-                           class="form-control form-control-sm" placeholder="Opcional…">
-                  </td>
                   <td class="text-center">
                     <div class="form-check d-inline-block m-0">
                       <input type="checkbox" name="presente__{{ t.pk }}" class="form-check-input" checked>
@@ -504,11 +499,18 @@
                 </tr>
               {% empty %}
                 <tr>
-                  <td colspan="4" class="text-center text-muted py-3">Sin personal activo.</td>
+                  <td colspan="3" class="text-center text-muted py-3">Sin personal activo.</td>
                 </tr>
               {% endfor %}
               </tbody>
             </table>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label fw-semibold">Observaciones generales</label>
+            <textarea name="observaciones_generales" rows="2" maxlength="200"
+                      class="form-control form-control-sm"
+                      placeholder="Comentario del día (opcional)…"></textarea>
           </div>
         </div>
         <div class="modal-footer py-2">
