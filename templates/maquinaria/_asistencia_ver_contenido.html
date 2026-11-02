@@ -1,0 +1,107 @@
+{# Contenido reusable de "Ver asistencia" — se usa tanto en la página completa como en el modal. #}
+
+{# ── Filtros ─────────────────────────────────────────── #}
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" action="{% url 'maquinaria:asistencia_ver' proyecto.pk %}" class="row g-2 align-items-end form-compact asist-ver-form">
+      <div class="col-sm-2">
+        <label class="form-label fw-semibold">Mes</label>
+        <select name="mes" class="form-select form-select-sm">
+          {% for v, label in meses_opciones %}
+          <option value="{{ v }}" {% if v == mes_sel %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-2">
+        <label class="form-label fw-semibold">Año</label>
+        <select name="anio" class="form-select form-select-sm">
+          {% for a in anios_opciones %}
+          <option value="{{ a }}" {% if a == anio_sel %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label fw-semibold">Cuadrilla</label>
+        <select name="cuadrilla" class="form-select form-select-sm">
+          <option value="">— Todas —</option>
+          {% for c in cuadrillas %}
+          <option value="{{ c.pk }}" {% if cuadrilla_sel == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label fw-semibold">Trabajador</label>
+        <select name="trabajador" class="form-select form-select-sm">
+          <option value="">— Todos —</option>
+          {% for t in trabajadores_all %}
+          <option value="{{ t.pk }}" {% if trabajador_sel == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.apellidos }}, {{ t.nombres }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-2 d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+        <a href="{% url 'maquinaria:asistencia_exportar' proyecto.pk %}?anio={{ anio_sel }}&mes={{ mes_sel }}&cuadrilla={{ cuadrilla_sel }}&trabajador={{ trabajador_sel }}"
+           class="btn btn-success btn-sm" title="Exportar Excel"
+           target="_blank">
+          <i class="bi bi-file-earmark-excel"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Tabla matriz ───────────────────────────────────── #}
+<div class="card">
+  <div class="card-body p-0" style="overflow-x:auto">
+    <table class="table-modern" style="font-size:.78rem;min-width:100%">
+      <thead>
+        <tr>
+          <th style="min-width:220px;position:sticky;left:0;background:#f8fafc;z-index:2">Trabajador</th>
+          {% for d in dias_mes %}
+          <th class="text-center" style="min-width:34px">
+            <div style="font-size:.58rem;text-transform:uppercase;color:#64748b">{{ d|date:"D" }}</div>
+            <div style="font-size:.78rem">{{ d|date:"j" }}</div>
+          </th>
+          {% endfor %}
+          <th class="text-end" style="min-width:72px;background:#f0fdf4">Asist.</th>
+          <th class="text-end" style="min-width:72px;background:#fef2f2">Faltas</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for f in filas %}
+        <tr>
+          <td class="fw-semibold" style="position:sticky;left:0;background:#fff;z-index:1">
+            {{ f.trab.apellidos }}, {{ f.trab.nombres }}
+            {% if f.trab.tipo_personal %}<div class="text-muted" style="font-size:.68rem">{{ f.trab.tipo_personal.nombre }}</div>{% endif %}
+          </td>
+          {% for c in f.celdas %}
+          <td class="text-center fw-semibold"
+              style="font-size:.72rem;
+                     {% if c == 'P' %}background:#dcfce7;color:#15803d{% elif c == 'F' %}background:#fee2e2;color:#b91c1c{% elif c == 'T' %}background:#fef3c7;color:#92400e{% elif c == 'PM' %}background:#dbeafe;color:#1d4ed8{% elif c == 'D' %}background:#f1f5f9;color:#64748b{% elif c == 'FE' %}background:#f3e8ff;color:#6b21a8{% else %}color:#cbd5e1{% endif %}">
+            {{ c|default:"—" }}
+          </td>
+          {% endfor %}
+          <td class="text-end fw-bold text-success">{{ f.asistidas }}</td>
+          <td class="text-end fw-bold text-danger">{{ f.faltas }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="{{ dias_mes|length|add:3 }}" class="text-center py-4 text-muted">
+            Sin resultados con los filtros aplicados.
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="px-3 py-2 text-muted" style="font-size:.72rem;border-top:1px solid #f3f4f6">
+    <i class="bi bi-info-circle me-1"></i>
+    <strong>P</strong>=Presente ·
+    <strong>F</strong>=Falta ·
+    <strong>T</strong>=Tardanza ·
+    <strong>PM</strong>=Permiso ·
+    <strong>D</strong>=Descanso ·
+    <strong>FE</strong>=Feriado ·
+    <strong>—</strong>=Sin marcar
+  </div>
+</div>

@@ -235,9 +235,10 @@
         Resumen del mes actual · <strong>{{ trabajadores|length }}</strong> trabajador{{ trabajadores|length|pluralize:"es" }} activo{{ trabajadores|length|pluralize:"s" }}
       </div>
       <div class="d-flex gap-2">
-        <a href="{% url 'maquinaria:asistencia_ver' proyecto.pk %}" class="btn btn-outline-primary btn-sm">
+        <button type="button" class="btn btn-outline-primary btn-sm"
+                data-bs-toggle="modal" data-bs-target="#modalVerAsistencia">
           <i class="bi bi-eye me-1"></i>Ver asistencia
-        </a>
+        </button>
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarAsistencia">
           <i class="bi bi-calendar-check me-1"></i>Registrar asistencia
         </button>
@@ -364,6 +365,25 @@
 
   </div>
 
+</div>
+
+{# ─── Modal Ver Asistencia (contenido vía AJAX) ─── #}
+<div class="modal fade" id="modalVerAsistencia" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-md-down">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title" style="font-size:.95rem"><i class="bi bi-table me-1"></i>Ver asistencia</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="ver-asistencia-contenido">
+          <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm me-2"></div>Cargando…
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {# ─── Modal Nueva Cuadrilla ─── #}
@@ -512,6 +532,45 @@
     var btn = document.getElementById('tab-' + hashTab);
     if (btn && window.bootstrap) new bootstrap.Tab(btn).show();
   }
+})();
+
+// ── Ver asistencia (modal con contenido vía fetch) ─────────────────────
+(function () {
+  var URL_BASE = "{% url 'maquinaria:asistencia_ver' proyecto.pk %}";
+  var modalEl  = document.getElementById('modalVerAsistencia');
+  var contEl   = document.getElementById('ver-asistencia-contenido');
+  if (!modalEl || !contEl) return;
+
+  function spinner() {
+    contEl.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando…</div>';
+  }
+
+  function cargar(url) {
+    spinner();
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function (r) { return r.text(); })
+    .then(function (html) { contEl.innerHTML = html; wireFormInterno(); })
+    .catch(function () {
+      contEl.innerHTML = '<div class="alert alert-danger m-3">Error al cargar.</div>';
+    });
+  }
+
+  function wireFormInterno() {
+    var form = contEl.querySelector('form.asist-ver-form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var fd = new FormData(form);
+      var params = new URLSearchParams();
+      fd.forEach(function (v, k) { params.append(k, v); });
+      params.append('partial', '1');
+      cargar(URL_BASE + '?' + params.toString());
+    });
+  }
+
+  modalEl.addEventListener('show.bs.modal', function () {
+    cargar(URL_BASE + '?partial=1');
+  });
 })();
 </script>
 {% endblock %}

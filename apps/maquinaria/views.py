@@ -614,6 +614,9 @@ def _reporte_asistencia_contexto(request, proyecto):
 def asistencia_ver(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     ctx = _reporte_asistencia_contexto(request, proyecto)
+    # Si ?partial=1 devolvemos solo el bloque de filtros + matriz (para el modal).
+    if request.GET.get('partial') == '1':
+        return render(request, 'maquinaria/_asistencia_ver_contenido.html', ctx)
     return render(request, 'maquinaria/asistencia_ver.html', ctx)
 
 
