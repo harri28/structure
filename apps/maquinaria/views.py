@@ -399,28 +399,14 @@ def registro_lista(request, proyecto_id):
         .annotate(n_integrantes=Count('integrantes'))
     )
 
-    # ── Resumen asistencia del mes de la fecha seleccionada (default: hoy) ──
+    # ── Resumen asistencia del mes actual (por trabajador activo) ─────────
     from datetime import date as _date
     hoy = _date.today()
-    fecha_sel_str = request.GET.get('fecha', '').strip()
-    try:
-        fecha_sel = _date.fromisoformat(fecha_sel_str) if fecha_sel_str else hoy
-    except ValueError:
-        fecha_sel = hoy
-    # Nunca futuro
-    if fecha_sel > hoy:
-        fecha_sel = hoy
-    mes_inicio = fecha_sel.replace(day=1)
-    # Fin del mes de la fecha elegida (o `hoy` si cae en el mes actual)
-    import calendar as _calendar
-    _ult_dia = _calendar.monthrange(fecha_sel.year, fecha_sel.month)[1]
-    mes_fin = fecha_sel.replace(day=_ult_dia)
-    if mes_fin > hoy:
-        mes_fin = hoy
+    mes_inicio = hoy.replace(day=1)
     asistencia_qs = Asistencia.objects.filter(
         trabajador__proyecto=proyecto,
         fecha__gte=mes_inicio,
-        fecha__lte=mes_fin,
+        fecha__lte=hoy,
     )
     conteo_mes = {}
     for trab_id, estado in asistencia_qs.values_list('trabajador_id', 'estado'):
@@ -461,9 +447,6 @@ def registro_lista(request, proyecto_id):
         'trabajadores_inactivos':   trabajadores_inactivos,
         'cuadrillas':               cuadrillas,
         'tab_activa':               tab_activa,
-        'fecha_sel':                fecha_sel,
-        'fecha_hoy':                hoy,
-        'es_hoy':                   fecha_sel == hoy,
     })
 
 
@@ -549,6 +532,163 @@ def asistencia_registrar_rapido(request, proyecto_id):
         cambios += 1
     messages.success(request, f'Asistencia del {fecha.strftime("%d/%m/%Y")} guardada ({cambios} registros).')
     return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=asistencia")
+
+
+def _reporte_asistencia_contexto(request, proyecto):
+    """Prepara los filtros, trabajadores y pivot de asistencia para la vista `Ver` y el export."""
+    from datetime import date as _date
+    import calendar as _calendar
+
+    hoy = _date.today()
+    anio = int(request.GET.get('anio') or hoy.year)
+    mes  = int(request.GET.get('mes')  or hoy.month)
+    try:
+        _date(anio, mes, 1)
+    except ValueError:
+        anio, mes = hoy.year, hoy.month
+
+    cuadrilla_id  = request.GET.get('cuadrilla') or ''
+    trabajador_id = request.GET.get('trabajador') or ''
+
+    primer_dia = _date(anio, mes, 1)
+    ult_dia    = _date(anio, mes, _calendar.monthrange(anio, mes)[1])
+    dias_mes   = [_date(anio, mes, d) for d in range(1, ult_dia.day + 1)]
+
+    trabajadores_qs = Trabajador.objects.filter(proyecto=proyecto).select_related('tipo_personal')
+    if cuadrilla_id:
+        trabajadores_qs = trabajadores_qs.filter(membresias__cuadrilla_id=cuadrilla_id).distinct()
+    if trabajador_id:
+        trabajadores_qs = trabajadores_qs.filter(pk=trabajador_id)
+    trabajadores_qs = trabajadores_qs.order_by('apellidos', 'nombres')
+
+    asistencias = Asistencia.objects.filter(
+        trabajador__in=trabajadores_qs,
+        fecha__gte=primer_dia,
+        fecha__lte=ult_dia,
+    ).values_list('trabajador_id', 'fecha', 'estado')
+
+    por_trab = {}
+    for trab_id, fecha, estado in asistencias:
+        por_trab.setdefault(trab_id, {})[fecha] = estado
+
+    filas = []
+    for t in trabajadores_qs:
+        marcas_dict = por_trab.get(t.pk, {})
+        celdas = [marcas_dict.get(d, '') for d in dias_mes]
+        asistidas = sum(1 for c in celdas if c == Asistencia.PRESENTE)
+        faltas    = sum(1 for c in celdas if c == Asistencia.FALTA)
+        filas.append({
+            'trab':      t,
+            'celdas':    celdas,
+            'asistidas': asistidas,
+            'faltas':    faltas,
+        })
+
+    cuadrillas = Cuadrilla.objects.filter(proyecto=proyecto).order_by('nombre')
+    trabajadores_all = Trabajador.objects.filter(proyecto=proyecto, activo=True).order_by('apellidos', 'nombres')
+
+    MESES = [
+        (1, 'Enero'), (2, 'Febrero'), (3, 'Marzo'), (4, 'Abril'),
+        (5, 'Mayo'),  (6, 'Junio'),   (7, 'Julio'), (8, 'Agosto'),
+        (9, 'Septiembre'), (10, 'Octubre'), (11, 'Noviembre'), (12, 'Diciembre'),
+    ]
+
+    return {
+        'proyecto':         proyecto,
+        'anio_sel':         anio,
+        'mes_sel':          mes,
+        'cuadrilla_sel':    cuadrilla_id,
+        'trabajador_sel':   trabajador_id,
+        'dias_mes':         dias_mes,
+        'filas':            filas,
+        'cuadrillas':       cuadrillas,
+        'trabajadores_all': trabajadores_all,
+        'anios_opciones':   list(range(hoy.year - 3, hoy.year + 1)),
+        'meses_opciones':   MESES,
+        'nombre_mes':       dict(MESES)[mes],
+    }
+
+
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
+def asistencia_ver(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    ctx = _reporte_asistencia_contexto(request, proyecto)
+    return render(request, 'maquinaria/asistencia_ver.html', ctx)
+
+
+@requiere('puede_ver_maquinaria', 'puede_gestionar_maquinaria')
+@proyecto_visible
+def asistencia_exportar(request, proyecto_id):
+    """Descarga la matriz de asistencia del mes como .xlsx."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from django.http import HttpResponse
+
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    ctx = _reporte_asistencia_contexto(request, proyecto)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"{ctx['nombre_mes'][:3]} {ctx['anio_sel']}"
+
+    thin = Side(border_style='thin', color='CBD5E1')
+    borde = Border(left=thin, right=thin, top=thin, bottom=thin)
+    header_fill = PatternFill('solid', fgColor='1D4ED8')
+    header_font = Font(bold=True, color='FFFFFF')
+    centro = Alignment(horizontal='center', vertical='center')
+    izq    = Alignment(horizontal='left', vertical='center')
+
+    # Título
+    ws.cell(row=1, column=1, value=f'Asistencia — {proyecto.codigo} — {ctx["nombre_mes"]} {ctx["anio_sel"]}').font = Font(bold=True, size=13)
+
+    # Encabezados
+    headers = ['N°', 'Apellidos y nombres', 'DNI', 'Cargo'] + [str(d.day) for d in ctx['dias_mes']] + ['Asistidas', 'Faltas']
+    for col, h in enumerate(headers, start=1):
+        c = ws.cell(row=3, column=col, value=h)
+        c.fill = header_fill
+        c.font = header_font
+        c.alignment = centro
+        c.border = borde
+
+    # Filas
+    for i, fila in enumerate(ctx['filas'], start=1):
+        t = fila['trab']
+        row_idx = 3 + i
+        ws.cell(row=row_idx, column=1, value=i).alignment = centro
+        ws.cell(row=row_idx, column=2, value=f'{t.apellidos}, {t.nombres}').alignment = izq
+        ws.cell(row=row_idx, column=3, value=t.dni or '').alignment = centro
+        ws.cell(row=row_idx, column=4, value=(t.tipo_personal.nombre if t.tipo_personal else '')).alignment = izq
+        for j, estado in enumerate(fila['celdas'], start=5):
+            cell = ws.cell(row=row_idx, column=j, value=estado or '')
+            cell.alignment = centro
+            # Pinta por estado
+            colores = {'P': 'DCFCE7', 'F': 'FEE2E2', 'T': 'FEF3C7', 'PM': 'DBEAFE', 'D': 'F1F5F9', 'FE': 'F3E8FF'}
+            if estado in colores:
+                cell.fill = PatternFill('solid', fgColor=colores[estado])
+        ws.cell(row=row_idx, column=5 + len(ctx['dias_mes']),     value=fila['asistidas']).alignment = centro
+        ws.cell(row=row_idx, column=5 + len(ctx['dias_mes']) + 1, value=fila['faltas']).alignment = centro
+
+    # Anchos
+    ws.column_dimensions['A'].width = 4
+    ws.column_dimensions['B'].width = 32
+    ws.column_dimensions['C'].width = 11
+    ws.column_dimensions['D'].width = 16
+    for col_idx in range(5, 5 + len(ctx['dias_mes'])):
+        ws.column_dimensions[ws.cell(row=1, column=col_idx).column_letter].width = 4
+    ws.column_dimensions[ws.cell(row=1, column=5 + len(ctx['dias_mes'])).column_letter].width = 10
+    ws.column_dimensions[ws.cell(row=1, column=5 + len(ctx['dias_mes']) + 1).column_letter].width = 8
+
+    # Leyenda abajo
+    legenda = 3 + len(ctx['filas']) + 2
+    ws.cell(row=legenda, column=1, value='Leyenda:').font = Font(bold=True)
+    ws.cell(row=legenda, column=2, value='P=Presente · F=Falta · T=Tardanza · PM=Permiso · D=Descanso · FE=Feriado')
+
+    filename = f'Asistencia_{proyecto.codigo}_{ctx["anio_sel"]}-{ctx["mes_sel"]:02d}.xlsx'
+    resp = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+    wb.save(resp)
+    return resp
 
 
 # ── Registros Maquinaria ──────────────────────────────────────────────
