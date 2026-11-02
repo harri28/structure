@@ -13,6 +13,10 @@ urlpatterns = [
     path('tipos-personal/<int:pk>/editar/',        views.tipo_personal_editar,  name='tipo_personal_editar'),
     path('tipos-personal/<int:pk>/eliminar/',      views.tipo_personal_eliminar, name='tipo_personal_eliminar'),
 
+    # Cargos (gestión rápida desde la pestaña Cargos de Cuadrilla)
+    path('proyecto/<int:proyecto_id>/cargos/nuevo/',             views.cargo_crear_rapido,    name='cargo_crear_rapido'),
+    path('proyecto/<int:proyecto_id>/cargos/<int:pk>/eliminar/', views.cargo_eliminar_rapido, name='cargo_eliminar_rapido'),
+
     # Maquinaria (alta/edición/baja; la lista vive por proyecto en maq_principal)
     path('catalogo/nuevo/',                        views.maquinaria_crear,    name='maquinaria_crear'),
     path('catalogo/<int:pk>/editar/',              views.maquinaria_editar,   name='maquinaria_editar'),

@@ -120,8 +120,8 @@ class TrabajadorForm(forms.ModelForm):
             'direccion', 'distrito', 'provincia', 'departamento',
             # Emergencia
             'emergencia_nombre', 'emergencia_parentesco', 'emergencia_telefono',
-            # Laboral
-            'tipo_personal', 'fecha_ingreso',
+            # Laboral (tipo_personal se gestiona desde la pestaña Cargos, no desde este form)
+            'fecha_ingreso',
             'anios_experiencia', 'experiencia_descripcion',
             # Habilidades
             'habilidades',
@@ -161,7 +161,6 @@ class TrabajadorForm(forms.ModelForm):
             'emergencia_parentesco': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Esposa, hermano, madre...'}),
             'emergencia_telefono':   forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'tel'}),
             # Laboral
-            'tipo_personal':         forms.Select(attrs={'class': 'form-select'}),
             'fecha_ingreso':         forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'anios_experiencia':     forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 70, 'placeholder': 'Ej: 5'}),
             'experiencia_descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3,
@@ -197,8 +196,6 @@ class TrabajadorForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['tipo_personal'].queryset    = TipoPersonal.objects.filter(activo=True)
-        self.fields['tipo_personal'].empty_label = '— Sin cargo asignado —'
         # Solo nombres y apellidos son obligatorios; el resto es opcional
         obligatorios = {'nombres', 'apellidos'}
         for name, field in self.fields.items():

@@ -39,6 +39,15 @@
     </button>
   </li>
   <li class="nav-item" role="presentation">
+    <button class="nav-link {% if tab_activa == 'cargos' %}active{% endif %}"
+            id="tab-cargos" data-bs-toggle="tab" data-bs-target="#pane-cargos"
+            type="button" role="tab" aria-controls="pane-cargos"
+            aria-selected="{% if tab_activa == 'cargos' %}true{% else %}false{% endif %}">
+      <i class="bi bi-briefcase me-1"></i>Cargos
+      {% if cargos|length %}<span class="badge bg-secondary ms-1" style="font-size:.65rem">{{ cargos|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
     <button class="nav-link {% if tab_activa == 'inactivos' %}active{% endif %}"
             id="tab-inactivos" data-bs-toggle="tab" data-bs-target="#pane-inactivos"
             type="button" role="tab" aria-controls="pane-inactivos"
@@ -280,6 +289,75 @@
     </div>
   </div>
 
+  {# ─── Tab Cargos ──────────────────────────────────── #}
+  <div class="tab-pane fade {% if tab_activa == 'cargos' %}show active{% endif %}"
+       id="pane-cargos" role="tabpanel" aria-labelledby="tab-cargos">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="text-muted" style="font-size:.84rem">
+        <strong>{{ cargos|length }}</strong> cargo{{ cargos|length|pluralize:"s" }} registrado{{ cargos|length|pluralize:"s" }}
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoCargo">
+        <i class="bi bi-plus-lg me-1"></i>Nuevo cargo
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-body p-0">
+        <table class="table-modern" style="font-size:.82rem">
+          <thead>
+            <tr>
+              <th style="width:100px">Código</th>
+              <th>Nombre</th>
+              <th class="text-end" style="width:140px">Trabajadores</th>
+              <th class="text-center" style="width:80px">Estado</th>
+              <th style="width:60px"></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for c in cargos %}
+            <tr>
+              <td><code style="color:#2563eb">{{ c.codigo }}</code></td>
+              <td class="fw-semibold">{{ c.nombre }}</td>
+              <td class="text-end {% if c.n_trabajadores %}fw-semibold{% else %}text-muted{% endif %}">{{ c.n_trabajadores }}</td>
+              <td class="text-center">
+                {% if c.activo %}
+                  <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.68rem">Activo</span>
+                {% else %}
+                  <span class="badge bg-secondary" style="font-size:.68rem">Inactivo</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                {% if c.n_trabajadores == 0 %}
+                <form method="post" action="{% url 'maquinaria:cargo_eliminar_rapido' proyecto.pk c.pk %}" class="m-0 d-inline"
+                      onsubmit="return confirm('¿Eliminar el cargo &quot;{{ c.nombre }}&quot;?')">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-tbl text-danger" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+                {% else %}
+                <span class="text-muted" title="No se puede eliminar: hay trabajadores asignados">
+                  <i class="bi bi-lock"></i>
+                </span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">
+                <i class="bi bi-briefcase" style="font-size:1.5rem;opacity:.25;display:block;margin-bottom:.4rem"></i>
+                Sin cargos registrados.
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
   {# ─── Tab Inactivos ──────────────────────────────── #}
   <div class="tab-pane fade {% if tab_activa == 'inactivos' %}show active{% endif %}"
        id="pane-inactivos" role="tabpanel" aria-labelledby="tab-inactivos">
@@ -444,6 +522,43 @@
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
           <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-check-lg me-1"></i>Crear cuadrilla
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ─── Modal Nuevo cargo ─── #}
+<div class="modal fade" id="modalNuevoCargo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <form method="post" action="{% url 'maquinaria:cargo_crear_rapido' proyecto.pk %}">
+        {% csrf_token %}
+        <div class="modal-header py-2">
+          <h5 class="modal-title" style="font-size:.95rem">
+            <i class="bi bi-briefcase me-1"></i>Nuevo cargo
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body form-compact">
+          <div class="row g-2">
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">Código <span class="text-danger">*</span></label>
+              <input type="text" name="codigo" class="form-control form-control-sm" required
+                     maxlength="20" placeholder="Ej: OPER" style="text-transform:uppercase">
+            </div>
+            <div class="col-sm-8">
+              <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" class="form-control form-control-sm" required
+                     maxlength="100" placeholder="Ej: Operario">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check-lg me-1"></i>Crear cargo
           </button>
         </div>
       </form>

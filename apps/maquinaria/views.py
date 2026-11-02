@@ -82,6 +82,38 @@ def tipo_personal_eliminar(request, pk):
         'cancel_url': 'maquinaria:tipo_personal_lista', 'cancel_args': []})
 
 
+@requiere('puede_gestionar_maquinaria')
+@proyecto_visible
+@require_POST
+def cargo_crear_rapido(request, proyecto_id):
+    """Crea un TipoPersonal desde el modal de la pestaña Cargos y vuelve a la lista."""
+    codigo = (request.POST.get('codigo') or '').strip().upper()[:20]
+    nombre = (request.POST.get('nombre') or '').strip()[:100]
+    if not codigo or not nombre:
+        messages.error(request, 'Código y nombre son obligatorios.')
+    elif TipoPersonal.objects.filter(codigo=codigo).exists():
+        messages.error(request, f'Ya existe un cargo con código "{codigo}".')
+    else:
+        TipoPersonal.objects.create(codigo=codigo, nombre=nombre, costo_hora=0, activo=True)
+        messages.success(request, f'Cargo "{nombre}" creado.')
+    return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=cargos")
+
+
+@requiere('puede_gestionar_maquinaria')
+@proyecto_visible
+@require_POST
+def cargo_eliminar_rapido(request, proyecto_id, pk):
+    """Elimina un TipoPersonal si no tiene trabajadores asignados; vuelve a la lista."""
+    tp = get_object_or_404(TipoPersonal, pk=pk)
+    if tp.trabajadores.exists():
+        messages.error(request, f'No se puede eliminar "{tp.nombre}": hay trabajadores asignados a este cargo.')
+    else:
+        nombre = tp.nombre
+        tp.delete()
+        messages.success(request, f'Cargo "{nombre}" eliminado.')
+    return redirect(f"{reverse('maquinaria:registro_lista', args=[proyecto_id])}?tab=cargos")
+
+
 # ── Maquinaria ────────────────────────────────────────────────────────
 
 def _siguiente_codigo_maq():
@@ -436,16 +468,26 @@ def registro_lista(request, proyecto_id):
         tab_activa = 'cuadrilla'
     elif tab == 'asistencia':
         tab_activa = 'asistencia'
+    elif tab == 'cargos':
+        tab_activa = 'cargos'
     elif tab == 'inactivos':
         tab_activa = 'inactivos'
     else:
         tab_activa = 'personal'
+
+    # Catálogo de Cargos (TipoPersonal) con cuántos trabajadores los usan
+    cargos = (
+        TipoPersonal.objects
+        .annotate(n_trabajadores=Count('trabajadores'))
+        .order_by('codigo')
+    )
 
     return render(request, 'maquinaria/registro_lista.html', {
         'proyecto':                 proyecto,
         'trabajadores':             trabajadores,
         'trabajadores_inactivos':   trabajadores_inactivos,
         'cuadrillas':               cuadrillas,
+        'cargos':                   cargos,
         'tab_activa':               tab_activa,
     })
 
