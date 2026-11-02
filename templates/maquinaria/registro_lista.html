@@ -188,20 +188,22 @@
                   <span class="text-muted">—</span>
                 {% endif %}
               </td>
-              <td class="d-flex gap-1">
-                <a href="{% url 'maquinaria:trabajador_detalle' t.pk %}" class="btn-tbl" title="Ver">
-                  <i class="bi bi-eye"></i>
-                </a>
-                <a href="{% url 'maquinaria:trabajador_editar' t.pk %}" class="btn-tbl" title="Editar">
-                  <i class="bi bi-pencil"></i>
-                </a>
-                <form method="post" action="{% url 'maquinaria:trabajador_dar_baja' t.pk %}"
-                      onsubmit="return confirm('¿Dar de baja a {{ t.nombres }} {{ t.apellidos }}? Podrás reactivarlo desde la pestaña Inactivos.')">
-                  {% csrf_token %}
-                  <button type="submit" class="btn-tbl text-danger" title="Dar de baja" style="font-size:1.15rem;line-height:1">
-                    <i class="bi bi-slash-circle-fill"></i>
-                  </button>
-                </form>
+              <td>
+                <div class="d-flex gap-1 align-items-center">
+                  <a href="{% url 'maquinaria:trabajador_detalle' t.pk %}" class="btn-tbl" title="Ver">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="{% url 'maquinaria:trabajador_editar' t.pk %}" class="btn-tbl" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <form method="post" action="{% url 'maquinaria:trabajador_dar_baja' t.pk %}" class="m-0"
+                        onsubmit="return confirm('¿Dar de baja a {{ t.nombres }} {{ t.apellidos }}? Podrás reactivarlo desde la pestaña Inactivos.')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-tbl text-danger" title="Dar de baja" style="font-size:1.15rem;line-height:1">
+                      <i class="bi bi-slash-circle-fill"></i>
+                    </button>
+                  </form>
+                </div>
               </td>
             </tr>
           {% empty %}
@@ -325,17 +327,19 @@
                   <span class="text-muted">—</span>
                 {% endif %}
               </td>
-              <td class="d-flex gap-1">
-                <a href="{% url 'maquinaria:trabajador_detalle' t.pk %}" class="btn-tbl" title="Ver">
-                  <i class="bi bi-eye"></i>
-                </a>
-                <form method="post" action="{% url 'maquinaria:trabajador_reactivar' t.pk %}"
-                      onsubmit="return confirm('¿Reactivar a {{ t.nombres }} {{ t.apellidos }}?')">
-                  {% csrf_token %}
-                  <button type="submit" class="btn-tbl text-success" title="Reactivar">
-                    <i class="bi bi-arrow-counterclockwise"></i>
-                  </button>
-                </form>
+              <td>
+                <div class="d-flex gap-1 align-items-center">
+                  <a href="{% url 'maquinaria:trabajador_detalle' t.pk %}" class="btn-tbl" title="Ver">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <form method="post" action="{% url 'maquinaria:trabajador_reactivar' t.pk %}" class="m-0"
+                        onsubmit="return confirm('¿Reactivar a {{ t.nombres }} {{ t.apellidos }}?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-tbl text-success" title="Reactivar">
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                  </form>
+                </div>
               </td>
             </tr>
           {% empty %}
