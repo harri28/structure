@@ -57,11 +57,11 @@
   </div>
 
   <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-primary">
+    <button type="submit" class="btn btn-primary btn-sm">
       <i class="bi bi-check-lg me-1"></i>
       {% if obj %}Guardar cambios{% else %}Crear cuadrilla{% endif %}
     </button>
-    <a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=cuadrilla" class="btn btn-outline-secondary">
+    <a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=cuadrilla" class="btn btn-outline-secondary btn-sm">
       Cancelar
     </a>
   </div>

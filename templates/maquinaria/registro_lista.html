@@ -62,7 +62,7 @@
         <strong>{{ cuadrillas|length }}</strong> cuadrilla{{ cuadrillas|length|pluralize:"s" }}
         / frente{{ cuadrillas|length|pluralize:"s" }} de trabajo
       </div>
-      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaCuadrilla">
+      <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaCuadrilla">
         <i class="bi bi-plus-lg me-1"></i>Nueva cuadrilla
       </button>
     </div>
@@ -134,7 +134,7 @@
       <div class="text-muted">
         <strong>{{ trabajadores|length }}</strong> registrado{{ trabajadores|length|pluralize:"s" }}
       </div>
-      <a href="{% url 'maquinaria:trabajador_crear' proyecto.pk %}" class="btn btn-primary">
+      <a href="{% url 'maquinaria:trabajador_crear' proyecto.pk %}" class="btn btn-primary btn-sm">
         <i class="bi bi-person-plus me-1"></i>Nuevo personal
       </a>
     </div>
