@@ -273,7 +273,7 @@ Reglas (helper `_recalcular_estado_req`):
 | `cotizado` cubre todo pero aún no hay guías | `COTIZADO` |
 | Nada cotizado o parcial sin despacho | `APROBADO` (o `PARCIAL` si se aprobó menos de lo requerido) |
 
-Por eso `PARCIAL` significa dos cosas: aprobado con menos cantidad, o despachado a medias. La pestaña **Por atender** (Logística → Ingreso de Requerimientos) lista los requerimientos en `PARCIAL`.
+Por eso `PARCIAL` significa dos cosas: aprobado con menos cantidad, o despachado a medias. La pestaña **Por atender** (Logística → Requerimiento de Almacén) lista los requerimientos en `PARCIAL`.
 
 La anulación de un requerimiento también se bloquea si alguna de sus cotizaciones viaja en una guía `EN_TRANSITO`/`ENTREGADO`.
 
@@ -290,9 +290,11 @@ El correlativo es por proyecto y por año; se toma el mayor número existente co
 - Estados: `PENDIENTE` (amarillo) → `EN_TRANSITO` (azul) → `ENTREGADO` (verde) / `ANULADO` (rojo).
 - **Transición a `ENTREGADO`**: ocurre **automáticamente** cuando el Almacenero aprieta "Registrar guía" en Almacén → Guías → detalle de la guía (vista `entrada_crear` en modo guía, `apps/almacen/views.py`). Antes se hacía desde la card "Cambiar Estado" del detalle de guía, pero esa card fue removida — ya no hay botones manuales de transición de estado. Mientras el Almacenero no registre la guía, queda en `EN_TRANSITO`.
 
-### Botón "← Ingreso de Requerimientos" removido en sub-pestañas
+### Botón "← Requerimiento de Almacén" removido en sub-pestañas
 
-En las vistas de Logística → Ingreso de Requerimientos, las sub-pestañas (`Por atender`, `R. Consolidados`, `Anulados`, `Historial`) ya no muestran el botón "← Ingreso de Requerimientos" al tope. La navegación hacia la pantalla principal se cubre con el breadcrumb y las chips de pestañas.
+> **Nombre del módulo:** el módulo **Ingreso de Requerimientos** fue renombrado a **Requerimiento de Almacén** (solo la etiqueta visible; la URL `logistica:requerimientos_log`, la vista y el bloque `nav_req_logistica` conservan su nombre interno).
+
+En las vistas de Logística → Requerimiento de Almacén, las sub-pestañas (`Por atender`, `R. Consolidados`, `Anulados`, `Historial`) ya no muestran el botón "← Requerimiento de Almacén" al tope. La navegación hacia la pantalla principal se cubre con el breadcrumb y las chips de pestañas.
 
 El banner `alert-info` ("Este requerimiento ya fue aprobado/atendido/anulado...") en la vista de Revisión también fue removido. El estado se refleja en el badge del título.
 
