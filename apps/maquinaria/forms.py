@@ -211,8 +211,8 @@ class DocumentoTrabajadorForm(forms.ModelForm):
         model  = DocumentoTrabajador
         fields = ['nombre', 'archivo']
         widgets = {
-            'nombre':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: CV, DNI, Certificado SCTR, Antecedentes...'}),
-            'archivo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'nombre':  forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Ej: CV, DNI, Certificado SCTR, Antecedentes...'}),
+            'archivo': forms.ClearableFileInput(attrs={'class': 'form-control form-control-sm'}),
         }
 
 
