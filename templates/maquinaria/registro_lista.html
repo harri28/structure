@@ -246,6 +246,7 @@
             <tr>
               <th>Trabajador</th>
               <th>Cuadrilla</th>
+              <th style="width:140px">Fecha de registro</th>
               <th class="text-end" style="width:120px">Asistidas</th>
               <th class="text-end" style="width:120px">Faltas</th>
             </tr>
@@ -255,12 +256,13 @@
             <tr>
               <td class="fw-semibold">{{ t.apellidos }}, {{ t.nombres }}</td>
               <td class="text-muted">{{ t.cuadrilla_nombre|default:"—" }}</td>
+              <td class="text-muted">{{ t.fecha_ingreso|default:t.created_at|date:"d/m/Y" }}</td>
               <td class="text-end fw-semibold text-success">{{ t.asistidas_mes }}</td>
               <td class="text-end fw-semibold text-danger">{{ t.faltas_mes }}</td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="4" class="text-center py-5 text-muted">
+              <td colspan="5" class="text-center py-5 text-muted">
                 <i class="bi bi-people" style="font-size:2rem;opacity:.25;display:block;margin-bottom:.5rem"></i>
                 No hay personal activo registrado todavía.
               </td>
