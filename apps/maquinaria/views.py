@@ -399,14 +399,28 @@ def registro_lista(request, proyecto_id):
         .annotate(n_integrantes=Count('integrantes'))
     )
 
-    # ── Resumen asistencia del mes actual (por trabajador activo) ─────────
+    # ── Resumen asistencia del mes de la fecha seleccionada (default: hoy) ──
     from datetime import date as _date
     hoy = _date.today()
-    mes_inicio = hoy.replace(day=1)
+    fecha_sel_str = request.GET.get('fecha', '').strip()
+    try:
+        fecha_sel = _date.fromisoformat(fecha_sel_str) if fecha_sel_str else hoy
+    except ValueError:
+        fecha_sel = hoy
+    # Nunca futuro
+    if fecha_sel > hoy:
+        fecha_sel = hoy
+    mes_inicio = fecha_sel.replace(day=1)
+    # Fin del mes de la fecha elegida (o `hoy` si cae en el mes actual)
+    import calendar as _calendar
+    _ult_dia = _calendar.monthrange(fecha_sel.year, fecha_sel.month)[1]
+    mes_fin = fecha_sel.replace(day=_ult_dia)
+    if mes_fin > hoy:
+        mes_fin = hoy
     asistencia_qs = Asistencia.objects.filter(
         trabajador__proyecto=proyecto,
         fecha__gte=mes_inicio,
-        fecha__lte=hoy,
+        fecha__lte=mes_fin,
     )
     conteo_mes = {}
     for trab_id, estado in asistencia_qs.values_list('trabajador_id', 'estado'):
@@ -447,6 +461,9 @@ def registro_lista(request, proyecto_id):
         'trabajadores_inactivos':   trabajadores_inactivos,
         'cuadrillas':               cuadrillas,
         'tab_activa':               tab_activa,
+        'fecha_sel':                fecha_sel,
+        'fecha_hoy':                hoy,
+        'es_hoy':                   fecha_sel == hoy,
     })
 
 

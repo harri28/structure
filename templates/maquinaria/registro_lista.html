@@ -232,12 +232,65 @@
 
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="text-muted" style="font-size:.84rem">
-        Resumen del mes actual · <strong>{{ trabajadores|length }}</strong> trabajador{{ trabajadores|length|pluralize:"es" }} activo{{ trabajadores|length|pluralize:"s" }}
+        Resumen de <strong>{{ fecha_sel|date:"F Y" }}</strong> · <strong>{{ trabajadores|length }}</strong> trabajador{{ trabajadores|length|pluralize:"es" }} activo{{ trabajadores|length|pluralize:"s" }}
       </div>
       <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarAsistencia">
         <i class="bi bi-calendar-check me-1"></i>Registrar asistencia
       </button>
     </div>
+
+    {# ── Chip de fecha + input date oculto ───────────────── #}
+    <form method="get" class="mb-3" id="form-fecha-asistencia">
+      <input type="hidden" name="tab" value="asistencia">
+      <div class="asist-fecha-chip" onclick="document.getElementById('inp-fecha-asist').showPicker ? document.getElementById('inp-fecha-asist').showPicker() : document.getElementById('inp-fecha-asist').click()">
+        <div class="asist-fecha-num">
+          {% if es_hoy %}<span class="asist-fecha-hoy">Hoy</span> {% endif %}{{ fecha_sel|date:"j" }}
+        </div>
+        <div class="asist-fecha-mes">{{ fecha_sel|date:"F" }}</div>
+      </div>
+      <input type="date" id="inp-fecha-asist" name="fecha"
+             value="{{ fecha_sel|date:'Y-m-d' }}"
+             max="{{ fecha_hoy|date:'Y-m-d' }}"
+             onchange="document.getElementById('form-fecha-asistencia').submit()"
+             style="position:absolute;opacity:0;pointer-events:none;left:-9999px">
+    </form>
+    <style>
+      .asist-fecha-chip {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: .6rem 1.1rem;
+        min-width: 100px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background .15s, border-color .15s;
+        user-select: none;
+      }
+      .asist-fecha-chip:hover { background: #dbeafe; border-color: #93c5fd; }
+      .asist-fecha-num {
+        font-size: 2.1rem;
+        font-weight: 700;
+        color: #1d4ed8;
+        line-height: 1;
+      }
+      .asist-fecha-hoy {
+        font-size: .9rem;
+        font-weight: 600;
+        color: #64748b;
+        letter-spacing: .02em;
+        margin-right: .15rem;
+      }
+      .asist-fecha-mes {
+        font-size: .74rem;
+        text-transform: capitalize;
+        color: #64748b;
+        margin-top: .15rem;
+        letter-spacing: .02em;
+      }
+    </style>
 
     <div class="card">
       <div class="card-body p-0">
@@ -443,7 +496,7 @@
           <div class="row g-2 mb-3">
             <div class="col-sm-6">
               <label class="form-label fw-semibold">Fecha</label>
-              <input type="date" name="fecha" value="{% now 'Y-m-d' %}" class="form-control form-control-sm" required>
+              <input type="date" name="fecha" value="{{ fecha_sel|date:'Y-m-d' }}" class="form-control form-control-sm" required>
             </div>
             <div class="col-sm-6 d-flex align-items-end">
               <div class="text-muted" style="font-size:.78rem">
