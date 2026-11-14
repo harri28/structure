@@ -62,10 +62,26 @@
             </div>
           </div>
 
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">E-mail</label>
+              <input type="email" name="email" class="form-control"
+                     value="{{ form_email }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Teléfono</label>
+              <input type="text" name="telefono" class="form-control"
+                     value="{{ form_telefono|default:'' }}" placeholder="Ej. 999 888 777">
+            </div>
+          </div>
+
           <div class="mb-0">
-            <label class="form-label fw-semibold">E-mail</label>
-            <input type="email" name="email" class="form-control"
-                   value="{{ form_email }}">
+            <label class="form-label fw-semibold">Cargo</label>
+            <input type="text" name="cargo" class="form-control"
+                   value="{{ form_cargo|default:'' }}" placeholder="Ej. Ing. Residente">
+            <div class="form-text">
+              Aparece como "Cargo del Solicitante" en los requerimientos que cree este usuario.
+            </div>
           </div>
 
         </div>

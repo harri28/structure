@@ -381,11 +381,19 @@ def usuarios(request):
     return _redirect('/configuracion/equipo/')
 
 
-def _guardar_perfil(usuario, rol_id):
-    """Crea o actualiza el PerfilUsuario con el rol seleccionado."""
+def _guardar_perfil(usuario, rol_id, cargo=None, telefono=None):
+    """Crea o actualiza el PerfilUsuario con rol + cargo + teléfono.
+
+    `cargo` y `telefono` solo se actualizan si vienen como argumento (no None),
+    para permitir updates parciales (ej: solo cambio de rol).
+    """
     rol = Rol.objects.filter(pk=rol_id).first() if rol_id else None
     perfil, _ = PerfilUsuario.objects.get_or_create(usuario=usuario)
     perfil.rol = rol
+    if cargo is not None:
+        perfil.cargo = cargo
+    if telefono is not None:
+        perfil.telefono = telefono
     perfil.save()
 
 
@@ -414,6 +422,8 @@ def usuario_crear(request):
         password2  = datos.get('password2', '')
         rol_id     = datos.get('rol_id') or None
         nivel      = datos.get('nivel', 'usuario')
+        cargo      = datos.get('cargo', '').strip()
+        telefono   = datos.get('telefono', '').strip()
 
         if not username:
             error['username'] = 'El nombre de usuario es obligatorio.'
@@ -437,7 +447,7 @@ def usuario_crear(request):
                 is_superuser=nivel == 'superadmin',
                 is_active=True,
             )
-            _guardar_perfil(u, rol_id)
+            _guardar_perfil(u, rol_id, cargo=cargo, telefono=telefono)
             rol_label = Rol.objects.filter(pk=rol_id).values_list('nombre', flat=True).first() if rol_id else 'sin rol'
             log(request, 'CREAR', 'Configuración',
                 f'Usuario creado: "{u.username}" (nivel: {nivel}, rol: {rol_label})')
@@ -462,6 +472,8 @@ def usuario_crear(request):
         'form_email':         datos.get('email', ''),
         'form_nivel':         datos.get('nivel', 'usuario'),
         'form_rol_id':        datos.get('rol_id', ''),
+        'form_cargo':         datos.get('cargo', ''),
+        'form_telefono':      datos.get('telefono', ''),
     })
 
 
@@ -478,6 +490,8 @@ def usuario_editar(request, pk):
         nivel      = request.POST.get('nivel', 'usuario')
         is_active  = request.POST.get('is_active') == '1'
         rol_id     = request.POST.get('rol_id') or None
+        cargo      = request.POST.get('cargo', '').strip()
+        telefono   = request.POST.get('telefono', '').strip()
 
         # Captura rol viejo antes del cambio para auditoría
         rol_viejo_nombre = None
@@ -496,7 +510,7 @@ def usuario_editar(request, pk):
         if u.pk != request.user.pk:
             u.is_active = is_active
         u.save()
-        _guardar_perfil(u, rol_id)
+        _guardar_perfil(u, rol_id, cargo=cargo, telefono=telefono)
 
         rol_nuevo_nombre = Rol.objects.filter(pk=rol_id).values_list('nombre', flat=True).first() if rol_id else None
         partes = []
@@ -513,8 +527,12 @@ def usuario_editar(request, pk):
 
     nivel_actual = 'superadmin' if u.is_superuser else ('staff' if u.is_staff else 'usuario')
     rol_actual_id = None
+    cargo_actual = ''
+    telefono_actual = ''
     try:
-        rol_actual_id = u.perfil.rol_id
+        rol_actual_id   = u.perfil.rol_id
+        cargo_actual    = u.perfil.cargo or ''
+        telefono_actual = u.perfil.telefono or ''
     except AttributeError:
         pass
 
@@ -529,6 +547,8 @@ def usuario_editar(request, pk):
         'form_email':      u.email,
         'form_nivel':      nivel_actual,
         'form_rol_id':     str(rol_actual_id) if rol_actual_id else '',
+        'form_cargo':      cargo_actual,
+        'form_telefono':   telefono_actual,
     })
 
 
