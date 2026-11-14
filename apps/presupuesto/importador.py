@@ -545,6 +545,14 @@ def importar_insumos_excel(archivo, presupuesto):
                 ordered_final = [(it, str(i)) for i, it in enumerate(items_sorted, 1)]
 
             for it, cod_asignado in ordered_final:
+                # Preferimos recalcular `total = cantidad × precio` en vez de
+                # tomar el `it['total']` del Excel. Excel suele llegar con el
+                # total ya redondeado a 2 decimales; nuestro `total` tiene 4,
+                # y mantener los 4 preserva precisión para el acumulado de
+                # presupuestos grandes (ver migración 0013_insumo_total_4_dec).
+                cant = Decimal(str(it['cant']))
+                prec = Decimal(str(it['precio']))
+                total_calculado = (cant * prec).quantize(Decimal('0.0001'))
                 InsumoPresupuesto.objects.create(
                     presupuesto=presupuesto,
                     tipo=tipo,
@@ -554,7 +562,7 @@ def importar_insumos_excel(archivo, presupuesto):
                     cantidad_total=it['cant'],
                     cantidad=it['cant'],
                     costo_unitario=it['precio'],
-                    total=it['total'],
+                    total=total_calculado,
                 )
                 total += 1
 

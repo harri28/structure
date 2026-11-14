@@ -170,7 +170,7 @@ class InsumoPresupuesto(models.Model):
     cantidad = models.DecimalField(max_digits=18, decimal_places=4, default=0)
     stock_almacen = models.DecimalField(max_digits=18, decimal_places=4, default=0)
     costo_unitario = models.DecimalField(max_digits=15, decimal_places=4, default=0)
-    total = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=18, decimal_places=4, default=0)
 
     class Meta:
         verbose_name = 'Insumo del Presupuesto'
