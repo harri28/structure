@@ -53,52 +53,35 @@
   </div>
 </div>
 
-<!-- ── Contadores rápidos ───────────────────────────────────────── -->
-<div class="row g-3 mb-3">
-  <div class="col-6 col-md-3">
-    <div class="card h-100" style="border-left:4px solid #0891b2">
-      <div class="card-body py-3 d-flex align-items-center gap-3">
-        <i class="bi bi-people-fill" style="color:#0891b2;font-size:1.5rem"></i>
-        <div>
-          <div style="font-size:1.4rem;font-weight:800;color:#0891b2;line-height:1">{{ cuadrillas_activas }}</div>
-          <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Cuadrillas activas</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card h-100" style="border-left:4px solid #ea580c">
-      <div class="card-body py-3 d-flex align-items-center gap-3">
-        <i class="bi bi-truck" style="color:#ea580c;font-size:1.5rem"></i>
-        <div>
-          <div style="font-size:1.4rem;font-weight:800;color:#ea580c;line-height:1">{{ maquinas_activas }}</div>
-          <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Maquinaria (30 d)</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card h-100" style="border-left:4px solid #059669">
-      <div class="card-body py-3 d-flex align-items-center gap-3">
-        <i class="bi bi-person-badge" style="color:#059669;font-size:1.5rem"></i>
-        <div>
-          <div style="font-size:1.4rem;font-weight:800;color:#059669;line-height:1">{{ trabajadores_activos }}</div>
-          <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Personal activo</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card h-100" style="border-left:4px solid #dc2626">
-      <div class="card-body py-3 d-flex align-items-center gap-3">
-        <i class="bi bi-exclamation-triangle-fill" style="color:#dc2626;font-size:1.5rem"></i>
-        <div>
-          <div style="font-size:1.4rem;font-weight:800;color:#dc2626;line-height:1">{{ insumos_alerta|length }}</div>
-          <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Insumos en alerta</div>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- ── Strip compacto de estado del proyecto ─────────────────────── -->
+<div class="d-flex align-items-center flex-wrap gap-2 mb-3"
+     style="font-size:.82rem;color:#6b7280;padding:.5rem .1rem">
+  <span style="color:#9ca3af">Estado del proyecto:</span>
+
+  <a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=cuadrilla"
+     class="text-decoration-none"
+     style="color:inherit">
+    <span style="color:{% if cuadrillas_activas %}#0891b2{% else %}#9ca3af{% endif %};font-weight:700">{{ cuadrillas_activas }}</span>
+    cuadrilla{{ cuadrillas_activas|pluralize:"s" }}
+  </a>
+  <span style="color:#d1d5db">·</span>
+
+  <a href="{% url 'maquinaria:maq_principal' proyecto.pk %}" class="text-decoration-none" style="color:inherit">
+    <span style="color:{% if maquinas_activas %}#ea580c{% else %}#9ca3af{% endif %};font-weight:700">{{ maquinas_activas }}</span>
+    máquina{{ maquinas_activas|pluralize:"s" }} <span style="color:#9ca3af;font-size:.74rem">(30d)</span>
+  </a>
+  <span style="color:#d1d5db">·</span>
+
+  <a href="{% url 'maquinaria:registro_lista' proyecto.pk %}?tab=personal" class="text-decoration-none" style="color:inherit">
+    <span style="color:{% if trabajadores_activos %}#059669{% else %}#9ca3af{% endif %};font-weight:700">{{ trabajadores_activos }}</span>
+    trabajador{{ trabajadores_activos|pluralize:"es" }}
+  </a>
+  <span style="color:#d1d5db">·</span>
+
+  <span>
+    <span style="color:{% if insumos_alerta %}#dc2626{% else %}#9ca3af{% endif %};font-weight:700">{{ insumos_alerta|length }}</span>
+    insumo{{ insumos_alerta|length|pluralize:"s" }} en alerta
+  </span>
 </div>
 
 <!-- ── Fila: Reqs por estado + Top insumos consumidos ──────────── -->
