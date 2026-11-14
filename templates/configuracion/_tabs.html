@@ -14,6 +14,10 @@
      class="cfg-tab {% if tab_activo_config == 'empresa' %}active{% endif %}">
     <i class="bi bi-building"></i> Empresa
   </a>
+  <a href="{% url 'configuracion:apariencia' %}"
+     class="cfg-tab {% if tab_activo_config == 'apariencia' %}active{% endif %}">
+    <i class="bi bi-palette"></i> Apariencia
+  </a>
   {% endif %}
 
   {% if permisos.puede_administrar_usuarios or permisos.puede_administrar_roles %}

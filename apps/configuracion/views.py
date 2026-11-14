@@ -82,27 +82,7 @@ class FaviconForm(forms.ModelForm):
 @requiere('puede_configurar_empresa')
 def empresa(request):
     config = ConfigEmpresa.get()
-    section = request.POST.get('section') if request.method == 'POST' else None
-
-    if section == 'imagen_marca':
-        form_imagen = ImagenMarcaForm(request.POST, request.FILES, instance=config)
-        if form_imagen.is_valid():
-            form_imagen.save()
-            messages.success(request, 'Imagen de marca actualizada.')
-            return redirect('configuracion:empresa')
-    elif section == 'favicon':
-        form_favicon = FaviconForm(request.POST, request.FILES, instance=config)
-        if form_favicon.is_valid():
-            form_favicon.save()
-            messages.success(request, 'Favicon actualizado.')
-            return redirect('configuracion:empresa')
-    elif section == 'color':
-        form_color = ColorPrimarioForm(request.POST, instance=config)
-        if form_color.is_valid():
-            form_color.save()
-            messages.success(request, 'Color primario actualizado.')
-            return redirect('configuracion:empresa')
-    elif section == 'identificacion':
+    if request.method == 'POST':
         form = EmpresaForm(request.POST, instance=config)
         if form.is_valid():
             form.save()
@@ -110,10 +90,37 @@ def empresa(request):
             return redirect('configuracion:empresa')
     else:
         form = EmpresaForm(instance=config)
+    return render(request, 'configuracion/empresa.html', {
+        'form':   form,
+        'config': config,
+        'tab_activo_config': 'empresa',
+    })
 
-    # Formularios vacíos por defecto para los que no se hayan procesado arriba
-    if 'form' not in locals():
-        form = EmpresaForm(instance=config)
+
+@requiere('puede_configurar_empresa')
+def apariencia(request):
+    config = ConfigEmpresa.get()
+    section = request.POST.get('section') if request.method == 'POST' else None
+
+    if section == 'imagen_marca':
+        form_imagen = ImagenMarcaForm(request.POST, request.FILES, instance=config)
+        if form_imagen.is_valid():
+            form_imagen.save()
+            messages.success(request, 'Imagen de marca actualizada.')
+            return redirect('configuracion:apariencia')
+    elif section == 'favicon':
+        form_favicon = FaviconForm(request.POST, request.FILES, instance=config)
+        if form_favicon.is_valid():
+            form_favicon.save()
+            messages.success(request, 'Favicon actualizado.')
+            return redirect('configuracion:apariencia')
+    elif section == 'color':
+        form_color = ColorPrimarioForm(request.POST, instance=config)
+        if form_color.is_valid():
+            form_color.save()
+            messages.success(request, 'Color primario actualizado.')
+            return redirect('configuracion:apariencia')
+
     if 'form_color' not in locals():
         form_color = ColorPrimarioForm(instance=config)
     if 'form_imagen' not in locals():
@@ -121,13 +128,12 @@ def empresa(request):
     if 'form_favicon' not in locals():
         form_favicon = FaviconForm(instance=config)
 
-    return render(request, 'configuracion/empresa.html', {
-        'form':          form,
-        'form_color':    form_color,
-        'form_imagen':   form_imagen,
-        'form_favicon':  form_favicon,
-        'config':        config,
-        'tab_activo_config': 'empresa',
+    return render(request, 'configuracion/apariencia.html', {
+        'form_color':   form_color,
+        'form_imagen':  form_imagen,
+        'form_favicon': form_favicon,
+        'config':       config,
+        'tab_activo_config': 'apariencia',
     })
 
 
