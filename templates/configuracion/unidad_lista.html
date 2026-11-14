@@ -4,16 +4,13 @@
 {% block nav_unidades %}active{% endblock %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{% url 'configuracion:hub' %}">Configuración</a></li>
-<li class="breadcrumb-item active">Unidades de Medida</li>
+<li class="breadcrumb-item active">Configuración</li>
 {% endblock %}
 
 {% block content %}
+{% include 'configuracion/_tabs.html' %}
 <div class="page-header">
   <div>
-    <a href="{% url 'configuracion:hub' %}" class="btn-back">
-      <i class="bi bi-chevron-left"></i> Configuración
-    </a>
     <h4><i class="bi bi-rulers me-2" style="color:#0284c7"></i>Unidades de Medida</h4>
   </div>
 </div>

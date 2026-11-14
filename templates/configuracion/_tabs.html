@@ -1,0 +1,31 @@
+{% comment %}
+  Barra de pestañas superior de Configuración. Cada sección setea
+  `tab_activo_config` en su contexto ('empresa', 'equipo', 'unidades',
+  'decimal', 'cargos', 'reglas') para marcar la pestaña activa.
+{% endcomment %}
+<div class="cfg-tabs">
+  <a href="{% url 'configuracion:empresa' %}"
+     class="cfg-tab {% if tab_activo_config == 'empresa' %}active{% endif %}">
+    <i class="bi bi-building"></i> Empresa
+  </a>
+  <a href="{% url 'configuracion:equipo' %}"
+     class="cfg-tab {% if tab_activo_config == 'equipo' %}active{% endif %}">
+    <i class="bi bi-people-fill"></i> Equipo
+  </a>
+  <a href="{% url 'configuracion:unidad_lista' %}"
+     class="cfg-tab {% if tab_activo_config == 'unidades' %}active{% endif %}">
+    <i class="bi bi-rulers"></i> Unidades
+  </a>
+  <a href="{% url 'configuracion:decimal_lista' %}"
+     class="cfg-tab {% if tab_activo_config == 'decimal' %}active{% endif %}">
+    <i class="bi bi-123"></i> Decimales
+  </a>
+  <a href="{% url 'configuracion:cargo_lista' %}"
+     class="cfg-tab {% if tab_activo_config == 'cargos' %}active{% endif %}">
+    <i class="bi bi-person-badge"></i> Cargos
+  </a>
+  <a href="{% url 'configuracion:regla_lista' %}"
+     class="cfg-tab {% if tab_activo_config == 'reglas' %}active{% endif %}">
+    <i class="bi bi-funnel"></i> Reglas
+  </a>
+</div>

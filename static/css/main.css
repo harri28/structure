@@ -947,3 +947,31 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* Badge para el estado COTIZADO del requerimiento (púrpura, distinto de APROBADO/ATENDIDO) */
 .bg-cotizado { background-color: #6f42c1 !important; color: #fff !important; }
+
+/* ── Pestañas superiores del módulo Configuración ───────────────────── */
+.cfg-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.25rem;
+  overflow-x: auto;
+}
+.cfg-tab {
+  padding: .55rem 1.1rem;
+  font-size: .84rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  white-space: nowrap;
+  transition: color .1s, border-color .1s;
+}
+.cfg-tab:hover { color: var(--text); }
+.cfg-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}

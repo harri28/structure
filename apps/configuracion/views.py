@@ -30,15 +30,8 @@ def _diff_permisos(permisos_viejos_set, permisos_nuevos_set):
 
 @requiere('puede_configurar_empresa', 'puede_administrar_usuarios', 'puede_administrar_roles')
 def hub(request):
-    config = ConfigEmpresa.get()
-    return render(request, 'configuracion/hub.html', {
-        'config':      config,
-        'n_usuarios':  User.objects.filter(is_active=True).count(),
-        'n_roles':     Rol.objects.count(),
-        'n_unidades':  UnidadMedida.objects.filter(activo=True).count(),
-        'n_cargos':    CargoManoObra.objects.filter(activo=True).count(),
-        'n_reglas':    ReglaDeteccionInsumo.objects.filter(activo=True).count(),
-    })
+    # El hub pasó a ser una página con pestañas — se entra por la primera.
+    return redirect('configuracion:empresa')
 
 
 # ── Empresa ───────────────────────────────────────────────────────
@@ -69,7 +62,9 @@ def empresa(request):
             return redirect('configuracion:empresa')
     else:
         form = EmpresaForm(instance=config)
-    return render(request, 'configuracion/empresa.html', {'form': form, 'config': config})
+    return render(request, 'configuracion/empresa.html', {
+        'form': form, 'config': config, 'tab_activo_config': 'empresa',
+    })
 
 
 
@@ -155,6 +150,7 @@ def equipo(request):
         'total_overrides':         total_overrides,
         'usuarios_con_override':   usuarios_con_override,
         'tab_activo':      tab,
+        'tab_activo_config': 'equipo',
     })
 
 
@@ -580,7 +576,9 @@ _UNIDADES_DEFAULT = [
 
 def unidad_lista(request):
     unidades = UnidadMedida.objects.all()
-    return render(request, 'configuracion/unidad_lista.html', {'unidades': unidades})
+    return render(request, 'configuracion/unidad_lista.html', {
+        'unidades': unidades, 'tab_activo_config': 'unidades',
+    })
 
 
 def unidad_crear(request):
@@ -813,7 +811,9 @@ def unidad_cargar_defaults(request):
 def decimal_lista(request):
     from .models import ConfigDecimal
     configs = ConfigDecimal.objects.all()
-    return render(request, 'configuracion/decimal_lista.html', {'configs': configs})
+    return render(request, 'configuracion/decimal_lista.html', {
+        'configs': configs, 'tab_activo_config': 'decimal',
+    })
 
 
 def _decimal_form_ctx(post=None, obj=None, error=None, titulo=''):
@@ -922,7 +922,9 @@ _CARGOS_DEFAULT = [
 
 def cargo_lista(request):
     cargos = CargoManoObra.objects.all()
-    return render(request, 'configuracion/cargo_lista.html', {'cargos': cargos})
+    return render(request, 'configuracion/cargo_lista.html', {
+        'cargos': cargos, 'tab_activo_config': 'cargos',
+    })
 
 
 def cargo_crear(request):
@@ -1069,6 +1071,7 @@ def regla_lista(request):
         'reglas':       reglas,
         'tipo_filtro':  tipo_filtro,
         'tipo_choices': ReglaDeteccionInsumo.TIPO_CHOICES,
+        'tab_activo_config': 'reglas',
     })
 
 
