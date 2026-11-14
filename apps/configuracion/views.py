@@ -281,7 +281,7 @@ def rol_editar(request, pk):
             permisos_viejos = {c for c in TODOS_LOS_PERMISOS if getattr(rol, c, False)}
             rol.nombre      = nombre
             rol.descripcion = request.POST.get('descripcion', '').strip()
-            # Los permisos de los roles sembrados (Administrador de Obra, Logística,
+            # Los permisos de los roles sembrados (Jefe de obra, Logística,
             # Almacenero) vienen fijos por diseño — se ignora cualquier valor de
             # permisos que llegue en el POST para ellos, aunque el HTML los muestre
             # deshabilitados (un POST manual no debe poder alterarlos).

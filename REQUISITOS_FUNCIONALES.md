@@ -44,11 +44,11 @@ proyecto, actualizando el contexto de toda la aplicación.
 | Actor | Rol en obra | Alcance |
 |-------|-------------|---------|
 | **Superadmin** | Dueño/programador del sistema | Todo el consorcio, todos los proyectos |
-| **Administrador de Obra** | Residente de obra | Un proyecto (puede haber varios residentes, uno por proyecto) |
+| **Jefe de obra** | Residente de obra | Un proyecto (puede haber varios residentes, uno por proyecto) |
 | **Logística** | Área de logística del consorcio | Atraviesa todos los proyectos |
 | **Almacenero** | Operador del almacén | Un proyecto |
 
-> **Aclaraciones de dominio:** "Administrador de Obra" ≠ "administrador del sistema" (ese es el
+> **Aclaraciones de dominio:** "Jefe de obra" ≠ "administrador del sistema" (ese es el
 > Superadmin). "Personal" (obreros/cuadrillas) ≠ "Usuarios" (cuentas que ingresan al sistema).
 
 ### 2.2 Requisitos de permisos
@@ -70,12 +70,12 @@ Administración y Especiales.
 (Presupuesto, Requerimientos, Almacén, Maquinaria, Logística, Administración, etc.).
 
 **RF-08.** El sistema debe permitir crear y editar roles desde la UI (Administración → Usuarios &
-Roles). Los 3 roles operativos (Administrador de Obra, Logística, Almacenero) vienen **sembrados
+Roles). Los 3 roles operativos (Jefe de obra, Logística, Almacenero) vienen **sembrados
 por migración** con sus permisos predefinidos:
 
 | Rol | Permisos clave sembrados |
 |-----|--------------------------|
-| **Administrador de Obra** | dashboard, ver/editar presupuesto, crear/aprobar requerimientos, ver/gestionar maquinaria, editar catálogo, gestionar personal, ver actividad, configurar proyecto |
+| **Jefe de obra** | dashboard, ver/editar presupuesto, crear/aprobar requerimientos, ver/gestionar maquinaria, editar catálogo, gestionar personal, ver actividad, configurar proyecto |
 | **Logística** | ver logística, revisar reqs, gestionar cotizaciones (log), gestionar logística/guías, inventarios, almacén log, control de maquinaria |
 | **Almacenero** | ver almacén, crear requerimientos, gestionar entradas, gestionar salidas |
 

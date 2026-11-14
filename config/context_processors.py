@@ -70,7 +70,7 @@ def req_enviados_count(request):
 def req_solicitados_count(request):
     """Conteo de requerimientos en estado SOLICITADO del proyecto activo.
 
-    Alimenta el badge de la 'Bandeja de Entrada' del Administrador de Obra.
+    Alimenta el badge de la 'Bandeja de Entrada' del Jefe de obra.
     Ver REGLAS_NEGOCIO.md §10.
     """
     try:

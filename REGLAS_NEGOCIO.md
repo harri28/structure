@@ -354,7 +354,7 @@ resume solo las reglas de dominio.
 
 ### Los cuatro roles del sistema
 
-**Aclaración semántica clave:** "Administrador de Obra" ≠ "Administrador del sistema".
+**Aclaración semántica clave:** "Jefe de obra" ≠ "Administrador del sistema".
 En términos de ingeniería civil, el Admin de Obra es el **residente**: puede
 haber varios en el sistema, cada uno en su propio proyecto. El "admin del
 sistema" es el Superadmin.
@@ -366,7 +366,7 @@ las cuentas que sí ingresan (hoy 3: Admin de Obra, Logística, Almacenero).
 | Rol | Rol en la vida real | Alcance |
 |---|---|---|
 | Superadmin | Programador / dueño del sistema | Todo el consorcio, todos los proyectos |
-| Administrador de Obra | Residente de obra | Un proyecto (puede haber varios residentes en distintos proyectos) |
+| Jefe de obra | Residente de obra | Un proyecto (puede haber varios residentes en distintos proyectos) |
 | Logística | Área de logística del consorcio | Atraviesa proyectos |
 | Almacenero | Operador de almacén de un proyecto | Un proyecto |
 
@@ -603,7 +603,7 @@ Almacenero → Admin de Obra → Logística.
 
 ## 13. Módulo "Configuración del Proyecto" (por crear)
 
-Módulo nuevo dedicado al Administrador de Obra para configurar los datos de
+Módulo nuevo dedicado al Jefe de obra para configurar los datos de
 **su proyecto activo**. No confundir con `configuracion:hub` (que es la
 configuración GLOBAL del consorcio: Empresa, SUNAT, Unidades, Usuarios,
 Roles — exclusivo del Superadmin).

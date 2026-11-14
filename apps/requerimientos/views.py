@@ -62,7 +62,7 @@ def lista(request, proyecto_id):
 @requiere('puede_aprobar_requerimientos')
 @proyecto_visible
 def bandeja_entrada(request, proyecto_id):
-    """Bandeja del Administrador de Obra: lista los requerimientos en estado
+    """Bandeja del Jefe de obra: lista los requerimientos en estado
     `SOLICITADO` que le mandó el Almacenero. Desde aquí puede abrir cada uno
     para editar/aprobar y enviar a Logística. Ver REGLAS_NEGOCIO.md §10.
     """
@@ -211,7 +211,7 @@ def solicitar(request, proyecto_id):
                 mensaje=f'Solicitada por {request.user.get_full_name() or request.user.username} — {proyecto.codigo}. Pendiente en Bandeja de Entrada.',
                 tipo='info',
             )
-            messages.success(request, f'Solicitud REQ{req.numero} enviada al Administrador de Obra.')
+            messages.success(request, f'Solicitud REQ{req.numero} enviada al Jefe de obra.')
             return redirect('requerimientos:lista', proyecto_id=proyecto_id)
     else:
         # Cargo del Almacenero: viene de su PerfilUsuario.cargo; si está vacío,

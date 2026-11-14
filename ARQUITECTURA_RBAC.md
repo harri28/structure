@@ -33,7 +33,7 @@ Reglas especiales:
 ### Roles sembrados (contrato, no editables)
 
 Definidos en `apps/configuracion/migrations/0019_seed_roles_operativos.py`.
-Listados en `ROLES_BLOQUEADOS = ['Administrador de Obra', 'Logística', 'Almacenero']`.
+Listados en `ROLES_BLOQUEADOS = ['Jefe de obra', 'Logística', 'Almacenero']`.
 
 Sus permisos vienen fijos por diseño. La UI los muestra read-only (candado); el handler `rol_editar` ignora el POST de permisos si el rol está bloqueado (defensa en profundidad contra POST manual).
 
@@ -131,7 +131,7 @@ El panel `/registro/actividad/` ya filtra por módulo. Los eventos de rol caen b
 ### Objetivos
 
 Permitir que un mismo usuario tenga **rol distinto según el proyecto**:
-- *Ejemplo*: Juan es `Administrador de Obra` en la obra A, pero `Solo lectura` en la obra B.
+- *Ejemplo*: Juan es `Jefe de obra` en la obra A, pero `Solo lectura` en la obra B.
 
 ### Diseño
 

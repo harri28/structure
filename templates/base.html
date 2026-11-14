@@ -138,7 +138,7 @@
     </a>
     {% endif %}
 
-    {# Administrador de Obra — crea, aprueba y recibe solicitudes del Almacenero #}
+    {# Jefe de obra — crea, aprueba y recibe solicitudes del Almacenero #}
     {% if permisos.puede_aprobar_requerimientos %}
     <div class="sb-module-row">
       <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"

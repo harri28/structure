@@ -17,7 +17,7 @@ S&S Gestión es un ERP interno para un consorcio de construcción, organizado
 alrededor del concepto de **proyecto** (obra civil). El superadmin crea los
 proyectos y les asigna equipos. Cada proyecto opera en cierto grado aislado
 —arquitectura *multi-proyecto en una sola BD*, no *multi-tenant* clásica—
-con su propio Administrador de Obra (residente), su Almacenero y compartiendo
+con su propio Jefe de obra (residente), su Almacenero y compartiendo
 el área de Logística del consorcio.
 
 El sistema trabaja con **un proyecto activo por sesión** (`request.session['proyecto_id']`)
@@ -27,7 +27,7 @@ y toda la UI se contextualiza a ese proyecto.
 
 ## 2. Los tres roles operativos (más el superadmin)
 
-**Aclaración semántica importante** — "Administrador de Obra" NO significa
+**Aclaración semántica importante** — "Jefe de obra" NO significa
 "administrador del sistema". En términos de ingeniería civil, es el
 **residente de obra**: puede haber varios en el sistema, cada uno dentro
 de su propio proyecto. El "administrador del sistema" es el Superadmin.
@@ -46,7 +46,7 @@ Responsabilidades exclusivas:
 - Crear y editar roles
 - Crear y editar usuarios (los 3 tipos operativos + eventuales otros)
 
-### 2.2 Administrador de Obra (Residente)
+### 2.2 Jefe de obra (Residente)
 
 Es el responsable de UN proyecto. Puede coexistir con otros Admins de Obra en
 otros proyectos. NO administra el sistema.
@@ -165,7 +165,7 @@ Este es un cambio de comportamiento importante respecto a
 **Resultado operativo:**
 
 - El Almacenero crea un requerimiento en BORRADOR. **No ve el botón Enviar.**
-- El Administrador de Obra ve una bandeja con todos los BORRADORes del proyecto
+- El Jefe de obra ve una bandeja con todos los BORRADORes del proyecto
   (los suyos y los del Almacenero) y decide cuáles enviar a Logística.
 - El resto del flujo (ENVIADO → EN_REVISION → APROBADO → ATENDIDO) sigue igual
   y sigue documentado en `REGLAS_NEGOCIO.md`.
