@@ -40,6 +40,12 @@ class Proyecto(models.Model):
 class ProyectoMiembro(models.Model):
     proyecto  = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='miembros')
     usuario   = models.ForeignKey(User, on_delete=models.CASCADE, related_name='proyectos_asignados')
+    rol       = models.ForeignKey(
+        'configuracion.Rol', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='membresias',
+        help_text='Rol específico para este proyecto. Si queda vacío, '
+                  'se aplica el rol global del PerfilUsuario.',
+    )
     agregado  = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -8,14 +8,44 @@ from django.contrib import messages
 from django.shortcuts import redirect
 
 
-def tiene(user, permiso):
-    """True si el usuario tiene el permiso indicado."""
+def _rol_efectivo(user, proyecto_id=None):
+    """
+    Devuelve el rol efectivo del usuario para un proyecto dado.
+    Precedencia:
+      1. ProyectoMiembro.rol (si proyecto_id está dado y la membresía tiene rol)
+      2. PerfilUsuario.rol (rol global, fallback)
+    Devuelve None si no hay ningún rol.
+    """
+    rol_global = None
+    try:
+        rol_global = user.perfil.rol
+    except AttributeError:
+        pass
+    if proyecto_id:
+        try:
+            from apps.proyectos.models import ProyectoMiembro
+            miembro = ProyectoMiembro.objects.select_related('rol').filter(
+                usuario=user, proyecto_id=proyecto_id,
+            ).first()
+            if miembro and miembro.rol:
+                return miembro.rol
+        except Exception:
+            pass
+    return rol_global
+
+
+def tiene(user, permiso, proyecto_id=None):
+    """
+    True si el usuario tiene el permiso indicado.
+    Si `proyecto_id` se proporciona, se resuelve contra el rol específico
+    del proyecto (si lo hay); sino cae al rol global del perfil.
+    """
     if not user.is_authenticated:
         return False
     if user.is_superuser:
         return True
     try:
-        rol = user.perfil.rol
+        rol = _rol_efectivo(user, proyecto_id)
         if rol is None:
             return False
         if rol.es_superadmin:
@@ -49,15 +79,19 @@ def proyectos_visibles(user):
         return Proyecto.objects.all()
 
 
-def permisos_dict(user):
-    """Devuelve un dict {campo: bool} con todos los permisos del usuario."""
+def permisos_dict(user, proyecto_id=None):
+    """
+    Devuelve un dict {campo: bool} con todos los permisos efectivos del usuario.
+    Si `proyecto_id` se proporciona, usa el rol específico del proyecto cuando
+    existe; sino cae al rol global del perfil.
+    """
     from apps.configuracion.models import TODOS_LOS_PERMISOS
     if not user.is_authenticated:
         return {}
     if user.is_superuser:
         return {p: True for p in TODOS_LOS_PERMISOS}
     try:
-        rol = user.perfil.rol
+        rol = _rol_efectivo(user, proyecto_id)
         if rol is None:
             return {p: False for p in TODOS_LOS_PERMISOS}
         if rol.es_superadmin:
@@ -111,13 +145,20 @@ def requiere(*permisos):
         @requiere('puede_administrar_usuarios', 'puede_administrar_roles')
         def equipo(request): ...
 
+    Si la URL incluye `proyecto_id`, el decorador resuelve el permiso contra
+    el rol efectivo en ese proyecto (override de ProyectoMiembro.rol si existe,
+    sino el rol global del PerfilUsuario). Así un usuario con rol restringido
+    en la Obra A no puede saltarse la restricción navegando directo por URL,
+    aunque su proyecto activo de sesión sea otro.
+
     La autenticación ya la garantiza `LoginRequiredMiddleware`, así que aquí
     solo se comprueba autorización.
     """
     def decorator(view):
         @wraps(view)
         def _wrapped(request, *args, **kwargs):
-            if any(tiene(request.user, p) for p in permisos):
+            proyecto_id = kwargs.get('proyecto_id')
+            if any(tiene(request.user, p, proyecto_id=proyecto_id) for p in permisos):
                 return view(request, *args, **kwargs)
             messages.warning(request, 'No tienes permiso para acceder a esa sección.')
             return redirect('proyectos:dashboard')

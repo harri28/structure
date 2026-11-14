@@ -203,14 +203,17 @@ def lista(request):
 
 @requiere('puede_crear_proyectos', 'puede_eliminar_proyectos', 'puede_administrar_usuarios')
 def detalle(request, pk):
+    from apps.configuracion.models import Rol
     proyecto = get_object_or_404(Proyecto, pk=pk)
-    miembros = proyecto.miembros.select_related('usuario__perfil__rol').all()
+    miembros = proyecto.miembros.select_related('usuario__perfil__rol', 'rol').all()
     ids_miembros = miembros.values_list('usuario_id', flat=True)
     usuarios_disponibles = User.objects.exclude(pk__in=ids_miembros).order_by('first_name', 'username')
+    roles_list = Rol.objects.all().order_by('nombre')
     return render(request, 'proyectos/detalle.html', {
         'proyecto':             proyecto,
         'miembros':             miembros,
         'usuarios_disponibles': usuarios_disponibles,
+        'roles_list':           roles_list,
     })
 
 
@@ -280,13 +283,47 @@ def miembro_agregar(request, pk):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     if request.method == 'POST':
         usuario_id = request.POST.get('usuario_id')
+        rol_id     = request.POST.get('rol_id') or None
         if usuario_id:
+            from apps.configuracion.models import Rol
             usuario = get_object_or_404(User, pk=usuario_id)
-            _, creado = ProyectoMiembro.objects.get_or_create(proyecto=proyecto, usuario=usuario)
+            rol = Rol.objects.filter(pk=rol_id).first() if rol_id else None
+            miembro, creado = ProyectoMiembro.objects.get_or_create(
+                proyecto=proyecto, usuario=usuario,
+                defaults={'rol': rol},
+            )
             if creado:
-                messages.success(request, f'{usuario.get_full_name() or usuario.username} agregado al equipo.')
+                sufijo = f' con rol "{rol.nombre}"' if rol else ''
+                messages.success(request,
+                    f'{usuario.get_full_name() or usuario.username} agregado al equipo{sufijo}.')
             else:
                 messages.warning(request, 'Ese usuario ya es miembro del proyecto.')
+    return redirect('proyectos:detalle', pk=pk)
+
+
+@requiere('puede_administrar_usuarios')
+def miembro_editar_rol(request, pk, usuario_id):
+    """Cambia el rol específico de un miembro del proyecto."""
+    proyecto = get_object_or_404(Proyecto, pk=pk)
+    miembro  = get_object_or_404(ProyectoMiembro, proyecto=proyecto, usuario_id=usuario_id)
+    if request.method == 'POST':
+        from apps.configuracion.models import Rol
+        rol_id = request.POST.get('rol_id') or None
+        rol_viejo_nombre = miembro.rol.nombre if miembro.rol else None
+        miembro.rol = Rol.objects.filter(pk=rol_id).first() if rol_id else None
+        miembro.save()
+        rol_nuevo_nombre = miembro.rol.nombre if miembro.rol else None
+        if rol_viejo_nombre != rol_nuevo_nombre:
+            try:
+                from apps.registro.utils import log
+                log(request, 'EDITAR', 'Configuración',
+                    f'Rol por proyecto: "{miembro.usuario.username}" en '
+                    f'{proyecto.codigo} — "{rol_viejo_nombre or "sin rol"}" → '
+                    f'"{rol_nuevo_nombre or "sin rol"}"')
+            except Exception:
+                pass
+            messages.success(request,
+                f'Rol actualizado para {miembro.usuario.get_full_name() or miembro.usuario.username}.')
     return redirect('proyectos:detalle', pk=pk)
 
 

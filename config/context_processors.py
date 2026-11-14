@@ -90,12 +90,23 @@ def permisos_usuario(request):
     try:
         if not request.user.is_authenticated:
             return {'permisos': {}}
-        from config.permisos import permisos_dict
-        rol = None
+        from config.permisos import permisos_dict, _rol_efectivo
+        # Preferimos el proyecto del URL (la vista que se está ejecutando)
+        # sobre el activo de sesión, para que {{ permisos }} coincida con
+        # lo que @requiere acaba de autorizar.
+        pid = None
         try:
-            rol = request.user.perfil.rol
-        except AttributeError:
+            rm = getattr(request, 'resolver_match', None)
+            if rm and rm.kwargs:
+                pid = rm.kwargs.get('proyecto_id')
+        except Exception:
             pass
-        return {'permisos': permisos_dict(request.user), 'rol_actual': rol}
+        if not pid:
+            pid = request.session.get('proyecto_id')
+        rol = _rol_efectivo(request.user, pid)
+        return {
+            'permisos':    permisos_dict(request.user, pid),
+            'rol_actual':  rol,
+        }
     except Exception:
         return {'permisos': {}}

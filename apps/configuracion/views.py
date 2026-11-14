@@ -5,6 +5,25 @@ from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, ReglaDeteccionInsumo, Reporte, ImagenReporte, MODULOS_REPORTE, ESTADOS_REPORTE, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS, ROLES_BLOQUEADOS
 from config.permisos import requiere
+from apps.registro.utils import log
+
+
+def _permisos_label_map():
+    """{'puede_X': 'Label visible', ...}"""
+    return {campo: label for _, campos in GRUPOS_PERMISOS for campo, label in campos}
+
+
+def _permisos_activos_labels(rol):
+    mp = _permisos_label_map()
+    return [mp[c] for c in TODOS_LOS_PERMISOS if getattr(rol, c, False)]
+
+
+def _diff_permisos(permisos_viejos_set, permisos_nuevos_set):
+    """Devuelve ('agregados', 'quitados') como listas de LABELS visibles."""
+    mp = _permisos_label_map()
+    agregados = [mp[c] for c in TODOS_LOS_PERMISOS if c in permisos_nuevos_set and c not in permisos_viejos_set]
+    quitados  = [mp[c] for c in TODOS_LOS_PERMISOS if c in permisos_viejos_set and c not in permisos_nuevos_set]
+    return agregados, quitados
 
 
 # ── Hub ───────────────────────────────────────────────────────────
@@ -93,9 +112,21 @@ def sunat(request):
 
 @requiere('puede_administrar_usuarios', 'puede_administrar_roles')
 def equipo(request):
-    from apps.proyectos.models import Proyecto
+    from apps.proyectos.models import Proyecto, ProyectoMiembro
 
     tab = request.GET.get('tab', 'usuarios')
+
+    # Overrides de rol por proyecto: {usuario_id: [{'proyecto': P, 'rol': R}, ...]}
+    overrides_map = {}
+    for m in ProyectoMiembro.objects.filter(rol__isnull=False).select_related('proyecto', 'rol'):
+        overrides_map.setdefault(m.usuario_id, []).append({
+            'proyecto': m.proyecto,
+            'rol':      m.rol,
+        })
+
+    def _attach(u):
+        u.overrides_rol = overrides_map.get(u.pk, [])
+        return u
 
     # Usuarios agrupados por proyecto
     grupos = []
@@ -105,16 +136,24 @@ def equipo(request):
     ).order_by('codigo'):
         miembros = list(proyecto.miembros.select_related('usuario__perfil__rol').all())
         if miembros:
-            usuarios_proy = [m.usuario for m in miembros]
+            usuarios_proy = [_attach(m.usuario) for m in miembros]
             grupos.append({'proyecto': proyecto, 'usuarios': usuarios_proy})
             ids_con_proyecto.update(u.pk for u in usuarios_proy)
 
-    sin_proyecto = User.objects.select_related('perfil__rol').exclude(
-        pk__in=ids_con_proyecto
-    ).order_by('username')
+    sin_proyecto = [
+        _attach(u)
+        for u in User.objects.select_related('perfil__rol').exclude(
+            pk__in=ids_con_proyecto
+        ).order_by('username')
+    ]
+
+    total_overrides = sum(len(v) for v in overrides_map.values())
+    usuarios_con_override = len(overrides_map)
+
+    roles_list = list(Rol.objects.prefetch_related('usuarios').all())
 
     roles_data = []
-    for rol in Rol.objects.prefetch_related('usuarios').all():
+    for rol in roles_list:
         permisos_activos = [
             label
             for _, campos in GRUPOS_PERMISOS
@@ -123,6 +162,22 @@ def equipo(request):
         ]
         roles_data.append({'rol': rol, 'permisos_activos': permisos_activos})
 
+    # Matriz permisos × roles para la pestaña "Matriz"
+    matriz_filas = []
+    for grupo, campos in GRUPOS_PERMISOS:
+        for campo, label in campos:
+            matriz_filas.append({
+                'grupo':  grupo,
+                'campo':  campo,
+                'label':  label,
+                'checks': [getattr(rol, campo, False) for rol in roles_list],
+            })
+
+    matriz_roles = [
+        {'rol': rol, 'bloqueado': rol.nombre in ROLES_BLOQUEADOS}
+        for rol in roles_list
+    ]
+
     total_usuarios = User.objects.count()
 
     return render(request, 'configuracion/equipo.html', {
@@ -130,6 +185,10 @@ def equipo(request):
         'sin_proyecto':    sin_proyecto,
         'total_usuarios':  total_usuarios,
         'roles_data':      roles_data,
+        'matriz_filas':    matriz_filas,
+        'matriz_roles':    matriz_roles,
+        'total_overrides':         total_overrides,
+        'usuarios_con_override':   usuarios_con_override,
         'tab_activo':      tab,
     })
 
@@ -148,6 +207,11 @@ def rol_crear(request):
     error = {}
     datos = {}
     superadmin_existe = Rol.objects.filter(es_superadmin=True).exists()
+    # Pre-llenar desde otro rol si viene ?copiar=<pk>
+    rol_copiado = None
+    copiar_pk = request.GET.get('copiar')
+    if copiar_pk:
+        rol_copiado = Rol.objects.filter(pk=copiar_pk).first()
     if request.method == 'POST':
         datos   = request.POST
         nombre  = datos.get('nombre', '').strip()
@@ -166,10 +230,21 @@ def rol_crear(request):
             for campo in TODOS_LOS_PERMISOS:
                 setattr(rol, campo, datos.get(campo) == '1')
             rol.save()
+            labels = _permisos_activos_labels(rol)
+            log(request, 'CREAR', 'Configuración',
+                f'Rol creado: "{rol.nombre}" — {len(labels)} permisos activos'
+                + (f': {", ".join(labels)}' if labels else ''))
             messages.success(request, f'Rol "{rol.nombre}" creado.')
             return redirect('/configuracion/equipo/?tab=roles')
 
-    permisos_checked = [c for c in TODOS_LOS_PERMISOS if datos.get(c) == '1']
+    if request.method == 'POST':
+        permisos_checked = [c for c in TODOS_LOS_PERMISOS if datos.get(c) == '1']
+    elif rol_copiado is not None:
+        permisos_checked = [c for c in TODOS_LOS_PERMISOS if getattr(rol_copiado, c, False)]
+    else:
+        permisos_checked = []
+
+    otros_roles = Rol.objects.exclude(es_superadmin=True).order_by('nombre')
     return render(request, 'configuracion/rol_form.html', {
         'titulo':             'Nuevo Rol',
         'accion':             'crear',
@@ -180,6 +255,8 @@ def rol_crear(request):
         'permisos_checked':   permisos_checked,
         'superadmin_existe':  superadmin_existe,
         'es_este_superadmin': False,
+        'otros_roles':        otros_roles,
+        'rol_copiado':        rol_copiado,
     })
 
 
@@ -200,6 +277,8 @@ def rol_editar(request, pk):
             error['es_superadmin'] = 'Ya existe un rol Superadmin. Solo puede haber uno en el sistema.'
 
         if not error:
+            nombre_viejo = rol.nombre
+            permisos_viejos = {c for c in TODOS_LOS_PERMISOS if getattr(rol, c, False)}
             rol.nombre      = nombre
             rol.descripcion = request.POST.get('descripcion', '').strip()
             # Los permisos de los roles sembrados (Administrador de Obra, Logística,
@@ -210,10 +289,25 @@ def rol_editar(request, pk):
                 for campo in TODOS_LOS_PERMISOS:
                     setattr(rol, campo, request.POST.get(campo) == '1')
             rol.save()
+            # Auditoría: diff de permisos + cambio de nombre
+            permisos_nuevos = {c for c in TODOS_LOS_PERMISOS if getattr(rol, c, False)}
+            agregados, quitados = _diff_permisos(permisos_viejos, permisos_nuevos)
+            partes = []
+            if nombre_viejo != rol.nombre:
+                partes.append(f'renombrado "{nombre_viejo}" → "{rol.nombre}"')
+            if agregados:
+                partes.append(f'permisos agregados: {", ".join(agregados)}')
+            if quitados:
+                partes.append(f'permisos quitados: {", ".join(quitados)}')
+            if not partes:
+                partes.append('sin cambios en permisos')
+            log(request, 'EDITAR', 'Configuración',
+                f'Rol editado: "{rol.nombre}" — ' + ' · '.join(partes))
             messages.success(request, f'Rol "{rol.nombre}" actualizado.')
             return redirect('/configuracion/equipo/?tab=roles')
 
     permisos_checked = [c for c in TODOS_LOS_PERMISOS if getattr(rol, c, False)]
+    otros_roles = Rol.objects.exclude(pk=pk).exclude(es_superadmin=True).order_by('nombre')
     return render(request, 'configuracion/rol_form.html', {
         'titulo':             f'Editar Rol — {rol.nombre}',
         'accion':             'editar',
@@ -226,6 +320,8 @@ def rol_editar(request, pk):
         'permisos_checked':   permisos_checked,
         'superadmin_existe':  superadmin_existe,
         'es_este_superadmin': es_este_superadmin,
+        'otros_roles':        otros_roles,
+        'rol_copiado':        None,
     })
 
 
@@ -237,7 +333,10 @@ def rol_eliminar(request, pk):
             messages.error(request, f'No se puede eliminar "{rol.nombre}": hay usuarios asignados.')
             return redirect('/configuracion/equipo/?tab=roles')
         nombre = rol.nombre
+        n_permisos = sum(1 for c in TODOS_LOS_PERMISOS if getattr(rol, c, False))
         rol.delete()
+        log(request, 'ELIMINAR', 'Configuración',
+            f'Rol eliminado: "{nombre}" (tenía {n_permisos} permisos)')
         messages.success(request, f'Rol "{nombre}" eliminado.')
         return redirect('/configuracion/equipo/?tab=roles')
     return render(request, 'configuracion/rol_confirmar_eliminar.html', {'rol': rol})
@@ -308,6 +407,9 @@ def usuario_crear(request):
                 is_active=True,
             )
             _guardar_perfil(u, rol_id)
+            rol_label = Rol.objects.filter(pk=rol_id).values_list('nombre', flat=True).first() if rol_id else 'sin rol'
+            log(request, 'CREAR', 'Configuración',
+                f'Usuario creado: "{u.username}" (nivel: {nivel}, rol: {rol_label})')
 
             if proyecto_destino:
                 ProyectoMiembro.objects.get_or_create(proyecto=proyecto_destino, usuario=u)
@@ -346,6 +448,15 @@ def usuario_editar(request, pk):
         is_active  = request.POST.get('is_active') == '1'
         rol_id     = request.POST.get('rol_id') or None
 
+        # Captura rol viejo antes del cambio para auditoría
+        rol_viejo_nombre = None
+        try:
+            if u.perfil.rol:
+                rol_viejo_nombre = u.perfil.rol.nombre
+        except AttributeError:
+            pass
+        activo_viejo = u.is_active
+
         u.first_name   = first_name
         u.last_name    = last_name
         u.email        = email
@@ -355,6 +466,17 @@ def usuario_editar(request, pk):
             u.is_active = is_active
         u.save()
         _guardar_perfil(u, rol_id)
+
+        rol_nuevo_nombre = Rol.objects.filter(pk=rol_id).values_list('nombre', flat=True).first() if rol_id else None
+        partes = []
+        if rol_viejo_nombre != rol_nuevo_nombre:
+            partes.append(f'rol: "{rol_viejo_nombre or "sin rol"}" → "{rol_nuevo_nombre or "sin rol"}"')
+        if activo_viejo != u.is_active and u.pk != request.user.pk:
+            partes.append(f'estado: {"activo" if u.is_active else "inactivo"}')
+        if partes:
+            log(request, 'EDITAR', 'Configuración',
+                f'Usuario editado: "{u.username}" — ' + ' · '.join(partes))
+
         messages.success(request, f'Usuario "{u.username}" actualizado.')
         return redirect('configuracion:equipo')
 

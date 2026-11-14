@@ -1,4 +1,4 @@
-<tr>
+<tr class="usuario-fila" data-override="{% if u.overrides_rol %}1{% else %}0{% endif %}">
   <td>
     <div class="d-flex align-items-center gap-2">
       <div style="width:30px;height:30px;border-radius:50%;background:#eff6ff;
@@ -16,11 +16,19 @@
   <td>
     {% if u.perfil.rol %}
     <span style="font-size:.72rem;padding:.2em .55em;border-radius:4px;
-                 background:#eff6ff;color:#1d4ed8;font-weight:600">
+                 background:#eff6ff;color:#1d4ed8;font-weight:600"
+          title="Rol global (aplica a vistas fuera de proyecto)">
       {{ u.perfil.rol.nombre }}
     </span>
     {% else %}
     <span class="text-muted" style="font-size:.78rem">—</span>
+    {% endif %}
+    {% if u.overrides_rol %}
+    <span style="font-size:.6rem;padding:.1em .4em;border-radius:3px;margin-left:.3rem;
+                 background:#fef3c7;color:#92400e;font-weight:700;cursor:help"
+          title="Rol distinto por proyecto:&#10;{% for o in u.overrides_rol %}{{ o.proyecto.codigo }} → {{ o.rol.nombre }}{% if not forloop.last %}&#10;{% endif %}{% endfor %}">
+      <i class="bi bi-diagram-3"></i> {{ u.overrides_rol|length }} override{{ u.overrides_rol|length|pluralize:"s" }}
+    </span>
     {% endif %}
   </td>
   <td class="text-center">
