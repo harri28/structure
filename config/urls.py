@@ -27,6 +27,7 @@ urlpatterns = [
     path('logistica/', include('apps.logistica.urls', namespace='logistica')),
     path('registro/', include('apps.registro.urls', namespace='registro')),
     path('requerimientos/', include('apps.requerimientos.urls', namespace='requerimientos')),
+    path('reportes/', include('apps.reportes.urls', namespace='reportes')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

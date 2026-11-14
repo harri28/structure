@@ -66,6 +66,12 @@
        class="sb-link {% block nav_dashboard_user %}{% endblock %}">
       <i class="bi bi-grid-1x2"></i> Dashboard
     </a>
+    {% if proyecto_activo %}
+    <a href="{% url 'reportes:hub' proyecto_activo.pk %}"
+       class="sb-link sb-sublink {% block nav_reportes_obra %}{% endblock %}">
+      <i class="bi bi-file-earmark-bar-graph"></i> Reportes
+    </a>
+    {% endif %}
     {% endif %}
   </div>
   {% if proyecto_activo %}

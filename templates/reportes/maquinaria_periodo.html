@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Maquinaria — {{ proyecto.codigo }}{% endblock %}
+{% block nav_reportes_obra %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'reportes:hub' proyecto.pk %}">Reportes</a></li>
+<li class="breadcrumb-item active">Maquinaria por período</li>
+{% endblock %}
+
+{% block extra_css %}{% include 'reportes/_print_css.html' %}{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2 no-print">
+  <div>
+    <a href="{% url 'reportes:hub' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Reportes</a>
+    <h4><i class="bi bi-truck me-2" style="color:#ea580c"></i>Maquinaria por período</h4>
+    <div class="text-muted" style="font-size:.85rem">{{ proyecto.codigo }} — {{ proyecto.nombre }}</div>
+  </div>
+  <div class="report-actions">
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Imprimir
+    </button>
+    <a href="{% url 'reportes:maquinaria_periodo_excel' proyecto.pk %}?desde={{ desde|date:'Y-m-d' }}&hasta={{ hasta|date:'Y-m-d' }}&maquinaria={{ maq_id|default_if_none:'' }}"
+       class="btn btn-success btn-sm">
+      <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+    </a>
+  </div>
+</div>
+
+<form method="get" class="card mb-3 no-print">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-end">
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.76rem;font-weight:600">Desde</label>
+        <input type="date" name="desde" value="{{ desde|date:'Y-m-d' }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.76rem;font-weight:600">Hasta</label>
+        <input type="date" name="hasta" value="{{ hasta|date:'Y-m-d' }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" style="font-size:.76rem;font-weight:600">Máquina</label>
+        <select name="maquinaria" class="form-select form-select-sm">
+          <option value="">Todas</option>
+          {% for m in maquinas %}
+          <option value="{{ m.pk }}" {% if m.pk == maq_id %}selected{% endif %}>{{ m.codigo }} — {{ m.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">
+          <i class="bi bi-funnel me-1"></i>Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="report-printable">
+  <div class="print-header mb-2" style="display:none">
+    <style>@media print{.print-header{display:block !important}}</style>
+    <div style="font-size:1.1rem;font-weight:700">Maquinaria trabajada — {{ proyecto.codigo }}</div>
+    <div style="font-size:.9rem">{{ proyecto.nombre }}</div>
+    <div style="font-size:.85rem;color:#444">Período: {{ desde|date:'d/m/Y' }} al {{ hasta|date:'d/m/Y' }}</div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      <table class="table-modern">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Máquina</th>
+            <th>Marca / Modelo</th>
+            <th>Placa</th>
+            <th class="text-center">Partes</th>
+            <th class="text-end">Horas</th>
+            <th class="text-end">Combustible (gal)</th>
+            <th class="text-end">Costo total (S/)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in items %}
+          <tr>
+            <td><code>{{ it.codigo }}</code></td>
+            <td>{{ it.nombre }}</td>
+            <td>{{ it.marca }} {{ it.modelo }}</td>
+            <td>{{ it.placa }}</td>
+            <td class="text-center">{{ it.partes }}</td>
+            <td class="text-end">{{ it.horas|miles }}</td>
+            <td class="text-end">{{ it.combustible|miles }}</td>
+            <td class="text-end fw-semibold">{{ it.costo|miles }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="text-center py-4 text-muted">Sin partes registrados en el período.</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if items %}
+        <tfoot>
+          <tr style="background:#f8fafc;border-top:2px solid #e5e7eb">
+            <th colspan="5" class="text-end" style="font-size:.85rem;padding:.55rem .75rem;text-transform:uppercase;letter-spacing:.05em;color:#374151">Total</th>
+            <th class="text-end" style="font-weight:800;color:#1d4ed8;padding:.55rem .75rem;white-space:nowrap">{{ total_horas|miles }}</th>
+            <th class="text-end" style="font-weight:800;color:#1d4ed8;padding:.55rem .75rem;white-space:nowrap">{{ total_comb|miles }}</th>
+            <th class="text-end" style="font-weight:800;color:#1d4ed8;padding:.55rem .75rem;white-space:nowrap">S/ {{ total_costo|miles }}</th>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

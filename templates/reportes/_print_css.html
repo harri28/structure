@@ -1,0 +1,19 @@
+{% comment %}
+  CSS compartido para los reportes imprimibles: oculta la UI del sistema
+  (sidebar, topbar, breadcrumb, botones de acción) cuando se imprime, y
+  deja el contenido en formato A4 horizontal.
+{% endcomment %}
+<style>
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  body * { visibility: hidden; }
+  .report-printable, .report-printable * { visibility: visible; }
+  .report-printable { position: absolute; left: 0; top: 0; width: 100%; }
+  .no-print, .no-print * { display: none !important; }
+  .card { border: 1px solid #888 !important; box-shadow: none !important; }
+  table { font-size: 10pt; }
+  table th, table td { padding: 4px 6px !important; }
+  thead { background: #e5e7eb !important; -webkit-print-color-adjust: exact; }
+}
+.report-actions { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+</style>

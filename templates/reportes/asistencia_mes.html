@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Asistencia {{ anio }}-{{ mes }} — {{ proyecto.codigo }}{% endblock %}
+{% block nav_reportes_obra %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'reportes:hub' proyecto.pk %}">Reportes</a></li>
+<li class="breadcrumb-item active">Asistencia mensual</li>
+{% endblock %}
+
+{% block extra_css %}{% include 'reportes/_print_css.html' %}
+<style>
+.asist-grid { font-size:.76rem; }
+.asist-grid th.col-dia, .asist-grid td.col-dia { width:22px; text-align:center; padding:2px; }
+.asist-grid td.col-trab { font-size:.78rem; white-space:nowrap; max-width:220px;
+                          overflow:hidden; text-overflow:ellipsis; }
+.asist-cell { display:inline-block; width:18px; height:18px; line-height:18px;
+              font-weight:700; font-size:.68rem; border-radius:3px; }
+.asist-P   { background:#dcfce7; color:#15803d; }
+.asist-F   { background:#fee2e2; color:#b91c1c; }
+.asist-T   { background:#fef3c7; color:#92400e; }
+.asist-PM  { background:#e0e7ff; color:#3730a3; }
+.asist-D   { background:#f3f4f6; color:#6b7280; }
+.asist-FE  { background:#ede9fe; color:#6d28d9; }
+.asist-grid tfoot td { font-weight:700; background:#f8fafc; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2 no-print">
+  <div>
+    <a href="{% url 'reportes:hub' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Reportes</a>
+    <h4><i class="bi bi-calendar-check me-2" style="color:#0891b2"></i>Asistencia mensual</h4>
+    <div class="text-muted" style="font-size:.85rem">{{ proyecto.codigo }} — {{ mes_label }} {{ anio }}</div>
+  </div>
+  <div class="report-actions">
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Imprimir
+    </button>
+    <a href="{% url 'reportes:asistencia_mes_excel' proyecto.pk %}?anio={{ anio }}&mes={{ mes }}&cuadrilla={{ cuadrilla_id|default_if_none:'' }}"
+       class="btn btn-success btn-sm">
+      <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+    </a>
+  </div>
+</div>
+
+<form method="get" class="card mb-3 no-print">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-end">
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.76rem;font-weight:600">Año</label>
+        <select name="anio" class="form-select form-select-sm">
+          {% for a in anios %}<option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.76rem;font-weight:600">Mes</label>
+        <select name="mes" class="form-select form-select-sm">
+          {% for i in "123456789"|make_list %}{% endfor %}
+          <option value="1"  {% if mes == 1 %}selected{% endif %}>Enero</option>
+          <option value="2"  {% if mes == 2 %}selected{% endif %}>Febrero</option>
+          <option value="3"  {% if mes == 3 %}selected{% endif %}>Marzo</option>
+          <option value="4"  {% if mes == 4 %}selected{% endif %}>Abril</option>
+          <option value="5"  {% if mes == 5 %}selected{% endif %}>Mayo</option>
+          <option value="6"  {% if mes == 6 %}selected{% endif %}>Junio</option>
+          <option value="7"  {% if mes == 7 %}selected{% endif %}>Julio</option>
+          <option value="8"  {% if mes == 8 %}selected{% endif %}>Agosto</option>
+          <option value="9"  {% if mes == 9 %}selected{% endif %}>Septiembre</option>
+          <option value="10" {% if mes == 10 %}selected{% endif %}>Octubre</option>
+          <option value="11" {% if mes == 11 %}selected{% endif %}>Noviembre</option>
+          <option value="12" {% if mes == 12 %}selected{% endif %}>Diciembre</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" style="font-size:.76rem;font-weight:600">Cuadrilla</label>
+        <select name="cuadrilla" class="form-select form-select-sm">
+          <option value="">Todas</option>
+          {% for c in cuadrillas %}
+          <option value="{{ c.pk }}" {% if c.pk == cuadrilla_id %}selected{% endif %}>{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">
+          <i class="bi bi-funnel me-1"></i>Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="report-printable">
+  <div class="print-header mb-2" style="display:none">
+    <style>@media print{.print-header{display:block !important}}</style>
+    <div style="font-size:1.1rem;font-weight:700">Asistencia Mensual — {{ proyecto.codigo }}</div>
+    <div style="font-size:.9rem">{{ proyecto.nombre }} · {{ mes_label }} {{ anio }}</div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0" style="overflow-x:auto">
+      <table class="asist-grid" style="min-width:100%;border-collapse:collapse">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:4px 8px;background:#f3f4f6;position:sticky;left:0;z-index:2">Trabajador</th>
+            {% for d in dias %}<th class="col-dia" style="background:#f3f4f6">{{ d }}</th>{% endfor %}
+            <th class="col-dia" style="background:#dcfce7;color:#15803d">P</th>
+            <th class="col-dia" style="background:#fee2e2;color:#b91c1c">F</th>
+            <th class="col-dia" style="background:#fef3c7;color:#92400e">T</th>
+            <th class="col-dia" style="background:#f3f4f6">Otros</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in filas %}
+          <tr>
+            <td class="col-trab" style="padding:3px 8px;background:#fff;position:sticky;left:0;z-index:1">
+              {{ f.trabajador.apellidos }}, {{ f.trabajador.nombres }}
+            </td>
+            {% for d in f.dias %}
+            <td class="col-dia">
+              {% if d.estado %}
+              <span class="asist-cell asist-{{ d.estado }}">{{ d.estado }}</span>
+              {% else %}
+              <span style="color:#d1d5db">·</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+            <td class="col-dia" style="font-weight:700">{{ f.p }}</td>
+            <td class="col-dia" style="font-weight:700;color:#b91c1c">{{ f.f }}</td>
+            <td class="col-dia" style="font-weight:700;color:#92400e">{{ f.t }}</td>
+            <td class="col-dia" style="font-weight:700;color:#6b7280">{{ f.otros }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="{{ dias|length|add:5 }}" class="text-center py-4 text-muted">Sin trabajadores activos con asistencia en el período.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-2" style="font-size:.75rem;color:#6b7280" id="leyenda">
+    <strong>Leyenda:</strong>
+    <span class="asist-cell asist-P me-1">P</span> Presente ·
+    <span class="asist-cell asist-F me-1">F</span> Falta ·
+    <span class="asist-cell asist-T me-1">T</span> Tardanza ·
+    <span class="asist-cell asist-PM me-1">PM</span> Permiso ·
+    <span class="asist-cell asist-D me-1">D</span> Descanso ·
+    <span class="asist-cell asist-FE me-1">FE</span> Feriado
+  </div>
+</div>
+{% endblock %}
