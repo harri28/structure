@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-from .models import ConfigEmpresa, ConfigSunat, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, ReglaDeteccionInsumo, Reporte, ImagenReporte, MODULOS_REPORTE, ESTADOS_REPORTE, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS, ROLES_BLOQUEADOS
+from .models import ConfigEmpresa, Rol, PerfilUsuario, UnidadMedida, CargoManoObra, ReglaDeteccionInsumo, Reporte, ImagenReporte, MODULOS_REPORTE, ESTADOS_REPORTE, GRUPOS_PERMISOS, TODOS_LOS_PERMISOS, ROLES_BLOQUEADOS
 from config.permisos import requiere
 from apps.registro.utils import log
 
@@ -31,10 +31,8 @@ def _diff_permisos(permisos_viejos_set, permisos_nuevos_set):
 @requiere('puede_configurar_empresa', 'puede_administrar_usuarios', 'puede_administrar_roles')
 def hub(request):
     config = ConfigEmpresa.get()
-    sunat  = ConfigSunat.get()
     return render(request, 'configuracion/hub.html', {
         'config':      config,
-        'sunat':       sunat,
         'n_usuarios':  User.objects.filter(is_active=True).count(),
         'n_roles':     Rol.objects.count(),
         'n_unidades':  UnidadMedida.objects.filter(activo=True).count(),
@@ -72,39 +70,6 @@ def empresa(request):
     else:
         form = EmpresaForm(instance=config)
     return render(request, 'configuracion/empresa.html', {'form': form, 'config': config})
-
-
-
-class SunatForm(forms.ModelForm):
-    class Meta:
-        model  = ConfigSunat
-        fields = ['regimen_tributario', 'usuario_sol', 'clave_sol',
-                  'tipo_comprobante', 'serie_factura', 'serie_boleta',
-                  'numero_correlativo', 'ose']
-        widgets = {
-            'regimen_tributario': forms.Select(attrs={'class': 'form-select'}),
-            'usuario_sol':        forms.TextInput(attrs={'class': 'form-control'}),
-            'clave_sol':          forms.PasswordInput(attrs={'class': 'form-control', 'render_value': True}),
-            'tipo_comprobante':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: FACTURA'}),
-            'serie_factura':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: F001'}),
-            'serie_boleta':       forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: B001'}),
-            'numero_correlativo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 00000001'}),
-            'ose':                forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: SUNAT, Efact, Nubefact…'}),
-        }
-
-
-def sunat(request):
-    config_sunat = ConfigSunat.get()
-    if request.method == 'POST':
-        form = SunatForm(request.POST, instance=config_sunat)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Configuración SUNAT guardada.')
-            return redirect('configuracion:sunat')
-    else:
-        form = SunatForm(instance=config_sunat)
-    return render(request, 'configuracion/sunat.html', {'form': form})
-
 
 
 

@@ -118,27 +118,6 @@
     </a>
   </div>
 
-  <div class="col-md-6 col-lg-4">
-    <a href="{% url 'configuracion:sunat' %}" class="cfg-card">
-      <div class="d-flex align-items-center gap-3">
-        <div class="cfg-icon" style="background:#fff1f2">
-          <i class="bi bi-receipt" style="color:#e11d48"></i>
-        </div>
-        <div>
-          <div class="cfg-title">Configuración SUNAT</div>
-          <div class="cfg-desc">Régimen tributario, credenciales SOL y series de comprobantes electrónicos</div>
-        </div>
-      </div>
-      <div class="cfg-meta">
-        {% if sunat.regimen_tributario %}
-        <i class="bi bi-check-circle-fill me-1"></i>{{ sunat.get_regimen_tributario_display }}
-        {% else %}
-        <i class="bi bi-exclamation-circle me-1"></i>Sin configurar
-        {% endif %}
-      </div>
-    </a>
-  </div>
-
 </div>
 
 <!-- ── Usuarios ── -->

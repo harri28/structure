@@ -31,32 +31,6 @@ class ConfigEmpresa(models.Model):
         return obj
 
 
-class ConfigSunat(models.Model):
-    REGIMENES = [
-        ('RG',  'Régimen General'),
-        ('RER', 'Régimen Especial de Renta'),
-        ('RUS', 'Nuevo RUS'),
-        ('MYPE', 'Régimen MYPE Tributario'),
-    ]
-    regimen_tributario   = models.CharField('Régimen Tributario', max_length=10, choices=REGIMENES, blank=True)
-    usuario_sol          = models.CharField('Usuario SOL',        max_length=100, blank=True)
-    clave_sol            = models.CharField('Clave SOL',          max_length=100, blank=True)
-    tipo_comprobante     = models.CharField('Tipo de Comprobante por defecto', max_length=20, blank=True)
-    serie_factura        = models.CharField('Serie Factura',      max_length=10,  blank=True)
-    serie_boleta         = models.CharField('Serie Boleta',       max_length=10,  blank=True)
-    numero_correlativo   = models.CharField('N° Correlativo',     max_length=20,  blank=True)
-    ose                  = models.CharField('OSE / PSE',          max_length=100, blank=True)
-    updated_at           = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Configuración SUNAT'
-
-    @classmethod
-    def get(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj
-
-
 # ── Roles y Permisos ──────────────────────────────────────────────
 
 # Roles sembrados por la migración 0019 (configuracion/migrations/0019_seed_roles_operativos.py).

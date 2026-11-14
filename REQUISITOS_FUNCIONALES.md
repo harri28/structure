@@ -459,9 +459,11 @@ por todos los proyectos, con código único, descripción, categoría y unidad.
 razón social, RUC, dirección, teléfono, email, logo y color/imagen de marca. *(IGV, sitio web y
 moneda fueron removidos: los precios vienen con/sin IGV directo del proveedor.)*
 
-**RF-111.** El sistema debe gestionar la configuración de **SUNAT/Factiliza** (`ConfigSunat`),
-catálogos de **Unidades de Medida**, **precisión decimal**, **cargos de mano de obra** y
-**reglas de detección de insumos**.
+**RF-111.** El sistema debe gestionar catálogos de **Unidades de Medida**, **precisión decimal**,
+**cargos de mano de obra** y **reglas de detección de insumos**. *(La configuración SUNAT/Factiliza
+para emisión de comprobantes fue removida — este sistema no emite facturas ni boletas. Se conserva
+la consulta de RUC/DNI contra SUNAT/RENIEC vía `maquinaria:consulta_doc` para validar nombres y
+empresas en Cuadrillas, Maquinaria, Cotizaciones y Guías.)*
 
 **RF-112.** El sistema debe gestionar **usuarios y roles** (Administración), y el **perfil** de
 cada usuario (`PerfilUsuario`: vínculo User↔Rol, teléfono).
