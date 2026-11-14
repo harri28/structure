@@ -132,11 +132,23 @@ def crear(request, proyecto_id):
                 messages.success(request, f'{tipo_txt} REQ{req.numero} guardado como borrador.')
             return redirect('requerimientos:detalle', pk=req.pk)
     else:
+        # Solicitante y cargo salen del PERFIL del usuario logueado — no del
+        # responsable del proyecto. Así, cada rol (Jefe de obra, Almacenero,
+        # Logística) ve sus propios datos. Para cambiar nombre/cargo, se
+        # edita el Perfil (/configuracion/perfil/) o desde el superadmin.
+        cargo_user = ''
+        try:
+            cargo_user = request.user.perfil.cargo or (
+                request.user.perfil.rol.nombre if request.user.perfil.rol else ''
+            )
+        except AttributeError:
+            pass
+
         form = RequerimientoForm(proyecto=proyecto, initial={
             'numero': siguiente,
             'obra': proyecto.nombre,
-            'solicitante': proyecto.responsable,
-            'cargo_solicitante': proyecto.cargo_responsable,
+            'solicitante': request.user.get_full_name() or request.user.username,
+            'cargo_solicitante': cargo_user,
             'sector_obra': proyecto.sector,
         })
         formset = DetalleRequerimientoFormSet(
