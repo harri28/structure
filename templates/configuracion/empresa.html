@@ -16,11 +16,13 @@
   <div class="text-muted">Información que aparecerá en documentos y reportes</div>
 </div>
 
-<form method="post" enctype="multipart/form-data" class="form-compact">
-  {% csrf_token %}
-  <div class="row g-3">
+<div class="row g-3">
 
-    <div class="col-lg-8">
+  <!-- ── Identificación ─────────────────────────────────────── -->
+  <div class="col-lg-8">
+    <form method="post" class="form-compact">
+      {% csrf_token %}
+      <input type="hidden" name="section" value="identificacion">
       <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span>Identificación</span>
@@ -50,67 +52,82 @@
               <label class="form-label">E-mail</label>
               {{ form.email }}
             </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="col-lg-4">
-      <!-- Apariencia -->
-      <div class="card mb-3">
-        <div class="card-header">Apariencia del Sistema</div>
-        <div class="card-body" style="padding:1.25rem">
-          <label class="form-label" style="font-size:.78rem">Color primario</label>
-          <div class="d-flex align-items-center gap-2">
-            {{ form.color_primario }}
-            <span class="text-muted" style="font-size:.8rem">{{ config.color_primario|default:'#2563eb' }}</span>
-          </div>
-          <div class="form-text" style="font-size:.72rem">Se aplica a botones, enlaces activos y acentos en todo el sistema.</div>
-
-          <div class="row g-2 mt-3">
-            <div class="col-6">
-              <label class="form-label" style="font-size:.78rem">Imagen de marca (sidebar)</label>
-              {% if config.imagen_marca %}
-              <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center">
-                <img src="{{ config.imagen_marca.url }}" alt="Imagen de marca"
-                     style="max-height:52px;max-width:100%;object-fit:contain">
-              </div>
-              {% else %}
-              <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.72rem">
-                Sin imagen cargada
-              </div>
-              {% endif %}
-              {{ form.imagen_marca }}
-              <div class="form-text" style="font-size:.7rem;line-height:1.3">
-                Logo del sidebar, Guía de Remisión y Solicitud de Cotización. PNG horizontal, fondo transparente.
-              </div>
-            </div>
-
-            <div class="col-6">
-              <label class="form-label" style="font-size:.78rem">Favicon</label>
-              {% if config.favicon %}
-              <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center">
-                <img src="{{ config.favicon.url }}" alt="Favicon"
-                     style="max-height:32px;max-width:32px;object-fit:contain">
-              </div>
-              {% else %}
-              <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.72rem">
-                Sin favicon
-              </div>
-              {% endif %}
-              {{ form.favicon }}
-              <div class="form-text" style="font-size:.7rem;line-height:1.3">
-                Ícono de la pestaña del navegador. PNG cuadrado 32×32 o 64×64. Se aplica también en la pantalla de inicio de sesión.
+            <div class="col-md-4">
+              <label class="form-label">Color primario</label>
+              <div class="d-flex align-items-center gap-2">
+                {{ form.color_primario }}
+                <span class="text-muted" style="font-size:.8rem">{{ config.color_primario|default:'#2563eb' }}</span>
               </div>
             </div>
           </div>
+          <div class="form-text mt-2" style="font-size:.72rem">
+            El color se aplica a botones, enlaces activos y acentos en todo el sistema.
+          </div>
         </div>
       </div>
-
-    </div>
-
+    </form>
   </div>
 
-</form>
+  <!-- ── Apariencia (2 forms independientes dentro) ────────── -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">Apariencia del Sistema</div>
+      <div class="card-body" style="padding:1rem">
+
+        <!-- Imagen de marca -->
+        <form method="post" enctype="multipart/form-data" class="form-compact mb-3 pb-3"
+              style="border-bottom:1px solid #f3f4f6">
+          {% csrf_token %}
+          <input type="hidden" name="section" value="imagen_marca">
+          <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.78rem">
+            <span>Imagen de marca (sidebar)</span>
+          </label>
+          {% if config.imagen_marca %}
+          <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center">
+            <img src="{{ config.imagen_marca.url }}" alt="Imagen de marca"
+                 style="max-height:52px;max-width:100%;object-fit:contain">
+          </div>
+          {% else %}
+          <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.72rem">
+            Sin imagen cargada
+          </div>
+          {% endif %}
+          {{ form_imagen.imagen_marca }}
+          <div class="form-text" style="font-size:.7rem;line-height:1.3;margin-top:.3rem">
+            Logo del sidebar, Guía de Remisión y Solicitud de Cotización. PNG horizontal, fondo transparente.
+          </div>
+          <button type="submit" class="btn btn-outline-primary btn-sm w-100 mt-2">
+            <i class="bi bi-upload me-1"></i>Guardar imagen de marca
+          </button>
+        </form>
+
+        <!-- Favicon -->
+        <form method="post" enctype="multipart/form-data" class="form-compact">
+          {% csrf_token %}
+          <input type="hidden" name="section" value="favicon">
+          <label class="form-label" style="font-size:.78rem">Favicon</label>
+          {% if config.favicon %}
+          <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center">
+            <img src="{{ config.favicon.url }}" alt="Favicon"
+                 style="max-height:32px;max-width:32px;object-fit:contain">
+          </div>
+          {% else %}
+          <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.72rem">
+            Sin favicon
+          </div>
+          {% endif %}
+          {{ form_favicon.favicon }}
+          <div class="form-text" style="font-size:.7rem;line-height:1.3;margin-top:.3rem">
+            Ícono de la pestaña del navegador. PNG cuadrado 32×32 o 64×64. Se aplica también en la pantalla de inicio de sesión.
+          </div>
+          <button type="submit" class="btn btn-outline-primary btn-sm w-100 mt-2">
+            <i class="bi bi-upload me-1"></i>Guardar favicon
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

@@ -39,7 +39,7 @@ def hub(request):
 class EmpresaForm(forms.ModelForm):
     class Meta:
         model  = ConfigEmpresa
-        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email', 'color_primario', 'imagen_marca', 'favicon']
+        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email', 'color_primario']
         widgets = {
             'razon_social':   forms.TextInput(attrs={'class': 'form-control'}),
             'ruc':            forms.TextInput(attrs={'class': 'form-control', 'maxlength': 11}),
@@ -47,25 +47,70 @@ class EmpresaForm(forms.ModelForm):
             'telefono':       forms.TextInput(attrs={'class': 'form-control'}),
             'email':          forms.EmailInput(attrs={'class': 'form-control'}),
             'color_primario': forms.TextInput(attrs={'class': 'form-control form-control-color', 'type': 'color'}),
-            'imagen_marca':   forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'favicon':        forms.ClearableFileInput(attrs={'class': 'form-control',
-                                                              'accept': 'image/png,image/x-icon,image/svg+xml'}),
+        }
+
+
+class ImagenMarcaForm(forms.ModelForm):
+    class Meta:
+        model  = ConfigEmpresa
+        fields = ['imagen_marca']
+        widgets = {
+            'imagen_marca': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+
+class FaviconForm(forms.ModelForm):
+    class Meta:
+        model  = ConfigEmpresa
+        fields = ['favicon']
+        widgets = {
+            'favicon': forms.ClearableFileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/png,image/x-icon,image/svg+xml',
+            }),
         }
 
 
 @requiere('puede_configurar_empresa')
 def empresa(request):
     config = ConfigEmpresa.get()
-    if request.method == 'POST':
-        form = EmpresaForm(request.POST, request.FILES, instance=config)
+    section = request.POST.get('section') if request.method == 'POST' else None
+
+    if section == 'imagen_marca':
+        form_imagen = ImagenMarcaForm(request.POST, request.FILES, instance=config)
+        if form_imagen.is_valid():
+            form_imagen.save()
+            messages.success(request, 'Imagen de marca actualizada.')
+            return redirect('configuracion:empresa')
+    elif section == 'favicon':
+        form_favicon = FaviconForm(request.POST, request.FILES, instance=config)
+        if form_favicon.is_valid():
+            form_favicon.save()
+            messages.success(request, 'Favicon actualizado.')
+            return redirect('configuracion:empresa')
+    elif section == 'identificacion':
+        form = EmpresaForm(request.POST, instance=config)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Configuración guardada.')
+            messages.success(request, 'Datos del consorcio actualizados.')
             return redirect('configuracion:empresa')
     else:
         form = EmpresaForm(instance=config)
+
+    # Formularios vacíos por defecto para los que no se hayan procesado arriba
+    if 'form' not in locals():
+        form = EmpresaForm(instance=config)
+    if 'form_imagen' not in locals():
+        form_imagen = ImagenMarcaForm(instance=config)
+    if 'form_favicon' not in locals():
+        form_favicon = FaviconForm(instance=config)
+
     return render(request, 'configuracion/empresa.html', {
-        'form': form, 'config': config, 'tab_activo_config': 'empresa',
+        'form':          form,
+        'form_imagen':   form_imagen,
+        'form_favicon':  form_favicon,
+        'config':        config,
+        'tab_activo_config': 'empresa',
     })
 
 
