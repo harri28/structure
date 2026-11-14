@@ -37,8 +37,9 @@ def _errores_saldo_global(formset, excluir_req_pk=None):
             errores.append(
                 f'"{ins.descripcion}": pediste {cant} pero solo quedan {disp} '
                 f'{ins.unidad or "und"} disponibles en el presupuesto. '
-                f'Revisá otros REQ aprobados que consumen este insumo, o '
-                f'marcá este requerimiento como "Ajuste" si es un adicional.'
+                f'Ya hay otros REQ en curso (enviados o aprobados) que '
+                f'comprometen este insumo. Si es un adicional de obra, '
+                f'marcá este requerimiento como "Ajuste".'
             )
     return errores
 
@@ -386,6 +387,35 @@ def enviar(request, pk):
     from django.views.decorators.http import require_POST
     req = get_object_or_404(Requerimiento, pk=pk)
     if request.method == 'POST' and req.estado in ('BORRADOR', 'SOLICITADO'):
+        # Validar saldo global antes de pasar a ENVIADO: puede haber otros
+        # REQs enviados/aprobados después de que este se guardó como borrador
+        # que juntos exceden el presupuesto. Modo ajuste queda exento.
+        if not req.es_ajuste:
+            from apps.presupuesto.services import saldo_disponible_insumo, consolidar_por_insumo
+            from apps.presupuesto.models import InsumoPresupuesto
+            pares = [(d.insumo_id, d.cantidad_requerida)
+                     for d in req.detalles.all()
+                     if d.insumo_id and d.cantidad_requerida]
+            pedido = consolidar_por_insumo(pares)
+            insumos_por_id = {ins.pk: ins for ins in
+                              InsumoPresupuesto.objects.filter(pk__in=pedido.keys())}
+            errores = []
+            for insumo_id, cant in pedido.items():
+                ins = insumos_por_id.get(insumo_id)
+                if not ins:
+                    continue
+                disp = saldo_disponible_insumo(ins, excluir_req_pk=req.pk)
+                if cant > disp:
+                    errores.append(
+                        f'"{ins.descripcion}": pedís {cant} pero quedan '
+                        f'{disp} {ins.unidad or "und"}. Hay otros REQ en curso '
+                        f'que ya comprometen este insumo.'
+                    )
+            if errores:
+                for e in errores:
+                    messages.error(request, e)
+                return redirect('requerimientos:detalle', pk=req.pk)
+
         estado_previo = req.estado
         req.estado = 'ENVIADO'
         req.save(update_fields=['estado'])

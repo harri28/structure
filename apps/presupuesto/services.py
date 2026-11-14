@@ -1,39 +1,51 @@
 """Servicios de dominio sobre el presupuesto — invariantes globales de saldo.
 
 El contador `InsumoPresupuesto.cantidad` solo se descuenta al emitir la guía
-de remisión. Entre la aprobación del REQ y la emisión de la guía existe un
-"gap" donde las cantidades aprobadas son compromisos reales contra el
+de remisión. Entre la creación del REQ y la emisión de la guía existe un
+"gap" donde las cantidades pedidas son compromisos reales contra el
 presupuesto pero no están reflejadas en ningún saldo. Este módulo expone
 el saldo global de cada insumo descontando esos compromisos vigentes.
 """
 from collections import defaultdict
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import DecimalField, Sum, Value
+from django.db.models.functions import Coalesce
 
 
-# REQs cuya `cantidad_aprobada` representa un compromiso efectivo contra el
-# presupuesto. BORRADOR / SOLICITADO / ENVIADO / EN_REVISION aún no están
-# aprobados; ANULADO libera el compromiso.
-ESTADOS_REQ_COMPROMETE = ('APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO')
+# REQs cuyo pedido representa un compromiso efectivo contra el presupuesto.
+# Incluye los estados "in-flight" (SOLICITADO/ENVIADO/EN_REVISION) para que
+# no se puedan crear o enviar múltiples REQs que, sumados, excedan lo
+# presupuestado antes de que Logística apruebe el primero.
+# BORRADOR queda fuera: son borradores que pueden abandonarse. ANULADO
+# también queda fuera: libera el compromiso.
+ESTADOS_REQ_COMPROMETE = (
+    'SOLICITADO', 'ENVIADO', 'EN_REVISION',
+    'APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO',
+)
 
 
 def saldo_disponible_insumo(insumo, excluir_req_pk=None):
     """Saldo global disponible del insumo (Decimal).
 
     Fórmula:
-        disponible = cantidad_total − Σ cantidad_aprobada en DetalleRequerimiento
-                     de REQs del mismo proyecto cuyo estado está en
-                     ESTADOS_REQ_COMPROMETE.
+        disponible = cantidad_total
+                   − Σ Coalesce(cantidad_aprobada, cantidad_requerida) en
+                     DetalleRequerimiento de REQs del mismo proyecto cuyo
+                     estado está en ESTADOS_REQ_COMPROMETE.
+
+    Se prefiere `cantidad_aprobada` cuando ya está seteada (Logística lo
+    aprobó); si no (REQs enviados pero no revisados), se usa
+    `cantidad_requerida` — pesimista pero seguro: evita que se cuelen
+    pedidos simultáneos que juntos excedan el presupuesto.
 
     No se suman cotizaciones ni guías aparte: toda cotización respeta el
     saldo cotizable por REQ (`_saldo_cotizable` en apps/almacen/views.py), y
-    toda guía nace de una cotización aprobada. Validando a nivel de
-    aprobación de REQ, los pasos posteriores quedan implícitamente topados.
+    toda guía nace de una cotización aprobada. Validando a nivel de REQ,
+    los pasos posteriores quedan implícitamente topados.
 
-    `excluir_req_pk` descuenta el propio REQ al re-aprobarlo (para no
-    contarse a sí mismo). En el flujo normal el REQ pasa a EN_REVISION
-    antes de validar, así que esto rara vez hace falta.
+    `excluir_req_pk` descuenta el propio REQ para no contarse a sí mismo
+    cuando se está editando o re-aprobando.
     """
     from apps.requerimientos.models import DetalleRequerimiento
 
@@ -44,7 +56,14 @@ def saldo_disponible_insumo(insumo, excluir_req_pk=None):
     )
     if excluir_req_pk:
         qs = qs.exclude(requerimiento_id=excluir_req_pk)
-    comprometido = qs.aggregate(s=Sum('cantidad_aprobada'))['s'] or Decimal('0')
+    dec = DecimalField(max_digits=18, decimal_places=4)
+    comprometido = qs.aggregate(
+        s=Sum(
+            Coalesce('cantidad_aprobada', 'cantidad_requerida', Value(Decimal('0')),
+                     output_field=dec),
+            output_field=dec,
+        )
+    )['s'] or Decimal('0')
     return (insumo.cantidad_total or Decimal('0')) - comprometido
 
 
