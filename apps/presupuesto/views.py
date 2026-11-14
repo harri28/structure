@@ -190,15 +190,18 @@ def detalle(request, pk):
 
 @requiere('puede_ver_presupuesto')
 def insumos(request, pk):
+    from django.db.models import Sum
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     tipo_sel = request.GET.get('tipo', '')
     qs_all = presupuesto.insumos.all()
     qs = qs_all.filter(tipo=tipo_sel) if tipo_sel else qs_all
+    total_sum = qs.aggregate(s=Sum('total'))['s'] or 0
     return render(request, 'presupuesto/insumos.html', {
         'presupuesto':   presupuesto,
         'proyecto':      presupuesto.proyecto,
         'insumos':       qs,
         'insumos_total': qs_all.count(),
+        'total_sum':     total_sum,
         'tipos':         TIPOS_RECURSO,
         'tipo_sel':      tipo_sel,
         'totales': {

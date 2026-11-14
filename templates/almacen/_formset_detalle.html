@@ -28,7 +28,7 @@
     <!-- Precio (opcional según formset) -->
     {% if form.precio_unitario %}
     <div class="col-md-2">
-      <label class="form-label">P.U. (S/.)</label>
+      <label class="form-label">P.U. (S/)</label>
       <input type="number" step="0.01" name="{{ form.precio_unitario.html_name }}"
              value="{{ form.precio_unitario.value|default:'' }}"
              class="form-control form-control-sm" placeholder="0.00">

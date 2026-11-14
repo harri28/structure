@@ -69,7 +69,7 @@
           <th>Unidad</th>
           <th class="text-end">Cantidad</th>
           <th class="text-end">Costo Unit.</th>
-          <th class="text-end">Total (S/.)</th>
+          <th class="text-end">Total (S/)</th>
         </tr>
       </thead>
       <tbody>
@@ -100,6 +100,20 @@
         </td></tr>
         {% endfor %}
       </tbody>
+      {% if insumos %}
+      <tfoot>
+        <tr style="background:#f8fafc;border-top:2px solid #e5e7eb">
+          <th colspan="6" class="text-end"
+              style="font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:#374151;padding:.55rem .75rem">
+            Total {% if tipo_sel %}({{ tipo_sel }}){% endif %}
+          </th>
+          <th class="text-end"
+              style="font-size:.95rem;font-weight:800;color:#1d4ed8;padding:.55rem .75rem">
+            S/ {{ total_sum|floatformat:2 }}
+          </th>
+        </tr>
+      </tfoot>
+      {% endif %}
     </table>
   </div>
 </div>

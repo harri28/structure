@@ -70,8 +70,8 @@
       <tr>
         <td class="text-muted fw-semibold">{{ a.codigo }}</td>
         <td>{{ a.nombre }}</td>
-        <td class="text-end fw-semibold">S/. {{ a.pu }}</td>
-        <td class="text-end text-muted">S/. {{ a.ml_media }}</td>
+        <td class="text-end fw-semibold">S/ {{ a.pu }}</td>
+        <td class="text-end text-muted">S/ {{ a.ml_media }}</td>
         <td class="text-end">
           <span class="badge {% if a.diff_pct > 80 %}bg-danger{% else %}bg-warning text-dark{% endif %}">
             {{ a.diff_pct }}%

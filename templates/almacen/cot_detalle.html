@@ -47,7 +47,7 @@
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <span>Materiales Cotizados</span>
-    <strong>Total: S/. <span id="cot-total">{{ cot.total|floatformat:2 }}</span></strong>
+    <strong>Total: S/ <span id="cot-total">{{ cot.total|floatformat:2 }}</span></strong>
   </div>
   <div class="card-body p-0">
     <table class="table table-sm mb-0 align-middle" id="tabla-cot">
@@ -57,8 +57,8 @@
           <th>Descripción</th>
           <th style="width:70px">Unidad</th>
           <th style="width:140px" class="text-end">Cantidad</th>
-          <th style="width:140px" class="text-end">P.U. (S/.)</th>
-          <th style="width:120px" class="text-end">Subtotal (S/.)</th>
+          <th style="width:140px" class="text-end">P.U. (S/)</th>
+          <th style="width:120px" class="text-end">Subtotal (S/)</th>
           {% if cot.estado == 'PENDIENTE' %}<th style="width:44px"></th>{% endif %}
         </tr>
       </thead>
