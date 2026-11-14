@@ -68,75 +68,201 @@ def proyecto_dashboard(request, pk):
     if _sin_dashboard(request.user):
         return _dashboard_del_rol(request.user, proyecto.pk)
 
-    from apps.requerimientos.models import Requerimiento
-    from apps.almacen.models import Cotizacion, OrdenCompra, Entrada
+    from apps.requerimientos.models import Requerimiento, ESTADOS_REQ
+    from apps.almacen.models import Entrada, DetalleSalida
     from apps.presupuesto.models import Presupuesto
+    from apps.maquinaria.models import Cuadrilla, RegistroMaquinaria, Asistencia, Trabajador
+    from django.db.models import Sum, Q, Value, F, DecimalField as DFld
+    from django.db.models.functions import Coalesce
+    from django.utils import timezone
+    from datetime import timedelta
+    from decimal import Decimal
 
+    # ── Presupuesto base ────────────────────────────────────────────
     presupuesto_obj   = None
     presupuesto_total = None
-    pres_detalle      = {}
     try:
         presupuesto_obj   = proyecto.presupuesto
         presupuesto_total = presupuesto_obj.total_presupuesto()
-        pres_detalle = {
-            'costo_directo':    presupuesto_obj.costo_directo(),
-            'gg_pct':           presupuesto_obj.gastos_generales_pct,
-            'gastos_generales': presupuesto_obj.gastos_generales(),
-            'ut_pct':           presupuesto_obj.utilidad_pct,
-            'utilidad':         presupuesto_obj.utilidad(),
-            'sub_total':        presupuesto_obj.sub_total(),
-            'igv_pct':          presupuesto_obj.igv_pct,
-            'igv':              presupuesto_obj.igv(),
-            'total':            presupuesto_total,
-        }
     except Presupuesto.DoesNotExist:
         pass
 
-    reqs_pendientes    = Requerimiento.objects.filter(proyecto=proyecto, estado='ENVIADO').count()
-    cots_pendientes    = Cotizacion.objects.filter(proyecto=proyecto, estado='PENDIENTE').count()
-    ocs_activas        = OrdenCompra.objects.filter(proyecto=proyecto, estado__in=['BORRADOR', 'ENVIADA']).count()
-    reqs_recientes     = Requerimiento.objects.filter(proyecto=proyecto).order_by('-created_at')[:8]
-    entradas_recientes = Entrada.objects.filter(proyecto=proyecto).order_by('-created_at')[:6]
-
-    # ── KPIs de insumos ──────────────────────────────────────────────
-    ins_n_total = ins_n_con_req = ins_n_sin_req = ins_n_excedidos = 0
+    # ── Avance del presupuesto (costo ejecutado por aprobados) ──────
+    avance_presupuesto = {'total': None, 'ejecutado': Decimal('0'), 'pct': 0}
+    insumos_alerta = []
+    top_insumos = []
+    avance_partidas = []
     if presupuesto_obj:
-        from django.db.models import Sum, Q, Value, DecimalField as DFld
-        from django.db.models.functions import Coalesce
+        # Costo total y ejecutado por insumo
         qs_ins = presupuesto_obj.insumos.annotate(
             total_aprobado=Coalesce(
                 Sum(
                     'detallerequerimiento__cantidad_requerida',
-                    filter=Q(detallerequerimiento__requerimiento__estado__in=['APROBADO', 'ATENDIDO', 'PARCIAL']),
+                    filter=Q(detallerequerimiento__requerimiento__estado__in=[
+                        'APROBADO', 'COTIZADO', 'ATENDIDO', 'PARCIAL'
+                    ]),
                 ),
                 Value(0, output_field=DFld()),
             )
         )
+        costo_ejecutado = Decimal('0')
+        costo_insumos_total = Decimal('0')
         for ins in qs_ins:
-            ins_n_total += 1
-            aprobado = ins.total_aprobado or 0
-            if aprobado > 0:
-                ins_n_con_req += 1
-                if aprobado > (ins.cantidad or 0):
-                    ins_n_excedidos += 1
-            else:
-                ins_n_sin_req += 1
+            precio = ins.costo_unitario or Decimal('0')
+            cupo   = ins.cantidad_total or ins.cantidad or Decimal('0')
+            aprob  = ins.total_aprobado or Decimal('0')
+            costo_ejecutado     += Decimal(aprob) * precio
+            costo_insumos_total += Decimal(cupo) * precio
+            if cupo > 0 and aprob > 0:
+                pct = float(Decimal(aprob) * 100 / cupo)
+                if pct >= 80 or aprob > cupo:
+                    insumos_alerta.append({
+                        'nombre':  ins.descripcion[:60],
+                        'unidad':  ins.unidad or '',
+                        'cupo':    cupo,
+                        'aprob':   aprob,
+                        'pct':     round(pct, 1),
+                        'excede':  aprob > cupo,
+                    })
+        insumos_alerta.sort(key=lambda x: (-x['pct'],))
+        insumos_alerta = insumos_alerta[:10]
+        avance_presupuesto['total']     = costo_insumos_total
+        avance_presupuesto['ejecutado'] = costo_ejecutado
+        avance_presupuesto['pct'] = round(
+            float(costo_ejecutado * 100 / costo_insumos_total), 1
+        ) if costo_insumos_total > 0 else 0
+
+        # ── Top 10 insumos más consumidos (sumando salidas del proyecto) ──
+        top_qs = (DetalleSalida.objects
+                  .filter(salida__proyecto=proyecto, insumo__isnull=False)
+                  .values('insumo__descripcion', 'insumo__unidad')
+                  .annotate(total=Sum('cantidad'))
+                  .order_by('-total')[:10])
+        top_insumos = [{
+            'nombre': (r['insumo__descripcion'] or '')[:55],
+            'unidad': r['insumo__unidad'] or '',
+            'total':  float(r['total'] or 0),
+        } for r in top_qs]
+
+        # ── Avance por partida (nivel 1 — grupos principales) ────────
+        partidas_nivel1 = presupuesto_obj.partidas.filter(nivel=1).order_by('orden', 'codigo')[:8]
+        for p in partidas_nivel1:
+            # Insumos ligados a cualquier partida descendiente
+            descendientes_ids = [p.pk]
+            def _recolectar(nodo_pk):
+                for hijo in Partida_hijos_de(nodo_pk, presupuesto_obj):
+                    descendientes_ids.append(hijo)
+                    _recolectar(hijo)
+            try:
+                _recolectar(p.pk)
+            except Exception:
+                pass
+            ins_qs = presupuesto_obj.insumos.filter(
+                recursopartida__partida_id__in=descendientes_ids
+            ).distinct().annotate(
+                aprob=Coalesce(
+                    Sum('detallerequerimiento__cantidad_requerida',
+                        filter=Q(detallerequerimiento__requerimiento__estado__in=[
+                            'APROBADO', 'COTIZADO', 'ATENDIDO', 'PARCIAL'
+                        ])),
+                    Value(0, output_field=DFld()),
+                )
+            )
+            tot = Decimal('0'); eje = Decimal('0')
+            for i in ins_qs:
+                precio = i.costo_unitario or Decimal('0')
+                cupo   = i.cantidad_total or i.cantidad or Decimal('0')
+                tot += Decimal(cupo) * precio
+                eje += Decimal(i.aprob or 0) * precio
+            pct = round(float(eje * 100 / tot), 1) if tot > 0 else 0
+            avance_partidas.append({
+                'codigo': p.codigo,
+                'nombre': p.nombre[:60],
+                'total':  tot,
+                'ejec':   eje,
+                'pct':    min(pct, 999),
+            })
+
+    # ── Requerimientos por estado ───────────────────────────────────
+    reqs_por_estado_qs = (Requerimiento.objects
+                          .filter(proyecto=proyecto)
+                          .values('estado')
+                          .annotate(n=Sum(Value(1, output_field=DFld()))))
+    estados_map = dict(ESTADOS_REQ)
+    reqs_por_estado = []
+    for r in reqs_por_estado_qs:
+        reqs_por_estado.append({
+            'estado': r['estado'],
+            'label':  estados_map.get(r['estado'], r['estado']),
+            'n':      int(r['n'] or 0),
+        })
+
+    # ── Cuadrillas / Maquinaria / Trabajadores ──────────────────────
+    # Defensivo: si las migraciones de maquinaria no están aplicadas
+    # (caso raro en local), devolvemos 0 en lugar de romper el dashboard.
+    from django.db import ProgrammingError, OperationalError
+    def _safe(fn, default=0):
+        try:
+            return fn()
+        except (ProgrammingError, OperationalError):
+            return default
+
+    cuadrillas_activas   = _safe(lambda: Cuadrilla.objects.filter(proyecto=proyecto, activo=True).count())
+    hace_30              = timezone.now().date() - timedelta(days=30)
+    maquinas_activas     = _safe(lambda: (RegistroMaquinaria.objects
+                                          .filter(proyecto=proyecto, fecha__gte=hace_30)
+                                          .values('maquinaria').distinct().count()))
+    trabajadores_activos = _safe(lambda: Trabajador.objects.filter(proyecto=proyecto, activo=True).count())
+
+    # ── Asistencia semanal (últimos 7 días, Presente + Tardanza) ────
+    hoy = timezone.now().date()
+    desde = hoy - timedelta(days=6)
+    asist_dict = _safe(lambda: {
+        r['fecha']: int(r['n'] or 0)
+        for r in (Asistencia.objects
+                  .filter(trabajador__proyecto=proyecto,
+                          fecha__gte=desde, fecha__lte=hoy,
+                          estado__in=['P', 'T'])
+                  .values('fecha')
+                  .annotate(n=Sum(Value(1, output_field=DFld()))))
+    }, default={})
+    dias_es = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+    asistencia_semana = []
+    for i in range(7):
+        d = desde + timedelta(days=i)
+        asistencia_semana.append({
+            'label':   f"{dias_es[d.weekday()]} {d.day:02d}",
+            'fecha':   d.isoformat(),
+            'n':       asist_dict.get(d, 0),
+        })
+
+    # ── Actividad reciente (tablas de abajo) ────────────────────────
+    reqs_recientes     = Requerimiento.objects.filter(proyecto=proyecto).order_by('-created_at')[:8]
+    entradas_recientes = Entrada.objects.filter(proyecto=proyecto).order_by('-created_at')[:6]
 
     return render(request, 'dashboard.html', {
-        'proyecto':            proyecto,
-        'presupuesto_obj':     presupuesto_obj,
-        'presupuesto_total':   presupuesto_total,
-        'pres_detalle':        pres_detalle,
-        'reqs_pendientes':     reqs_pendientes,
-        'cots_pendientes':     cots_pendientes,
-        'ocs_activas':         ocs_activas,
-        'reqs_recientes':      reqs_recientes,
-        'entradas_recientes':  entradas_recientes,
-        'ins_n_total':         ins_n_total,
-        'ins_n_con_req':       ins_n_con_req,
-        'ins_n_sin_req':       ins_n_sin_req,
-        'ins_n_excedidos':     ins_n_excedidos,
+        'proyecto':             proyecto,
+        'presupuesto_obj':      presupuesto_obj,
+        'presupuesto_total':    presupuesto_total,
+        'avance_presupuesto':   avance_presupuesto,
+        'insumos_alerta':       insumos_alerta,
+        'top_insumos':          top_insumos,
+        'avance_partidas':      avance_partidas,
+        'reqs_por_estado':      reqs_por_estado,
+        'cuadrillas_activas':   cuadrillas_activas,
+        'maquinas_activas':     maquinas_activas,
+        'trabajadores_activos': trabajadores_activos,
+        'asistencia_semana':    asistencia_semana,
+        'reqs_recientes':       reqs_recientes,
+        'entradas_recientes':   entradas_recientes,
     })
+
+
+def Partida_hijos_de(partida_pk, presupuesto_obj):
+    """Helper: devuelve los PKs de los hijos directos de una partida."""
+    return list(
+        presupuesto_obj.partidas.filter(padre_id=partida_pk).values_list('pk', flat=True)
+    )
 
 
 def dashboard(request):

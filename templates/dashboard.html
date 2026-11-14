@@ -24,240 +24,195 @@
 
 {% else %}
 
-<!-- ── KPIs del proyecto ─────────────────────────────────────────── -->
-<div class="row g-3 mb-4">
-
-  <div class="col-6 col-lg-3">
-    {% if presupuesto_obj %}
-    <a href="{% url 'presupuesto:lista' proyecto.pk %}" class="text-decoration-none">
-    {% endif %}
-    <div class="card h-100" style="border-left:4px solid #2563eb{% if presupuesto_obj %};cursor:pointer{% endif %}">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start">
-          <div style="min-width:0">
-            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
-              Presupuesto
-            </div>
-            <div style="font-size:1.35rem;font-weight:800;color:#2563eb;line-height:1.2;margin-top:.2rem">
-              {% if presupuesto_total %}
-              S/ {{ presupuesto_total|miles:0 }}
-              {% else %}
-              —
-              {% endif %}
-            </div>
-            <div style="font-size:.72rem;color:#9ca3af;margin-top:.1rem">
-              {% if pres_detalle %}
-              C.D. S/ {{ pres_detalle.costo_directo|miles:0 }} · inc. IGV
-              {% else %}
-              contractual total
-              {% endif %}
-            </div>
-          </div>
-          <div style="width:42px;height:42px;border-radius:10px;background:#eff6ff;
-                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i class="bi bi-calculator" style="color:#2563eb;font-size:1.1rem"></i>
-          </div>
+<!-- ── Avance del Presupuesto ───────────────────────────────────── -->
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+      <div>
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+          <i class="bi bi-bar-chart-line me-1 text-primary"></i> Avance del Presupuesto
+        </div>
+        <div style="font-size:1.4rem;font-weight:800;color:#1d4ed8;line-height:1.1;margin-top:.15rem">
+          {{ avance_presupuesto.pct }}%
+        </div>
+        <div style="font-size:.74rem;color:#6b7280">
+          Ejecutado S/ {{ avance_presupuesto.ejecutado|miles:2 }}
+          {% if avance_presupuesto.total %}/ S/ {{ avance_presupuesto.total|miles:2 }} de insumos presupuestados{% endif %}
         </div>
       </div>
+      {% if presupuesto_obj %}
+      <a href="{% url 'presupuesto:lista' proyecto.pk %}"
+         class="btn btn-sm btn-outline-primary">Ver presupuesto →</a>
+      {% endif %}
     </div>
-    {% if presupuesto_obj %}</a>{% endif %}
-  </div>
-
-  <div class="col-6 col-lg-3">
-    <div class="card h-100" style="border-left:4px solid #f59e0b">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
-              Requerimientos
-            </div>
-            <div style="font-size:2rem;font-weight:800;color:#f59e0b;line-height:1.1;margin-top:.2rem">
-              {{ reqs_pendientes }}
-            </div>
-            <div style="font-size:.78rem;color:#9ca3af;margin-top:.1rem">pendientes de atender</div>
-          </div>
-          <div style="width:42px;height:42px;border-radius:10px;background:#fffbeb;
-                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i class="bi bi-file-earmark-text" style="color:#f59e0b;font-size:1.1rem"></i>
-          </div>
-        </div>
-      </div>
+    <div style="height:14px;background:#f3f4f6;border-radius:7px;overflow:hidden">
+      <div style="height:100%;background:linear-gradient(90deg,#3b82f6,#1d4ed8);
+                  width:{{ avance_presupuesto.pct|stringformat:'.1f' }}%;
+                  transition:width .6s ease"></div>
     </div>
   </div>
-
-  <div class="col-6 col-lg-3">
-    <div class="card h-100" style="border-left:4px solid #7c3aed">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
-              Cotizaciones
-            </div>
-            <div style="font-size:2rem;font-weight:800;color:#7c3aed;line-height:1.1;margin-top:.2rem">
-              {{ cots_pendientes }}
-            </div>
-            <div style="font-size:.78rem;color:#9ca3af;margin-top:.1rem">pendientes de aprobar</div>
-          </div>
-          <div style="width:42px;height:42px;border-radius:10px;background:#f5f3ff;
-                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i class="bi bi-tags" style="color:#7c3aed;font-size:1.1rem"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-6 col-lg-3">
-    <div class="card h-100" style="border-left:4px solid #16a34a">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
-              Órdenes de Compra
-            </div>
-            <div style="font-size:2rem;font-weight:800;color:#16a34a;line-height:1.1;margin-top:.2rem">
-              {{ ocs_activas }}
-            </div>
-            <div style="font-size:.78rem;color:#9ca3af;margin-top:.1rem">activas (borrador + enviada)</div>
-          </div>
-          <div style="width:42px;height:42px;border-radius:10px;background:#f0fdf4;
-                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i class="bi bi-cart-check" style="color:#16a34a;font-size:1.1rem"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
-<!-- ── Resumen Financiero del Presupuesto ─────────────────────── -->
-{% if pres_detalle %}
-<div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center py-2">
-    <span style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#374151">
-      <i class="bi bi-bar-chart-line me-2 text-primary"></i>Resumen Financiero
+<!-- ── Contadores rápidos ───────────────────────────────────────── -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card h-100" style="border-left:4px solid #0891b2">
+      <div class="card-body py-3 d-flex align-items-center gap-3">
+        <i class="bi bi-people-fill" style="color:#0891b2;font-size:1.5rem"></i>
+        <div>
+          <div style="font-size:1.4rem;font-weight:800;color:#0891b2;line-height:1">{{ cuadrillas_activas }}</div>
+          <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Cuadrillas activas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100" style="border-left:4px solid #ea580c">
+      <div class="card-body py-3 d-flex align-items-center gap-3">
+        <i class="bi bi-truck" style="color:#ea580c;font-size:1.5rem"></i>
+        <div>
+          <div style="font-size:1.4rem;font-weight:800;color:#ea580c;line-height:1">{{ maquinas_activas }}</div>
+          <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Maquinaria (30 d)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100" style="border-left:4px solid #059669">
+      <div class="card-body py-3 d-flex align-items-center gap-3">
+        <i class="bi bi-person-badge" style="color:#059669;font-size:1.5rem"></i>
+        <div>
+          <div style="font-size:1.4rem;font-weight:800;color:#059669;line-height:1">{{ trabajadores_activos }}</div>
+          <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Personal activo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100" style="border-left:4px solid #dc2626">
+      <div class="card-body py-3 d-flex align-items-center gap-3">
+        <i class="bi bi-exclamation-triangle-fill" style="color:#dc2626;font-size:1.5rem"></i>
+        <div>
+          <div style="font-size:1.4rem;font-weight:800;color:#dc2626;line-height:1">{{ insumos_alerta|length }}</div>
+          <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Insumos en alerta</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Fila: Reqs por estado + Top insumos consumidos ──────────── -->
+<div class="row g-3 mb-3">
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header py-2" style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+        <i class="bi bi-pie-chart me-1 text-warning"></i> Requerimientos por estado
+      </div>
+      <div class="card-body" style="min-height:260px">
+        {% if reqs_por_estado %}
+        <canvas id="chart-reqs-estado" style="max-height:230px"></canvas>
+        {% else %}
+        <div class="text-center text-muted py-5" style="font-size:.85rem">Sin requerimientos todavía.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header py-2" style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+        <i class="bi bi-boxes me-1 text-primary"></i> Top 10 insumos más consumidos
+      </div>
+      <div class="card-body" style="min-height:260px">
+        {% if top_insumos %}
+        <canvas id="chart-top-insumos" style="max-height:260px"></canvas>
+        {% else %}
+        <div class="text-center text-muted py-5" style="font-size:.85rem">Sin salidas registradas aún.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Asistencia semanal ──────────────────────────────────────── -->
+<div class="card mb-3">
+  <div class="card-header py-2 d-flex justify-content-between align-items-center">
+    <span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+      <i class="bi bi-calendar-week me-1 text-success"></i> Asistencia semanal (últimos 7 días)
     </span>
-    <a href="{% url 'presupuesto:lista' proyecto.pk %}" style="font-size:.75rem;color:#2563eb">
-      Ver presupuesto →
-    </a>
+    <a href="{% url 'maquinaria:asistencia_ver' proyecto.pk %}"
+       style="font-size:.75rem;color:#2563eb;text-decoration:none">Ver detalle →</a>
   </div>
-  <div class="card-body p-0">
-    <div class="row g-0 text-center" style="border-bottom:1px solid #f3f4f6">
-
-      <div class="col border-end py-3 px-2">
-        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
-          Costo Directo
-        </div>
-        <div style="font-size:1rem;font-weight:700;color:#111;margin-top:.25rem">
-          S/ {{ pres_detalle.costo_directo|miles:2 }}
-        </div>
-        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">partidas de obra</div>
-      </div>
-
-      {% if pres_detalle.gg_pct %}
-      <div class="col border-end py-3 px-2">
-        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
-          Gastos Generales
-        </div>
-        <div style="font-size:1rem;font-weight:700;color:#374151;margin-top:.25rem">
-          S/ {{ pres_detalle.gastos_generales|miles:2 }}
-        </div>
-        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">{{ pres_detalle.gg_pct }}%</div>
-      </div>
-      {% endif %}
-
-      {% if pres_detalle.ut_pct %}
-      <div class="col border-end py-3 px-2">
-        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
-          Utilidad
-        </div>
-        <div style="font-size:1rem;font-weight:700;color:#374151;margin-top:.25rem">
-          S/ {{ pres_detalle.utilidad|miles:2 }}
-        </div>
-        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">{{ pres_detalle.ut_pct }}%</div>
-      </div>
-      {% endif %}
-
-      <div class="col border-end py-3 px-2">
-        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
-          Sub Total
-        </div>
-        <div style="font-size:1rem;font-weight:700;color:#374151;margin-top:.25rem">
-          S/ {{ pres_detalle.sub_total|miles:2 }}
-        </div>
-        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">sin IGV</div>
-      </div>
-
-      {% if pres_detalle.igv_pct %}
-      <div class="col border-end py-3 px-2">
-        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">
-          IGV
-        </div>
-        <div style="font-size:1rem;font-weight:700;color:#374151;margin-top:.25rem">
-          S/ {{ pres_detalle.igv|miles:2 }}
-        </div>
-        <div style="font-size:.68rem;color:#d1d5db;margin-top:.1rem">{{ pres_detalle.igv_pct }}%</div>
-      </div>
-      {% endif %}
-
-      <div class="col py-3 px-2" style="background:#eff6ff">
-        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#3b82f6">
-          Total Presupuesto
-        </div>
-        <div style="font-size:1.1rem;font-weight:800;color:#1d4ed8;margin-top:.25rem">
-          S/ {{ pres_detalle.total|miles:2 }}
-        </div>
-        <div style="font-size:.68rem;color:#93c5fd;margin-top:.1rem">inc. IGV</div>
-      </div>
-
-    </div>
+  <div class="card-body" style="min-height:230px">
+    <canvas id="chart-asistencia" style="max-height:200px"></canvas>
   </div>
 </div>
-{% endif %}
 
-<!-- ── KPIs secundarios (Insumos · Maquinaria · Cuadrilla · …) ─── -->
-{% if ins_n_total %}
-<div class="row g-3 mb-4">
-
-  <div class="col-12 col-md-6 col-lg-3">
-    <a href="{% url 'presupuesto:insumos' proyecto.presupuesto.pk %}" class="text-decoration-none">
-    <div class="card h-100" style="border-left:4px solid #2563eb;cursor:pointer">
-      <div class="card-body py-3">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">Insumos</div>
-            <div class="d-flex gap-3 mt-2">
-              <div>
-                <div style="font-size:1.4rem;font-weight:800;color:#111;line-height:1">{{ ins_n_total }}</div>
-                <div style="font-size:.68rem;color:#9ca3af">total</div>
+<!-- ── Avance por partida + Insumos en alerta ─────────────────── -->
+<div class="row g-3 mb-3">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header py-2" style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+        <i class="bi bi-list-check me-1 text-primary"></i> Avance por partida (grupos principales)
+      </div>
+      <div class="card-body py-2">
+        {% if avance_partidas %}
+          {% for p in avance_partidas %}
+          <div class="mb-2">
+            <div class="d-flex justify-content-between align-items-center">
+              <div style="min-width:0;flex:1">
+                <span style="font-size:.74rem;font-weight:700;color:#1d4ed8;letter-spacing:.02em">
+                  {{ p.codigo }}
+                </span>
+                <span style="font-size:.78rem;color:#374151">· {{ p.nombre }}</span>
               </div>
-              <div>
-                <div style="font-size:1.4rem;font-weight:800;color:#2563eb;line-height:1">{{ ins_n_con_req }}</div>
-                <div style="font-size:.68rem;color:#9ca3af">aprobados</div>
-              </div>
-              {% if ins_n_excedidos %}
-              <div>
-                <div style="font-size:1.4rem;font-weight:800;color:#dc2626;line-height:1">{{ ins_n_excedidos }}</div>
-                <div style="font-size:.68rem;color:#9ca3af">excedidos</div>
-              </div>
-              {% endif %}
+              <span style="font-size:.74rem;font-weight:700;color:#1d4ed8;margin-left:.5rem">{{ p.pct }}%</span>
+            </div>
+            <div style="height:7px;background:#f3f4f6;border-radius:4px;overflow:hidden;margin-top:.2rem">
+              <div style="height:100%;background:#3b82f6;width:{% if p.pct > 100 %}100{% else %}{{ p.pct|stringformat:'.1f' }}{% endif %}%"></div>
+            </div>
+            <div style="font-size:.68rem;color:#9ca3af;margin-top:.1rem">
+              S/ {{ p.ejec|miles:0 }} / S/ {{ p.total|miles:0 }}
             </div>
           </div>
-          <div style="width:38px;height:38px;border-radius:9px;background:#eff6ff;
-                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i class="bi bi-boxes" style="color:#2563eb;font-size:1rem"></i>
-          </div>
-        </div>
+          {% endfor %}
+        {% else %}
+        <div class="text-center text-muted py-4" style="font-size:.85rem">Sin partidas con insumos configurados.</div>
+        {% endif %}
       </div>
     </div>
-    </a>
   </div>
-
-  <!-- Espacio para futuros KPIs: Maquinaria, Cuadrilla, Logística -->
-
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header py-2" style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+        <i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> Insumos en alerta
+      </div>
+      <div class="card-body py-2" style="max-height:360px;overflow:auto">
+        {% if insumos_alerta %}
+          {% for ins in insumos_alerta %}
+          <div class="d-flex justify-content-between align-items-center mb-2 pb-2"
+               style="border-bottom:1px solid #f3f4f6">
+            <div style="min-width:0;flex:1">
+              <div style="font-size:.78rem;font-weight:600;color:#374151">{{ ins.nombre }}</div>
+              <div style="font-size:.68rem;color:#9ca3af">
+                {{ ins.aprob|floatformat:2 }} / {{ ins.cupo|floatformat:2 }} {{ ins.unidad }}
+              </div>
+            </div>
+            <span class="badge" style="font-size:.7rem;
+                  {% if ins.excede %}background:#fee2e2;color:#b91c1c{% else %}background:#fef3c7;color:#92400e{% endif %}">
+              {{ ins.pct }}%
+            </span>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="text-center text-muted py-4" style="font-size:.85rem">
+          <i class="bi bi-check-circle" style="font-size:1.4rem;color:#10b981"></i>
+          <div class="mt-1">Sin insumos en alerta.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
-{% endif %}
 
 <!-- ── Actividad reciente ─────────────────────────────────────── -->
 <div class="row g-3">
@@ -356,5 +311,109 @@
 
 </div>
 
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if not sin_proyecto %}
+{{ reqs_por_estado|json_script:"data-reqs-estado" }}
+{{ top_insumos|json_script:"data-top-insumos" }}
+{{ asistencia_semana|json_script:"data-asistencia" }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof Chart === 'undefined') return;
+  const readJSON = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return [];
+    try { return JSON.parse(el.textContent); } catch { return []; }
+  };
+
+  // ── Requerimientos por estado (dona) ─────────────────────────────
+  const reqsEstadoData = readJSON('data-reqs-estado');
+  const elReqsEstado = document.getElementById('chart-reqs-estado');
+  if (elReqsEstado && reqsEstadoData.length) {
+    const colorByEstado = {
+      'BORRADOR':'#9ca3af','SOLICITADO':'#64748b','ENVIADO':'#f59e0b',
+      'EN_REVISION':'#eab308','APROBADO':'#10b981','COTIZADO':'#8b5cf6',
+      'ATENDIDO':'#2563eb','PARCIAL':'#06b6d4','ANULADO':'#ef4444',
+    };
+    new Chart(elReqsEstado, {
+      type: 'doughnut',
+      data: {
+        labels:   reqsEstadoData.map(r => r.label),
+        datasets: [{
+          data: reqsEstadoData.map(r => r.n),
+          backgroundColor: reqsEstadoData.map(r => colorByEstado[r.estado] || '#94a3b8'),
+          borderWidth: 2, borderColor: '#fff',
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } }
+        }
+      }
+    });
+  }
+
+  // ── Top insumos consumidos (barras horizontales) ────────────────
+  const topInsumos = readJSON('data-top-insumos');
+  const elTop = document.getElementById('chart-top-insumos');
+  if (elTop && topInsumos.length) {
+    new Chart(elTop, {
+      type: 'bar',
+      data: {
+        labels:   topInsumos.map(i => i.nombre),
+        datasets: [{
+          label: 'Consumo',
+          data: topInsumos.map(i => Number(i.total)),
+          backgroundColor: '#3b82f6', borderRadius: 4,
+        }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.parsed.x.toLocaleString()} ${topInsumos[ctx.dataIndex].unidad}`,
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 10 } }, grid: { color: '#f3f4f6' } },
+          y: { ticks: { font: { size: 10 }, autoSkip: false } },
+        }
+      }
+    });
+  }
+
+  // ── Asistencia semanal (barras verticales) ──────────────────────
+  const asist = readJSON('data-asistencia');
+  const elAsist = document.getElementById('chart-asistencia');
+  if (elAsist && asist.length) {
+    new Chart(elAsist, {
+      type: 'bar',
+      data: {
+        labels:   asist.map(d => d.label),
+        datasets: [{
+          label: 'Presentes',
+          data: asist.map(d => d.n),
+          backgroundColor: '#10b981', borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f3f4f6' } },
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+        }
+      }
+    });
+  }
+});
+</script>
 {% endif %}
 {% endblock %}
