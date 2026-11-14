@@ -262,12 +262,15 @@ def importar_automatico(archivo, presupuesto):
     """
     Detecta el tipo del Excel e importa al módulo correcto.
     Retorna (tipo_detectado, total, info_dict).
+    `info_dict` incluye `unidades_desc` cuando el tipo es insumos, para
+    que el view pueda auto-registrarlas en el catálogo de UnidadMedida.
     """
     tipo = detectar_tipo_excel(archivo)
 
     if tipo == 'insumos':
-        total = importar_insumos_excel(archivo, presupuesto)
-        info  = {'total': total, 'con_precio': total, 'sin_precio': 0}
+        total, unidades_desc = importar_insumos_excel(archivo, presupuesto)
+        info = {'total': total, 'con_precio': total, 'sin_precio': 0,
+                'unidades_desc': unidades_desc}
     else:
         total, info = importar_presupuesto_excel(archivo, presupuesto)
 

@@ -242,6 +242,28 @@ def importar(request, pk):
                     messages.success(request,
                         f'Detectado: Lista de Insumos. {total} recursos importados '
                         f'(Mano de Obra, Materiales, Equipos, Sub-contratos).')
+                    unidades_desc = info.get('unidades_desc', [])
+                    if unidades_desc:
+                        from apps.configuracion.unidades_defaults import registrar_unidades_desconocidas
+                        con_nombre, sin_nombre, _ = registrar_unidades_desconocidas(unidades_desc)
+                        partes = []
+                        if con_nombre:
+                            partes.append(
+                                f'{len(con_nombre)} reconocida(s) del catálogo estándar '
+                                f'({", ".join(con_nombre)})'
+                            )
+                        if sin_nombre:
+                            partes.append(
+                                f'{len(sin_nombre)} nueva(s) sin nombre completo '
+                                f'({", ".join(sin_nombre)}) — editá su nombre en '
+                                f'Configuración → Unidades de Medida'
+                            )
+                        if partes:
+                            messages.info(
+                                request,
+                                'Unidades agregadas automáticamente al catálogo: ' +
+                                '; '.join(partes) + '.'
+                            )
                     return redirect('presupuesto:insumos', pk=presupuesto.pk)
                 else:
                     if info['sin_precio'] == total:
@@ -278,10 +300,26 @@ def importar(request, pk):
                     f'{total} insumos importados en {presupuesto.proyecto.codigo} desde {archivo.name}')
                 messages.success(request, f'{total} insumos importados correctamente.')
                 if unidades_desc:
-                    lista = ', '.join(f'"{u}"' for u in unidades_desc)
-                    messages.warning(request,
-                        f'Se encontraron {len(unidades_desc)} abreviatura(s) de unidad no reconocidas: {lista}. '
-                        f'Agrégalas en Configuración → Unidades de Medida para normalizarlas en futuros imports.')
+                    from apps.configuracion.unidades_defaults import registrar_unidades_desconocidas
+                    con_nombre, sin_nombre, _ = registrar_unidades_desconocidas(unidades_desc)
+                    partes = []
+                    if con_nombre:
+                        partes.append(
+                            f'{len(con_nombre)} reconocida(s) del catálogo estándar '
+                            f'({", ".join(con_nombre)})'
+                        )
+                    if sin_nombre:
+                        partes.append(
+                            f'{len(sin_nombre)} nueva(s) sin nombre completo '
+                            f'({", ".join(sin_nombre)}) — editá su nombre en '
+                            f'Configuración → Unidades de Medida'
+                        )
+                    if partes:
+                        messages.info(
+                            request,
+                            'Unidades agregadas automáticamente al catálogo: ' +
+                            '; '.join(partes) + '.'
+                        )
                 return redirect('presupuesto:insumos', pk=presupuesto.pk)
 
             elif tipo == 'pdf':

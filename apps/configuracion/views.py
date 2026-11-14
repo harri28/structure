@@ -632,36 +632,9 @@ def perfil(request):
 
 # ── Unidades de Medida ────────────────────────────────────────────
 
-_UNIDADES_DEFAULT = [
-    # (codigo, nombre, descripcion, aliases)
-    ('hh',  'Hora Hombre',    'Mano de obra directa',   'HH, hora hombre, horas hombre'),
-    ('hm',  'Hora Máquina',   'Equipos y maquinaria',   'HM, hora máquina, horas máquina, hora maquina, horas maquina'),
-    ('he',  'Hora Equipo',    'Equipos varios',          'HE, hora equipo, horas equipo'),
-    ('m2',  'Metro Cuadrado', '',                        'M2, m², metro cuadrado, metros cuadrados'),
-    ('m3',  'Metro Cúbico',   '',                        'M3, m³, metro cúbico, metros cúbicos, metro cubico'),
-    ('ml',  'Metro Lineal',   '',                        'ML, mll, metro lineal, metros lineales'),
-    ('m',   'Metro',          '',                        'MT, mt, metro, metros'),
-    ('kg',  'Kilogramo',      '',                        'KG, Kg, kilogramo, kilogramos'),
-    ('tn',  'Tonelada',       '',                        'TN, ton, TON, tonelada, toneladas'),
-    ('g',   'Gramo',          '',                        'GR, gr, gramo, gramos'),
-    ('lt',  'Litro',          '',                        'LT, lts, LTS, l, L, litro, litros'),
-    ('gal', 'Galón',          '',                        'GAL, Gal, galón, galon, galones'),
-    ('glb', 'Global',         '',                        'GLB, gb, GL, gl, global, globales'),
-    ('und', 'Unidad',         '',                        'UND, un, UN, u, U, unidad, unidades'),
-    ('pza', 'Pieza',          '',                        'PZA, Pza, pieza, piezas'),
-    ('par', 'Par',            '',                        'PAR, pares'),
-    ('jgo', 'Juego',          '',                        'JGO, Jgo, juego, juegos'),
-    ('set', 'Set',            '',                        'SET, sets'),
-    ('bls', 'Bolsa',          '',                        'BLS, Bls, bolsa, bolsas'),
-    ('caj', 'Caja',           '',                        'CAJ, Caj, caja, cajas'),
-    ('rll', 'Rollo',          '',                        'RLL, Rll, rollo, rollos'),
-    ('plg', 'Pulgada',        '',                        'PLG, Plg, pulgada, pulgadas'),
-    ('p2',  'Pie Cuadrado',   '',                        'P2, pie2, pie cuadrado, pies cuadrados'),
-    ('p3',  'Pie Cúbico',     '',                        'P3, pie3, pie cúbico, pie cubico, pies cúbicos'),
-    ('dia', 'Día',            '',                        'DIA, Dia, día, d'),
-    ('mes', 'Mes',            '',                        'MES, Mes'),
-    ('sem', 'Semana',         '',                        'SEM, Sem, semana, semanas'),
-]
+# El catálogo semilla vive en unidades_defaults.py para poder reutilizarlo
+# desde el importador de presupuesto sin crear dependencia circular.
+from .unidades_defaults import UNIDADES_DEFAULT as _UNIDADES_DEFAULT
 
 
 def unidad_lista(request):
