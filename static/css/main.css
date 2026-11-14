@@ -975,3 +975,17 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   color: var(--accent);
   border-bottom-color: var(--accent);
 }
+
+/* ── Ocultar spinner nativo de inputs numéricos ────────────────────
+   Las flechitas arriba/abajo (spin buttons) causan ruido visual, se
+   disparan accidentalmente con la rueda del mouse y rompen la
+   alineación en inputs chicos. El teclado (↑↓) sigue funcionando. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
