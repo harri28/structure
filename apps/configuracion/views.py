@@ -39,13 +39,21 @@ def hub(request):
 class EmpresaForm(forms.ModelForm):
     class Meta:
         model  = ConfigEmpresa
-        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email', 'color_primario']
+        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email']
         widgets = {
             'razon_social':   forms.TextInput(attrs={'class': 'form-control'}),
             'ruc':            forms.TextInput(attrs={'class': 'form-control', 'maxlength': 11}),
             'direccion':      forms.TextInput(attrs={'class': 'form-control'}),
             'telefono':       forms.TextInput(attrs={'class': 'form-control'}),
             'email':          forms.EmailInput(attrs={'class': 'form-control'}),
+        }
+
+
+class ColorPrimarioForm(forms.ModelForm):
+    class Meta:
+        model  = ConfigEmpresa
+        fields = ['color_primario']
+        widgets = {
             'color_primario': forms.TextInput(attrs={'class': 'form-control form-control-color', 'type': 'color'}),
         }
 
@@ -88,6 +96,12 @@ def empresa(request):
             form_favicon.save()
             messages.success(request, 'Favicon actualizado.')
             return redirect('configuracion:empresa')
+    elif section == 'color':
+        form_color = ColorPrimarioForm(request.POST, instance=config)
+        if form_color.is_valid():
+            form_color.save()
+            messages.success(request, 'Color primario actualizado.')
+            return redirect('configuracion:empresa')
     elif section == 'identificacion':
         form = EmpresaForm(request.POST, instance=config)
         if form.is_valid():
@@ -100,6 +114,8 @@ def empresa(request):
     # Formularios vacíos por defecto para los que no se hayan procesado arriba
     if 'form' not in locals():
         form = EmpresaForm(instance=config)
+    if 'form_color' not in locals():
+        form_color = ColorPrimarioForm(instance=config)
     if 'form_imagen' not in locals():
         form_imagen = ImagenMarcaForm(instance=config)
     if 'form_favicon' not in locals():
@@ -107,6 +123,7 @@ def empresa(request):
 
     return render(request, 'configuracion/empresa.html', {
         'form':          form,
+        'form_color':    form_color,
         'form_imagen':   form_imagen,
         'form_favicon':  form_favicon,
         'config':        config,
