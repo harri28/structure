@@ -328,11 +328,6 @@ def avance_partidas_excel(request, proyecto_id):
 
 # ── 3. Asistencia mensual ───────────────────────────────────────
 
-ASIST_LABELS = {
-    'P': 'P', 'F': 'F', 'T': 'T', 'PM': 'PM', 'D': 'D', 'FE': 'FE', '': '',
-}
-
-
 def _query_asistencia_mes(proyecto, anio, mes, cuadrilla_id=None):
     from django.db import ProgrammingError, OperationalError
     dias_mes = monthrange(anio, mes)[1]
@@ -365,18 +360,18 @@ def _query_asistencia_mes(proyecto, anio, mes, cuadrilla_id=None):
     filas = []
     for t in trabajadores:
         dias_map = mapa.get(t.pk, {})
-        fila = {'trabajador': t, 'dias': [], 'p': 0, 'f': 0, 't': 0, 'otros': 0}
+        fila = {'trabajador': t, 'dias': [], 'p': 0, 'f': 0}
         for d in range(1, dias_mes + 1):
             estado = dias_map.get(d, '')
+            # Normalizamos: solo P o F son significativos para este reporte.
+            # Cualquier otro valor histórico se muestra en blanco.
+            if estado not in ('P', 'F'):
+                estado = ''
             fila['dias'].append({'num': d, 'estado': estado})
             if estado == 'P':
                 fila['p'] += 1
             elif estado == 'F':
                 fila['f'] += 1
-            elif estado == 'T':
-                fila['t'] += 1
-            elif estado:
-                fila['otros'] += 1
         filas.append(fila)
 
     return filas, dias_mes, desde, hasta
@@ -441,10 +436,10 @@ def asistencia_mes_excel(request, proyecto_id):
         c.font = Font(bold=True, color='FFFFFF')
         c.fill = PatternFill('solid', fgColor='1D4ED8')
         c.alignment = Alignment(horizontal='center')
-    for i, label in enumerate(['P', 'F', 'T', 'Otros'], start=dias_mes + 2):
+    for i, label in enumerate(['P', 'F'], start=dias_mes + 2):
         c = ws.cell(row=row, column=i, value=label)
         c.font = Font(bold=True, color='FFFFFF')
-        c.fill = PatternFill('solid', fgColor='059669' if label == 'P' else '6B7280')
+        c.fill = PatternFill('solid', fgColor='059669' if label == 'P' else 'DC2626')
         c.alignment = Alignment(horizontal='center')
     row += 1
     for fila in filas:
@@ -455,15 +450,13 @@ def asistencia_mes_excel(request, proyecto_id):
             c.alignment = Alignment(horizontal='center')
         ws.cell(row=row, column=dias_mes + 2, value=fila['p']).alignment = Alignment(horizontal='center')
         ws.cell(row=row, column=dias_mes + 3, value=fila['f']).alignment = Alignment(horizontal='center')
-        ws.cell(row=row, column=dias_mes + 4, value=fila['t']).alignment = Alignment(horizontal='center')
-        ws.cell(row=row, column=dias_mes + 5, value=fila['otros']).alignment = Alignment(horizontal='center')
         row += 1
 
     from openpyxl.utils import get_column_letter
     ws.column_dimensions['A'].width = 34
     for d in range(1, dias_mes + 1):
         ws.column_dimensions[get_column_letter(1 + d)].width = 4
-    for i in range(4):
+    for i in range(2):
         ws.column_dimensions[get_column_letter(dias_mes + 2 + i)].width = 7
     return _flush_wb(wb, nombre)
 

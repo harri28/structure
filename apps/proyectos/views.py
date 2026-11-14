@@ -222,7 +222,7 @@ def proyecto_dashboard(request, pk):
         for r in (Asistencia.objects
                   .filter(trabajador__proyecto=proyecto,
                           fecha__gte=desde, fecha__lte=hoy,
-                          estado__in=['P', 'T'])
+                          estado='P')
                   .values('fecha')
                   .annotate(n=Sum(Value(1, output_field=DFld()))))
     }, default={})

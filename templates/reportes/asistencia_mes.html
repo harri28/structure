@@ -17,10 +17,6 @@
               font-weight:700; font-size:.68rem; border-radius:3px; }
 .asist-P   { background:#dcfce7; color:#15803d; }
 .asist-F   { background:#fee2e2; color:#b91c1c; }
-.asist-T   { background:#fef3c7; color:#92400e; }
-.asist-PM  { background:#e0e7ff; color:#3730a3; }
-.asist-D   { background:#f3f4f6; color:#6b7280; }
-.asist-FE  { background:#ede9fe; color:#6d28d9; }
 .asist-grid tfoot td { font-weight:700; background:#f8fafc; }
 </style>
 {% endblock %}
@@ -104,8 +100,6 @@
             {% for d in dias %}<th class="col-dia" style="background:#f3f4f6">{{ d }}</th>{% endfor %}
             <th class="col-dia" style="background:#dcfce7;color:#15803d">P</th>
             <th class="col-dia" style="background:#fee2e2;color:#b91c1c">F</th>
-            <th class="col-dia" style="background:#fef3c7;color:#92400e">T</th>
-            <th class="col-dia" style="background:#f3f4f6">Otros</th>
           </tr>
         </thead>
         <tbody>
@@ -123,13 +117,11 @@
               {% endif %}
             </td>
             {% endfor %}
-            <td class="col-dia" style="font-weight:700">{{ f.p }}</td>
+            <td class="col-dia" style="font-weight:700;color:#15803d">{{ f.p }}</td>
             <td class="col-dia" style="font-weight:700;color:#b91c1c">{{ f.f }}</td>
-            <td class="col-dia" style="font-weight:700;color:#92400e">{{ f.t }}</td>
-            <td class="col-dia" style="font-weight:700;color:#6b7280">{{ f.otros }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="{{ dias|length|add:5 }}" class="text-center py-4 text-muted">Sin trabajadores activos con asistencia en el período.</td></tr>
+          <tr><td colspan="{{ dias|length|add:3 }}" class="text-center py-4 text-muted">Sin trabajadores activos con asistencia en el período.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -139,11 +131,7 @@
   <div class="mt-2" style="font-size:.75rem;color:#6b7280" id="leyenda">
     <strong>Leyenda:</strong>
     <span class="asist-cell asist-P me-1">P</span> Presente ·
-    <span class="asist-cell asist-F me-1">F</span> Falta ·
-    <span class="asist-cell asist-T me-1">T</span> Tardanza ·
-    <span class="asist-cell asist-PM me-1">PM</span> Permiso ·
-    <span class="asist-cell asist-D me-1">D</span> Descanso ·
-    <span class="asist-cell asist-FE me-1">FE</span> Feriado
+    <span class="asist-cell asist-F me-1">F</span> Falta
   </div>
 </div>
 {% endblock %}
