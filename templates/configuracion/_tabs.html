@@ -2,16 +2,27 @@
   Barra de pestañas superior de Configuración. Cada sección setea
   `tab_activo_config` en su contexto ('empresa', 'equipo', 'unidades',
   'decimal', 'cargos', 'reglas') para marcar la pestaña activa.
+
+  Cada pestaña se renderiza solo si el usuario tiene el permiso que la
+  vista correspondiente exige (ver @requiere en apps/configuracion/views.py).
+  Unidades / Decimales / Cargos / Reglas no tienen @requiere hoy — se
+  muestran a cualquier usuario autenticado que haya entrado al módulo.
 {% endcomment %}
 <div class="cfg-tabs">
+  {% if permisos.puede_configurar_empresa %}
   <a href="{% url 'configuracion:empresa' %}"
      class="cfg-tab {% if tab_activo_config == 'empresa' %}active{% endif %}">
     <i class="bi bi-building"></i> Empresa
   </a>
+  {% endif %}
+
+  {% if permisos.puede_administrar_usuarios or permisos.puede_administrar_roles %}
   <a href="{% url 'configuracion:equipo' %}"
      class="cfg-tab {% if tab_activo_config == 'equipo' %}active{% endif %}">
     <i class="bi bi-people-fill"></i> Equipo
   </a>
+  {% endif %}
+
   <a href="{% url 'configuracion:unidad_lista' %}"
      class="cfg-tab {% if tab_activo_config == 'unidades' %}active{% endif %}">
     <i class="bi bi-rulers"></i> Unidades
