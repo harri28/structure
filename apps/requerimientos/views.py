@@ -37,9 +37,7 @@ def _errores_saldo_global(formset, excluir_req_pk=None):
             errores.append(
                 f'"{ins.descripcion}": pediste {cant} pero solo quedan {disp} '
                 f'{ins.unidad or "und"} disponibles en el presupuesto. '
-                f'Ya hay otros REQ en curso (enviados o aprobados) que '
-                f'comprometen este insumo. Si es un adicional de obra, '
-                f'marcá este requerimiento como "Ajuste".'
+                f'Espera a que logística apruebe tu solicitud.'
             )
     return errores
 
@@ -407,9 +405,10 @@ def enviar(request, pk):
                 disp = saldo_disponible_insumo(ins, excluir_req_pk=req.pk)
                 if cant > disp:
                     errores.append(
-                        f'"{ins.descripcion}": pedís {cant} pero quedan '
-                        f'{disp} {ins.unidad or "und"}. Hay otros REQ en curso '
-                        f'que ya comprometen este insumo.'
+                        f'"{ins.descripcion}": pediste {cant} pero solo '
+                        f'quedan {disp} {ins.unidad or "und"} disponibles '
+                        f'en el presupuesto. Espera a que logística '
+                        f'apruebe tu solicitud.'
                     )
             if errores:
                 for e in errores:
