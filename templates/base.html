@@ -124,7 +124,7 @@
         <i class="bi bi-graph-up-arrow" style="color:#0ea5e9"></i> Registro de Avance Físico
       </a>
       {% else %}
-      <a href="{% url 'presupuesto:lista' proyecto_activo.pk %}" class="sb-link sb-sublink">
+      <a href="{% url 'presupuesto:crear' proyecto_activo.pk %}" class="sb-link sb-sublink">
         <i class="bi bi-upload"></i> Importar presupuesto
       </a>
       {% endif %}
