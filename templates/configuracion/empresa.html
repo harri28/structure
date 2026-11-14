@@ -68,15 +68,43 @@
           </div>
           <div class="form-text" style="font-size:.72rem">Se aplica a botones, enlaces activos y acentos en todo el sistema.</div>
 
-          <label class="form-label mt-3" style="font-size:.78rem">Imagen de marca (sidebar)</label>
-          {% if config.imagen_marca %}
-          <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center">
-            <img src="{{ config.imagen_marca.url }}" alt="Imagen de marca"
-                 style="max-height:56px;max-width:100%;object-fit:contain">
+          <div class="row g-2 mt-3">
+            <div class="col-6">
+              <label class="form-label" style="font-size:.78rem">Imagen de marca (sidebar)</label>
+              {% if config.imagen_marca %}
+              <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center">
+                <img src="{{ config.imagen_marca.url }}" alt="Imagen de marca"
+                     style="max-height:52px;max-width:100%;object-fit:contain">
+              </div>
+              {% else %}
+              <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.72rem">
+                Sin imagen cargada
+              </div>
+              {% endif %}
+              {{ form.imagen_marca }}
+              <div class="form-text" style="font-size:.7rem;line-height:1.3">
+                Logo del sidebar, Guía de Remisión y Solicitud de Cotización. PNG horizontal, fondo transparente.
+              </div>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label" style="font-size:.78rem">Favicon</label>
+              {% if config.favicon %}
+              <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center">
+                <img src="{{ config.favicon.url }}" alt="Favicon"
+                     style="max-height:32px;max-width:32px;object-fit:contain">
+              </div>
+              {% else %}
+              <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.72rem">
+                Sin favicon
+              </div>
+              {% endif %}
+              {{ form.favicon }}
+              <div class="form-text" style="font-size:.7rem;line-height:1.3">
+                Ícono de la pestaña del navegador. PNG cuadrado 32×32 o 64×64. Se aplica también en la pantalla de inicio de sesión.
+              </div>
+            </div>
           </div>
-          {% endif %}
-          {{ form.imagen_marca }}
-          <div class="form-text" style="font-size:.72rem">Reemplaza el ícono y texto "S&amp;S Gestión" en la franja superior del sidebar, y es el logo de la Guía de Remisión y de la Solicitud de Cotización impresas. Recomendado: PNG con fondo transparente, horizontal.</div>
         </div>
       </div>
 

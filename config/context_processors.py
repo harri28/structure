@@ -22,6 +22,7 @@ def tema_empresa(request):
             'tema_color_hover':    _mezclar(color, (0, 0, 0), 0.15),
             'tema_color_pale':     _mezclar(color, (255, 255, 255), 0.92),
             'tema_imagen_marca':   cfg.imagen_marca.url if cfg.imagen_marca else '',
+            'tema_favicon':        cfg.favicon.url if cfg.favicon else '',
         }
     except Exception:
         return {}

@@ -39,7 +39,7 @@ def hub(request):
 class EmpresaForm(forms.ModelForm):
     class Meta:
         model  = ConfigEmpresa
-        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email', 'color_primario', 'imagen_marca']
+        fields = ['razon_social', 'ruc', 'direccion', 'telefono', 'email', 'color_primario', 'imagen_marca', 'favicon']
         widgets = {
             'razon_social':   forms.TextInput(attrs={'class': 'form-control'}),
             'ruc':            forms.TextInput(attrs={'class': 'form-control', 'maxlength': 11}),
@@ -48,6 +48,8 @@ class EmpresaForm(forms.ModelForm):
             'email':          forms.EmailInput(attrs={'class': 'form-control'}),
             'color_primario': forms.TextInput(attrs={'class': 'form-control form-control-color', 'type': 'color'}),
             'imagen_marca':   forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'favicon':        forms.ClearableFileInput(attrs={'class': 'form-control',
+                                                              'accept': 'image/png,image/x-icon,image/svg+xml'}),
         }
 
 

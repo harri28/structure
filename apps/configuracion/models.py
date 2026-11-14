@@ -14,6 +14,8 @@ class ConfigEmpresa(models.Model):
     logo         = models.ImageField('Logo', upload_to='empresa/', blank=True)
     color_primario = models.CharField('Color Primario', max_length=7, default='#2563eb', blank=True)
     imagen_marca = models.ImageField('Imagen de Marca (sidebar)', upload_to='empresa/marca/', blank=True, null=True)
+    favicon      = models.ImageField('Favicon', upload_to='empresa/favicon/', blank=True, null=True,
+                                     help_text='Ícono del navegador (pestaña, acceso directo). PNG cuadrado 32×32 o 64×64.')
     updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:
