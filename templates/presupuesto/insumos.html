@@ -88,8 +88,8 @@
           </td>
           <td>{{ ins.unidad }}</td>
           <td class="text-end">{{ ins.cantidad|floatformat:4 }}</td>
-          <td class="text-end">{{ ins.costo_unitario|floatformat:2 }}</td>
-          <td class="text-end fw-semibold">{{ ins.total|floatformat:2 }}</td>
+          <td class="text-end">{{ ins.costo_unitario|miles }}</td>
+          <td class="text-end fw-semibold">{{ ins.total|miles }}</td>
         </tr>
         {% empty %}
         <tr><td colspan="7">
@@ -108,8 +108,8 @@
             Total {% if tipo_sel %}({{ tipo_sel }}){% endif %}
           </th>
           <th class="text-end"
-              style="font-size:.95rem;font-weight:800;color:#1d4ed8;padding:.55rem .75rem">
-            S/ {{ total_sum|floatformat:2 }}
+              style="font-size:.95rem;font-weight:800;color:#1d4ed8;padding:.55rem .75rem;white-space:nowrap">
+            S/ {{ total_sum|miles }}
           </th>
         </tr>
       </tfoot>
