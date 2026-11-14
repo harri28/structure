@@ -605,6 +605,7 @@ def req_revisar_log(request, proyecto_id, pk):
             desc     = request.POST.get(f'nuevo_{n}_desc', '').strip()
             unidad   = request.POST.get(f'nuevo_{n}_unidad', '').strip()
             justif   = request.POST.get(f'nuevo_{n}_justif', '').strip()
+            sust_pk  = request.POST.get(f'nuevo_{n}_sustituye_a', '').strip()
             if not ins_pk or not cant_str:
                 continue
             try:
@@ -616,9 +617,45 @@ def req_revisar_log(request, proyecto_id, pk):
                     nuevos.append({'insumo': insumo, 'cantidad': cant,
                                    'desc': desc or insumo.descripcion,
                                    'unidad': unidad or insumo.unidad or '',
-                                   'justif': justif})
+                                   'justif': justif,
+                                   'sustituye_a_pk': int(sust_pk) if sust_pk.isdigit() else None})
             except (ValueError, _Ins.DoesNotExist, InvalidOperation):
                 errores.append(f'Ítem nuevo "{desc}": insumo o cantidad inválidos.')
+
+        # ── Validar saldo GLOBAL por insumo ──────────────────────────
+        # Consolidación: lo que este REQ comprometerá por insumo =
+        #   Σ aprobaciones de ítems existentes (los marcados "eliminar"
+        #     ya quedaron en 0) + Σ cantidades de los nuevos.
+        # Un nuevo que "sustituye_a_pk" un detalle existente libera la
+        # aprobación de ese detalle (se marca como eliminado implícito).
+        from apps.presupuesto.services import saldo_disponible_insumo, consolidar_por_insumo
+
+        sust_pks = {n['sustituye_a_pk'] for n in nuevos if n.get('sustituye_a_pk')}
+        pares = []
+        for det in detalles:
+            if det.pk in sust_pks:
+                # Será eliminado por sustitución: no cuenta.
+                continue
+            if det.insumo_id and aprobaciones.get(det.pk):
+                pares.append((det.insumo_id, aprobaciones[det.pk]))
+        for n in nuevos:
+            pares.append((n['insumo'].pk, n['cantidad']))
+        pedido_por_insumo = consolidar_por_insumo(pares)
+
+        for insumo_id, cant in pedido_por_insumo.items():
+            try:
+                ins_obj = _Ins.objects.get(pk=insumo_id)
+            except _Ins.DoesNotExist:
+                continue
+            disp = saldo_disponible_insumo(ins_obj, excluir_req_pk=req.pk)
+            if cant > disp:
+                errores.append(
+                    f'"{ins_obj.descripcion}": la cantidad total a aprobar '
+                    f'({cant}) supera el saldo disponible del presupuesto '
+                    f'({disp} {ins_obj.unidad or "und"}). '
+                    f'Si existen otros REQ aprobados que consumen este insumo, '
+                    f'revisá el stock en el presupuesto antes de aprobar.'
+                )
 
         if errores:
             for e in errores:
@@ -632,13 +669,17 @@ def req_revisar_log(request, proyecto_id, pk):
 
         # ── Guardar aprobaciones y registrar eliminaciones ───────────
         es_parcial = False
+        detalle_por_pk = {d.pk: d for d in detalles}
         for det in detalles:
-            aprobada = aprobaciones[det.pk]
+            # Si este detalle fue marcado para ser sustituido por un nuevo
+            # ítem, forzamos su aprobación a 0 (equivale a eliminarlo).
+            es_sustituido = det.pk in sust_pks
+            aprobada = Decimal('0') if es_sustituido else aprobaciones[det.pk]
             det.cantidad_aprobada = aprobada
             det.save(update_fields=['cantidad_aprobada'])
             if aprobada < det.cantidad_requerida:
                 es_parcial = True
-            if det.pk in eliminados:
+            if det.pk in eliminados and not es_sustituido:
                 HistorialRevisionReq.objects.create(
                     requerimiento=req,
                     accion='ELIMINAR',
@@ -663,16 +704,38 @@ def req_revisar_log(request, proyecto_id, pk):
                 cantidad_requerida=n['cantidad'],
                 cantidad_aprobada=n['cantidad'],
             )
-            HistorialRevisionReq.objects.create(
-                requerimiento=req,
-                accion='AGREGAR',
-                insumo=n['insumo'],
-                descripcion=n['desc'],
-                unidad=n['unidad'],
-                cantidad=n['cantidad'],
-                justificacion=n['justif'],
-                usuario=request.user,
-            )
+            # Si el nuevo ítem sustituye a uno existente, el historial lo
+            # registra como SUSTITUIR y nombra al insumo original para
+            # dejar rastro completo. Si no, es un AGREGAR común.
+            sust_pk = n.get('sustituye_a_pk')
+            sust_det = detalle_por_pk.get(sust_pk) if sust_pk else None
+            if sust_det:
+                orig_desc = (sust_det.descripcion
+                             or (sust_det.insumo.descripcion if sust_det.insumo else '—'))
+                justif_final = (
+                    f'Sustituye a "{orig_desc}". ' + (n['justif'] or '')
+                ).strip()
+                HistorialRevisionReq.objects.create(
+                    requerimiento=req,
+                    accion='SUSTITUIR',
+                    insumo=n['insumo'],
+                    descripcion=n['desc'],
+                    unidad=n['unidad'],
+                    cantidad=n['cantidad'],
+                    justificacion=justif_final,
+                    usuario=request.user,
+                )
+            else:
+                HistorialRevisionReq.objects.create(
+                    requerimiento=req,
+                    accion='AGREGAR',
+                    insumo=n['insumo'],
+                    descripcion=n['desc'],
+                    unidad=n['unidad'],
+                    cantidad=n['cantidad'],
+                    justificacion=n['justif'],
+                    usuario=request.user,
+                )
 
         # ── Estado del requerimiento ─────────────────────────────────
         if nuevos and not es_parcial:

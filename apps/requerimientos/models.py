@@ -93,6 +93,7 @@ class HistorialRevisionReq(models.Model):
     ACCIONES = [
         ('ELIMINAR',   'Ítem eliminado'),
         ('AGREGAR',    'Ítem agregado'),
+        ('SUSTITUIR',  'Insumo sustituido'),
         ('ANULAR',     'Requerimiento anulado'),
         ('RECUPERAR',  'Requerimiento recuperado'),
     ]

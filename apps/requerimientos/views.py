@@ -8,6 +8,41 @@ from .forms import RequerimientoForm, DetalleRequerimientoFormSet
 from config.permisos import requiere, tiene, proyecto_visible
 
 
+def _errores_saldo_global(formset, excluir_req_pk=None):
+    """Valida que el total pedido por insumo en este REQ no supere el saldo
+    global disponible del presupuesto. Devuelve lista de mensajes de error
+    (vacía si todo OK). Suma líneas duplicadas del mismo insumo dentro del REQ.
+    """
+    from apps.presupuesto.services import saldo_disponible_insumo, consolidar_por_insumo
+    from apps.presupuesto.models import InsumoPresupuesto
+
+    pares = []
+    for f in formset:
+        if not f.cleaned_data or f.cleaned_data.get('DELETE'):
+            continue
+        insumo = f.cleaned_data.get('insumo')
+        cant_req = f.cleaned_data.get('cantidad_requerida') or 0
+        if insumo and cant_req:
+            pares.append((insumo.pk, cant_req))
+    pedido = consolidar_por_insumo(pares)
+    insumos_por_id = {ins.pk: ins for ins in
+                      InsumoPresupuesto.objects.filter(pk__in=pedido.keys())}
+    errores = []
+    for insumo_id, cant in pedido.items():
+        ins = insumos_por_id.get(insumo_id)
+        if not ins:
+            continue
+        disp = saldo_disponible_insumo(ins, excluir_req_pk=excluir_req_pk)
+        if cant > disp:
+            errores.append(
+                f'"{ins.descripcion}": pediste {cant} pero solo quedan {disp} '
+                f'{ins.unidad or "und"} disponibles en el presupuesto. '
+                f'Revisá otros REQ aprobados que consumen este insumo, o '
+                f'marcá este requerimiento como "Ajuste" si es un adicional.'
+            )
+    return errores
+
+
 def _siguiente_numero(proyecto):
     ultimo = proyecto.requerimientos.order_by('-pk').first()
     if not ultimo:
@@ -104,6 +139,20 @@ def crear(request, proyecto_id):
         )
         accion = request.POST.get('accion', 'borrador')
         if form.is_valid() and formset.is_valid():
+            # Validar saldo global del presupuesto por insumo (salvo
+            # modo_ajuste, que precisamente autoriza exceder lo presupuestado).
+            errores_saldo = [] if modo_ajuste else _errores_saldo_global(formset)
+            if errores_saldo:
+                for e in errores_saldo:
+                    messages.error(request, e)
+                return render(request, 'requerimientos/form.html', {
+                    'form': form, 'formset': formset, 'proyecto': proyecto,
+                    'empresa': empresa,
+                    'titulo': 'Nuevo Ajuste' if modo_ajuste else 'Nuevo Requerimiento',
+                    'siguiente_numero': siguiente,
+                    'numero_global': siguiente_global,
+                    'modo_ajuste': modo_ajuste,
+                })
             req = form.save(commit=False)
             req.proyecto = proyecto
             req.es_ajuste = modo_ajuste
@@ -204,6 +253,18 @@ def solicitar(request, proyecto_id):
         form = RequerimientoForm(request.POST, proyecto=proyecto)
         formset = DetalleRequerimientoFormSet(request.POST, prefix='detalles')
         if form.is_valid() and formset.is_valid():
+            # El Almacenero no tiene modo_ajuste: siempre validar saldo global.
+            errores_saldo = _errores_saldo_global(formset)
+            if errores_saldo:
+                for e in errores_saldo:
+                    messages.error(request, e)
+                return render(request, 'requerimientos/solicitar.html', {
+                    'form': form, 'formset': formset, 'proyecto': proyecto,
+                    'empresa': empresa,
+                    'titulo': 'Solicitar material',
+                    'siguiente_numero': siguiente,
+                    'numero_global': siguiente_global,
+                })
             req = form.save(commit=False)
             req.proyecto = proyecto
             req.estado = 'SOLICITADO'
@@ -270,6 +331,22 @@ def editar(request, pk):
         )
         accion = request.POST.get('accion', '')
         if form.is_valid() and formset.is_valid():
+            # Validar saldo global (excluyendo este REQ para no contarse a sí
+            # mismo si ya estaba en un estado comprometido).
+            errores_saldo = [] if req.es_ajuste else _errores_saldo_global(
+                formset, excluir_req_pk=req.pk,
+            )
+            if errores_saldo:
+                for e in errores_saldo:
+                    messages.error(request, e)
+                return render(request, 'requerimientos/form.html', {
+                    'form': form, 'formset': formset, 'proyecto': proyecto,
+                    'empresa': empresa,
+                    'titulo': 'Editar Requerimiento', 'req': req,
+                    'numero_global': req.numero_global,
+                    'siguiente_numero': req.numero,
+                    'modo_ajuste': req.es_ajuste,
+                })
             updated = form.save(commit=False)
             if accion == 'enviar' and req.estado in ('BORRADOR', 'SOLICITADO') and tiene(request.user, 'puede_aprobar_requerimientos'):
                 origen = 'solicitud del Almacén' if req.estado == 'SOLICITADO' else 'borrador propio'

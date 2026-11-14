@@ -144,31 +144,32 @@
   </div>
 </div>
 
-<!-- Agregar insumo -->
+<!-- Sustituir / agregar insumo -->
 {% if editable %}
 <div class="card mb-3">
   <div class="card-header d-flex justify-content-between align-items-center"
        style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
-    <span><i class="bi bi-plus-circle me-2 text-success"></i>Agregar / Cambiar insumo</span>
-    <button type="button" class="btn btn-success btn-sm" id="btn-agregar-fila">
-      <i class="bi bi-plus-lg me-1"></i>Agregar insumo
+    <span><i class="bi bi-arrow-repeat me-2 text-primary"></i>Sustituir o agregar insumo</span>
+    <button type="button" class="btn btn-primary btn-sm" id="btn-agregar-fila">
+      <i class="bi bi-arrow-repeat me-1"></i>Sustituir insumo
     </button>
   </div>
   <div class="card-body p-0" id="card-nuevos-body">
     <table class="table table-sm mb-0" id="tabla-nuevos" style="display:none">
       <thead style="background:#f8fafc">
         <tr>
-          <th>Descripción</th>
+          <th style="width:180px">Reemplaza a</th>
+          <th>Nuevo insumo</th>
           <th style="width:70px">Und</th>
-          <th style="width:130px">Cantidad</th>
-          <th style="width:200px">Justificación</th>
+          <th style="width:110px">Cantidad</th>
+          <th style="width:180px">Justificación</th>
           <th style="width:40px"></th>
         </tr>
       </thead>
       <tbody id="nuevos-tbody"></tbody>
     </table>
     <div id="nuevos-placeholder" class="text-center text-muted py-3" style="font-size:.82rem">
-      Haz clic en "Agregar insumo" para reemplazar o añadir un material.
+      Clic en "Sustituir insumo" para reemplazar un material del REQ (o agregar uno nuevo si "Reemplaza a" queda vacío).
     </div>
   </div>
 </div>
@@ -199,6 +200,12 @@
           <td>
             {% if h.accion == 'ELIMINAR' %}
             <span class="badge bg-danger" style="font-size:.72rem">Eliminó</span>
+            {% elif h.accion == 'SUSTITUIR' %}
+            <span class="badge bg-primary" style="font-size:.72rem">Sustituyó</span>
+            {% elif h.accion == 'ANULAR' %}
+            <span class="badge bg-danger" style="font-size:.72rem">Anuló</span>
+            {% elif h.accion == 'RECUPERAR' %}
+            <span class="badge bg-info" style="font-size:.72rem">Recuperó</span>
             {% else %}
             <span class="badge bg-success" style="font-size:.72rem">Agregó</span>
             {% endif %}
@@ -539,12 +546,29 @@
   document.body.appendChild(sharedDrop);
   var activeSearch = null;
 
+  // Opciones del select "Reemplaza a" — construidas desde la tabla de ítems
+  function opcionesReemplaza() {
+    var opts = '<option value="">— agregar sin reemplazar —</option>';
+    document.querySelectorAll('#tabla-items tbody tr.item-row').forEach(function (fila) {
+      var pk = fila.id.replace('fila-', '');
+      var descEl = fila.querySelector('[id^="desc-cell-"]');
+      var desc = descEl ? descEl.textContent.trim().slice(0, 60) : ('item #' + pk);
+      opts += '<option value="' + pk + '">' + desc + '</option>';
+    });
+    return opts;
+  }
+
   function agregarFilaNueva() {
     var n     = nuevoIdx++;
     var tbody = document.getElementById('nuevos-tbody');
     var tr    = document.createElement('tr');
     tr.id     = 'nuevo-row-' + n;
     tr.innerHTML =
+      '<td>' +
+        '<select name="nuevo_' + n + '_sustituye_a" class="form-select form-select-sm">' +
+          opcionesReemplaza() +
+        '</select>' +
+      '</td>' +
       '<td style="min-width:220px">' +
         '<input type="text" class="form-control form-control-sm nuevo-search" placeholder="Buscar insumo..." autocomplete="off" data-idx="' + n + '">' +
         '<input type="hidden" name="nuevo_' + n + '_insumo" id="n' + n + '-insumo">' +
@@ -553,7 +577,7 @@
       '</td>' +
       '<td><input type="text" class="form-control form-control-sm" id="n' + n + '-unidad-disp" placeholder="und" readonly style="background:#f8f9fa;color:#6b7280"></td>' +
       '<td><input type="number" name="nuevo_' + n + '_cantidad" step="0.0001" min="0.0001" class="form-control form-control-sm" placeholder="0.00" required></td>' +
-      '<td><input type="text" name="nuevo_' + n + '_justif" class="form-control form-control-sm" placeholder="Justificación..."></td>' +
+      '<td><input type="text" name="nuevo_' + n + '_justif" class="form-control form-control-sm" placeholder="Motivo del cambio..."></td>' +
       '<td class="text-center">' +
         '<button type="button" class="btn btn-link p-0" style="color:#dc2626" onclick="this.closest(\'tr\').remove();actualizarCount()">' +
           '<i class="bi bi-x-lg"></i>' +
