@@ -58,12 +58,20 @@
             <img src="{{ config.imagen_marca.url }}" alt="Imagen de marca"
                  style="max-height:52px;max-width:100%;object-fit:contain">
           </div>
+          <div style="font-size:.72rem;color:#6b7280;margin-bottom:.4rem;word-break:break-all">
+            Actualmente: <span style="color:#374151">{{ config.imagen_marca.name }}</span>
+          </div>
+          <label class="d-inline-flex align-items-center gap-2 mb-2" style="font-size:.78rem;cursor:pointer">
+            <input type="checkbox" name="imagen_marca-clear" value="on" style="margin:0">
+            Limpiar
+          </label>
           {% else %}
           <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.72rem">
             Sin imagen cargada
           </div>
           {% endif %}
-          {{ form_imagen.imagen_marca }}
+          <label class="form-label" style="font-size:.72rem">Subir nueva:</label>
+          <input type="file" name="imagen_marca" class="form-control form-control-sm" accept="image/*">
           <div class="form-text" style="font-size:.72rem;line-height:1.3;margin-top:.3rem;flex:1">
             Logo del sidebar, Guía de Remisión y Solicitud de Cotización. PNG horizontal, fondo transparente.
           </div>
@@ -90,12 +98,21 @@
             <img src="{{ config.favicon.url }}" alt="Favicon"
                  style="max-height:32px;max-width:32px;object-fit:contain">
           </div>
+          <div style="font-size:.72rem;color:#6b7280;margin-bottom:.4rem;word-break:break-all">
+            Actualmente: <span style="color:#374151">{{ config.favicon.name }}</span>
+          </div>
+          <label class="d-inline-flex align-items-center gap-2 mb-2" style="font-size:.78rem;cursor:pointer">
+            <input type="checkbox" name="favicon-clear" value="on" style="margin:0">
+            Limpiar
+          </label>
           {% else %}
           <div class="mb-2 p-2" style="background:var(--bg);border-radius:var(--radius-sm);text-align:center;min-height:68px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.72rem">
             Sin favicon
           </div>
           {% endif %}
-          {{ form_favicon.favicon }}
+          <label class="form-label" style="font-size:.72rem">Subir nuevo:</label>
+          <input type="file" name="favicon" class="form-control form-control-sm"
+                 accept="image/png,image/x-icon,image/svg+xml">
           <div class="form-text" style="font-size:.72rem;line-height:1.3;margin-top:.3rem;flex:1">
             Ícono de la pestaña del navegador. PNG cuadrado 32×32 o 64×64. También aplica en la pantalla de login.
           </div>
