@@ -62,9 +62,8 @@
           <tr>
             <th style="width:100px">RUC</th>
             <th>Razón Social</th>
-            <th style="width:110px">Teléfono</th>
+            <th style="width:120px">Num. Celular</th>
             <th style="width:180px">Email</th>
-            <th style="width:130px">Contacto</th>
             <th style="width:90px" class="text-center">Estado</th>
             <th style="width:70px" class="text-center">Acciones</th>
           </tr>
@@ -76,7 +75,6 @@
             <td class="fw-semibold">{{ it.obj.razon_social }}</td>
             <td class="text-muted">{{ it.obj.telefono|default:"—" }}</td>
             <td class="text-muted">{{ it.obj.email|default:"—" }}</td>
-            <td class="text-muted">{{ it.obj.persona_contacto|default:"—" }}</td>
             <td class="text-center">
               {% if it.obj.activo %}
               <span class="badge" style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700">ACTIVO</span>
@@ -93,7 +91,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="7" class="text-center text-muted py-5">
+          <tr><td colspan="6" class="text-center text-muted py-5">
             <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3"></i>
             Sin proveedores registrados.
           </td></tr>
@@ -142,7 +140,7 @@
 
         <div class="row g-3 mb-3">
           <div class="col-md-6">
-            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Teléfono</label>
+            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Num. Celular</label>
             <input type="text" id="prov-tel" class="form-control form-control-sm">
           </div>
           <div class="col-md-6">
@@ -151,15 +149,9 @@
           </div>
         </div>
 
-        <div class="row g-3 mb-3">
-          <div class="col-md-6">
-            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Persona de Contacto</label>
-            <input type="text" id="prov-contacto" class="form-control form-control-sm">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Dirección</label>
-            <input type="text" id="prov-direccion" class="form-control form-control-sm">
-          </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Dirección</label>
+          <input type="text" id="prov-direccion" class="form-control form-control-sm">
         </div>
 
         <!-- Datos SUNAT (se autocompletan al Consultar; editables si hace falta corregir) -->
@@ -222,7 +214,6 @@
   const razon   = document.getElementById('prov-razon');
   const tel     = document.getElementById('prov-tel');
   const email   = document.getElementById('prov-email');
-  const contacto = document.getElementById('prov-contacto');
   const direccion = document.getElementById('prov-direccion');
   const estadoSunat    = document.getElementById('prov-estado-sunat');
   const condicionSunat = document.getElementById('prov-condicion-sunat');
@@ -239,7 +230,7 @@
 
   function resetModal() {
     pk.value = ''; ruc.value = ''; razon.value = '';
-    tel.value = ''; email.value = ''; contacto.value = ''; direccion.value = '';
+    tel.value = ''; email.value = ''; direccion.value = '';
     estadoSunat.value = ''; condicionSunat.value = '';
     tipoContrib.value = ''; fechaIni.value = '';
     rucErr.style.display = 'none'; err.style.display = 'none';
@@ -302,8 +293,7 @@
     }
     const body = {
       ruc: ruc.value.trim(), razon_social: razon.value.trim(),
-      telefono: tel.value.trim(),
-      email: email.value.trim(), persona_contacto: contacto.value.trim(),
+      telefono: tel.value.trim(), email: email.value.trim(),
       direccion: direccion.value.trim(),
       estado_sunat:             estadoSunat.value.trim(),
       condicion_sunat:          condicionSunat.value.trim(),
@@ -350,7 +340,7 @@
           const p = data.proveedor;
           pk.value = p.id; ruc.value = p.ruc;
           razon.value = p.razon_social; tel.value = p.telefono;
-          email.value = p.email; contacto.value = p.persona_contacto;
+          email.value = p.email;
           direccion.value = p.direccion;
           estadoSunat.value    = p.estado_sunat || '';
           condicionSunat.value = p.condicion_sunat || '';
