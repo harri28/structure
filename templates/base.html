@@ -282,6 +282,7 @@
 
     {% if proyecto_activo.presupuesto %}
     <div class="sb-section">
+      <div class="sb-label">Presupuesto</div>
       <div class="sb-module-row">
         <a href="{% url 'presupuesto:insumos' proyecto_activo.presupuesto.pk %}"
            class="sb-link">
@@ -310,9 +311,14 @@
     {% endif %}
 
     <div class="sb-section">
+      <div class="sb-label">Compras</div>
       <a href="{% url 'logistica:compras_log' proyecto_activo.pk %}"
          class="sb-link {% if vn == 'logistica:compras_log' %}active{% endif %}">
         <i class="bi bi-cart-check"></i> Compras
+      </a>
+      <a href="{% url 'logistica:proveedores_log' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:proveedores_log' %}active{% endif %}">
+        <i class="bi bi-people"></i> Proveedores
       </a>
     </div>
 

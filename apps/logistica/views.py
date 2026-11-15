@@ -1254,6 +1254,14 @@ def compras_log(request, proyecto_id):
     return render(request, 'logistica/compras_log.html', {'proyecto': proyecto})
 
 
+@requiere('puede_ver_logistica')
+@proyecto_visible
+def proveedores_log(request, proyecto_id):
+    """Módulo Proveedores — placeholder 'En desarrollo'."""
+    proyecto = _get_proyecto(proyecto_id)
+    return render(request, 'logistica/proveedores_log.html', {'proyecto': proyecto})
+
+
 @requiere('puede_gestionar_ctrl_maq_log')
 @proyecto_visible
 def control_maquinaria(request, proyecto_id):
