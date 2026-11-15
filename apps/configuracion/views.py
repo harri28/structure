@@ -94,13 +94,26 @@ class ImagenFondoLoginForm(forms.ModelForm):
 class TextoLoginForm(forms.ModelForm):
     class Meta:
         model  = ConfigEmpresa
-        fields = ['login_titulo', 'login_subtitulo']
+        fields = ['login_titulo', 'login_titulo_tamano',
+                  'login_subtitulo', 'login_subtitulo_tamano']
         widgets = {
-            'login_titulo':    forms.TextInput(attrs={'class': 'form-control form-control-sm',
-                                                     'placeholder': 'S&S Gestión'}),
-            'login_subtitulo': forms.TextInput(attrs={'class': 'form-control form-control-sm',
-                                                     'placeholder': 'v1.0 · 2026'}),
+            'login_titulo':           forms.TextInput(attrs={'class': 'form-control form-control-sm',
+                                                             'placeholder': 'S&S Gestión'}),
+            'login_titulo_tamano':    forms.NumberInput(attrs={'class': 'form-control form-control-sm',
+                                                               'min': 12, 'max': 120, 'step': 1}),
+            'login_subtitulo':        forms.TextInput(attrs={'class': 'form-control form-control-sm',
+                                                             'placeholder': 'v1.0 · 2026'}),
+            'login_subtitulo_tamano': forms.NumberInput(attrs={'class': 'form-control form-control-sm',
+                                                               'min': 8, 'max': 48, 'step': 1}),
         }
+
+    def clean_login_titulo_tamano(self):
+        v = self.cleaned_data.get('login_titulo_tamano') or 44
+        return max(12, min(120, v))
+
+    def clean_login_subtitulo_tamano(self):
+        v = self.cleaned_data.get('login_subtitulo_tamano') or 14
+        return max(8, min(48, v))
 
 
 @requiere('puede_configurar_empresa')

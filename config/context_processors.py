@@ -24,8 +24,10 @@ def tema_empresa(request):
             'tema_imagen_marca':   cfg.imagen_marca.url if cfg.imagen_marca else '',
             'tema_favicon':        cfg.favicon.url if cfg.favicon else '',
             'tema_fondo_login':    cfg.imagen_fondo_login.url if cfg.imagen_fondo_login else '',
-            'tema_login_titulo':    cfg.login_titulo or '',
-            'tema_login_subtitulo': cfg.login_subtitulo or '',
+            'tema_login_titulo':           cfg.login_titulo or '',
+            'tema_login_subtitulo':        cfg.login_subtitulo or '',
+            'tema_login_titulo_tamano':    cfg.login_titulo_tamano or 44,
+            'tema_login_subtitulo_tamano': cfg.login_subtitulo_tamano or 14,
         }
     except Exception:
         return {}

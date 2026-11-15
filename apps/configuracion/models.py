@@ -22,6 +22,8 @@ class ConfigEmpresa(models.Model):
                                        help_text='Texto grande que se muestra al costado izquierdo del formulario de ingreso. Dejar vacío para ocultar.')
     login_subtitulo = models.CharField('Subtítulo sobre el fondo de login', max_length=120, blank=True,
                                        help_text='Línea pequeña bajo el título (por ejemplo, la versión del sistema). Dejar vacío para ocultar.')
+    login_titulo_tamano    = models.PositiveSmallIntegerField('Tamaño del título (px)', default=44)
+    login_subtitulo_tamano = models.PositiveSmallIntegerField('Tamaño del subtítulo (px)', default=14)
     updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:
