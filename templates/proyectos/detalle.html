@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}{{ proyecto.nombre }}{% endblock %}
-{% block nav_proyecto %}active{% endblock %}
+{% block nav_proyectos %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'proyectos:lista' %}">Proyectos</a></li>
 <li class="breadcrumb-item active">{{ proyecto.codigo }}</li>
