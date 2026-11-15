@@ -301,7 +301,8 @@
           <i class="bi bi-boxes"></i> Insumos
         </a>
         <a href="{% url 'logistica:req_insumos_log' proyecto_activo.pk %}"
-           class="sb-link sb-sublink {% if vn == 'logistica:req_insumos_log' %}active{% endif %}">
+           class="sb-link sb-sublink {% if vn == 'logistica:req_insumos_log' %}active{% endif %}"
+           style="white-space:nowrap">
           <i class="bi bi-clipboard-check"></i> Requerimiento de insumos
         </a>
       </div>
