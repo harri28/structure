@@ -143,17 +143,6 @@
                 <i class="bi {% if d.cantidad_aprobada is not None %}bi-check2{% else %}bi-check-lg{% endif %} me-1"></i>
                 <span class="btn-aprobar-label">{% if d.cantidad_aprobada is not None %}Aprobado{% else %}Aprobar{% endif %}</span>
               </button>
-              <button type="button" class="btn btn-link p-0 btn-sustituir-item"
-                      style="color:#2563eb;font-size:1rem;line-height:1"
-                      data-pk="{{ d.pk }}"
-                      data-url="{% url 'logistica:req_item_sustituir' req.pk d.pk %}"
-                      data-original-code="{% if d.codigo %}{{ d.codigo }}{% elif d.insumo %}{{ d.insumo.codigo }}{% endif %}"
-                      data-original-desc="{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% endif %}"
-                      data-original-und="{{ d.unidad|default:'' }}"
-                      data-original-cant="{{ d.cantidad_requerida|unlocalize }}"
-                      title="Sustituir / Editar insumo">
-                <i class="bi bi-arrow-repeat"></i>
-              </button>
             </div>
             <div class="small aprobar-feedback mt-1" style="font-size:.7rem;display:none"></div>
           </td>
@@ -306,73 +295,6 @@
 </div>
 {% endif %}
 
-<!-- Modal: Cambiar o Editar insumo (sustitución por fila) -->
-{% if editable %}
-<div class="modal fade" id="modal-sustituir" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title" style="font-size:.95rem">
-          <i class="bi bi-arrow-repeat me-1 text-primary"></i>Cambiar o Editar insumo
-        </h6>
-        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-
-        <div class="card mb-3" style="background:#f8fafc;border:1px solid #cbd5e1">
-          <div class="card-body py-2 px-3">
-            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700">Insumo original</div>
-            <div id="sustituir-original-desc" class="fw-semibold" style="font-size:.88rem">—</div>
-            <div class="small text-muted mt-1">
-              <span id="sustituir-original-code"></span>
-              · <span id="sustituir-original-cant"></span>
-              <span id="sustituir-original-und"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="d-flex justify-content-center my-2">
-          <i class="bi bi-arrow-down-circle" style="font-size:1.3rem;color:#6b7280"></i>
-        </div>
-
-        <div class="mb-2">
-          <label class="form-label fw-semibold" style="font-size:.78rem">Nuevo insumo <span class="text-danger">*</span></label>
-          <div style="position:relative">
-            <input type="text" id="sustituir-buscar" class="form-control form-control-sm"
-                   placeholder="Buscar por código o descripción..." autocomplete="off">
-            <div id="sustituir-drop" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #dee2e6;border-radius:4px;max-height:200px;overflow-y:auto;z-index:1051;box-shadow:0 4px 12px rgba(0,0,0,.15)"></div>
-          </div>
-          <input type="hidden" id="sustituir-nuevo-id">
-          <div id="sustituir-nuevo-sel" class="mt-2 p-2 border rounded" style="display:none;background:#eff6ff;border-color:#93c5fd !important;font-size:.82rem"></div>
-        </div>
-
-        <div class="row g-2 mb-2">
-          <div class="col-md-5">
-            <label class="form-label fw-semibold" style="font-size:.78rem">Cantidad <span class="text-danger">*</span></label>
-            <input type="number" id="sustituir-cantidad" class="form-control form-control-sm"
-                   step="0.0001" min="0.0001" placeholder="0.00">
-          </div>
-        </div>
-
-        <div class="mb-0">
-          <label class="form-label fw-semibold" style="font-size:.78rem">Justificación</label>
-          <textarea id="sustituir-justif" class="form-control form-control-sm" rows="2"
-                    placeholder="Motivo del cambio (ej. no disponible en zona)..."></textarea>
-        </div>
-
-        <div id="sustituir-error" class="text-danger mt-2" style="font-size:.78rem;display:none"></div>
-
-      </div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-sustituir-guardar">
-          <i class="bi bi-check-lg me-1"></i>Guardar
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-{% endif %}
 
 <!-- Modal: generar cotización (seleccionar / quitar ítems) -->
 <div class="modal fade" id="modal-cotizar" tabindex="-1" aria-hidden="true">
@@ -491,8 +413,6 @@
 {% block extra_js %}
 <script>
 (function () {
-  var API = '/almacen/api/productos/';
-
   // Solo activar JS de edición si el formulario es editable
   if (!document.getElementById('btn-aprobar')) return;
 
@@ -584,133 +504,6 @@
       });
     });
   });
-
-  // ── Modal "Cambiar o Editar insumo" (sustitución por fila) ───────
-  var modalSustEl = document.getElementById('modal-sustituir');
-  var modalSust = modalSustEl ? new bootstrap.Modal(modalSustEl) : null;
-  var sustCurrentBtn = null;
-
-  if (modalSustEl) {
-    var inpBuscar = document.getElementById('sustituir-buscar');
-    var drop      = document.getElementById('sustituir-drop');
-    var selDiv    = document.getElementById('sustituir-nuevo-sel');
-    var idHidden  = document.getElementById('sustituir-nuevo-id');
-    var errDiv    = document.getElementById('sustituir-error');
-
-    document.querySelectorAll('.btn-sustituir-item').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        sustCurrentBtn = btn;
-        document.getElementById('sustituir-original-desc').textContent = btn.dataset.originalDesc || '—';
-        document.getElementById('sustituir-original-code').textContent = btn.dataset.originalCode || '';
-        document.getElementById('sustituir-original-cant').textContent = btn.dataset.originalCant || '';
-        document.getElementById('sustituir-original-und').textContent  = ' ' + (btn.dataset.originalUnd || '');
-        inpBuscar.value = '';
-        idHidden.value = '';
-        selDiv.style.display = 'none';
-        selDiv.innerHTML = '';
-        document.getElementById('sustituir-cantidad').value = btn.dataset.originalCant || '';
-        document.getElementById('sustituir-justif').value = '';
-        errDiv.style.display = 'none';
-        drop.style.display = 'none';
-        modalSust.show();
-      });
-    });
-
-    inpBuscar.addEventListener('input', function () {
-      var q = inpBuscar.value.trim();
-      if (!q) { drop.style.display = 'none'; return; }
-      fetch(API + '?q=' + encodeURIComponent(q))
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (!data.length) {
-            drop.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:.8rem">Sin resultados</div>';
-          } else {
-            drop.innerHTML = data.map(function (p) {
-              return '<div class="sust-opt" data-id="' + p.id +
-                '" data-desc="' + p.descripcion.replace(/"/g,'&quot;') +
-                '" data-unidad="' + (p.unidad||'') +
-                '" data-codigo="' + (p.codigo||'') + '"' +
-                ' style="padding:6px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.8rem">' +
-                '<strong style="color:#d97706">' + p.codigo + '</strong> ' + p.descripcion +
-                '</div>';
-            }).join('');
-          }
-          drop.style.display = 'block';
-        });
-    });
-
-    drop.addEventListener('click', function (e) {
-      var opt = e.target.closest('.sust-opt');
-      if (!opt) return;
-      idHidden.value = opt.dataset.id;
-      inpBuscar.value = opt.dataset.desc;
-      selDiv.innerHTML = '<strong style="color:#d97706">' + (opt.dataset.codigo || '—') + '</strong> ' +
-        opt.dataset.desc + ' <span class="text-muted">· ' + (opt.dataset.unidad || '') + '</span>';
-      selDiv.style.display = 'block';
-      drop.style.display = 'none';
-    });
-
-    drop.addEventListener('mouseover', function (e) {
-      var opt = e.target.closest('.sust-opt');
-      if (opt) opt.style.background = '#eff6ff';
-    });
-    drop.addEventListener('mouseout', function (e) {
-      var opt = e.target.closest('.sust-opt');
-      if (opt) opt.style.background = '';
-    });
-
-    document.getElementById('btn-sustituir-guardar').addEventListener('click', function () {
-      errDiv.style.display = 'none';
-      var nuevoId = idHidden.value;
-      var cantidad = document.getElementById('sustituir-cantidad').value;
-      var justif = document.getElementById('sustituir-justif').value;
-      if (!nuevoId) {
-        errDiv.style.display = 'block';
-        errDiv.textContent = 'Elegí un insumo de reemplazo.';
-        return;
-      }
-      if (!cantidad || parseFloat(cantidad) <= 0) {
-        errDiv.style.display = 'block';
-        errDiv.textContent = 'Ingresá una cantidad mayor a 0.';
-        return;
-      }
-
-      var btn = this;
-      btn.disabled = true;
-      var orig = btn.innerHTML;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem"></span> Guardando...';
-
-      var body = new FormData();
-      body.append('nuevo_insumo_id', nuevoId);
-      body.append('cantidad', cantidad);
-      body.append('justificacion', justif);
-
-      fetch(sustCurrentBtn.dataset.url, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
-        body: body,
-      })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        btn.disabled = false;
-        btn.innerHTML = orig;
-        if (!data.ok) {
-          errDiv.style.display = 'block';
-          errDiv.textContent = data.error || 'Error al guardar.';
-          return;
-        }
-        modalSust.hide();
-        // Recarga la página para ver el nuevo detalle en la tabla.
-        window.location.reload();
-      })
-      .catch(function (err) {
-        btn.disabled = false;
-        btn.innerHTML = orig;
-        errDiv.style.display = 'block';
-        errDiv.textContent = 'Error de red: ' + err.message;
-      });
-    });
-  }
 
   // ── Validación cantidades originales ─────────────────────────────
   var inputs = document.querySelectorAll('.cant-aprobada');
