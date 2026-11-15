@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Proveedores — {{ proyecto.codigo }}{% endblock %}
 
 {% block breadcrumb %}
@@ -135,13 +136,16 @@
         <div class="row g-3 mb-3">
           <div class="col-md-6">
             <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">RUC / DNI</label>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-center">
               <input type="text" id="prov-ruc" class="form-control form-control-sm"
                      maxlength="11" placeholder="11 dígitos RUC o 8 DNI">
               <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-prov-consultar"
                       style="white-space:nowrap">
                 <i class="bi bi-search me-1"></i>Consultar
               </button>
+              <img src="{% static 'img/sunat.png' %}" alt="SUNAT"
+                   title="Consulta vía SUNAT"
+                   style="height:24px;width:auto;flex-shrink:0">
             </div>
             <div id="prov-ruc-err" style="font-size:.72rem;color:#dc2626;display:none;margin-top:3px"></div>
           </div>
