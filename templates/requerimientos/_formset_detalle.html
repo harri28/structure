@@ -273,7 +273,11 @@
       const cantPres = row ? row.querySelector('.cantidad-pres') : null;
       if (cantPres) {
         cantPres.value = opt.dataset.cantidad;
-        cantPres.dataset.restante = opt.dataset.cantidadRestante;
+        // Límite real = saldo global disponible contra el presupuesto (ya
+        // descontando lo comprometido en REQs activos). No usar
+        // 'cantidad_restante' (p.cantidad) porque se descuenta al emitir
+        // guías y daría un tope más chico que el real disponible.
+        cantPres.dataset.restante = opt.dataset.disponible ?? opt.dataset.cantidadRestante;
       }
       const stockInp = row ? row.querySelector('.stock-display') : null;
       if (stockInp) cargarStock(opt.dataset.id, stockInp);
