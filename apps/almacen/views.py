@@ -1622,6 +1622,39 @@ def api_insumo_stock(request, insumo_id):
     return JsonResponse({'stock': float(entrada - salida)})
 
 
+@requiere('puede_crear_requerimientos', 'puede_aprobar_requerimientos', 'puede_ver_almacen')
+def api_insumo_saldo(request, insumo_id):
+    """Saldo global de un insumo para mostrar en el tooltip del input
+    'Cantidad a solicitar' al crear/editar un requerimiento.
+
+    Retorna cuánto ya quedó comprometido en otros REQs activos del proyecto
+    (SOLICITADO/ENVIADO/EN_REVISION/APROBADO/COTIZADO/PARCIAL/ATENDIDO) y
+    cuánto queda libre contra `cantidad_total`.
+
+    Acepta ?excluir_req=<pk> para no contar el REQ actual al editar.
+    """
+    from apps.presupuesto.services import saldo_disponible_insumo
+    from apps.presupuesto.models import InsumoPresupuesto
+    try:
+        ins = InsumoPresupuesto.objects.get(pk=insumo_id)
+    except InsumoPresupuesto.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Insumo no encontrado.'}, status=404)
+    excluir_req = request.GET.get('excluir_req') or None
+    try:
+        excluir_req_pk = int(excluir_req) if excluir_req else None
+    except ValueError:
+        excluir_req_pk = None
+    disponible = saldo_disponible_insumo(ins, excluir_req_pk=excluir_req_pk)
+    ya_pedido = (ins.cantidad_total or Decimal('0')) - disponible
+    return JsonResponse({
+        'ok':             True,
+        'cantidad_total': str(ins.cantidad_total or Decimal('0')),
+        'ya_pedido':      str(ya_pedido if ya_pedido > 0 else Decimal('0')),
+        'disponible':     str(disponible if disponible > 0 else Decimal('0')),
+        'unidad':         ins.unidad or '',
+    })
+
+
 @requiere('puede_ver_almacen', 'puede_gestionar_entradas', 'puede_gestionar_salidas', 'puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log', 'puede_gestionar_oc', 'puede_crear_requerimientos', 'puede_aprobar_requerimientos')
 def api_productos(request):
     q = request.GET.get('q', '')

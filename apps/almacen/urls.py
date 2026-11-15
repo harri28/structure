@@ -53,4 +53,5 @@ urlpatterns = [
     path('api/productos/', views.api_productos, name='api_productos'),
     path('api/req/<int:pk>/detalles/', views.api_req_detalles, name='api_req_detalles'),
     path('api/insumo/<int:insumo_id>/stock/', views.api_insumo_stock, name='api_insumo_stock'),
+    path('api/insumo/<int:insumo_id>/saldo/', views.api_insumo_saldo, name='api_insumo_saldo'),
 ]

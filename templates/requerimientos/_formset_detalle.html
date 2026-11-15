@@ -54,9 +54,15 @@
                data-insumo-id="{{ form.instance.insumo_id|default:'' }}">
       </td>
       <td>
-        <input type="number" step="0.0001" name="{{ form.cantidad_requerida.html_name }}"
-               value="{{ form.cantidad_requerida.value|default:'' }}"
-               class="form-control form-control-sm cant-req">
+        <div class="d-flex align-items-center gap-1">
+          <input type="number" step="0.0001" name="{{ form.cantidad_requerida.html_name }}"
+                 value="{{ form.cantidad_requerida.value|default:'' }}"
+                 class="form-control form-control-sm cant-req" style="flex:1">
+          <span class="saldo-info" style="display:none;cursor:help;color:#d97706;font-size:1rem;line-height:1"
+                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="">
+            <i class="bi bi-exclamation-circle-fill"></i>
+          </span>
+        </div>
         <div class="cant-req-error" style="display:none;font-size:.72rem;color:#dc2626;margin-top:2px"></div>
         {% if form.cantidad_requerida.errors %}
         <div class="text-danger" style="font-size:.72rem;margin-top:2px">{{ form.cantidad_requerida.errors.0 }}</div>
@@ -140,6 +146,34 @@
       .catch(() => { stockInput.value = '—'; });
   }
 
+  function cargarSaldoTooltip(insumoId, saldoSpan) {
+    if (!insumoId || !saldoSpan) return;
+    fetch(API_STOCK + insumoId + '/saldo/')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) { saldoSpan.style.display = 'none'; return; }
+        var yaPedido = parseFloat(data.ya_pedido);
+        var disponible = parseFloat(data.disponible);
+        var unidad = data.unidad || 'und';
+        // Si no hay nada comprometido aún, no mostramos el ícono (no hay
+        // nada que avisar).
+        if (yaPedido <= 0) { saldoSpan.style.display = 'none'; return; }
+        var txt = 'Ya has solicitado <strong>' + yaPedido.toLocaleString('es-PE', {maximumFractionDigits: 4}) +
+                  ' ' + unidad + '</strong> anteriormente. ' +
+                  'Te quedan <strong>' + disponible.toLocaleString('es-PE', {maximumFractionDigits: 4}) +
+                  ' ' + unidad + '</strong> por solicitar.';
+        saldoSpan.setAttribute('title', txt);
+        saldoSpan.setAttribute('data-bs-original-title', txt);
+        saldoSpan.style.display = '';
+        if (window.bootstrap && window.bootstrap.Tooltip) {
+          var existing = bootstrap.Tooltip.getInstance(saldoSpan);
+          if (existing) existing.dispose();
+          new bootstrap.Tooltip(saldoSpan);
+        }
+      })
+      .catch(() => { saldoSpan.style.display = 'none'; });
+  }
+
   function buscar(input, q) {
     if (q === undefined) q = input.value.trim();
     const wrap = input.closest('.prod-wrap');
@@ -219,6 +253,8 @@
       }
       const stockInp = row ? row.querySelector('.stock-display') : null;
       if (stockInp) cargarStock(opt.dataset.id, stockInp);
+      const saldoSp = row ? row.querySelector('.saldo-info') : null;
+      if (saldoSp) cargarSaldoTooltip(opt.dataset.id, saldoSp);
       const itemNum = row ? row.querySelector('.item-num') : null;
       if (itemNum) itemNum.textContent = opt.dataset.codigo;
       opt.closest('.prod-dropdown').style.display = 'none';
@@ -263,6 +299,8 @@
       if (cantPresClr) cantPresClr.value = '';
       const stockInp = row ? row.querySelector('.stock-display') : null;
       if (stockInp) stockInp.value = '—';
+      const saldoSp = row ? row.querySelector('.saldo-info') : null;
+      if (saldoSp) { saldoSp.style.display = 'none'; saldoSp.setAttribute('title', ''); }
       const itemNum = row ? row.querySelector('.item-num') : null;
       if (itemNum) itemNum.textContent = '—';
     }
@@ -364,6 +402,12 @@
     nuevoProdSearch.style.cursor = '';
     nuevoProdSearch.removeAttribute('title');
     tpl.querySelector('.stock-display').value = '—';
+    var nuevoSaldo = tpl.querySelector('.saldo-info');
+    if (nuevoSaldo) {
+      nuevoSaldo.style.display = 'none';
+      nuevoSaldo.setAttribute('title', '');
+      nuevoSaldo.removeAttribute('data-bs-original-title');
+    }
     tpl.style.opacity = '1';
     tbody.appendChild(tpl);
     const tf = document.querySelector('[name$="-TOTAL_FORMS"]');
@@ -372,9 +416,14 @@
     tpl.querySelector('.prod-search')?.focus();
   });
 
-  // Cargar stock para filas existentes con insumo
+  // Cargar stock + saldo para filas existentes con insumo (al editar un REQ)
   document.querySelectorAll('.stock-display[data-insumo-id]').forEach(function(inp) {
-    if (inp.dataset.insumoId) cargarStock(inp.dataset.insumoId, inp);
+    if (inp.dataset.insumoId) {
+      cargarStock(inp.dataset.insumoId, inp);
+      var row = inp.closest('.formset-row');
+      var saldoSp = row ? row.querySelector('.saldo-info') : null;
+      if (saldoSp) cargarSaldoTooltip(inp.dataset.insumoId, saldoSp);
+    }
   });
 
   actualizarItems();
