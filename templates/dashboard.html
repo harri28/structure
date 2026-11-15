@@ -88,12 +88,17 @@
 <div class="row g-3 mb-3">
   <div class="col-lg-5">
     <div class="card h-100">
-      <div class="card-header py-2" style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
-        <i class="bi bi-pie-chart me-1 text-warning"></i> Requerimientos por estado
+      <div class="card-header py-2 d-flex justify-content-between align-items-center" style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+        <span><i class="bi bi-pie-chart me-1 text-warning"></i> Requerimientos por estado</span>
+        {% if total_reqs %}
+        <span class="badge bg-primary rounded-pill" style="font-size:.7rem;font-weight:700">{{ total_reqs }}</span>
+        {% endif %}
       </div>
-      <div class="card-body" style="min-height:260px">
-        {% if reqs_por_estado %}
-        <canvas id="chart-reqs-estado" style="max-height:230px"></canvas>
+      <div class="card-body" style="min-height:260px;position:relative">
+        {% if total_reqs %}
+        <div style="position:relative;height:230px">
+          <canvas id="chart-reqs-estado"></canvas>
+        </div>
         {% else %}
         <div class="text-center text-muted py-5" style="font-size:.85rem">Sin requerimientos todavía.</div>
         {% endif %}
@@ -105,9 +110,11 @@
       <div class="card-header py-2" style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
         <i class="bi bi-boxes me-1 text-primary"></i> Top 10 insumos más consumidos
       </div>
-      <div class="card-body" style="min-height:260px">
+      <div class="card-body" style="min-height:260px;position:relative">
         {% if top_insumos %}
-        <canvas id="chart-top-insumos" style="max-height:260px"></canvas>
+        <div style="position:relative;height:260px">
+          <canvas id="chart-top-insumos"></canvas>
+        </div>
         {% else %}
         <div class="text-center text-muted py-5" style="font-size:.85rem">Sin salidas registradas aún.</div>
         {% endif %}

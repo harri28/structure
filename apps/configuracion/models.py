@@ -18,6 +18,10 @@ class ConfigEmpresa(models.Model):
                                      help_text='Ícono del navegador (pestaña, acceso directo). PNG cuadrado 32×32 o 64×64.')
     imagen_fondo_login = models.ImageField('Fondo de Login', upload_to='empresa/fondo_login/', blank=True, null=True,
                                            help_text='Imagen de fondo a pantalla completa detrás del formulario de ingreso.')
+    login_titulo    = models.CharField('Título sobre el fondo de login', max_length=80, blank=True,
+                                       help_text='Texto grande que se muestra al costado izquierdo del formulario de ingreso. Dejar vacío para ocultar.')
+    login_subtitulo = models.CharField('Subtítulo sobre el fondo de login', max_length=120, blank=True,
+                                       help_text='Línea pequeña bajo el título (por ejemplo, la versión del sistema). Dejar vacío para ocultar.')
     updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:

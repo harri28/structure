@@ -184,17 +184,22 @@ def proyecto_dashboard(request, pk):
             })
 
     # ── Requerimientos por estado ───────────────────────────────────
+    from django.db.models import Count
     reqs_por_estado_qs = (Requerimiento.objects
                           .filter(proyecto=proyecto)
                           .values('estado')
-                          .annotate(n=Sum(Value(1, output_field=DFld()))))
+                          .annotate(n=Count('id'))
+                          .order_by('estado'))
     estados_map = dict(ESTADOS_REQ)
     reqs_por_estado = []
+    total_reqs = 0
     for r in reqs_por_estado_qs:
+        n = int(r['n'] or 0)
+        total_reqs += n
         reqs_por_estado.append({
             'estado': r['estado'],
             'label':  estados_map.get(r['estado'], r['estado']),
-            'n':      int(r['n'] or 0),
+            'n':      n,
         })
 
     # ── Cuadrillas / Maquinaria / Trabajadores ──────────────────────
@@ -249,6 +254,7 @@ def proyecto_dashboard(request, pk):
         'top_insumos':          top_insumos,
         'avance_partidas':      avance_partidas,
         'reqs_por_estado':      reqs_por_estado,
+        'total_reqs':           total_reqs,
         'cuadrillas_activas':   cuadrillas_activas,
         'maquinas_activas':     maquinas_activas,
         'trabajadores_activos': trabajadores_activos,

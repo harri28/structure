@@ -91,6 +91,18 @@ class ImagenFondoLoginForm(forms.ModelForm):
         }
 
 
+class TextoLoginForm(forms.ModelForm):
+    class Meta:
+        model  = ConfigEmpresa
+        fields = ['login_titulo', 'login_subtitulo']
+        widgets = {
+            'login_titulo':    forms.TextInput(attrs={'class': 'form-control form-control-sm',
+                                                     'placeholder': 'S&S Gestión'}),
+            'login_subtitulo': forms.TextInput(attrs={'class': 'form-control form-control-sm',
+                                                     'placeholder': 'v1.0 · 2026'}),
+        }
+
+
 @requiere('puede_configurar_empresa')
 def empresa(request):
     config = ConfigEmpresa.get()
@@ -132,6 +144,12 @@ def apariencia(request):
             form_fondo.save()
             messages.success(request, 'Fondo de login actualizado.')
             return redirect('configuracion:apariencia')
+    elif section == 'texto_login':
+        form_texto = TextoLoginForm(request.POST, instance=config)
+        if form_texto.is_valid():
+            form_texto.save()
+            messages.success(request, 'Texto del login actualizado.')
+            return redirect('configuracion:apariencia')
     elif section == 'color':
         form_color = ColorPrimarioForm(request.POST, instance=config)
         if form_color.is_valid():
@@ -147,12 +165,15 @@ def apariencia(request):
         form_favicon = FaviconForm(instance=config)
     if 'form_fondo' not in locals():
         form_fondo = ImagenFondoLoginForm(instance=config)
+    if 'form_texto' not in locals():
+        form_texto = TextoLoginForm(instance=config)
 
     return render(request, 'configuracion/apariencia.html', {
         'form_color':   form_color,
         'form_imagen':  form_imagen,
         'form_favicon': form_favicon,
         'form_fondo':   form_fondo,
+        'form_texto':   form_texto,
         'config':       config,
         'tab_activo_config': 'apariencia',
     })

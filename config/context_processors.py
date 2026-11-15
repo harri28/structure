@@ -24,6 +24,8 @@ def tema_empresa(request):
             'tema_imagen_marca':   cfg.imagen_marca.url if cfg.imagen_marca else '',
             'tema_favicon':        cfg.favicon.url if cfg.favicon else '',
             'tema_fondo_login':    cfg.imagen_fondo_login.url if cfg.imagen_fondo_login else '',
+            'tema_login_titulo':    cfg.login_titulo or '',
+            'tema_login_subtitulo': cfg.login_subtitulo or '',
         }
     except Exception:
         return {}
