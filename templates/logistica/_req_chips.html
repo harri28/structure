@@ -1,6 +1,8 @@
-{# Barra de pestañas de 'Ingreso de Requerimientos' — se incluye en cada
-   vista pasando 'active=<slug>' para marcar la actual.
-   Slugs: ingreso, por_atender, aprobados, consolidados, anulados, historial. #}
+{% comment %}
+Barra de pestañas de 'Ingreso de Requerimientos' — se incluye en cada
+vista pasando 'active=<slug>' para marcar la actual.
+Slugs: ingreso, por_atender, aprobados, consolidados, anulados, historial.
+{% endcomment %}
 <div class="submodule-chips mt-2">
   <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}"
      class="s-chip{% if active == 'ingreso' %} active{% endif %}">
