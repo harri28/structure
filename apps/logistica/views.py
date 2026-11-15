@@ -922,6 +922,7 @@ def req_item_aprobar(request, req_pk, det_pk):
     global del insumo en el presupuesto. Responde JSON."""
     from decimal import Decimal, InvalidOperation
     from django.http import JsonResponse
+    from django.db.models import Sum
     from apps.requerimientos.models import Requerimiento, DetalleRequerimiento
     from apps.presupuesto.services import saldo_disponible_insumo
 
