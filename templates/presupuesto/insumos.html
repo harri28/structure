@@ -459,10 +459,22 @@
   });
 
   function cargarDetalle(id) {
-    fetch('/presupuesto/insumo/' + id + '/ampliaciones/')
-      .then(r => r.json())
+    errDiv.style.display = 'none';
+    fetch('/presupuesto/insumo/' + id + '/ampliaciones/', {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(r => {
+        if (!r.ok) {
+          throw new Error('HTTP ' + r.status + ' — sin acceso al endpoint de modificaciones');
+        }
+        return r.json();
+      })
       .then(data => {
-        if (!data.ok) return;
+        if (!data.ok) {
+          errDiv.textContent = data.error || 'No se pudo cargar el insumo.';
+          errDiv.style.display = 'block';
+          return;
+        }
         const i = data.insumo;
         const nf = (v, d) => parseFloat(v).toLocaleString('es-PE', {minimumFractionDigits:d||0, maximumFractionDigits:d||4});
         document.getElementById('mod-ins-desc').textContent = i.descripcion;
@@ -506,6 +518,10 @@
         } else {
           histWrap.style.display = 'none';
         }
+      })
+      .catch(err => {
+        errDiv.textContent = 'Error de red: ' + err.message;
+        errDiv.style.display = 'block';
       });
   }
 
