@@ -292,7 +292,7 @@ def insumo_ampliar(request, pk):
     })
 
 
-@requiere('puede_editar_presupuesto')
+@requiere('puede_ver_presupuesto', 'puede_editar_presupuesto')
 def insumo_ampliaciones_json(request, pk):
     """GET: datos del insumo + lista de ampliaciones previas para el modal."""
     from django.http import JsonResponse

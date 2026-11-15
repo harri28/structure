@@ -87,7 +87,9 @@
       </thead>
       <tbody>
         {% for ins in insumos %}
-        <tr {% if ins.n_ampliaciones %}style="background:#fff7ed" title="Cantidad modificada: {{ ins.cantidad_total|floatformat:4 }} original + {{ ins.ampliado|floatformat:4 }} agregadas"{% endif %}>
+        <tr class="ins-row" data-insumo-id="{{ ins.pk }}"
+            {% if ins.n_ampliaciones %}style="background:#fff7ed;cursor:pointer" title="Cantidad modificada: {{ ins.cantidad_total|floatformat:4 }} original + {{ ins.ampliado|floatformat:4 }} agregadas"
+            {% else %}style="cursor:pointer" title="Ver historial de ampliaciones"{% endif %}>
           <td><code>{{ ins.codigo }}</code></td>
           <td>
             {{ ins.descripcion }}
@@ -275,6 +277,49 @@
 </div>
 {% endif %}
 
+<!-- Modal Kardex (historial de ampliaciones, solo lectura) -->
+<div class="modal fade" id="modal-kardex" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:#eff6ff;border-bottom:1px solid #bfdbfe">
+        <h6 class="modal-title" style="font-size:.95rem;color:#1e40af">
+          <i class="bi bi-clock-history me-1" style="color:#2563eb"></i>Historial de ampliaciones
+        </h6>
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div style="font-size:.72rem;color:#1e3a8a;text-transform:uppercase;letter-spacing:.05em;font-weight:700">Insumo</div>
+          <div class="fw-semibold mt-1" style="font-size:.9rem">
+            <code id="krd-codigo" style="color:#2563eb;background:#eff6ff;padding:.1rem .35rem;border-radius:3px;margin-right:.35rem"></code>
+            <span id="krd-desc"></span>
+          </div>
+        </div>
+        <div id="krd-vacio" style="display:none;padding:1.5rem;text-align:center;color:#6b7280;font-size:.82rem">
+          <i class="bi bi-inbox d-block mb-2" style="font-size:1.5rem;opacity:.5"></i>
+          Sin ampliaciones registradas para este insumo.
+        </div>
+        <div id="krd-tabla-wrap" style="display:none">
+          <table class="table table-sm mb-0" style="font-size:.78rem">
+            <thead class="table-light">
+              <tr>
+                <th>Fecha</th>
+                <th class="text-end">Cantidad</th>
+                <th>Justificación</th>
+                <th>Usuario</th>
+              </tr>
+            </thead>
+            <tbody id="krd-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -453,5 +498,59 @@
   });
 })();
 {% endif %}
+
+// ── Kardex: clic en fila abre historial de ampliaciones (solo lectura) ──
+(function() {
+  const modalEl = document.getElementById('modal-kardex');
+  if (!modalEl) return;
+  const modal   = new bootstrap.Modal(modalEl);
+  const codigo  = document.getElementById('krd-codigo');
+  const desc    = document.getElementById('krd-desc');
+  const vacio   = document.getElementById('krd-vacio');
+  const wrap    = document.getElementById('krd-tabla-wrap');
+  const body    = document.getElementById('krd-body');
+
+  document.querySelectorAll('.ins-row').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+      const id = row.dataset.insumoId;
+      if (!id) return;
+      codigo.textContent = '…';
+      desc.textContent = '';
+      body.innerHTML = '';
+      vacio.style.display = 'none';
+      wrap.style.display = 'none';
+      modal.show();
+      fetch('/presupuesto/insumo/' + id + '/ampliaciones/')
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok) {
+            vacio.textContent = data.error || 'Error al cargar historial.';
+            vacio.style.display = 'block';
+            return;
+          }
+          codigo.textContent = data.insumo.codigo;
+          desc.textContent   = data.insumo.descripcion;
+          if (!data.ampliaciones.length) {
+            vacio.innerHTML = '<i class="bi bi-inbox d-block mb-2" style="font-size:1.5rem;opacity:.5"></i>Sin ampliaciones registradas para este insumo.';
+            vacio.style.display = 'block';
+            return;
+          }
+          body.innerHTML = data.ampliaciones.map(a =>
+            `<tr>
+               <td style="color:#6b7280">${a.fecha}</td>
+               <td class="text-end fw-semibold" style="color:#15803d">+${a.cantidad}</td>
+               <td>${a.justificacion || '<span class="text-muted">—</span>'}</td>
+               <td>${a.usuario}</td>
+             </tr>`
+          ).join('');
+          wrap.style.display = 'block';
+        })
+        .catch(err => {
+          vacio.textContent = 'Error de red: ' + err.message;
+          vacio.style.display = 'block';
+        });
+    });
+  });
+})();
 </script>
 {% endblock %}
