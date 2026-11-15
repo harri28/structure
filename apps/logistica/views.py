@@ -1259,8 +1259,7 @@ def compras_log(request, proyecto_id):
 @proyecto_visible
 def proveedores_log(request, proyecto_id):
     """Catálogo global de proveedores — lista con filtros."""
-    from django.db.models import Q, Count
-    from apps.almacen.models import Cotizacion
+    from django.db.models import Q
 
     proyecto = _get_proyecto(proyecto_id)
     q      = (request.GET.get('q') or '').strip()
@@ -1268,24 +1267,13 @@ def proveedores_log(request, proyecto_id):
 
     qs = Proveedor.objects.all()
     if q:
-        qs = qs.filter(Q(razon_social__icontains=q) | Q(ruc__icontains=q)
-                       | Q(nombre_comercial__icontains=q))
+        qs = qs.filter(Q(razon_social__icontains=q) | Q(ruc__icontains=q))
     if estado == 'activos':
         qs = qs.filter(activo=True)
     elif estado == 'inactivos':
         qs = qs.filter(activo=False)
 
-    # Ingresos = cantidad de cotizaciones registradas con esa razón social
-    ingresos_por_razon = {
-        row['proveedor']: row['n']
-        for row in Cotizacion.objects.values('proveedor').annotate(n=Count('id'))
-    }
-    items = []
-    for p in qs:
-        items.append({
-            'obj':      p,
-            'ingresos': ingresos_por_razon.get(p.razon_social, 0),
-        })
+    items = [{'obj': p} for p in qs]
 
     return render(request, 'logistica/proveedores_log.html', {
         'proyecto': proyecto,

@@ -62,13 +62,11 @@
           <tr>
             <th style="width:100px">RUC</th>
             <th>Razón Social</th>
-            <th style="width:140px">Nombre Comercial</th>
             <th style="width:110px">Teléfono</th>
             <th style="width:180px">Email</th>
             <th style="width:130px">Contacto</th>
-            <th style="width:80px" class="text-center">Ingresos</th>
             <th style="width:90px" class="text-center">Estado</th>
-            <th style="width:90px" class="text-center">Acciones</th>
+            <th style="width:70px" class="text-center">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -76,14 +74,9 @@
           <tr>
             <td><code>{{ it.obj.ruc|default:"—" }}</code></td>
             <td class="fw-semibold">{{ it.obj.razon_social }}</td>
-            <td class="text-muted">{{ it.obj.nombre_comercial|default:"—" }}</td>
             <td class="text-muted">{{ it.obj.telefono|default:"—" }}</td>
             <td class="text-muted">{{ it.obj.email|default:"—" }}</td>
             <td class="text-muted">{{ it.obj.persona_contacto|default:"—" }}</td>
-            <td class="text-center">
-              <span class="badge rounded-pill"
-                    style="background:#fef3c7;color:#92400e;font-size:.72rem">{{ it.ingresos }}</span>
-            </td>
             <td class="text-center">
               {% if it.obj.activo %}
               <span class="badge" style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700">ACTIVO</span>
@@ -92,24 +85,15 @@
               {% endif %}
             </td>
             <td class="text-center">
-              <div class="d-inline-flex gap-1">
-                <button type="button" class="btn btn-sm btn-outline-primary btn-prov-editar"
-                        data-pk="{{ it.obj.pk }}" title="Editar"
-                        style="padding:.15rem .4rem">
-                  <i class="bi bi-pencil-square"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-danger btn-prov-eliminar"
-                        data-pk="{{ it.obj.pk }}"
-                        data-razon="{{ it.obj.razon_social }}"
-                        title="Eliminar"
-                        style="padding:.15rem .4rem">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </div>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-prov-editar"
+                      data-pk="{{ it.obj.pk }}" title="Editar"
+                      style="padding:.15rem .4rem">
+                <i class="bi bi-pencil-square"></i>
+              </button>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="9" class="text-center text-muted py-5">
+          <tr><td colspan="7" class="text-center text-muted py-5">
             <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3"></i>
             Sin proveedores registrados.
           </td></tr>
@@ -133,26 +117,20 @@
       <div class="modal-body">
         <input type="hidden" id="prov-pk" value="">
 
-        <div class="row g-3 mb-3">
-          <div class="col-md-6">
-            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">RUC / DNI</label>
-            <div class="d-flex gap-2 align-items-center">
-              <input type="text" id="prov-ruc" class="form-control form-control-sm"
-                     maxlength="11" placeholder="11 dígitos RUC o 8 DNI">
-              <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-prov-consultar"
-                      style="white-space:nowrap">
-                <i class="bi bi-search me-1"></i>Consultar
-              </button>
-              <img src="{% static 'img/sunat.png' %}" alt="SUNAT"
-                   title="Consulta vía SUNAT"
-                   style="height:24px;width:auto;flex-shrink:0">
-            </div>
-            <div id="prov-ruc-err" style="font-size:.72rem;color:#dc2626;display:none;margin-top:3px"></div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">RUC / DNI</label>
+          <div class="d-flex gap-2 align-items-center">
+            <input type="text" id="prov-ruc" class="form-control form-control-sm"
+                   maxlength="11" placeholder="11 dígitos RUC o 8 DNI" style="max-width:260px">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-prov-consultar"
+                    style="white-space:nowrap">
+              <i class="bi bi-search me-1"></i>Consultar
+            </button>
+            <img src="{% static 'img/sunat.png' %}" alt="SUNAT"
+                 title="Consulta vía SUNAT"
+                 style="height:24px;width:auto;flex-shrink:0">
           </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Nombre Comercial</label>
-            <input type="text" id="prov-nom-com" class="form-control form-control-sm" placeholder="Ej. Bayer">
-          </div>
+          <div id="prov-ruc-err" style="font-size:.72rem;color:#dc2626;display:none;margin-top:3px"></div>
         </div>
 
         <div class="mb-3">
@@ -235,14 +213,12 @@
   const URL_CREAR    = '{% url "logistica:proveedor_crear_ajax" proyecto.pk %}';
   const URL_DETALLE  = (pk) => `/logistica/proyecto/{{ proyecto.pk }}/proveedores/${pk}/`;
   const URL_EDITAR   = (pk) => `/logistica/proyecto/{{ proyecto.pk }}/proveedores/${pk}/guardar/`;
-  const URL_ELIMINAR = (pk) => `/logistica/proyecto/{{ proyecto.pk }}/proveedores/${pk}/eliminar/`;
 
   const modalEl = document.getElementById('modal-prov');
   const modal   = new bootstrap.Modal(modalEl);
 
   const pk      = document.getElementById('prov-pk');
   const ruc     = document.getElementById('prov-ruc');
-  const nomCom  = document.getElementById('prov-nom-com');
   const razon   = document.getElementById('prov-razon');
   const tel     = document.getElementById('prov-tel');
   const email   = document.getElementById('prov-email');
@@ -262,7 +238,7 @@
   }
 
   function resetModal() {
-    pk.value = ''; ruc.value = ''; nomCom.value = ''; razon.value = '';
+    pk.value = ''; ruc.value = ''; razon.value = '';
     tel.value = ''; email.value = ''; contacto.value = ''; direccion.value = '';
     estadoSunat.value = ''; condicionSunat.value = '';
     tipoContrib.value = ''; fechaIni.value = '';
@@ -326,7 +302,7 @@
     }
     const body = {
       ruc: ruc.value.trim(), razon_social: razon.value.trim(),
-      nombre_comercial: nomCom.value.trim(), telefono: tel.value.trim(),
+      telefono: tel.value.trim(),
       email: email.value.trim(), persona_contacto: contacto.value.trim(),
       direccion: direccion.value.trim(),
       estado_sunat:             estadoSunat.value.trim(),
@@ -372,7 +348,7 @@
         .then(data => {
           if (!data.ok) { alert(data.error || 'Error'); return; }
           const p = data.proveedor;
-          pk.value = p.id; ruc.value = p.ruc; nomCom.value = p.nombre_comercial;
+          pk.value = p.id; ruc.value = p.ruc;
           razon.value = p.razon_social; tel.value = p.telefono;
           email.value = p.email; contacto.value = p.persona_contacto;
           direccion.value = p.direccion;
@@ -386,23 +362,6 @@
     });
   });
 
-  // Eliminar
-  document.querySelectorAll('.btn-prov-eliminar').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const id = this.dataset.pk;
-      const razon = this.dataset.razon;
-      if (!confirm('¿Eliminar el proveedor "' + razon + '"? Esta acción no se puede deshacer.')) return;
-      fetch(URL_ELIMINAR(id), {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.ok) { alert(data.error || 'Error al eliminar.'); return; }
-        window.location.reload();
-      });
-    });
-  });
 })();
 </script>
 {% endblock %}
