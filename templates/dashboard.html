@@ -33,7 +33,7 @@
           <i class="bi bi-bar-chart-line me-1 text-primary"></i> Avance del Presupuesto
         </div>
         <div style="font-size:1.4rem;font-weight:800;color:#1d4ed8;line-height:1.1;margin-top:.15rem">
-          {{ avance_presupuesto.pct }}%
+          {{ avance_presupuesto.pct|stringformat:'.4f' }}%
         </div>
         <div style="font-size:.74rem;color:#6b7280">
           Ejecutado S/ {{ avance_presupuesto.ejecutado|miles:2 }}

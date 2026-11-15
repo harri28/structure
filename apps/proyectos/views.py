@@ -129,7 +129,7 @@ def proyecto_dashboard(request, pk):
         avance_presupuesto['total']     = costo_insumos_total
         avance_presupuesto['ejecutado'] = costo_ejecutado
         avance_presupuesto['pct'] = round(
-            float(costo_ejecutado * 100 / costo_insumos_total), 1
+            float(costo_ejecutado * 100 / costo_insumos_total), 4
         ) if costo_insumos_total > 0 else 0
 
         # ── Top 10 insumos más consumidos (sumando salidas del proyecto) ──
