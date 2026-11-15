@@ -599,7 +599,9 @@ def req_revisar_log(request, proyecto_id, pk):
     req = get_object_or_404(Requerimiento, pk=pk, proyecto=proyecto)
 
     ESTADOS_VISIBLES  = ('ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL', 'ANULADO', 'ATENDIDO')
-    ESTADOS_EDITABLES = ('ENVIADO', 'EN_REVISION')
+    # APROBADO entra también a editables: desde 'Por Atender' Logística puede
+    # completar la aprobación de los ítems que quedaron con diferencia pendiente.
+    ESTADOS_EDITABLES = ('ENVIADO', 'EN_REVISION', 'APROBADO')
     if req.estado not in ESTADOS_VISIBLES:
         messages.error(request, 'Este requerimiento no puede visualizarse en su estado actual.')
         return redirect('logistica:requerimientos_log', proyecto_id=proyecto_id)

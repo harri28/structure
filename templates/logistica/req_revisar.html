@@ -210,16 +210,17 @@
     {% if editable %}Cancelar{% else %}Volver{% endif %}
   </a>
   {% if editable %}
+  {% if req.estado == 'APROBADO' or req.estado == 'PARCIAL' %}
+  <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modal-anular">
+    <i class="bi bi-x-circle me-1"></i>Anular
+  </button>
+  {% endif %}
   <button type="submit" class="btn btn-success btn-sm" id="btn-aprobar">
     <i class="bi bi-check-lg me-1"></i>Aprobar requerimiento
   </button>
-  {% elif req.estado == 'APROBADO' or req.estado == 'PARCIAL' %}
+  {% elif req.estado == 'PARCIAL' %}
   <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modal-anular">
     <i class="bi bi-x-circle me-1"></i>Anular requerimiento
-  </button>
-  <button type="button" class="btn btn-success btn-sm"
-          data-bs-toggle="modal" data-bs-target="#modal-cotizar">
-    <i class="bi bi-receipt me-1"></i>{% if req.cotizaciones_origen.count %}Crear Cotizaciones{% else %}Generar cotización{% endif %}
   </button>
   {% elif req.estado == 'ANULADO' %}
   <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-recuperar">
