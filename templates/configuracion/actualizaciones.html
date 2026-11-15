@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block title %}Configuración — Actualizaciones{% endblock %}
+{% block nav_configuracion %}active{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Configuración</li>
+{% endblock %}
+
+{% block content %}
+{% include 'configuracion/_tabs.html' %}
+
+<div class="row justify-content-center mt-3">
+  <div class="col-lg-8">
+
+    <div class="text-center mb-4">
+      <h4 class="fw-bold mb-1" style="color:#0a0a0a">
+        <i class="bi bi-megaphone me-2" style="color:#2563eb"></i>Actualizaciones del Sistema
+      </h4>
+      <div class="text-muted" style="font-size:.88rem">
+        Novedades, mejoras y cambios recientes que debés conocer.
+      </div>
+    </div>
+
+    <!-- ── NOVIEMBRE 2026 ─────────────────────────────────────────── -->
+    <div class="text-center mb-3">
+      <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.78rem;padding:.4em .8em;border-radius:12px;font-weight:600">
+        Noviembre 2026
+      </span>
+    </div>
+
+    <div class="update-list">
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Modificar cantidad de insumos</h6>
+        <p class="update-desc">
+          En Insumos ahora hay un botón <strong>Modificar</strong> (naranja) para
+          agregar cantidad a cualquier insumo del presupuesto. La cantidad
+          original importada del S10 no se pisa — las ampliaciones se registran
+          aparte con fecha, usuario y justificación. Los insumos modificados
+          se destacan con fondo naranja pastel.
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Paginación en la lista de Insumos</h6>
+        <p class="update-desc">
+          Ya no cargamos toda la lista de una. Selector 10/25/50/100 por
+          página (25 por defecto), controles arriba y abajo.
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Aviso de saldo al solicitar requerimientos</h6>
+        <p class="update-desc">
+          Al seleccionar un insumo en Solicitar Requerimiento, si ya se pidió
+          anteriormente en otros REQ, aparece un ícono naranja con tooltip:
+          <em>"Ya has solicitado 25 und anteriormente. Te quedan 0 und por solicitar."</em>
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Aprobar y Sustituir insumos uno por uno</h6>
+        <p class="update-desc">
+          En Ingreso de Requerimientos → Revisión, cada fila tiene su propio
+          botón <strong>Aprobar</strong> (guarda la cantidad al toque) y un ícono
+          de flechas para <strong>Sustituir insumo</strong> por otro desde un modal.
+          Se acabó tener que llegar al final del formulario con 200 ítems.
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Pestaña "Cambios de insumos"</h6>
+        <p class="update-desc">
+          Nueva pestaña en Logística que lista todas las sustituciones de
+          insumo realizadas en los requerimientos del proyecto, con el insumo
+          original, el nuevo, cantidad, usuario y justificación.
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Validación de saldo global del presupuesto</h6>
+        <p class="update-desc">
+          El sistema ahora bloquea pedidos que exceden lo presupuestado para
+          un insumo, sumando lo comprometido en todos los REQ activos
+          (incluidos los enviados y en revisión, no solo los aprobados).
+          Mensaje claro cuando se supera el saldo.
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Unidades de medida auto-registradas</h6>
+        <p class="update-desc">
+          Al importar un presupuesto S10, las abreviaturas detectadas
+          (hh, kg, m3, glb, und, etc.) se agregan automáticamente al catálogo
+          con nombre completo. Ya no sale la advertencia pidiendo que las
+          cargues a mano.
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Ingreso de Requerimientos (nuevo nombre)</h6>
+        <p class="update-desc">
+          En Logística, el módulo de requerimientos recibidos volvió a
+          llamarse <strong>Ingreso de Requerimientos</strong>. El nombre anterior
+          ("Requerimiento de Almacén") se confundía con la vista propia del
+          Almacenero.
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Dashboard con contador visible</h6>
+        <p class="update-desc">
+          El widget "Requerimientos por estado" ahora muestra un badge con el
+          total de REQ del proyecto directo en el header, además del gráfico
+          de dona.
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Apariencia del sistema</h6>
+        <p class="update-desc">
+          Nueva pestaña <strong>Apariencia</strong> en Configuración para
+          personalizar color primario, imagen de marca (sidebar), favicon,
+          fondo de pantalla del login y texto del login — todo con botones
+          independientes.
+        </p>
+      </div>
+
+      <div class="update-item">
+        <div class="update-date">14 nov</div>
+        <h6 class="update-title">Perfil de cada usuario</h6>
+        <p class="update-desc">
+          Cada rol (Jefe de obra, Almacenero, Logística) tiene su propio
+          perfil con nombre, apellido, cargo y teléfono. El superadmin puede
+          editar el perfil de cualquiera. Los requerimientos ahora muestran
+          los datos del usuario que los crea, no del responsable del proyecto.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<style>
+.update-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.update-item {
+  text-align: center;
+  padding: 1rem 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+.update-date {
+  font-size: .72rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 600;
+  margin-bottom: .3rem;
+}
+.update-title {
+  color: #0a0a0a;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: .4rem;
+}
+.update-desc {
+  color: #4b5563;
+  font-size: .86rem;
+  line-height: 1.55;
+  margin-bottom: 0;
+  max-width: 620px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+{% endblock %}

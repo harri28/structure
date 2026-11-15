@@ -134,6 +134,14 @@ def empresa(request):
     })
 
 
+def actualizaciones(request):
+    """Pestaña informativa con las novedades del sistema. Visible a cualquier
+    usuario autenticado. El contenido vive hardcoded en el template."""
+    return render(request, 'configuracion/actualizaciones.html', {
+        'tab_activo_config': 'actualizaciones',
+    })
+
+
 @requiere('puede_configurar_empresa')
 def apariencia(request):
     config = ConfigEmpresa.get()

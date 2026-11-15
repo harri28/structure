@@ -6,6 +6,7 @@ app_name = 'configuracion'
 urlpatterns = [
     path('',                                  views.hub,                   name='hub'),
     path('empresa/',                          views.empresa,               name='empresa'),
+    path('actualizaciones/',                  views.actualizaciones,       name='actualizaciones'),
     path('apariencia/',                       views.apariencia,            name='apariencia'),
     path('equipo/',                           views.equipo,                name='equipo'),
     # Roles

@@ -191,45 +191,42 @@
             </div>
           </div>
 
-          <!-- Cantidad a agregar + campos read-only del insumo -->
-          <div class="mb-3">
-            <label class="form-label fw-semibold" style="font-size:.78rem">
-              Cantidad a agregar <span class="text-danger">*</span>
-            </label>
-            <div class="row g-2 align-items-end">
-              <div class="col-md-3">
-                <input type="number" id="mod-cantidad" class="form-control form-control-sm"
-                       step="0.0001" min="0.0001" placeholder="0.00">
-              </div>
-              <div class="col-md-9">
-                <div class="row g-1 text-center" style="font-size:.72rem">
-                  <div class="col">
-                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Tipo</div>
-                    <input type="text" id="mod-ro-tipo" class="form-control form-control-sm text-center" readonly
-                           style="background:#f8f9fa;color:#374151;font-weight:600;font-size:.72rem;padding:.2rem">
-                  </div>
-                  <div class="col">
-                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Unidad</div>
-                    <input type="text" id="mod-ro-unidad" class="form-control form-control-sm text-center" readonly
-                           style="background:#f8f9fa;color:#374151;font-size:.72rem;padding:.2rem">
-                  </div>
-                  <div class="col">
-                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Cantidad</div>
-                    <input type="text" id="mod-ro-cantidad" class="form-control form-control-sm text-end" readonly
-                           style="background:#f8f9fa;color:#374151;font-size:.72rem;padding:.2rem">
-                  </div>
-                  <div class="col">
-                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Costo Unit.</div>
-                    <input type="text" id="mod-ro-costo" class="form-control form-control-sm text-end" readonly
-                           style="background:#f8f9fa;color:#374151;font-size:.72rem;padding:.2rem">
-                  </div>
-                  <div class="col">
-                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Total</div>
-                    <input type="text" id="mod-ro-total" class="form-control form-control-sm text-end" readonly
-                           style="background:#f8f9fa;color:#1d4ed8;font-weight:700;font-size:.72rem;padding:.2rem">
-                  </div>
-                </div>
-              </div>
+          <!-- Cantidad a agregar + campos read-only del insumo
+               Grilla de 6 columnas iguales: label en el mismo estilo
+               (fw-semibold .78rem, uppercase) y mismo tamaño de input
+               (form-control-sm estándar) para que la fila luzca pareja. -->
+          <div class="row g-2 mb-3 align-items-end">
+            <div class="col">
+              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">
+                Cantidad a agregar <span class="text-danger">*</span>
+              </label>
+              <input type="number" id="mod-cantidad" class="form-control form-control-sm"
+                     step="0.0001" min="0.0001" placeholder="0.00">
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Tipo</label>
+              <input type="text" id="mod-ro-tipo" class="form-control form-control-sm text-center" readonly
+                     style="background:#f8f9fa;color:#374151;font-weight:600">
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Unidad</label>
+              <input type="text" id="mod-ro-unidad" class="form-control form-control-sm text-center" readonly
+                     style="background:#f8f9fa;color:#374151">
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Cantidad</label>
+              <input type="text" id="mod-ro-cantidad" class="form-control form-control-sm text-end" readonly
+                     style="background:#f8f9fa;color:#374151">
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Costo Unit.</label>
+              <input type="text" id="mod-ro-costo" class="form-control form-control-sm text-end" readonly
+                     style="background:#f8f9fa;color:#374151">
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Total</label>
+              <input type="text" id="mod-ro-total" class="form-control form-control-sm text-end" readonly
+                     style="background:#f8f9fa;color:#1d4ed8;font-weight:700">
             </div>
           </div>
 
