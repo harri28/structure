@@ -60,7 +60,7 @@
        title="Limpiar búsqueda" style="font-size:.8rem">×</a>
     {% endif %}
   </form>
-  {% if permisos.puede_editar_presupuesto %}
+  {% if permisos.puede_editar_presupuesto or permisos.puede_ver_logistica %}
   <button type="button" class="btn" id="btn-modificar"
           style="background:#f97316;color:#fff;border:none;font-weight:600;font-size:.85rem">
     <i class="bi bi-pencil-square me-1"></i>Modificar
@@ -155,7 +155,7 @@
 {% include 'presupuesto/_paginacion_insumos.html' with where='bottom' %}
 
 <!-- Modal Modificar -->
-{% if permisos.puede_editar_presupuesto %}
+{% if permisos.puede_editar_presupuesto or permisos.puede_ver_logistica %}
 <div class="modal fade" id="modal-modificar" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -363,7 +363,7 @@
 // (Antes el filtro era client-side con JS y solo filtraba los 30 ítems
 // de la página actual. Ahora recorre toda la lista del presupuesto.)
 
-{% if permisos.puede_editar_presupuesto %}
+{% if permisos.puede_editar_presupuesto or permisos.puede_ver_logistica %}
 // ── Modal Modificar insumo ───────────────────────────────────────
 (function() {
   const modalEl = document.getElementById('modal-modificar');

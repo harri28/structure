@@ -282,15 +282,29 @@
 
     {% if proyecto_activo.presupuesto %}
     <div class="sb-section">
-      <div class="sb-label">Presupuesto</div>
-      <a href="{% url 'presupuesto:insumos' proyecto_activo.presupuesto.pk %}"
-         class="sb-link {% if vn == 'presupuesto:insumos' %}active{% endif %}">
-        <i class="bi bi-boxes"></i> Insumos
-      </a>
-      <a href="{% url 'logistica:req_insumos_log' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:req_insumos_log' %}active{% endif %}">
-        <i class="bi bi-clipboard-check"></i> Requerimiento de insumos
-      </a>
+      <div class="sb-module-row">
+        <a href="{% url 'presupuesto:insumos' proyecto_activo.presupuesto.pk %}"
+           class="sb-link {% if vn == 'presupuesto:insumos' or vn == 'logistica:req_insumos_log' %}active{% endif %}">
+          <i class="bi bi-table"></i> Presupuesto
+        </a>
+        <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse"
+                data-bs-target="#nav-presupuesto-log"
+                aria-expanded="{% if vn == 'presupuesto:insumos' or vn == 'logistica:req_insumos_log' %}true{% else %}false{% endif %}"
+                aria-label="Expandir Presupuesto">
+          <i class="bi bi-chevron-right sb-arrow"></i>
+        </button>
+      </div>
+      <div class="collapse {% if vn == 'presupuesto:insumos' or vn == 'logistica:req_insumos_log' %}show{% endif %}"
+           id="nav-presupuesto-log">
+        <a href="{% url 'presupuesto:insumos' proyecto_activo.presupuesto.pk %}"
+           class="sb-link sb-sublink {% if vn == 'presupuesto:insumos' %}active{% endif %}">
+          <i class="bi bi-boxes"></i> Insumos
+        </a>
+        <a href="{% url 'logistica:req_insumos_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:req_insumos_log' %}active{% endif %}">
+          <i class="bi bi-clipboard-check"></i> Requerimiento de insumos
+        </a>
+      </div>
     </div>
     {% endif %}
 

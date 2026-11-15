@@ -188,7 +188,7 @@ def detalle(request, pk):
     })
 
 
-@requiere('puede_ver_presupuesto')
+@requiere('puede_ver_presupuesto', 'puede_ver_logistica')
 def insumos(request, pk):
     from django.db.models import Sum, Count, Q, Value, DecimalField as DFld
     from django.db.models.functions import Coalesce, LPad
@@ -251,7 +251,7 @@ def insumos(request, pk):
     })
 
 
-@requiere('puede_editar_presupuesto')
+@requiere('puede_editar_presupuesto', 'puede_ver_logistica')
 def insumo_ampliar(request, pk):
     """AJAX POST: agrega una ampliación de cantidad a un insumo. La cantidad
     importada original (cantidad_total) no se toca — queda la fila como
@@ -292,7 +292,7 @@ def insumo_ampliar(request, pk):
     })
 
 
-@requiere('puede_ver_presupuesto', 'puede_editar_presupuesto')
+@requiere('puede_ver_presupuesto', 'puede_editar_presupuesto', 'puede_ver_logistica')
 def insumo_ampliaciones_json(request, pk):
     """GET: datos del insumo + historial unificado (ampliaciones de cantidad
     y cambios de nombre) para el modal/kardex."""
@@ -357,7 +357,7 @@ def insumo_ampliaciones_json(request, pk):
     })
 
 
-@requiere('puede_editar_presupuesto')
+@requiere('puede_editar_presupuesto', 'puede_ver_logistica')
 def insumo_renombrar(request, pk):
     """AJAX POST: cambia la descripción (nombre) del insumo y registra el cambio
     en CambioNombreInsumo con usuario y fecha."""
