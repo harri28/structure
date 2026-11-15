@@ -8,6 +8,8 @@
 {% endblock %}
 
 {% block content %}
+{% include 'logistica/_reportes_tabs.html' with tab='almacen' %}
+
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
     <a href="{% url 'logistica:dashboard' proyecto.pk %}" class="btn-back"><i class="bi bi-chevron-left"></i> Logística</a>
