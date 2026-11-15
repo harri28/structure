@@ -44,7 +44,18 @@
                 {{ f.tipo|default:"General" }}
               </span>
             </td>
-            <td class="text-end text-muted">{{ f.presupuestado|floatformat:2 }}</td>
+            <td class="text-end">
+              {% if f.ampliado > 0 %}
+                <span class="fw-semibold" style="color:#c2410c">{{ f.presupuestado|floatformat:2 }}</span>
+                <span class="ms-1" style="cursor:help;color:#f97316"
+                      data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                      title="Cantidad <strong>modificada</strong>: {{ f.cantidad_base|floatformat:2 }} original + <strong>{{ f.ampliado|floatformat:2 }} agregada{{ f.ampliado|pluralize:'s' }}</strong>">
+                  <i class="bi bi-exclamation-circle-fill" style="font-size:.85rem"></i>
+                </span>
+              {% else %}
+                <span class="text-muted">{{ f.presupuestado|floatformat:2 }}</span>
+              {% endif %}
+            </td>
             <td class="text-end fw-semibold">{{ f.solicitado|floatformat:2 }}</td>
             <td class="text-end" style="color:#15803d;font-weight:600">{{ f.atendido|floatformat:2 }}</td>
             <td class="text-end fw-bold
@@ -62,6 +73,12 @@
       Vista informativa. Atendido refleja cantidades aprobadas por Logística.
       Saldo en rojo indica exceso de atención sobre lo solicitado.
     </div>
+    <script>
+    (function(){
+      var tips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tips.forEach(function(el){ if (window.bootstrap) new bootstrap.Tooltip(el); });
+    })();
+    </script>
     {% else %}
     <div class="text-center py-5 text-muted">
       <i class="bi bi-bar-chart-steps d-block mb-3" style="font-size:2.5rem;opacity:.3"></i>

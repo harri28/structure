@@ -504,17 +504,22 @@ def consolidar_vs_atenciones(proyecto):
                 descripcion = ins.descripcion
                 unidad      = ins.unidad or det.unidad
                 tipo        = ins.get_tipo_display() if hasattr(ins, 'get_tipo_display') else ''
-                original    = ins.cantidad_total or Decimal('0')
+                # Presupuestado = original importado + ampliaciones manuales.
+                ampliado    = ins.cantidad_ampliada()
+                original    = (ins.cantidad_total or Decimal('0')) + ampliado
             else:
                 codigo      = det.codigo or '—'
                 descripcion = det.descripcion
                 unidad      = det.unidad
                 tipo        = ''
                 original    = Decimal('0')
+                ampliado    = Decimal('0')
             consolidado[key] = {
                 'codigo': codigo, 'descripcion': descripcion,
                 'unidad': unidad, 'tipo': tipo,
                 'original': original,
+                'ampliado': ampliado,
+                'cantidad_base': (ins.cantidad_total or Decimal('0')) if ins else Decimal('0'),
                 'solicitado': Decimal('0'), 'atendido': Decimal('0'),
                 'observaciones': '',
                 'insumo_id': ins.pk if ins else None,
