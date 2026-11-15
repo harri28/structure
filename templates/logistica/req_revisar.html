@@ -89,7 +89,7 @@
           <th style="width:120px" class="text-end">Cant. requerida</th>
           <th style="width:150px" class="text-center">Cant. a aprobar</th>
           <th style="width:110px" class="text-end" title="Cantidad cubierta por cotizaciones aprobadas">Aprobado</th>
-          {% if editable %}<th style="width:200px" class="text-center">Acciones</th>{% else %}<th style="width:44px"></th>{% endif %}
+          {% if editable %}<th style="width:120px">Acciones</th>{% else %}<th style="width:44px"></th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -130,20 +130,18 @@
             {% endwith %}
           </td>
           {% if editable %}
-          <td class="text-center">
-            <div class="d-inline-flex gap-1 align-items-center">
-              <button type="button" class="btn btn-sm btn-aprobar-item"
-                      data-pk="{{ d.pk }}"
-                      data-url="{% url 'logistica:req_item_aprobar' req.pk d.pk %}"
-                      {% if d.cantidad_aprobada is not None %}
-                        style="font-size:.72rem;padding:.2em .55em;background:#dcfce7;border:1px solid #86efac;color:#166534"
-                      {% else %}
-                        style="font-size:.72rem;padding:.2em .55em;background:#2563eb;border:1px solid #2563eb;color:#fff"
-                      {% endif %}>
-                <i class="bi {% if d.cantidad_aprobada is not None %}bi-check2{% else %}bi-check-lg{% endif %} me-1"></i>
-                <span class="btn-aprobar-label">{% if d.cantidad_aprobada is not None %}Aprobado{% else %}Aprobar{% endif %}</span>
-              </button>
-            </div>
+          <td>
+            <button type="button" class="btn btn-sm btn-aprobar-item"
+                    data-pk="{{ d.pk }}"
+                    data-url="{% url 'logistica:req_item_aprobar' req.pk d.pk %}"
+                    {% if d.cantidad_aprobada is not None %}
+                      style="font-size:.72rem;padding:.2em .55em;background:#dcfce7;border:1px solid #86efac;color:#166534"
+                    {% else %}
+                      style="font-size:.72rem;padding:.2em .55em;background:#2563eb;border:1px solid #2563eb;color:#fff"
+                    {% endif %}>
+              <i class="bi {% if d.cantidad_aprobada is not None %}bi-check2{% else %}bi-check-lg{% endif %} me-1"></i>
+              <span class="btn-aprobar-label">{% if d.cantidad_aprobada is not None %}Aprobado{% else %}Aprobar{% endif %}</span>
+            </button>
             <div class="small aprobar-feedback mt-1" style="font-size:.7rem;display:none"></div>
           </td>
           {% else %}
