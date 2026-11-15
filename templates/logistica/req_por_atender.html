@@ -22,8 +22,10 @@
 {% if items %}
   {% for grupo in items %}
   <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center"
-         style="background:#fff7ed;border-bottom:1px solid #fed7aa">
+    <a href="{% url 'logistica:req_revisar_log' proyecto.pk grupo.req.pk %}"
+       class="card-header d-flex justify-content-between align-items-center text-decoration-none"
+       style="background:#fff7ed;border-bottom:1px solid #fed7aa;color:inherit;cursor:pointer"
+       title="Abrir requerimiento para aprobar los pendientes">
       <div>
         <strong style="color:#9a3412">REQ{{ grupo.req.numero }}</strong>
         <span class="text-muted ms-2" style="font-size:.78rem">
@@ -34,12 +36,9 @@
         <span class="badge" style="background:#fed7aa;color:#9a3412;font-size:.68rem;font-weight:700">
           {{ grupo.detalles|length }} pendiente{{ grupo.detalles|length|pluralize }}
         </span>
-        <a href="{% url 'logistica:req_revisar_log' proyecto.pk grupo.req.pk %}"
-           class="btn btn-sm ms-2" style="background:#d97706;color:#fff;font-weight:600">
-          <i class="bi bi-check2-all me-1"></i>Aprobar pendientes
-        </a>
+        <i class="bi bi-chevron-right ms-2" style="color:#9a3412"></i>
       </div>
-    </div>
+    </a>
     <div class="card-body p-0">
       <table class="table-modern mb-0" style="font-size:.82rem">
         <thead style="background:#f8fafc">
