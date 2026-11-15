@@ -7,20 +7,351 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center">
+<div class="page-header d-flex justify-content-between align-items-start">
   <div>
-    <h4><i class="bi bi-people me-2"></i>Proveedores</h4>
+    <h4 class="mb-1"><i class="bi bi-people me-2"></i>Proveedores</h4>
+    <div class="text-muted" style="font-size:.84rem">Gestiona los proveedores de mercadería</div>
+  </div>
+  <button type="button" class="btn btn-sm" id="btn-nuevo-prov"
+          style="background:#4f46e5;color:#fff;font-weight:600">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo Proveedor
+  </button>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-7">
+        <label class="form-label mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;font-weight:600">Buscar</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+               placeholder="Razón social o RUC...">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;font-weight:600">Estado</label>
+        <select name="estado" class="form-select form-select-sm">
+          <option value="" {% if not estado %}selected{% endif %}>Todos</option>
+          <option value="activos" {% if estado == 'activos' %}selected{% endif %}>Activos</option>
+          <option value="inactivos" {% if estado == 'inactivos' %}selected{% endif %}>Inactivos</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-sm btn-outline-secondary flex-fill">
+          <i class="bi bi-search me-1"></i>Buscar
+        </button>
+        <a href="{% url 'logistica:proveedores_log' proyecto.pk %}"
+           class="btn btn-sm btn-outline-secondary" title="Limpiar">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+    </form>
   </div>
 </div>
 
+<!-- Tabla -->
 <div class="card">
-  <div class="card-body text-center py-5">
-    <i class="bi bi-tools d-block mb-3" style="font-size:3rem;color:#f59e0b;opacity:.8"></i>
-    <h5 class="fw-bold mb-2" style="color:#0a0a0a">En desarrollo</h5>
-    <p class="text-muted mb-0" style="font-size:.9rem">
-      Este módulo todavía está en construcción.<br>
-      Pronto podrás gestionar el catálogo de proveedores desde acá.
-    </p>
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:#f8fafc">
+    <div class="fw-semibold">Proveedores registrados</div>
+    <div class="text-muted" style="font-size:.78rem">{{ total }} proveedor{{ total|pluralize:"es" }}</div>
+  </div>
+  <div class="card-body p-0">
+    <div style="overflow-x:auto">
+      <table class="table-modern mb-0" style="font-size:.82rem;min-width:900px">
+        <thead style="background:#f8fafc">
+          <tr>
+            <th style="width:100px">RUC</th>
+            <th>Razón Social</th>
+            <th style="width:140px">Nombre Comercial</th>
+            <th style="width:110px">Teléfono</th>
+            <th style="width:180px">Email</th>
+            <th style="width:130px">Contacto</th>
+            <th style="width:80px" class="text-center">Ingresos</th>
+            <th style="width:90px" class="text-center">Estado</th>
+            <th style="width:90px" class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in items %}
+          <tr>
+            <td><code>{{ it.obj.ruc|default:"—" }}</code></td>
+            <td class="fw-semibold">{{ it.obj.razon_social }}</td>
+            <td class="text-muted">{{ it.obj.nombre_comercial|default:"—" }}</td>
+            <td class="text-muted">{{ it.obj.telefono|default:"—" }}</td>
+            <td class="text-muted">{{ it.obj.email|default:"—" }}</td>
+            <td class="text-muted">{{ it.obj.persona_contacto|default:"—" }}</td>
+            <td class="text-center">
+              <span class="badge rounded-pill"
+                    style="background:#fef3c7;color:#92400e;font-size:.72rem">{{ it.ingresos }}</span>
+            </td>
+            <td class="text-center">
+              {% if it.obj.activo %}
+              <span class="badge" style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700">ACTIVO</span>
+              {% else %}
+              <span class="badge" style="background:#fee2e2;color:#991b1b;font-size:.68rem;font-weight:700">INACTIVO</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <div class="d-inline-flex gap-1">
+                <button type="button" class="btn btn-sm btn-outline-primary btn-prov-editar"
+                        data-pk="{{ it.obj.pk }}" title="Editar"
+                        style="padding:.15rem .4rem">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-prov-eliminar"
+                        data-pk="{{ it.obj.pk }}"
+                        data-razon="{{ it.obj.razon_social }}"
+                        title="Eliminar"
+                        style="padding:.15rem .4rem">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-muted py-5">
+            <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+            Sin proveedores registrados.
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
+
+<!-- Modal: Nuevo / Editar Proveedor -->
+<div class="modal fade" id="modal-prov" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" id="modal-prov-title" style="font-size:1rem">
+          <i class="bi bi-truck me-2" style="color:#4f46e5"></i>Nuevo Proveedor
+        </h6>
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="prov-pk" value="">
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">RUC / DNI</label>
+            <div class="d-flex gap-2">
+              <input type="text" id="prov-ruc" class="form-control form-control-sm"
+                     maxlength="11" placeholder="11 dígitos RUC o 8 DNI">
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-prov-consultar"
+                      style="white-space:nowrap">
+                <i class="bi bi-search me-1"></i>Consultar
+              </button>
+            </div>
+            <div id="prov-ruc-err" style="font-size:.72rem;color:#dc2626;display:none;margin-top:3px"></div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Nombre Comercial</label>
+            <input type="text" id="prov-nom-com" class="form-control form-control-sm" placeholder="Ej. Bayer">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">
+            Razón Social <span class="text-danger">*</span>
+          </label>
+          <input type="text" id="prov-razon" class="form-control form-control-sm" required>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Teléfono</label>
+            <input type="text" id="prov-tel" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Email</label>
+            <input type="email" id="prov-email" class="form-control form-control-sm">
+          </div>
+        </div>
+
+        <div class="row g-3 mb-2">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Persona de Contacto</label>
+            <input type="text" id="prov-contacto" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Dirección</label>
+            <input type="text" id="prov-direccion" class="form-control form-control-sm">
+          </div>
+        </div>
+
+        <div id="prov-err" class="text-danger mt-2" style="font-size:.78rem;display:none"></div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-sm" id="btn-prov-guardar"
+                style="background:#4f46e5;color:#fff;font-weight:600">
+          <i class="bi bi-save me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  const URL_CONSULTA = '{% url "maquinaria:consulta_doc" %}';
+  const URL_CREAR    = '{% url "logistica:proveedor_crear_ajax" proyecto.pk %}';
+  const URL_DETALLE  = (pk) => `/logistica/proyecto/{{ proyecto.pk }}/proveedores/${pk}/`;
+  const URL_EDITAR   = (pk) => `/logistica/proyecto/{{ proyecto.pk }}/proveedores/${pk}/guardar/`;
+  const URL_ELIMINAR = (pk) => `/logistica/proyecto/{{ proyecto.pk }}/proveedores/${pk}/eliminar/`;
+
+  const modalEl = document.getElementById('modal-prov');
+  const modal   = new bootstrap.Modal(modalEl);
+
+  const pk      = document.getElementById('prov-pk');
+  const ruc     = document.getElementById('prov-ruc');
+  const nomCom  = document.getElementById('prov-nom-com');
+  const razon   = document.getElementById('prov-razon');
+  const tel     = document.getElementById('prov-tel');
+  const email   = document.getElementById('prov-email');
+  const contacto = document.getElementById('prov-contacto');
+  const direccion = document.getElementById('prov-direccion');
+  const rucErr  = document.getElementById('prov-ruc-err');
+  const err     = document.getElementById('prov-err');
+  const title   = document.getElementById('modal-prov-title');
+
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  function resetModal() {
+    pk.value = ''; ruc.value = ''; nomCom.value = ''; razon.value = '';
+    tel.value = ''; email.value = ''; contacto.value = ''; direccion.value = '';
+    rucErr.style.display = 'none'; err.style.display = 'none';
+    title.innerHTML = '<i class="bi bi-truck me-2" style="color:#4f46e5"></i>Nuevo Proveedor';
+  }
+
+  // Abrir modal "Nuevo"
+  document.getElementById('btn-nuevo-prov').addEventListener('click', function() {
+    resetModal();
+    modal.show();
+  });
+
+  // Consultar SUNAT
+  document.getElementById('btn-prov-consultar').addEventListener('click', function() {
+    const numero = ruc.value.trim();
+    rucErr.style.display = 'none';
+    if (!numero || !(numero.length === 8 || numero.length === 11) || !/^\d+$/.test(numero)) {
+      rucErr.textContent = 'Ingresá 8 dígitos (DNI) u 11 (RUC).';
+      rucErr.style.display = 'block';
+      return;
+    }
+    const btn = this;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem"></span>';
+    fetch(URL_CONSULTA, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ numero }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false; btn.innerHTML = orig;
+      if (!data.ok) {
+        rucErr.textContent = data.error || 'No se encontraron datos.';
+        rucErr.style.display = 'block';
+        return;
+      }
+      razon.value = data.razon_social || razon.value;
+      if (data.direccion) direccion.value = data.direccion;
+    })
+    .catch(e => {
+      btn.disabled = false; btn.innerHTML = orig;
+      rucErr.textContent = 'Error de red: ' + e.message;
+      rucErr.style.display = 'block';
+    });
+  });
+
+  // Guardar
+  document.getElementById('btn-prov-guardar').addEventListener('click', function() {
+    err.style.display = 'none';
+    if (!razon.value.trim()) {
+      err.textContent = 'La razón social es obligatoria.';
+      err.style.display = 'block';
+      return;
+    }
+    const body = {
+      ruc: ruc.value.trim(), razon_social: razon.value.trim(),
+      nombre_comercial: nomCom.value.trim(), telefono: tel.value.trim(),
+      email: email.value.trim(), persona_contacto: contacto.value.trim(),
+      direccion: direccion.value.trim(),
+    };
+    const url = pk.value ? URL_EDITAR(pk.value) : URL_CREAR;
+    const btn = this;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem"></span> Guardando...';
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify(body),
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false; btn.innerHTML = orig;
+      if (!data.ok) {
+        err.textContent = data.error || 'Error al guardar.';
+        err.style.display = 'block';
+        return;
+      }
+      modal.hide();
+      window.location.reload();
+    })
+    .catch(e => {
+      btn.disabled = false; btn.innerHTML = orig;
+      err.textContent = 'Error de red: ' + e.message;
+      err.style.display = 'block';
+    });
+  });
+
+  // Editar
+  document.querySelectorAll('.btn-prov-editar').forEach(btn => {
+    btn.addEventListener('click', function() {
+      resetModal();
+      const id = this.dataset.pk;
+      fetch(URL_DETALLE(id))
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok) { alert(data.error || 'Error'); return; }
+          const p = data.proveedor;
+          pk.value = p.id; ruc.value = p.ruc; nomCom.value = p.nombre_comercial;
+          razon.value = p.razon_social; tel.value = p.telefono;
+          email.value = p.email; contacto.value = p.persona_contacto;
+          direccion.value = p.direccion;
+          title.innerHTML = '<i class="bi bi-pencil-square me-2" style="color:#4f46e5"></i>Editar Proveedor';
+          modal.show();
+        });
+    });
+  });
+
+  // Eliminar
+  document.querySelectorAll('.btn-prov-eliminar').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.dataset.pk;
+      const razon = this.dataset.razon;
+      if (!confirm('¿Eliminar el proveedor "' + razon + '"? Esta acción no se puede deshacer.')) return;
+      fetch(URL_ELIMINAR(id), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) { alert(data.error || 'Error al eliminar.'); return; }
+        window.location.reload();
+      });
+    });
+  });
+})();
+</script>
 {% endblock %}

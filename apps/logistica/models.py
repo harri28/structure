@@ -35,6 +35,27 @@ class Transportista(models.Model):
         return self.razon_social
 
 
+class Proveedor(models.Model):
+    """Catálogo global de proveedores de mercadería."""
+    ruc              = models.CharField('RUC / DNI', max_length=11)
+    razon_social     = models.CharField('Razón Social', max_length=200)
+    nombre_comercial = models.CharField('Nombre Comercial', max_length=200, blank=True)
+    telefono         = models.CharField('Teléfono', max_length=50, blank=True)
+    email            = models.EmailField('E-mail', blank=True)
+    persona_contacto = models.CharField('Persona de Contacto', max_length=150, blank=True)
+    direccion        = models.CharField('Dirección', max_length=300, blank=True)
+    activo           = models.BooleanField(default=True)
+    created_at       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ['razon_social']
+        verbose_name        = 'Proveedor'
+        verbose_name_plural = 'Proveedores'
+
+    def __str__(self):
+        return self.razon_social
+
+
 class GuiaRemision(models.Model):
     proyecto       = models.ForeignKey('proyectos.Proyecto', on_delete=models.CASCADE, related_name='guias')
     numero         = models.CharField('N° Guía', max_length=30)

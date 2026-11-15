@@ -1,10 +1,11 @@
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from apps.proyectos.models import Proyecto
 from apps.registro.utils import log, notificar
-from .models import GuiaRemision, DetalleGuia, Transportista, ESTADOS_GUIA, MOTIVOS_TRASLADO
+from .models import GuiaRemision, DetalleGuia, Transportista, Proveedor, ESTADOS_GUIA, MOTIVOS_TRASLADO
 from .forms import GuiaRemisionForm, DetalleGuiaFormSet, TransportistaForm
 from config.permisos import requiere, proyecto_visible
 
@@ -1257,9 +1258,136 @@ def compras_log(request, proyecto_id):
 @requiere('puede_ver_logistica')
 @proyecto_visible
 def proveedores_log(request, proyecto_id):
-    """Módulo Proveedores — placeholder 'En desarrollo'."""
+    """Catálogo global de proveedores — lista con filtros."""
+    from django.db.models import Q, Count
+    from apps.almacen.models import Cotizacion
+
     proyecto = _get_proyecto(proyecto_id)
-    return render(request, 'logistica/proveedores_log.html', {'proyecto': proyecto})
+    q      = (request.GET.get('q') or '').strip()
+    estado = (request.GET.get('estado') or '').strip()
+
+    qs = Proveedor.objects.all()
+    if q:
+        qs = qs.filter(Q(razon_social__icontains=q) | Q(ruc__icontains=q)
+                       | Q(nombre_comercial__icontains=q))
+    if estado == 'activos':
+        qs = qs.filter(activo=True)
+    elif estado == 'inactivos':
+        qs = qs.filter(activo=False)
+
+    # Ingresos = cantidad de cotizaciones registradas con esa razón social
+    ingresos_por_razon = dict(
+        Cotizacion.objects.values_list('proveedor').annotate(n=Count('id')).values_list('proveedor', 'n')
+    )
+    items = []
+    for p in qs:
+        items.append({
+            'obj':      p,
+            'ingresos': ingresos_por_razon.get(p.razon_social, 0),
+        })
+
+    return render(request, 'logistica/proveedores_log.html', {
+        'proyecto': proyecto,
+        'items':    items,
+        'q':        q,
+        'estado':   estado,
+        'total':    qs.count(),
+    })
+
+
+def _parse_json(request):
+    import json
+    try:
+        return json.loads(request.body or b'{}')
+    except (ValueError, json.JSONDecodeError):
+        return None
+
+
+@requiere('puede_ver_logistica')
+@require_POST
+def proveedor_guardar_ajax(request, proyecto_id, pk=None):
+    """POST AJAX: crea o edita un proveedor.
+
+    - pk=None → crea nuevo.
+    - pk=<id> → edita existente.
+    """
+    data = _parse_json(request)
+    if data is None:
+        return JsonResponse({'ok': False, 'error': 'Payload inválido.'}, status=400)
+
+    ruc              = (data.get('ruc') or '').strip()
+    razon_social     = (data.get('razon_social') or '').strip()
+    nombre_comercial = (data.get('nombre_comercial') or '').strip()
+    telefono         = (data.get('telefono') or '').strip()
+    email            = (data.get('email') or '').strip()
+    persona_contacto = (data.get('persona_contacto') or '').strip()
+    direccion        = (data.get('direccion') or '').strip()
+
+    if not razon_social:
+        return JsonResponse({'ok': False, 'error': 'La razón social es obligatoria.'}, status=400)
+    if ruc and not (len(ruc) in (8, 11) and ruc.isdigit()):
+        return JsonResponse({'ok': False, 'error': 'RUC debe ser 11 dígitos, DNI 8.'}, status=400)
+
+    if pk:
+        try:
+            prov = Proveedor.objects.get(pk=pk)
+        except Proveedor.DoesNotExist:
+            return JsonResponse({'ok': False, 'error': 'Proveedor no encontrado.'}, status=404)
+    else:
+        prov = Proveedor()
+
+    prov.ruc              = ruc
+    prov.razon_social     = razon_social
+    prov.nombre_comercial = nombre_comercial
+    prov.telefono         = telefono
+    prov.email            = email
+    prov.persona_contacto = persona_contacto
+    prov.direccion        = direccion
+    prov.save()
+    return JsonResponse({'ok': True, 'id': prov.pk})
+
+
+@requiere('puede_ver_logistica')
+def proveedor_detalle_ajax(request, proyecto_id, pk):
+    """GET AJAX: datos del proveedor para precargar el modal de edición."""
+    try:
+        p = Proveedor.objects.get(pk=pk)
+    except Proveedor.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Proveedor no encontrado.'}, status=404)
+    return JsonResponse({
+        'ok': True,
+        'proveedor': {
+            'id': p.pk, 'ruc': p.ruc, 'razon_social': p.razon_social,
+            'nombre_comercial': p.nombre_comercial, 'telefono': p.telefono,
+            'email': p.email, 'persona_contacto': p.persona_contacto,
+            'direccion': p.direccion, 'activo': p.activo,
+        },
+    })
+
+
+@requiere('puede_ver_logistica')
+@require_POST
+def proveedor_toggle_ajax(request, proyecto_id, pk):
+    """POST AJAX: activa/desactiva un proveedor (no se elimina)."""
+    try:
+        p = Proveedor.objects.get(pk=pk)
+    except Proveedor.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Proveedor no encontrado.'}, status=404)
+    p.activo = not p.activo
+    p.save(update_fields=['activo'])
+    return JsonResponse({'ok': True, 'activo': p.activo})
+
+
+@requiere('puede_ver_logistica')
+@require_POST
+def proveedor_eliminar_ajax(request, proyecto_id, pk):
+    """POST AJAX: borra un proveedor."""
+    try:
+        p = Proveedor.objects.get(pk=pk)
+    except Proveedor.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Proveedor no encontrado.'}, status=404)
+    p.delete()
+    return JsonResponse({'ok': True})
 
 
 @requiere('puede_gestionar_ctrl_maq_log')
