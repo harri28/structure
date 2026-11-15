@@ -1658,22 +1658,31 @@ def api_insumo_saldo(request, insumo_id):
 
 @requiere('puede_ver_almacen', 'puede_gestionar_entradas', 'puede_gestionar_salidas', 'puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log', 'puede_gestionar_oc', 'puede_crear_requerimientos', 'puede_aprobar_requerimientos')
 def api_productos(request):
+    from apps.presupuesto.services import saldo_disponible_insumo
     q = request.GET.get('q', '')
     pid = request.session.get('proyecto_id')
     proyecto_activo = Proyecto.objects.filter(pk=pid).first() if pid else None
     if not proyecto_activo or not hasattr(proyecto_activo, 'presupuesto'):
         return JsonResponse([], safe=False)
+    excluir_req = request.GET.get('excluir_req') or None
+    try:
+        excluir_req_pk = int(excluir_req) if excluir_req else None
+    except ValueError:
+        excluir_req_pk = None
     qs = proyecto_activo.presupuesto.insumos.all()
     if q:
         qs = qs.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
-    data = [
-        {
+    data = []
+    for p in qs[:50]:
+        disp = saldo_disponible_insumo(p, excluir_req_pk=excluir_req_pk)
+        if disp < 0:
+            disp = Decimal('0')
+        data.append({
             'id': p.pk, 'codigo': p.codigo, 'descripcion': p.descripcion,
             'unidad': p.unidad,
             'cantidad': str(p.cantidad),
             'cantidad_restante': str(p.cantidad),
             'cantidad_total': str(p.cantidad_total),
-        }
-        for p in qs[:50]
-    ]
+            'disponible': str(disp),
+        })
     return JsonResponse(data, safe=False)

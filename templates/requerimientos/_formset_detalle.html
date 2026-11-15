@@ -108,6 +108,7 @@
   let activeDropdown = null;
 
   const PROYECTO_ID = '{{ proyecto.pk }}';
+  const REQ_PK      = '{{ req.pk|default:"" }}';
   const HM_UNITS = ['hm', 'h/m'];
   const HH_UNITS = ['hh', 'h/h'];
 
@@ -182,24 +183,41 @@
     dropdown.style.top   = rect.bottom + 'px';
     dropdown.style.left  = rect.left + 'px';
     dropdown.style.width = rect.width + 'px';
-    fetch(API_PROD + (q ? '?q=' + encodeURIComponent(q) : ''))
+    var params = [];
+    if (q) params.push('q=' + encodeURIComponent(q));
+    if (REQ_PK) params.push('excluir_req=' + encodeURIComponent(REQ_PK));
+    var url = API_PROD + (params.length ? '?' + params.join('&') : '');
+    fetch(url)
       .then(r => r.json())
       .then(data => {
         if (!data.length) {
           dropdown.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:.8rem">Sin resultados</div>';
         } else {
-          dropdown.innerHTML = data.map(p =>
-            `<div class="prod-opt" data-id="${p.id}" data-unidad="${p.unidad}"
+          dropdown.innerHTML = data.map(p => {
+            var disp = parseFloat(p.disponible || '0');
+            var agotado = !(disp > 0);
+            var style = 'padding:6px 12px;border-bottom:1px solid #f3f4f6;font-size:.8rem';
+            if (agotado) {
+              style += ';cursor:not-allowed;background:#f9fafb;color:#9ca3af;opacity:.7';
+            } else {
+              style += ';cursor:pointer';
+            }
+            var clase = 'prod-opt' + (agotado ? ' prod-opt-agotado' : '');
+            var sufijo = agotado
+              ? ' <span style="color:#dc2626;font-size:.72rem;font-weight:600">· sin saldo</span>'
+              : '';
+            return `<div class="${clase}" data-id="${p.id}" data-unidad="${p.unidad}"
                   data-codigo="${p.codigo}"
                   data-desc="${p.descripcion.replace(/"/g,'&quot;')}"
                   data-cantidad="${p.cantidad_total}"
                   data-cantidad-restante="${p.cantidad_restante}"
+                  data-disponible="${p.disponible || '0'}"
                   data-label="${p.descripcion.replace(/"/g,'&quot;')}"
-                  style="padding:6px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.8rem">
-               <strong style="color:var(--amber-dark)">${p.codigo}</strong>
-               <span style="color:#374151"> ${p.descripcion}</span>
-             </div>`
-          ).join('');
+                  style="${style}">
+               <strong style="color:${agotado ? '#9ca3af' : 'var(--amber-dark)'}">${p.codigo}</strong>
+               <span> ${p.descripcion}</span>${sufijo}
+             </div>`;
+          }).join('');
         }
         dropdown.style.display = 'block';
         activeDropdown = dropdown;
@@ -210,6 +228,12 @@
   document.addEventListener('click', function(e) {
     const opt = e.target.closest('.prod-opt');
     if (opt) {
+      // Sin saldo disponible — no se puede seleccionar
+      if (opt.classList.contains('prod-opt-agotado')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       const wrap   = opt.closest('.prod-wrap');
       const row    = wrap.closest('.formset-row');
 
