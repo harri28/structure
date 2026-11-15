@@ -134,13 +134,13 @@
             <button type="button" class="btn btn-sm btn-aprobar-item"
                     data-pk="{{ d.pk }}"
                     data-url="{% url 'logistica:req_item_aprobar' req.pk d.pk %}"
+                    title="{% if d.cantidad_aprobada is not None %}Aprobado{% else %}Aprobar{% endif %}"
                     {% if d.cantidad_aprobada is not None %}
-                      style="font-size:.72rem;padding:.2em .55em;background:#dcfce7;border:1px solid #86efac;color:#166534"
+                      style="padding:.15rem .4rem;background:#dcfce7;border:1px solid #86efac;color:#166534;line-height:1"
                     {% else %}
-                      style="font-size:.72rem;padding:.2em .55em;background:#2563eb;border:1px solid #2563eb;color:#fff"
+                      style="padding:.15rem .4rem;background:#2563eb;border:1px solid #2563eb;color:#fff;line-height:1"
                     {% endif %}>
-              <i class="bi {% if d.cantidad_aprobada is not None %}bi-check2{% else %}bi-check-lg{% endif %} me-1"></i>
-              <span class="btn-aprobar-label">{% if d.cantidad_aprobada is not None %}Aprobado{% else %}Aprobar{% endif %}</span>
+              <i class="bi {% if d.cantidad_aprobada is not None %}bi-check2{% else %}bi-check-lg{% endif %}" style="font-size:.95rem"></i>
             </button>
             <div class="small aprobar-feedback mt-1" style="font-size:.7rem;display:none"></div>
           </td>
@@ -427,15 +427,17 @@
     btn.style.background = '#dcfce7';
     btn.style.borderColor = '#86efac';
     btn.style.color = '#166534';
-    btn.querySelector('.btn-aprobar-label').textContent = 'Aprobado';
-    btn.querySelector('i').className = 'bi bi-check2 me-1';
+    btn.title = 'Aprobado';
+    btn.querySelector('i').className = 'bi bi-check2';
+    btn.querySelector('i').style.fontSize = '.95rem';
   }
   function setPendiente(btn) {
     btn.style.background = '#2563eb';
     btn.style.borderColor = '#2563eb';
     btn.style.color = '#fff';
-    btn.querySelector('.btn-aprobar-label').textContent = 'Aprobar';
-    btn.querySelector('i').className = 'bi bi-check-lg me-1';
+    btn.title = 'Aprobar';
+    btn.querySelector('i').className = 'bi bi-check-lg';
+    btn.querySelector('i').style.fontSize = '.95rem';
   }
 
   document.querySelectorAll('.btn-aprobar-item').forEach(function (btn) {
