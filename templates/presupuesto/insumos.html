@@ -458,6 +458,15 @@
     if (opt) opt.style.background = '';
   });
 
+  function mostrarError(msg) {
+    // errDiv vive dentro de divDet (que está display:none hasta que carga el
+    // detalle). Si falla antes, hay que forzar visible el panel para que el
+    // mensaje se vea.
+    divDet.style.display = '';
+    errDiv.textContent = msg;
+    errDiv.style.display = 'block';
+  }
+
   function cargarDetalle(id) {
     errDiv.style.display = 'none';
     fetch('/presupuesto/insumo/' + id + '/ampliaciones/', {
@@ -471,10 +480,10 @@
       })
       .then(data => {
         if (!data.ok) {
-          errDiv.textContent = data.error || 'No se pudo cargar el insumo.';
-          errDiv.style.display = 'block';
+          mostrarError(data.error || 'No se pudo cargar el insumo.');
           return;
         }
+        try {
         const i = data.insumo;
         const nf = (v, d) => parseFloat(v).toLocaleString('es-PE', {minimumFractionDigits:d||0, maximumFractionDigits:d||4});
         document.getElementById('mod-ins-desc').textContent = i.descripcion;
@@ -518,10 +527,12 @@
         } else {
           histWrap.style.display = 'none';
         }
+        } catch(e) {
+          mostrarError('Error al renderizar: ' + (e.message || e));
+        }
       })
       .catch(err => {
-        errDiv.textContent = 'Error de red: ' + err.message;
-        errDiv.style.display = 'block';
+        mostrarError('Error de red: ' + err.message);
       });
   }
 
