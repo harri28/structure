@@ -245,6 +245,15 @@ def proyecto_dashboard(request, pk):
     reqs_recientes     = Requerimiento.objects.filter(proyecto=proyecto).order_by('-created_at')[:8]
     entradas_recientes = Entrada.objects.filter(proyecto=proyecto).order_by('-created_at')[:6]
 
+    # ── Insumos modificados (ampliaciones manuales del presupuesto) ─
+    from apps.presupuesto.models import AmpliacionInsumo
+    ampliaciones_recientes = (
+        AmpliacionInsumo.objects
+        .filter(insumo__presupuesto__proyecto=proyecto)
+        .select_related('insumo', 'usuario')
+        .order_by('-fecha')[:10]
+    )
+
     return render(request, 'dashboard.html', {
         'proyecto':             proyecto,
         'presupuesto_obj':      presupuesto_obj,
@@ -261,6 +270,7 @@ def proyecto_dashboard(request, pk):
         'asistencia_semana':    asistencia_semana,
         'reqs_recientes':       reqs_recientes,
         'entradas_recientes':   entradas_recientes,
+        'ampliaciones_recientes': ampliaciones_recientes,
     })
 
 

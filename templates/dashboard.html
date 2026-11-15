@@ -204,6 +204,54 @@
   </div>
 </div>
 
+<!-- ── Insumos modificados recientemente ──────────────────────── -->
+<div class="card mb-3" style="border:1px solid #fed7aa">
+  <div class="card-header d-flex justify-content-between align-items-center py-2"
+       style="background:#fff7ed;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9a3412">
+    <span><i class="bi bi-pencil-square me-1" style="color:#f97316"></i>Insumos modificados recientemente</span>
+    {% if ampliaciones_recientes %}
+    <a href="{% url 'presupuesto:insumos' proyecto.presupuesto.pk %}"
+       style="font-size:.75rem;color:#c2410c;text-decoration:none">Ver insumos →</a>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    {% if ampliaciones_recientes %}
+    <table class="table table-sm mb-0" style="font-size:.82rem">
+      <thead style="background:#fff7ed">
+        <tr>
+          <th style="width:110px">Fecha</th>
+          <th style="width:80px">Código</th>
+          <th>Insumo</th>
+          <th style="width:130px" class="text-end">Cantidad agregada</th>
+          <th>Justificación</th>
+          <th style="width:150px">Usuario</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in ampliaciones_recientes %}
+        <tr>
+          <td style="color:#6b7280">{{ a.fecha|date:"d/m/Y H:i" }}</td>
+          <td><code style="color:#d97706">{{ a.insumo.codigo }}</code></td>
+          <td>{{ a.insumo.descripcion|truncatechars:60 }}</td>
+          <td class="text-end fw-semibold" style="color:#c2410c">
+            +{{ a.cantidad|floatformat:4 }} {{ a.insumo.unidad }}
+          </td>
+          <td class="text-muted" style="font-size:.78rem">{{ a.justificacion|default:"—" }}</td>
+          <td style="font-size:.78rem">
+            {% if a.usuario %}{{ a.usuario.get_full_name|default:a.usuario.username }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center text-muted py-4" style="font-size:.85rem">
+      No hay insumos modificados aún. Usá el botón <strong>Modificar</strong> en Insumos para ampliar cantidades.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
 <!-- ── Actividad reciente ─────────────────────────────────────── -->
 <div class="row g-3">
 
