@@ -44,6 +44,7 @@ class Proveedor(models.Model):
     email            = models.EmailField('E-mail', blank=True)
     persona_contacto = models.CharField('Persona de Contacto', max_length=150, blank=True)
     direccion        = models.CharField('Dirección', max_length=300, blank=True)
+    referencia       = models.CharField('Referencia', max_length=300, blank=True)
     # Datos SUNAT (se autocompletan al consultar; editables si hay que corregir)
     estado_sunat             = models.CharField('Estado SUNAT', max_length=40, blank=True)
     condicion_sunat          = models.CharField('Condición SUNAT', max_length=40, blank=True)

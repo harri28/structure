@@ -1311,6 +1311,7 @@ def proveedor_guardar_ajax(request, proyecto_id, pk=None):
     email                    = (data.get('email') or '').strip()
     persona_contacto         = (data.get('persona_contacto') or '').strip()
     direccion                = (data.get('direccion') or '').strip()
+    referencia               = (data.get('referencia') or '').strip()
     estado_sunat             = (data.get('estado_sunat') or '').strip()
     condicion_sunat          = (data.get('condicion_sunat') or '').strip()
     tipo_contribuyente       = (data.get('tipo_contribuyente') or '').strip()
@@ -1336,6 +1337,7 @@ def proveedor_guardar_ajax(request, proyecto_id, pk=None):
     prov.email                    = email
     prov.persona_contacto         = persona_contacto
     prov.direccion                = direccion
+    prov.referencia               = referencia
     prov.estado_sunat             = estado_sunat
     prov.condicion_sunat          = condicion_sunat
     prov.tipo_contribuyente       = tipo_contribuyente
@@ -1357,7 +1359,7 @@ def proveedor_detalle_ajax(request, proyecto_id, pk):
             'id': p.pk, 'ruc': p.ruc, 'razon_social': p.razon_social,
             'nombre_comercial': p.nombre_comercial, 'telefono': p.telefono,
             'email': p.email, 'persona_contacto': p.persona_contacto,
-            'direccion': p.direccion, 'activo': p.activo,
+            'direccion': p.direccion, 'referencia': p.referencia, 'activo': p.activo,
             'estado_sunat':             p.estado_sunat,
             'condicion_sunat':          p.condicion_sunat,
             'tipo_contribuyente':       p.tipo_contribuyente,

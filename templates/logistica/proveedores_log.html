@@ -102,6 +102,13 @@
   </div>
 </div>
 
+<style>
+  /* Placeholders del modal de Proveedor con baja opacidad (referencias de ejemplo) */
+  #modal-prov ::placeholder        { opacity: .4; color: #6b7280; font-style: italic; }
+  #modal-prov ::-webkit-input-placeholder { opacity: .4; color: #6b7280; font-style: italic; }
+  #modal-prov :-ms-input-placeholder     { opacity: .4; color: #6b7280; font-style: italic; }
+</style>
+
 <!-- Modal: Nuevo / Editar Proveedor -->
 <div class="modal fade" id="modal-prov" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -135,23 +142,34 @@
           <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">
             Razón Social <span class="text-danger">*</span>
           </label>
-          <input type="text" id="prov-razon" class="form-control form-control-sm" required>
+          <input type="text" id="prov-razon" class="form-control form-control-sm" required
+                 placeholder="Ej. LABORATORIOS BAYER S.A.">
         </div>
 
         <div class="row g-3 mb-3">
           <div class="col-md-6">
             <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Num. Celular</label>
-            <input type="text" id="prov-tel" class="form-control form-control-sm">
+            <input type="text" id="prov-tel" class="form-control form-control-sm"
+                   placeholder="Ej. 987 654 321">
           </div>
           <div class="col-md-6">
             <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Email</label>
-            <input type="email" id="prov-email" class="form-control form-control-sm">
+            <input type="email" id="prov-email" class="form-control form-control-sm"
+                   placeholder="Ej. ventas@proveedor.com">
           </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Dirección</label>
-          <input type="text" id="prov-direccion" class="form-control form-control-sm">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Dirección</label>
+            <input type="text" id="prov-direccion" class="form-control form-control-sm"
+                   placeholder="Ej. Av. Industrial 123, Lima">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Referencia</label>
+            <input type="text" id="prov-referencia" class="form-control form-control-sm"
+                   placeholder="Ej. Recomendado por Juan Pérez">
+          </div>
         </div>
 
         <!-- Datos SUNAT (se autocompletan al Consultar; editables si hace falta corregir) -->
@@ -215,6 +233,7 @@
   const tel     = document.getElementById('prov-tel');
   const email   = document.getElementById('prov-email');
   const direccion = document.getElementById('prov-direccion');
+  const referencia = document.getElementById('prov-referencia');
   const estadoSunat    = document.getElementById('prov-estado-sunat');
   const condicionSunat = document.getElementById('prov-condicion-sunat');
   const tipoContrib    = document.getElementById('prov-tipo-contrib');
@@ -231,6 +250,7 @@
   function resetModal() {
     pk.value = ''; ruc.value = ''; razon.value = '';
     tel.value = ''; email.value = ''; direccion.value = '';
+    referencia.value = '';
     estadoSunat.value = ''; condicionSunat.value = '';
     tipoContrib.value = ''; fechaIni.value = '';
     rucErr.style.display = 'none'; err.style.display = 'none';
@@ -295,6 +315,7 @@
       ruc: ruc.value.trim(), razon_social: razon.value.trim(),
       telefono: tel.value.trim(), email: email.value.trim(),
       direccion: direccion.value.trim(),
+      referencia: referencia.value.trim(),
       estado_sunat:             estadoSunat.value.trim(),
       condicion_sunat:          condicionSunat.value.trim(),
       tipo_contribuyente:       tipoContrib.value.trim(),
@@ -342,6 +363,7 @@
           razon.value = p.razon_social; tel.value = p.telefono;
           email.value = p.email;
           direccion.value = p.direccion;
+          referencia.value = p.referencia || '';
           estadoSunat.value    = p.estado_sunat || '';
           condicionSunat.value = p.condicion_sunat || '';
           tipoContrib.value    = p.tipo_contribuyente || '';
