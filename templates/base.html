@@ -230,55 +230,79 @@
     {% if rol_actual and rol_actual.nombre == 'Logística' %}
     {# ── Layout PLANO agrupado: solo para el rol Logística ────────── #}
     {% with vn=request.resolver_match.view_name %}
+    {% with log_core_vns='logistica:dashboard,logistica:requerimientos_log,logistica:req_revisar_log,logistica:req_detalle_log,logistica:por_atender_log,logistica:consolidados_log,logistica:historial_log,logistica:anulados_log,almacen:cot_lista,almacen:cot_detalle,almacen:cot_editar,almacen:cot_imprimir,almacen:cot_crear,almacen:cot_rapida,logistica:guia_lista,logistica:guia_crear,logistica:guia_detalle,logistica:guia_editar' log_rep_vns='logistica:reportes,logistica:vs_atenciones,logistica:cuadrilla,logistica:maquinaria' %}
     <div class="sb-section">
       <div class="sb-label">Logística</div>
-      <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:dashboard' %}active{% endif %}">
-        <i class="bi bi-speedometer2"></i> Dashboard Logística
-      </a>
-      {% if permisos.puede_revisar_reqs_log %}
-      <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:requerimientos_log' or vn == 'logistica:req_revisar_log' or vn == 'logistica:req_detalle_log' or vn == 'logistica:por_atender_log' or vn == 'logistica:consolidados_log' or vn == 'logistica:historial_log' or vn == 'logistica:anulados_log' %}active{% endif %}">
-        <i class="bi bi-file-earmark-text"></i> Ingreso de Requerimientos
-        {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
-      </a>
-      {% endif %}
-      {% if permisos.puede_gestionar_cotizaciones_log %}
-      <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'almacen:cot_lista' or vn == 'almacen:cot_detalle' or vn == 'almacen:cot_editar' or vn == 'almacen:cot_imprimir' or vn == 'almacen:cot_crear' or vn == 'almacen:cot_rapida' %}active{% endif %}">
-        <i class="bi bi-tags"></i> Cotizaciones
-      </a>
-      {% endif %}
-      {% if permisos.puede_gestionar_logistica %}
-      <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:guia_lista' or vn == 'logistica:guia_crear' or vn == 'logistica:guia_detalle' or vn == 'logistica:guia_editar' %}active{% endif %}">
-        <i class="bi bi-send"></i> Guías de Remisión
-      </a>
-      {% endif %}
-      {% if permisos.puede_revisar_reqs_log %}
-      <a href="{% url 'logistica:vs_atenciones' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:vs_atenciones' %}active{% endif %}">
-        <i class="bi bi-bar-chart-steps"></i> Req. vs Atenciones
-      </a>
-      {% endif %}
-      <a href="{% url 'logistica:cuadrilla' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:cuadrilla' %}active{% endif %}">
-        <i class="bi bi-people-fill"></i> Cuadrilla
-      </a>
-      <a href="{% url 'logistica:maquinaria' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:maquinaria' %}active{% endif %}">
-        <i class="bi bi-truck"></i> Maquinaria
-      </a>
-      <a href="{% url 'logistica:reportes' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:reportes' %}active{% endif %}">
-        <i class="bi bi-bar-chart-line"></i> Reportes
-        {# BOTÓN TEMPORAL "Nuevo+" — eliminar este <span> cuando ya no se necesite #}
-        <span class="ms-auto" style="background:#16a34a;color:#fff;font-size:.6rem;
-                                     padding:.2em .5em;border-radius:4px;line-height:1.2">
-          Nuevo+
-        </span>
-      </a>
+
+      {# ─── Módulo Logística (colapsable) ─── #}
+      <div class="sb-module-row">
+        <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}" class="sb-link">
+          <i class="bi bi-speedometer2"></i> Logística
+        </a>
+        <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse"
+                data-bs-target="#nav-log-core"
+                aria-expanded="{% if vn in log_core_vns %}true{% else %}false{% endif %}"
+                aria-label="Expandir Logística">
+          <i class="bi bi-chevron-right sb-arrow"></i>
+        </button>
+      </div>
+      <div class="collapse {% if vn in log_core_vns %}show{% endif %}" id="nav-log-core">
+        <a href="{% url 'logistica:dashboard' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:dashboard' %}active{% endif %}">
+          <i class="bi bi-speedometer2"></i> Dashboard Logística
+        </a>
+        {% if permisos.puede_revisar_reqs_log %}
+        <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:requerimientos_log' or vn == 'logistica:req_revisar_log' or vn == 'logistica:req_detalle_log' or vn == 'logistica:por_atender_log' or vn == 'logistica:consolidados_log' or vn == 'logistica:historial_log' or vn == 'logistica:anulados_log' %}active{% endif %}">
+          <i class="bi bi-file-earmark-text"></i> Ingreso de Requerimientos
+          {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
+        </a>
+        {% endif %}
+        {% if permisos.puede_gestionar_cotizaciones_log %}
+        <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'almacen:cot_lista' or vn == 'almacen:cot_detalle' or vn == 'almacen:cot_editar' or vn == 'almacen:cot_imprimir' or vn == 'almacen:cot_crear' or vn == 'almacen:cot_rapida' %}active{% endif %}">
+          <i class="bi bi-tags"></i> Cotizaciones
+        </a>
+        {% endif %}
+        {% if permisos.puede_gestionar_logistica %}
+        <a href="{% url 'logistica:guia_lista' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:guia_lista' or vn == 'logistica:guia_crear' or vn == 'logistica:guia_detalle' or vn == 'logistica:guia_editar' %}active{% endif %}">
+          <i class="bi bi-send"></i> Guías de Remisión
+        </a>
+        {% endif %}
+      </div>
+
+      {# ─── Módulo Reportes (colapsable) ─── #}
+      <div class="sb-module-row mt-1">
+        <a href="{% url 'logistica:reportes' proyecto_activo.pk %}" class="sb-link">
+          <i class="bi bi-bar-chart-line"></i> Reportes
+        </a>
+        <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse"
+                data-bs-target="#nav-log-reportes"
+                aria-expanded="{% if vn in log_rep_vns %}true{% else %}false{% endif %}"
+                aria-label="Expandir Reportes">
+          <i class="bi bi-chevron-right sb-arrow"></i>
+        </button>
+      </div>
+      <div class="collapse {% if vn in log_rep_vns %}show{% endif %}" id="nav-log-reportes">
+        {% if permisos.puede_revisar_reqs_log %}
+        <a href="{% url 'logistica:vs_atenciones' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:vs_atenciones' %}active{% endif %}"
+           style="white-space:nowrap">
+          <i class="bi bi-bar-chart-steps"></i> Req. vs Atenciones
+        </a>
+        {% endif %}
+        <a href="{% url 'logistica:cuadrilla' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:cuadrilla' %}active{% endif %}">
+          <i class="bi bi-people-fill"></i> Cuadrilla
+        </a>
+        <a href="{% url 'logistica:maquinaria' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:maquinaria' %}active{% endif %}">
+          <i class="bi bi-truck"></i> Maquinaria
+        </a>
+      </div>
     </div>
+    {% endwith %}
 
     {% if proyecto_activo.presupuesto %}
     <div class="sb-section">
@@ -332,17 +356,7 @@
     </div>
     {% endif %}
 
-    {% if permisos.puede_gestionar_ctrl_maq_log %}
-    <div class="sb-section">
-      <div class="sb-label">Maquinaria</div>
-      <a href="{% url 'logistica:control_maquinaria' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:control_maquinaria' %}active{% endif %}">
-        <i class="bi bi-gear-wide-connected"></i> Control Maq. y Equipos
-      </a>
-    </div>
-    {% endif %}
-
-    <div class="sb-section">
+<div class="sb-section">
       <div class="sb-label">Configuración</div>
       <a href="{% url 'configuracion:perfil' %}"
          class="sb-link {% if vn == 'configuracion:perfil' %}active{% endif %}">

@@ -1,0 +1,21 @@
+{# Pestañas del módulo Reportes (Logística) #}
+<ul class="nav nav-tabs mb-3" style="border-bottom:1px solid #e5e7eb;font-size:.85rem">
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'vs_atenciones' %}active{% endif %}"
+       href="{% url 'logistica:vs_atenciones' proyecto.pk %}">
+      <i class="bi bi-bar-chart-steps me-1"></i>Req. vs Atenciones
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'cuadrilla' %}active{% endif %}"
+       href="{% url 'logistica:cuadrilla' proyecto.pk %}">
+      <i class="bi bi-people-fill me-1"></i>Cuadrilla
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'maquinaria' %}active{% endif %}"
+       href="{% url 'logistica:maquinaria' proyecto.pk %}">
+      <i class="bi bi-truck me-1"></i>Maquinaria
+    </a>
+  </li>
+</ul>

@@ -1410,8 +1410,8 @@ def abastecimiento(request, proyecto_id):
 @requiere('puede_ver_logistica')
 @proyecto_visible
 def reportes(request, proyecto_id):
-    proyecto = _get_proyecto(proyecto_id)
-    return render(request, 'logistica/reportes.html', {'proyecto': proyecto})
+    """Entrada del módulo Reportes — redirige al primer tab (Req. vs Atenciones)."""
+    return redirect('logistica:vs_atenciones', proyecto_id=proyecto_id)
 
 
 @requiere('puede_revisar_reqs_log')
