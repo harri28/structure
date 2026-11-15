@@ -212,13 +212,8 @@ def insumos(request, pk):
         cant_ef = (ins.cantidad_total or 0) + (ins.ampliado or 0)
         total_sum += Decimal(cant_ef) * (ins.costo_unitario or Decimal('0'))
 
-    # Paginación: 25 por página (ajustable con ?page_size=).
-    try:
-        page_size = int(request.GET.get('page_size', '25'))
-    except ValueError:
-        page_size = 25
-    if page_size not in (10, 25, 50, 100):
-        page_size = 25
+    # Paginación: 30 por página (fijo, sin selector en la UI).
+    page_size = 30
     paginator = Paginator(qs, page_size)
     page_obj = paginator.get_page(request.GET.get('page'))
 

@@ -1,40 +1,22 @@
 {% if page_obj.paginator.num_pages > 1 %}
-<nav aria-label="Paginación de insumos" class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 mt-2"
-     style="font-size:.8rem">
-  <div class="text-muted">
-    Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
-  </div>
-  <ul class="pagination pagination-sm mb-0">
+<nav aria-label="Paginación de insumos"
+     class="d-flex align-items-center justify-content-end gap-3 mb-3 mt-2"
+     style="font-size:.78rem;color:#6b7280">
+  <span>{{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}</span>
+  <div class="d-flex align-items-center gap-1">
     {% if page_obj.has_previous %}
-    <li class="page-item">
-      <a class="page-link" href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}page=1&page_size={{ page_size }}">« Primera</a>
-    </li>
-    <li class="page-item">
-      <a class="page-link" href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}page={{ page_obj.previous_page_number }}&page_size={{ page_size }}">‹</a>
-    </li>
+    <a href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}page={{ page_obj.previous_page_number }}"
+       class="text-decoration-none" style="color:#6b7280;padding:.1rem .4rem">‹</a>
+    {% else %}
+    <span style="color:#d1d5db;padding:.1rem .4rem">‹</span>
     {% endif %}
-    <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+    <span style="color:#374151">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
     {% if page_obj.has_next %}
-    <li class="page-item">
-      <a class="page-link" href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}page={{ page_obj.next_page_number }}&page_size={{ page_size }}">›</a>
-    </li>
-    <li class="page-item">
-      <a class="page-link" href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}page={{ page_obj.paginator.num_pages }}&page_size={{ page_size }}">Última »</a>
-    </li>
+    <a href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}page={{ page_obj.next_page_number }}"
+       class="text-decoration-none" style="color:#6b7280;padding:.1rem .4rem">›</a>
+    {% else %}
+    <span style="color:#d1d5db;padding:.1rem .4rem">›</span>
     {% endif %}
-  </ul>
-  {% if where == 'top' %}
-  <form method="get" class="d-flex align-items-center gap-1" style="font-size:.78rem">
-    {% if tipo_sel %}<input type="hidden" name="tipo" value="{{ tipo_sel }}">{% endif %}
-    <label class="text-muted">Por página:</label>
-    <select name="page_size" class="form-select form-select-sm" style="width:auto"
-            onchange="this.form.submit()">
-      <option value="10" {% if page_size == 10 %}selected{% endif %}>10</option>
-      <option value="25" {% if page_size == 25 %}selected{% endif %}>25</option>
-      <option value="50" {% if page_size == 50 %}selected{% endif %}>50</option>
-      <option value="100" {% if page_size == 100 %}selected{% endif %}>100</option>
-    </select>
-  </form>
-  {% endif %}
+  </div>
 </nav>
 {% endif %}
