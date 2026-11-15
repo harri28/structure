@@ -15,26 +15,7 @@
       Historial de requerimientos
     </h4>
     <div class="text-muted">Requerimientos en revisión, aprobados y anulados</div>
-    <div class="submodule-chips mt-2">
-      <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="s-chip">
-        <i class="bi bi-list-ul me-1"></i>Ingreso de Requerimientos
-      </a>
-      <a href="{% url 'logistica:por_atender_log' proyecto.pk %}" class="s-chip">
-        <i class="bi bi-hourglass-split me-1"></i>Por atender
-      </a>
-      <a href="{% url 'logistica:cambios_insumos_log' proyecto.pk %}" class="s-chip">
-        <i class="bi bi-arrow-repeat me-1"></i>Cambios de insumos
-      </a>
-      <a href="{% url 'logistica:consolidados_log' proyecto.pk %}" class="s-chip">
-        <i class="bi bi-layer-forward me-1"></i>R. Consolidados
-      </a>
-      <a href="{% url 'logistica:anulados_log' proyecto.pk %}" class="s-chip">
-        <i class="bi bi-x-circle me-1"></i>Anulados
-      </a>
-      <a href="{% url 'logistica:historial_log' proyecto.pk %}" class="s-chip active">
-        <i class="bi bi-clock-history me-1"></i>Historial
-      </a>
-    </div>
+    {% include 'logistica/_req_chips.html' with active='historial' %}
   </div>
 </div>
 

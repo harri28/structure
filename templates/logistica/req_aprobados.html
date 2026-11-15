@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Requerimientos aprobados — {{ proyecto.codigo }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'logistica:dashboard' proyecto.pk %}">Logística</a></li>
+<li class="breadcrumb-item active">Requerimientos aprobados</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4 class="mt-1 d-flex align-items-center gap-2">
+    <i class="bi bi-check2-circle" style="color:#16a34a"></i>
+    Requerimientos Aprobados
+  </h4>
+  <div class="text-muted">
+    Ítems aprobados por Logística listos para cotizar. Los ítems no aprobados viven en
+    <a href="{% url 'logistica:por_atender_log' proyecto.pk %}">Por atender</a>.
+  </div>
+  {% include 'logistica/_req_chips.html' with active='aprobados' %}
+</div>
+
+{% if items %}
+  {% for grupo in items %}
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center"
+         style="background:#f0fdf4;border-bottom:1px solid #bbf7d0">
+      <div>
+        <strong style="color:#166534">REQ{{ grupo.req.numero }}</strong>
+        <span class="text-muted ms-2" style="font-size:.78rem">
+          {{ grupo.req.fecha|date:"d/m/Y" }} · {{ grupo.req.solicitante|default:"—" }}
+        </span>
+      </div>
+      <div>
+        <span class="badge" style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700">
+          {{ grupo.detalles|length }} ítem{{ grupo.detalles|length|pluralize }} aprobado{{ grupo.detalles|length|pluralize }}
+        </span>
+        <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk grupo.req.pk %}"
+              class="d-inline ms-2">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="background:#16a34a;color:#fff;font-weight:600">
+            <i class="bi bi-tags me-1"></i>Crear cotización
+          </button>
+        </form>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <table class="table-modern mb-0" style="font-size:.82rem">
+        <thead style="background:#f8fafc">
+          <tr>
+            <th style="width:80px">Código</th>
+            <th>Descripción</th>
+            <th style="width:70px" class="text-center">Unidad</th>
+            <th style="width:120px" class="text-end">Cant. Solicitada</th>
+            <th style="width:120px" class="text-end">Cant. Aprobada</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in grupo.detalles %}
+          <tr>
+            <td><code>{{ d.insumo.codigo|default:"—" }}</code></td>
+            <td>{{ d.insumo.descripcion|default:d.descripcion|default:"—" }}</td>
+            <td class="text-center text-muted">{{ d.unidad|default:d.insumo.unidad|default:"—" }}</td>
+            <td class="text-end text-muted">{{ d.cantidad_requerida|floatformat:2 }}</td>
+            <td class="text-end fw-bold" style="color:#15803d">
+              {{ d.cantidad_aprobada|floatformat:2 }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-inbox d-block mb-2" style="font-size:2.5rem;opacity:.3"></i>
+    <div class="fw-semibold mb-1">Sin ítems aprobados todavía</div>
+    <div style="font-size:.82rem">
+      Los ítems aprobados en Ingreso de Requerimientos aparecen acá.
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

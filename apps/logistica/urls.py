@@ -25,7 +25,7 @@ urlpatterns = [
     # Requerimientos recibidos
     path('proyecto/<int:proyecto_id>/requerimientos/',                       views.requerimientos_log,  name='requerimientos_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/por-atender/',           views.por_atender_log,     name='por_atender_log'),
-    path('proyecto/<int:proyecto_id>/requerimientos/cambios-insumos/',       views.cambios_insumos_log, name='cambios_insumos_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/aprobados/',             views.aprobados_log,       name='aprobados_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/consolidados/',          views.consolidados_log,    name='consolidados_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/historial/',             views.historial_log,       name='historial_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/anulados/',              views.anulados_log,        name='anulados_log'),

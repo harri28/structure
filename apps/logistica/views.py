@@ -425,19 +425,26 @@ def transportista_editar(request, pk):
 @requiere('puede_revisar_reqs_log')
 @proyecto_visible
 def requerimientos_log(request, proyecto_id):
+    """Ingreso de Requerimientos: solo REQs aún no revisados (ENVIADO/
+    EN_REVISION). Una vez que Logística clickea 'Aprobar Requerimiento',
+    el REQ sale de esta lista y se ve en 'Aprobados' y/o 'Por Atender'
+    según si hay diferencia pendiente o no.
+    """
     from apps.requerimientos.models import Requerimiento, ESTADOS_REQ
     proyecto = _get_proyecto(proyecto_id)
+    ESTADOS_INGRESO = ('ENVIADO', 'EN_REVISION')
     estado_sel = request.GET.get('estado', '')
     qs = (Requerimiento.objects
-          .filter(proyecto=proyecto)
+          .filter(proyecto=proyecto, estado__in=ESTADOS_INGRESO)
           .prefetch_related('detalles__insumo', 'cotizaciones_origen')
           .order_by('-fecha', '-numero'))
-    if estado_sel:
+    if estado_sel in ESTADOS_INGRESO:
         qs = qs.filter(estado=estado_sel)
+    estados_filtro = [(e, l) for e, l in ESTADOS_REQ if e in ESTADOS_INGRESO]
     return render(request, 'logistica/requerimientos.html', {
         'proyecto':    proyecto,
         'requerimientos': qs,
-        'estados':     ESTADOS_REQ,
+        'estados':     estados_filtro,
         'estado_sel':  estado_sel,
         'enviados':    Requerimiento.objects.filter(proyecto=proyecto, estado='ENVIADO').count(),
     })
@@ -472,17 +479,71 @@ def historial_log(request, proyecto_id):
     })
 
 
+ESTADOS_REQ_REVISADOS = ('APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO')
+
+
+def _reqs_con_items(proyecto, filtro):
+    """Devuelve lista de dicts {req, detalles_filtrados} para templates
+    de Por Atender / Aprobados.
+
+    filtro:
+      - 'pendientes': detalles con cantidad_aprobada < cantidad_requerida
+        (o cantidad_aprobada IS NULL) y el REQ está en estado revisado.
+      - 'aprobados':  detalles con cantidad_aprobada > 0 (no null) y el
+        REQ está en estado revisado.
+    """
+    from apps.requerimientos.models import Requerimiento
+    from django.db.models import F, Q
+
+    qs = (Requerimiento.objects
+          .filter(proyecto=proyecto, estado__in=ESTADOS_REQ_REVISADOS)
+          .prefetch_related('detalles__insumo')
+          .order_by('-fecha', '-numero'))
+
+    from decimal import Decimal
+    resultado = []
+    for r in qs:
+        detalles_filtrados = []
+        for d in r.detalles.all():
+            cant_req = d.cantidad_requerida or Decimal('0')
+            cant_apr = d.cantidad_aprobada  # puede ser None
+            aprobada_real = cant_apr if cant_apr is not None else Decimal('0')
+            if filtro == 'aprobados':
+                if aprobada_real > 0:
+                    d.cantidad_pendiente = cant_req - aprobada_real
+                    detalles_filtrados.append(d)
+            elif filtro == 'pendientes':
+                if aprobada_real < cant_req:
+                    d.cantidad_pendiente = cant_req - aprobada_real
+                    detalles_filtrados.append(d)
+        if detalles_filtrados:
+            resultado.append({'req': r, 'detalles': detalles_filtrados})
+    return resultado
+
+
 @requiere('puede_revisar_reqs_log')
 @proyecto_visible
 def por_atender_log(request, proyecto_id):
-    from apps.requerimientos.models import Requerimiento
+    """Lista ítems con diferencia pendiente de aprobación (cantidad_requerida
+    > cantidad_aprobada) en REQs ya revisados por Logística."""
     proyecto = _get_proyecto(proyecto_id)
-    requerimientos = (Requerimiento.objects
-                      .filter(proyecto=proyecto, estado='PARCIAL')
-                      .order_by('-fecha', '-numero'))
+    items = _reqs_con_items(proyecto, 'pendientes')
     return render(request, 'logistica/req_por_atender.html', {
-        'proyecto':       proyecto,
-        'requerimientos': requerimientos,
+        'proyecto': proyecto,
+        'items':    items,
+    })
+
+
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
+def aprobados_log(request, proyecto_id):
+    """Lista ítems aprobados por Logística (cantidad_aprobada > 0) en REQs
+    ya revisados. Desde acá se generan cotizaciones."""
+    proyecto = _get_proyecto(proyecto_id)
+    items = _reqs_con_items(proyecto, 'aprobados')
+    return render(request, 'logistica/req_aprobados.html', {
+        'proyecto': proyecto,
+        'items':    items,
     })
 
 
@@ -1082,23 +1143,6 @@ def req_item_sustituir(request, req_pk, det_pk):
         'ok': True,
         'nuevo_det_pk': nuevo_det.pk,
         'original_det_pk': det_original.pk,
-    })
-
-
-@requiere('puede_revisar_reqs_log')
-@proyecto_visible
-def cambios_insumos_log(request, proyecto_id):
-    """Lista de sustituciones de insumos del proyecto (acción SUSTITUIR del
-    HistorialRevisionReq), agrupadas cronológicamente."""
-    from apps.requerimientos.models import HistorialRevisionReq
-    proyecto = _get_proyecto(proyecto_id)
-    cambios = (HistorialRevisionReq.objects
-               .filter(requerimiento__proyecto=proyecto, accion='SUSTITUIR')
-               .select_related('requerimiento', 'insumo', 'insumo_original', 'usuario')
-               .order_by('-fecha'))
-    return render(request, 'logistica/req_cambios.html', {
-        'proyecto': proyecto,
-        'cambios':  cambios,
     })
 
 

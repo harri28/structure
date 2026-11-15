@@ -9,8 +9,7 @@ el saldo global de cada insumo descontando esos compromisos vigentes.
 from collections import defaultdict
 from decimal import Decimal
 
-from django.db.models import DecimalField, Sum, Value
-from django.db.models.functions import Coalesce
+from django.db.models import DecimalField, Sum
 
 
 # REQs cuyo pedido representa un compromiso efectivo contra el presupuesto.
@@ -30,14 +29,15 @@ def saldo_disponible_insumo(insumo, excluir_req_pk=None):
 
     Fórmula:
         disponible = cantidad_total
-                   − Σ Coalesce(cantidad_aprobada, cantidad_requerida) en
-                     DetalleRequerimiento de REQs del mismo proyecto cuyo
-                     estado está en ESTADOS_REQ_COMPROMETE.
+                   − Σ cantidad_requerida en DetalleRequerimiento de REQs
+                     del mismo proyecto cuyo estado está en
+                     ESTADOS_REQ_COMPROMETE.
 
-    Se prefiere `cantidad_aprobada` cuando ya está seteada (Logística lo
-    aprobó); si no (REQs enviados pero no revisados), se usa
-    `cantidad_requerida` — pesimista pero seguro: evita que se cuelen
-    pedidos simultáneos que juntos excedan el presupuesto.
+    Siempre se usa `cantidad_requerida` (lo que Admin solicitó), NO
+    `cantidad_aprobada`. Esto implementa la regla de negocio: la
+    diferencia entre lo pedido y lo aprobado NO se libera de vuelta a
+    Admin — queda retenida en Logística ("Por Atender") hasta que
+    Logística la apruebe o la descarte internamente.
 
     No se suman cotizaciones ni guías aparte: toda cotización respeta el
     saldo cotizable por REQ (`_saldo_cotizable` en apps/almacen/views.py), y
@@ -58,11 +58,7 @@ def saldo_disponible_insumo(insumo, excluir_req_pk=None):
         qs = qs.exclude(requerimiento_id=excluir_req_pk)
     dec = DecimalField(max_digits=18, decimal_places=4)
     comprometido = qs.aggregate(
-        s=Sum(
-            Coalesce('cantidad_aprobada', 'cantidad_requerida', Value(Decimal('0')),
-                     output_field=dec),
-            output_field=dec,
-        )
+        s=Sum('cantidad_requerida', output_field=dec)
     )['s'] or Decimal('0')
     # Cantidad presupuestada real = original importada + lo ampliado a mano
     # desde Insumos → Modificar (modelo AmpliacionInsumo).
