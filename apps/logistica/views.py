@@ -1276,9 +1276,10 @@ def proveedores_log(request, proyecto_id):
         qs = qs.filter(activo=False)
 
     # Ingresos = cantidad de cotizaciones registradas con esa razón social
-    ingresos_por_razon = dict(
-        Cotizacion.objects.values_list('proveedor').annotate(n=Count('id')).values_list('proveedor', 'n')
-    )
+    ingresos_por_razon = {
+        row['proveedor']: row['n']
+        for row in Cotizacion.objects.values('proveedor').annotate(n=Count('id'))
+    }
     items = []
     for p in qs:
         items.append({
@@ -1315,13 +1316,17 @@ def proveedor_guardar_ajax(request, proyecto_id, pk=None):
     if data is None:
         return JsonResponse({'ok': False, 'error': 'Payload inválido.'}, status=400)
 
-    ruc              = (data.get('ruc') or '').strip()
-    razon_social     = (data.get('razon_social') or '').strip()
-    nombre_comercial = (data.get('nombre_comercial') or '').strip()
-    telefono         = (data.get('telefono') or '').strip()
-    email            = (data.get('email') or '').strip()
-    persona_contacto = (data.get('persona_contacto') or '').strip()
-    direccion        = (data.get('direccion') or '').strip()
+    ruc                      = (data.get('ruc') or '').strip()
+    razon_social             = (data.get('razon_social') or '').strip()
+    nombre_comercial         = (data.get('nombre_comercial') or '').strip()
+    telefono                 = (data.get('telefono') or '').strip()
+    email                    = (data.get('email') or '').strip()
+    persona_contacto         = (data.get('persona_contacto') or '').strip()
+    direccion                = (data.get('direccion') or '').strip()
+    estado_sunat             = (data.get('estado_sunat') or '').strip()
+    condicion_sunat          = (data.get('condicion_sunat') or '').strip()
+    tipo_contribuyente       = (data.get('tipo_contribuyente') or '').strip()
+    fecha_inicio_actividades = (data.get('fecha_inicio_actividades') or '').strip()
 
     if not razon_social:
         return JsonResponse({'ok': False, 'error': 'La razón social es obligatoria.'}, status=400)
@@ -1336,13 +1341,17 @@ def proveedor_guardar_ajax(request, proyecto_id, pk=None):
     else:
         prov = Proveedor()
 
-    prov.ruc              = ruc
-    prov.razon_social     = razon_social
-    prov.nombre_comercial = nombre_comercial
-    prov.telefono         = telefono
-    prov.email            = email
-    prov.persona_contacto = persona_contacto
-    prov.direccion        = direccion
+    prov.ruc                      = ruc
+    prov.razon_social             = razon_social
+    prov.nombre_comercial         = nombre_comercial
+    prov.telefono                 = telefono
+    prov.email                    = email
+    prov.persona_contacto         = persona_contacto
+    prov.direccion                = direccion
+    prov.estado_sunat             = estado_sunat
+    prov.condicion_sunat          = condicion_sunat
+    prov.tipo_contribuyente       = tipo_contribuyente
+    prov.fecha_inicio_actividades = fecha_inicio_actividades
     prov.save()
     return JsonResponse({'ok': True, 'id': prov.pk})
 
@@ -1361,6 +1370,10 @@ def proveedor_detalle_ajax(request, proyecto_id, pk):
             'nombre_comercial': p.nombre_comercial, 'telefono': p.telefono,
             'email': p.email, 'persona_contacto': p.persona_contacto,
             'direccion': p.direccion, 'activo': p.activo,
+            'estado_sunat':             p.estado_sunat,
+            'condicion_sunat':          p.condicion_sunat,
+            'tipo_contribuyente':       p.tipo_contribuyente,
+            'fecha_inicio_actividades': p.fecha_inicio_actividades,
         },
     })
 

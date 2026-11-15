@@ -1156,4 +1156,10 @@ def consulta_documento(request):
         # Estos solo vienen si el plan de Factiliza los expone; si no, string vacío
         'fecha_nacimiento': (data.get('fecha_nacimiento') or '').strip(),
         'sexo':             (data.get('sexo') or '').strip(),
+        # Datos SUNAT adicionales (RUC) — solo el plan RUC los devuelve
+        'estado_sunat':             (data.get('estado') or '').strip(),
+        'condicion_sunat':          (data.get('condicion') or '').strip(),
+        'tipo_contribuyente':       (data.get('tipo') or data.get('tipo_contribuyente') or '').strip(),
+        'fecha_inicio_actividades': (data.get('fecha_inicio_actividades') or data.get('actividad_inicio') or '').strip(),
+        'actividades_economicas':   data.get('actividades_economicas') or [],
     })

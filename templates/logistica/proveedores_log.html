@@ -169,7 +169,7 @@
           </div>
         </div>
 
-        <div class="row g-3 mb-2">
+        <div class="row g-3 mb-3">
           <div class="col-md-6">
             <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Persona de Contacto</label>
             <input type="text" id="prov-contacto" class="form-control form-control-sm">
@@ -177,6 +177,35 @@
           <div class="col-md-6">
             <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Dirección</label>
             <input type="text" id="prov-direccion" class="form-control form-control-sm">
+          </div>
+        </div>
+
+        <!-- Datos SUNAT (se autocompletan al Consultar; editables si hace falta corregir) -->
+        <div class="mb-2 mt-3" style="border-top:1px solid #e5e7eb;padding-top:.8rem">
+          <div class="fw-semibold mb-2" style="font-size:.78rem;color:#4f46e5;text-transform:uppercase;letter-spacing:.05em">
+            <i class="bi bi-shield-check me-1"></i>Datos SUNAT
+          </div>
+          <div class="row g-3 mb-2">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold mb-1" style="font-size:.74rem;text-transform:uppercase;letter-spacing:.03em">Estado</label>
+              <input type="text" id="prov-estado-sunat" class="form-control form-control-sm"
+                     placeholder="ACTIVO, BAJA...">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold mb-1" style="font-size:.74rem;text-transform:uppercase;letter-spacing:.03em">Condición</label>
+              <input type="text" id="prov-condicion-sunat" class="form-control form-control-sm"
+                     placeholder="HABIDO, NO HABIDO">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold mb-1" style="font-size:.74rem;text-transform:uppercase;letter-spacing:.03em">Tipo Contribuyente</label>
+              <input type="text" id="prov-tipo-contrib" class="form-control form-control-sm"
+                     placeholder="SOC. ANONIMA, EIRL...">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold mb-1" style="font-size:.74rem;text-transform:uppercase;letter-spacing:.03em">Inicio</label>
+              <input type="text" id="prov-fecha-ini" class="form-control form-control-sm"
+                     placeholder="2015-03-21">
+            </div>
           </div>
         </div>
 
@@ -215,6 +244,10 @@
   const email   = document.getElementById('prov-email');
   const contacto = document.getElementById('prov-contacto');
   const direccion = document.getElementById('prov-direccion');
+  const estadoSunat    = document.getElementById('prov-estado-sunat');
+  const condicionSunat = document.getElementById('prov-condicion-sunat');
+  const tipoContrib    = document.getElementById('prov-tipo-contrib');
+  const fechaIni       = document.getElementById('prov-fecha-ini');
   const rucErr  = document.getElementById('prov-ruc-err');
   const err     = document.getElementById('prov-err');
   const title   = document.getElementById('modal-prov-title');
@@ -227,6 +260,8 @@
   function resetModal() {
     pk.value = ''; ruc.value = ''; nomCom.value = ''; razon.value = '';
     tel.value = ''; email.value = ''; contacto.value = ''; direccion.value = '';
+    estadoSunat.value = ''; condicionSunat.value = '';
+    tipoContrib.value = ''; fechaIni.value = '';
     rucErr.style.display = 'none'; err.style.display = 'none';
     title.innerHTML = '<i class="bi bi-truck me-2" style="color:#4f46e5"></i>Nuevo Proveedor';
   }
@@ -264,7 +299,11 @@
         return;
       }
       razon.value = data.razon_social || razon.value;
-      if (data.direccion) direccion.value = data.direccion;
+      if (data.direccion)                direccion.value      = data.direccion;
+      if (data.estado_sunat)             estadoSunat.value    = data.estado_sunat;
+      if (data.condicion_sunat)          condicionSunat.value = data.condicion_sunat;
+      if (data.tipo_contribuyente)       tipoContrib.value    = data.tipo_contribuyente;
+      if (data.fecha_inicio_actividades) fechaIni.value       = data.fecha_inicio_actividades;
     })
     .catch(e => {
       btn.disabled = false; btn.innerHTML = orig;
@@ -286,6 +325,10 @@
       nombre_comercial: nomCom.value.trim(), telefono: tel.value.trim(),
       email: email.value.trim(), persona_contacto: contacto.value.trim(),
       direccion: direccion.value.trim(),
+      estado_sunat:             estadoSunat.value.trim(),
+      condicion_sunat:          condicionSunat.value.trim(),
+      tipo_contribuyente:       tipoContrib.value.trim(),
+      fecha_inicio_actividades: fechaIni.value.trim(),
     };
     const url = pk.value ? URL_EDITAR(pk.value) : URL_CREAR;
     const btn = this;
@@ -329,6 +372,10 @@
           razon.value = p.razon_social; tel.value = p.telefono;
           email.value = p.email; contacto.value = p.persona_contacto;
           direccion.value = p.direccion;
+          estadoSunat.value    = p.estado_sunat || '';
+          condicionSunat.value = p.condicion_sunat || '';
+          tipoContrib.value    = p.tipo_contribuyente || '';
+          fechaIni.value       = p.fecha_inicio_actividades || '';
           title.innerHTML = '<i class="bi bi-pencil-square me-2" style="color:#4f46e5"></i>Editar Proveedor';
           modal.show();
         });

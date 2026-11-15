@@ -44,6 +44,11 @@ class Proveedor(models.Model):
     email            = models.EmailField('E-mail', blank=True)
     persona_contacto = models.CharField('Persona de Contacto', max_length=150, blank=True)
     direccion        = models.CharField('Dirección', max_length=300, blank=True)
+    # Datos SUNAT (se autocompletan al consultar; editables si hay que corregir)
+    estado_sunat             = models.CharField('Estado SUNAT', max_length=40, blank=True)
+    condicion_sunat          = models.CharField('Condición SUNAT', max_length=40, blank=True)
+    tipo_contribuyente       = models.CharField('Tipo de Contribuyente', max_length=100, blank=True)
+    fecha_inicio_actividades = models.CharField('Fecha Inicio Actividades', max_length=20, blank=True)
     activo           = models.BooleanField(default=True)
     created_at       = models.DateTimeField(auto_now_add=True)
 
