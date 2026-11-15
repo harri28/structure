@@ -298,16 +298,23 @@ def insumo_ampliaciones_json(request, pk):
         'usuario':       (a.usuario.get_full_name() or a.usuario.username) if a.usuario else '—',
         'fecha':         a.fecha.strftime('%d/%m/%Y %H:%M'),
     } for a in insumo.ampliaciones.select_related('usuario').all()[:50]]
+    from decimal import Decimal
+    costo = insumo.costo_unitario or Decimal('0')
+    total_efectivo = insumo.cantidad_total_efectiva()
     return JsonResponse({
         'ok': True,
         'insumo': {
             'id':             insumo.pk,
             'codigo':         insumo.codigo,
             'descripcion':    insumo.descripcion,
+            'tipo':           insumo.tipo,
+            'tipo_display':   insumo.get_tipo_display(),
             'unidad':         insumo.unidad or '',
             'cantidad_total': str(insumo.cantidad_total or 0),
             'ampliado':       str(insumo.cantidad_ampliada()),
-            'total_efectivo': str(insumo.cantidad_total_efectiva()),
+            'total_efectivo': str(total_efectivo),
+            'costo_unitario': str(costo),
+            'total':          str((total_efectivo * costo).quantize(Decimal('0.01'))),
         },
         'ampliaciones': amps,
     })

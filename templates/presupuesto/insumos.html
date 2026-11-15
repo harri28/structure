@@ -175,12 +175,14 @@
           <div class="card mb-3" style="background:#fff7ed;border:1px solid #fed7aa">
             <div class="card-body py-2 px-3">
               <div class="d-flex justify-content-between align-items-start">
-                <div>
+                <div style="flex:1;min-width:0">
                   <div style="font-size:.7rem;color:#9a3412;text-transform:uppercase;letter-spacing:.05em;font-weight:700">Insumo seleccionado</div>
-                  <div class="fw-semibold mt-1" id="mod-ins-desc" style="font-size:.9rem"></div>
-                  <div class="small text-muted"><code id="mod-ins-codigo"></code> · <span id="mod-ins-unidad"></span></div>
+                  <div class="fw-semibold mt-1" style="font-size:.9rem">
+                    <code id="mod-ins-codigo" style="color:#d97706;background:#fff;padding:.1rem .35rem;border-radius:3px;margin-right:.35rem"></code>
+                    <span id="mod-ins-desc"></span>
+                  </div>
                 </div>
-                <div class="text-end">
+                <div class="text-end" style="flex-shrink:0;margin-left:1rem">
                   <div style="font-size:.7rem;color:#9a3412;text-transform:uppercase;letter-spacing:.05em;font-weight:700">Cantidad actual</div>
                   <div class="fw-bold" style="font-size:1rem;color:#c2410c" id="mod-ins-total">—</div>
                   <div class="small text-muted" id="mod-ins-desglose"></div>
@@ -189,17 +191,52 @@
             </div>
           </div>
 
-          <div class="row g-2 mb-3">
-            <div class="col-md-5">
-              <label class="form-label fw-semibold" style="font-size:.78rem">Cantidad a agregar <span class="text-danger">*</span></label>
-              <input type="number" id="mod-cantidad" class="form-control form-control-sm"
-                     step="0.0001" min="0.0001" placeholder="0.00">
+          <!-- Cantidad a agregar + campos read-only del insumo -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.78rem">
+              Cantidad a agregar <span class="text-danger">*</span>
+            </label>
+            <div class="row g-2 align-items-end">
+              <div class="col-md-3">
+                <input type="number" id="mod-cantidad" class="form-control form-control-sm"
+                       step="0.0001" min="0.0001" placeholder="0.00">
+              </div>
+              <div class="col-md-9">
+                <div class="row g-1 text-center" style="font-size:.72rem">
+                  <div class="col">
+                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Tipo</div>
+                    <input type="text" id="mod-ro-tipo" class="form-control form-control-sm text-center" readonly
+                           style="background:#f8f9fa;color:#374151;font-weight:600;font-size:.72rem;padding:.2rem">
+                  </div>
+                  <div class="col">
+                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Unidad</div>
+                    <input type="text" id="mod-ro-unidad" class="form-control form-control-sm text-center" readonly
+                           style="background:#f8f9fa;color:#374151;font-size:.72rem;padding:.2rem">
+                  </div>
+                  <div class="col">
+                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Cantidad</div>
+                    <input type="text" id="mod-ro-cantidad" class="form-control form-control-sm text-end" readonly
+                           style="background:#f8f9fa;color:#374151;font-size:.72rem;padding:.2rem">
+                  </div>
+                  <div class="col">
+                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Costo Unit.</div>
+                    <input type="text" id="mod-ro-costo" class="form-control form-control-sm text-end" readonly
+                           style="background:#f8f9fa;color:#374151;font-size:.72rem;padding:.2rem">
+                  </div>
+                  <div class="col">
+                    <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.04em">Total</div>
+                    <input type="text" id="mod-ro-total" class="form-control form-control-sm text-end" readonly
+                           style="background:#f8f9fa;color:#1d4ed8;font-weight:700;font-size:.72rem;padding:.2rem">
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="col-md-7">
-              <label class="form-label fw-semibold" style="font-size:.78rem">Justificación</label>
-              <input type="text" id="mod-justif" class="form-control form-control-sm"
-                     placeholder="Motivo del incremento (ej. adicional de obra)">
-            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.78rem">Justificación</label>
+            <input type="text" id="mod-justif" class="form-control form-control-sm"
+                   placeholder="Motivo del incremento (ej. adicional de obra)">
           </div>
 
           <div id="mod-error" class="text-danger mb-2" style="font-size:.78rem;display:none"></div>
@@ -313,7 +350,8 @@ if (buscador) {
     const opt = e.target.closest('.mod-opt');
     if (!opt) return;
     insumoId = opt.dataset.id;
-    inpBuscar.value = opt.dataset.desc;
+    // Mostrar código a la izquierda + descripción en la misma línea.
+    inpBuscar.value = '[' + (opt.dataset.codigo || '—') + '] ' + opt.dataset.desc;
     drop.style.display = 'none';
     cargarDetalle(insumoId);
   });
@@ -333,20 +371,24 @@ if (buscador) {
       .then(data => {
         if (!data.ok) return;
         const i = data.insumo;
+        const nf = (v, d) => parseFloat(v).toLocaleString('es-PE', {minimumFractionDigits:d||0, maximumFractionDigits:d||4});
         document.getElementById('mod-ins-desc').textContent = i.descripcion;
-        document.getElementById('mod-ins-codigo').textContent = i.codigo;
-        document.getElementById('mod-ins-unidad').textContent = i.unidad || 'und';
+        document.getElementById('mod-ins-codigo').textContent = '[' + i.codigo + ']';
         document.getElementById('mod-ins-total').textContent =
-          parseFloat(i.total_efectivo).toLocaleString('es-PE', {maximumFractionDigits:4}) + ' ' + (i.unidad || 'und');
+          nf(i.total_efectivo, 4) + ' ' + (i.unidad || 'und');
         const amp = parseFloat(i.ampliado);
         if (amp > 0) {
           document.getElementById('mod-ins-desglose').textContent =
-            parseFloat(i.cantidad_total).toLocaleString('es-PE',{maximumFractionDigits:4}) +
-            ' original + ' +
-            amp.toLocaleString('es-PE',{maximumFractionDigits:4}) + ' agregadas';
+            nf(i.cantidad_total, 4) + ' original + ' + nf(amp, 4) + ' agregadas';
         } else {
           document.getElementById('mod-ins-desglose').textContent = 'Sin ampliaciones previas';
         }
+        // Campos read-only al costado del input de cantidad
+        document.getElementById('mod-ro-tipo').value     = i.tipo_display || '';
+        document.getElementById('mod-ro-unidad').value   = i.unidad || '';
+        document.getElementById('mod-ro-cantidad').value = nf(i.total_efectivo, 4);
+        document.getElementById('mod-ro-costo').value    = nf(i.costo_unitario, 2);
+        document.getElementById('mod-ro-total').value    = nf(i.total, 2);
         divDet.style.display = '';
         btnGuardar.disabled = false;
 
