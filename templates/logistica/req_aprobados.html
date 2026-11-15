@@ -22,15 +22,6 @@
 <div class="card">
   <div class="card-body p-0">
     <table class="table-modern">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Descripción</th>
-          <th class="text-center">Unidad</th>
-          <th class="text-end">Solicitada</th>
-          <th class="text-end">Aprobada</th>
-        </tr>
-      </thead>
       <tbody>
         {% for grupo in items %}
         <tr class="req-group" data-group="apr-{{ forloop.counter }}" style="background:#f0fdf4">
@@ -64,6 +55,13 @@
               </form>
             </div>
           </td>
+        </tr>
+        <tr class="req-item req-item-head" data-group="apr-{{ forloop.counter }}" style="display:none;background:#f8fafc">
+          <th style="padding-left:1.75rem;font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Código</th>
+          <th style="font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Descripción</th>
+          <th class="text-center" style="font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Unidad</th>
+          <th class="text-end" style="font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Solicitada</th>
+          <th class="text-end" style="font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Aprobada</th>
         </tr>
         {% for d in grupo.detalles %}
         <tr class="req-item" data-group="apr-{{ forloop.parentloop.counter }}" style="display:none">
