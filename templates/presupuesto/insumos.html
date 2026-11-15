@@ -12,31 +12,31 @@
 
 <!-- Filtros de tipo -->
 <div class="d-flex align-items-center gap-2 flex-wrap mb-3 mt-3">
-  <a href="{% url 'presupuesto:insumos' presupuesto.pk %}"
+  <a href="{% url 'presupuesto:insumos' presupuesto.pk %}{% if q %}?q={{ q }}{% endif %}"
      class="req-chip{% if not tipo_sel %} active{% endif %}"
      style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
     Todos
     <span class="ms-1" style="font-size:.75rem;opacity:.75">({{ insumos_total }})</span>
   </a>
-  <a href="?tipo=MANO_OBRA"
+  <a href="?tipo=MANO_OBRA{% if q %}&q={{ q }}{% endif %}"
      class="req-chip{% if tipo_sel == 'MANO_OBRA' %} active{% endif %}"
      style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
     <i class="bi bi-person-arms-up me-1"></i>Mano de Obra
     <span class="ms-1" style="font-size:.75rem;opacity:.75">({{ totales.mano_obra.count }})</span>
   </a>
-  <a href="?tipo=MATERIAL"
+  <a href="?tipo=MATERIAL{% if q %}&q={{ q }}{% endif %}"
      class="req-chip{% if tipo_sel == 'MATERIAL' %} active{% endif %}"
      style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
     <i class="bi bi-box-seam me-1"></i>Materiales
     <span class="ms-1" style="font-size:.75rem;opacity:.75">({{ totales.materiales.count }})</span>
   </a>
-  <a href="?tipo=EQUIPO"
+  <a href="?tipo=EQUIPO{% if q %}&q={{ q }}{% endif %}"
      class="req-chip{% if tipo_sel == 'EQUIPO' %} active{% endif %}"
      style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
     <i class="bi bi-gear me-1"></i>Equipos
     <span class="ms-1" style="font-size:.75rem;opacity:.75">({{ totales.equipos.count }})</span>
   </a>
-  <a href="?tipo=SUBCONTRATO"
+  <a href="?tipo=SUBCONTRATO{% if q %}&q={{ q }}{% endif %}"
      class="req-chip{% if tipo_sel == 'SUBCONTRATO' %} active{% endif %}"
      style="border-radius:6px;border:1px solid #dee2e6;text-decoration:none">
     <i class="bi bi-building me-1"></i>Subcontratos
@@ -45,16 +45,21 @@
   <span class="ms-auto text-muted" style="font-size:.78rem">{{ page_obj.paginator.count }} insumos</span>
 </div>
 
-<!-- Buscador + Modificar -->
+<!-- Buscador (server-side) + Modificar -->
 <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
-  <div class="input-group" style="max-width:380px">
+  <form method="get" class="input-group" style="max-width:380px">
+    {% if tipo_sel %}<input type="hidden" name="tipo" value="{{ tipo_sel }}">{% endif %}
     <span class="input-group-text" style="background:transparent">
       <i class="bi bi-search" style="font-size:.85rem;color:#6b7280"></i>
     </span>
-    <input type="text" id="buscador-insumos" class="form-control"
+    <input type="text" name="q" value="{{ q|default:'' }}" class="form-control"
            placeholder="Buscar por descripción, código o unidad…"
            autocomplete="off" style="font-size:.85rem">
-  </div>
+    {% if q %}
+    <a href="?{% if tipo_sel %}tipo={{ tipo_sel }}{% endif %}" class="btn btn-outline-secondary btn-sm"
+       title="Limpiar búsqueda" style="font-size:.8rem">×</a>
+    {% endif %}
+  </form>
   {% if permisos.puede_editar_presupuesto %}
   <button type="button" class="btn btn-sm" id="btn-modificar"
           style="background:#f97316;color:#fff;border:none;font-weight:600;padding:.4rem .9rem">
@@ -274,15 +279,9 @@
 
 {% block extra_js %}
 <script>
-const buscador = document.getElementById('buscador-insumos');
-if (buscador) {
-  buscador.addEventListener('input', function() {
-    const q = this.value.toLowerCase().trim();
-    document.querySelectorAll('table tbody tr').forEach(fila => {
-      fila.style.display = (!q || fila.textContent.toLowerCase().includes(q)) ? '' : 'none';
-    });
-  });
-}
+// Búsqueda server-side: el form se envía al presionar Enter.
+// (Antes el filtro era client-side con JS y solo filtraba los 30 ítems
+// de la página actual. Ahora recorre toda la lista del presupuesto.)
 
 {% if permisos.puede_editar_presupuesto %}
 // ── Modal Modificar insumo ───────────────────────────────────────

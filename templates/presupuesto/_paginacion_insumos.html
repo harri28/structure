@@ -5,14 +5,14 @@
   <span>{{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}</span>
   <div class="d-flex align-items-center gap-1">
     {% if page_obj.has_previous %}
-    <a href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}page={{ page_obj.previous_page_number }}"
+    <a href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}{% if q %}q={{ q }}&{% endif %}page={{ page_obj.previous_page_number }}"
        class="text-decoration-none" style="color:#6b7280;padding:.1rem .4rem">‹</a>
     {% else %}
     <span style="color:#d1d5db;padding:.1rem .4rem">‹</span>
     {% endif %}
     <span style="color:#374151">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
     {% if page_obj.has_next %}
-    <a href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}page={{ page_obj.next_page_number }}"
+    <a href="?{% if tipo_sel %}tipo={{ tipo_sel }}&{% endif %}{% if q %}q={{ q }}&{% endif %}page={{ page_obj.next_page_number }}"
        class="text-decoration-none" style="color:#6b7280;padding:.1rem .4rem">›</a>
     {% else %}
     <span style="color:#d1d5db;padding:.1rem .4rem">›</span>

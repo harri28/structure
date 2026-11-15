@@ -190,22 +190,35 @@ def detalle(request, pk):
 
 @requiere('puede_ver_presupuesto')
 def insumos(request, pk):
-    from django.db.models import Sum, Count, DecimalField as DFld
-    from django.db.models.functions import Coalesce
+    from django.db.models import Sum, Count, Q, Value, DecimalField as DFld
+    from django.db.models.functions import Coalesce, LPad
     from django.core.paginator import Paginator
     from decimal import Decimal
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     tipo_sel = request.GET.get('tipo', '')
+    q = (request.GET.get('q') or '').strip()
     qs_all = presupuesto.insumos.all()
     qs = qs_all.filter(tipo=tipo_sel) if tipo_sel else qs_all
-    # Anotar ampliaciones por insumo para calcular cantidad efectiva y
-    # marcar visualmente los modificados en la grilla.
+    # Búsqueda server-side (soporta código, descripción y unidad). Es
+    # importante filtrar acá antes de paginar, para que la búsqueda no
+    # quede limitada a los 30 visibles.
+    if q:
+        qs = qs.filter(
+            Q(codigo__icontains=q) |
+            Q(descripcion__icontains=q) |
+            Q(unidad__icontains=q)
+        )
+    # Anotar ampliaciones por insumo + código con left-padding para ordenar
+    # por número natural (el código viene como texto "1", "2", "10", "100"...).
+    # LPad convierte "1" → "0000000001" y "10" → "0000000010", así orden
+    # lexicográfico = orden numérico. No falla con strings vacíos.
     dec = DFld(max_digits=18, decimal_places=4)
     qs = qs.annotate(
         ampliado=Coalesce(Sum('ampliaciones__cantidad'),
                           0, output_field=dec),
         n_ampliaciones=Count('ampliaciones'),
-    )
+        codigo_sort=LPad('codigo', 10, Value('0')),
+    ).order_by('tipo', 'codigo_sort')
     # total_sum = Σ (cantidad_total + ampliado) × costo_unitario sobre el filtro vigente.
     total_sum = Decimal('0')
     for ins in qs:
@@ -228,6 +241,7 @@ def insumos(request, pk):
         'total_sum':     total_sum,
         'tipos':         TIPOS_RECURSO,
         'tipo_sel':      tipo_sel,
+        'q':             q,
         'totales': {
             'mano_obra':    qs_all.filter(tipo='MANO_OBRA'),
             'materiales':   qs_all.filter(tipo='MATERIAL'),
