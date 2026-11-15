@@ -49,8 +49,8 @@
               {% if f.ampliado > 0 %}
                 <span class="fw-semibold" style="color:#c2410c">{{ f.presupuestado|floatformat:2 }}</span>
                 <span class="ms-1" style="cursor:help;color:#f97316"
-                      data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-                      title="Cantidad <strong>modificada</strong>: {{ f.cantidad_base|floatformat:2 }} original + <strong>{{ f.ampliado|floatformat:2 }} agregada{{ f.ampliado|pluralize:'s' }}</strong>">
+                      data-bs-toggle="tooltip" data-bs-placement="top"
+                      title="Cantidad modificada: {{ f.cantidad_base|floatformat:2 }} original + {{ f.ampliado|floatformat:2 }} agregada{{ f.ampliado|pluralize:'s' }}">
                   <i class="bi bi-exclamation-circle-fill" style="font-size:.85rem"></i>
                 </span>
               {% else %}
