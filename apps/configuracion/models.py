@@ -164,6 +164,15 @@ class Rol(models.Model):
     def cantidad_permisos(self):
         return sum(1 for campo in TODOS_LOS_PERMISOS if getattr(self, campo, False))
 
+    @property
+    def es_rol_logistica(self):
+        """True si este rol es el de Logística (independiente de variaciones
+        de capitalización o acento en el nombre). Usado para decidir el
+        layout plano agrupado en el sidebar.
+        """
+        nombre = (self.nombre or '').strip().lower()
+        return nombre in ('logística', 'logistica', 'log', 'logistic')
+
 
 class UnidadMedida(models.Model):
     """Catálogo de unidades de medida estandarizadas."""

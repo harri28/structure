@@ -1337,6 +1337,7 @@ def _parse_json(request):
 
 
 @requiere('puede_ver_logistica')
+@proyecto_visible
 @require_POST
 def proveedor_guardar_ajax(request, proyecto_id, pk=None):
     """POST AJAX: crea o edita un proveedor.
@@ -1391,6 +1392,7 @@ def proveedor_guardar_ajax(request, proyecto_id, pk=None):
 
 
 @requiere('puede_ver_logistica')
+@proyecto_visible
 def proveedor_detalle_ajax(request, proyecto_id, pk):
     """GET AJAX: datos del proveedor para precargar el modal de edición."""
     try:
@@ -1413,6 +1415,7 @@ def proveedor_detalle_ajax(request, proyecto_id, pk):
 
 
 @requiere('puede_ver_logistica')
+@proyecto_visible
 @require_POST
 def proveedor_toggle_ajax(request, proyecto_id, pk):
     """POST AJAX: activa/desactiva un proveedor (no se elimina)."""
@@ -1426,6 +1429,7 @@ def proveedor_toggle_ajax(request, proyecto_id, pk):
 
 
 @requiere('puede_ver_logistica')
+@proyecto_visible
 @require_POST
 def proveedor_eliminar_ajax(request, proyecto_id, pk):
     """POST AJAX: borra un proveedor."""

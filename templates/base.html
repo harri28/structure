@@ -227,7 +227,7 @@
   </div>
 
   {% if permisos.puede_ver_logistica %}
-    {% if rol_actual and rol_actual.nombre == 'Logística' %}
+    {% if rol_actual and rol_actual.es_rol_logistica %}
     {# ── Layout PLANO agrupado: solo para el rol Logística ────────── #}
     {% with vn=request.resolver_match.view_name %}
     {% with log_rep_vns='logistica:reportes,logistica:vs_atenciones,logistica:cuadrilla,logistica:maquinaria,logistica:almacen_log' %}
