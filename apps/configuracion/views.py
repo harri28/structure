@@ -79,6 +79,18 @@ class FaviconForm(forms.ModelForm):
         }
 
 
+class ImagenFondoLoginForm(forms.ModelForm):
+    class Meta:
+        model  = ConfigEmpresa
+        fields = ['imagen_fondo_login']
+        widgets = {
+            'imagen_fondo_login': forms.ClearableFileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*',
+            }),
+        }
+
+
 @requiere('puede_configurar_empresa')
 def empresa(request):
     config = ConfigEmpresa.get()
@@ -114,6 +126,12 @@ def apariencia(request):
             form_favicon.save()
             messages.success(request, 'Favicon actualizado.')
             return redirect('configuracion:apariencia')
+    elif section == 'fondo_login':
+        form_fondo = ImagenFondoLoginForm(request.POST, request.FILES, instance=config)
+        if form_fondo.is_valid():
+            form_fondo.save()
+            messages.success(request, 'Fondo de login actualizado.')
+            return redirect('configuracion:apariencia')
     elif section == 'color':
         form_color = ColorPrimarioForm(request.POST, instance=config)
         if form_color.is_valid():
@@ -127,11 +145,14 @@ def apariencia(request):
         form_imagen = ImagenMarcaForm(instance=config)
     if 'form_favicon' not in locals():
         form_favicon = FaviconForm(instance=config)
+    if 'form_fondo' not in locals():
+        form_fondo = ImagenFondoLoginForm(instance=config)
 
     return render(request, 'configuracion/apariencia.html', {
         'form_color':   form_color,
         'form_imagen':  form_imagen,
         'form_favicon': form_favicon,
+        'form_fondo':   form_fondo,
         'config':       config,
         'tab_activo_config': 'apariencia',
     })

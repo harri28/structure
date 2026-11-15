@@ -16,6 +16,8 @@ class ConfigEmpresa(models.Model):
     imagen_marca = models.ImageField('Imagen de Marca (sidebar)', upload_to='empresa/marca/', blank=True, null=True)
     favicon      = models.ImageField('Favicon', upload_to='empresa/favicon/', blank=True, null=True,
                                      help_text='Ícono del navegador (pestaña, acceso directo). PNG cuadrado 32×32 o 64×64.')
+    imagen_fondo_login = models.ImageField('Fondo de Login', upload_to='empresa/fondo_login/', blank=True, null=True,
+                                           help_text='Imagen de fondo a pantalla completa detrás del formulario de ingreso.')
     updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:

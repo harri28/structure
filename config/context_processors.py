@@ -23,6 +23,7 @@ def tema_empresa(request):
             'tema_color_pale':     _mezclar(color, (255, 255, 255), 0.92),
             'tema_imagen_marca':   cfg.imagen_marca.url if cfg.imagen_marca else '',
             'tema_favicon':        cfg.favicon.url if cfg.favicon else '',
+            'tema_fondo_login':    cfg.imagen_fondo_login.url if cfg.imagen_fondo_login else '',
         }
     except Exception:
         return {}

@@ -15,7 +15,11 @@
   <style>
     body {
       min-height: 100vh;
+      {% if tema_fondo_login %}
+      background: #0f172a url("{{ tema_fondo_login }}") center center / cover no-repeat fixed;
+      {% else %}
       background: #f1f5f9;
+      {% endif %}
       display: flex;
       align-items: center;
       justify-content: center;
@@ -28,6 +32,9 @@
       width: 100%;
       max-width: 400px;
       padding: 2.5rem 2rem 2rem;
+      {% if tema_fondo_login %}
+      backdrop-filter: blur(2px);
+      {% endif %}
     }
     .login-logo {
       min-height: 52px;
