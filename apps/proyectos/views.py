@@ -485,14 +485,16 @@ def proyecto_restablecer(request, pk):
 
     proyecto = get_object_or_404(Proyecto, pk=pk)
 
-    from apps.requerimientos.models import Requerimiento, DetalleRequerimiento
-    from apps.almacen.models import Entrada, Salida, Cotizacion, OrdenCompra
-    from apps.logistica.models import GuiaRemision
+    from apps.requerimientos.models import Requerimiento, DetalleRequerimiento, HistorialRevisionReq
+    from apps.almacen.models import Entrada, Salida, Cotizacion, OrdenCompra, DetalleCotizacion
+    from apps.logistica.models import GuiaRemision, Proveedor, Transportista
     from apps.maquinaria.models import (
         RegistroDiario, RegistroMaquinaria, Liquidacion,
         Trabajador, DocumentoTrabajador, Cuadrilla, IntegranteCuadrilla, Asistencia,
     )
-    from apps.presupuesto.models import Presupuesto, Partida
+    from apps.presupuesto.models import (
+        Presupuesto, Partida, InsumoPresupuesto, AmpliacionInsumo, CambioNombreInsumo,
+    )
     from apps.registro.models import Notificacion, RegistroAccion
 
     def _count(qs):
@@ -502,89 +504,120 @@ def proyecto_restablecer(request, pk):
             return 0
 
     modulos = {
+        # ── Por proyecto ──────────────────────────────────────────────
         'presupuesto': {
             'nombre': 'Presupuesto',
             'icono': 'bi-table',
             'color': '#6366f1',
-            'descripcion': 'Partidas, insumos, ACU y modificaciones',
+            'descripcion': 'Partidas, insumos, ACU, modificaciones, ampliaciones y cambios de nombre de insumo.',
             'count': _count(Partida.objects.filter(presupuesto__proyecto=proyecto)),
+            'global': False,
         },
         'requerimientos': {
             'nombre': 'Requerimientos',
             'icono': 'bi-file-earmark-text',
             'color': '#f59e0b',
-            'descripcion': 'Requerimientos y sus detalles',
+            'descripcion': 'Requerimientos, sus ítems e historial de revisión (aprobaciones, sustituciones, anulaciones).',
             'count': _count(Requerimiento.objects.filter(proyecto=proyecto)),
+            'global': False,
         },
         'cotizaciones': {
             'nombre': 'Cotizaciones y OC',
             'icono': 'bi-tags',
             'color': '#10b981',
-            'descripcion': 'Cotizaciones y órdenes de compra',
+            'descripcion': 'Cotizaciones del proyecto con sus ítems y órdenes de compra. No afecta al stock en obra.',
             'count': _count(Cotizacion.objects.filter(proyecto=proyecto)) + _count(OrdenCompra.objects.filter(proyecto=proyecto)),
+            'global': False,
         },
         'almacen': {
             'nombre': 'Almacén',
             'icono': 'bi-box-seam',
             'color': '#3b82f6',
-            'descripcion': 'Entradas y salidas de materiales',
+            'descripcion': 'Entradas y salidas de materiales registradas por el Almacenero.',
             'count': _count(Entrada.objects.filter(proyecto=proyecto)) + _count(Salida.objects.filter(proyecto=proyecto)),
+            'global': False,
         },
         'logistica': {
-            'nombre': 'Logística',
+            'nombre': 'Logística — Aprobaciones',
             'icono': 'bi-clipboard-check',
             'color': '#0ea5e9',
-            'descripcion': 'Aprobaciones, contadores de insumos y guías de remisión',
-            'count': _count(Requerimiento.objects.filter(proyecto=proyecto, estado__in=['APROBADO', 'PARCIAL', 'ATENDIDO'])),
+            'descripcion': 'Revierte estados y aprobaciones de requerimientos, restaura contadores de insumos (stock en obra) y borra guías de remisión asociadas.',
+            'count': _count(Requerimiento.objects.filter(proyecto=proyecto, estado__in=['APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO'])),
+            'global': False,
         },
         'guias': {
             'nombre': 'Guías de Remisión',
             'icono': 'bi-file-earmark-arrow-right',
             'color': '#8b5cf6',
-            'descripcion': 'Guías de remisión generadas',
+            'descripcion': 'Guías de remisión del proyecto (sin tocar aprobaciones ni cotizaciones). Devuelve el stock descontado.',
             'count': _count(GuiaRemision.objects.filter(proyecto=proyecto)),
+            'global': False,
         },
         'personal': {
             'nombre': 'Personal (Trabajadores)',
             'icono': 'bi-person-badge',
             'color': '#14b8a6',
-            'descripcion': 'Trabajadores de obra + documentos adjuntos (CV, SCTR, etc.). Al borrar también se eliminan sus asignaciones a cuadrillas y marcas de asistencia.',
+            'descripcion': 'Trabajadores de obra + documentos adjuntos (CV, SCTR, etc.). Cascada: asignaciones a cuadrillas y asistencias.',
             'count': _count(Trabajador.objects.filter(proyecto=proyecto)),
+            'global': False,
         },
         'cuadrillas': {
             'nombre': 'Cuadrillas',
             'icono': 'bi-diagram-3',
             'color': '#2563eb',
-            'descripcion': 'Frentes de trabajo del proyecto y asignaciones de personal',
+            'descripcion': 'Frentes de trabajo del proyecto y asignaciones de personal.',
             'count': _count(Cuadrilla.objects.filter(proyecto=proyecto)),
+            'global': False,
         },
         'asistencia': {
             'nombre': 'Asistencia',
             'icono': 'bi-calendar-check',
             'color': '#0891b2',
-            'descripcion': 'Marcas de asistencia diaria del personal (Presente/Falta/Tardanza/etc.)',
+            'descripcion': 'Marcas de asistencia diaria del personal (Presente/Falta/Tardanza/etc.).',
             'count': _count(Asistencia.objects.filter(trabajador__proyecto=proyecto)),
+            'global': False,
         },
         'maquinaria': {
             'nombre': 'Maquinaria',
             'icono': 'bi-truck',
             'color': '#ec4899',
-            'descripcion': 'Registros diarios de maquinaria y liquidaciones',
+            'descripcion': 'Registros diarios de maquinaria y liquidaciones del proyecto.',
             'count': _count(RegistroDiario.objects.filter(proyecto=proyecto)) + _count(RegistroMaquinaria.objects.filter(proyecto=proyecto)),
+            'global': False,
+        },
+
+        # ── Catálogos globales (afectan a TODOS los proyectos) ────────
+        'proveedores': {
+            'nombre': 'Proveedores (global)',
+            'icono': 'bi-building',
+            'color': '#9333ea',
+            'descripcion': 'Catálogo de proveedores con datos de SUNAT. Afecta a todos los proyectos.',
+            'count': _count(Proveedor.objects.all()),
+            'global': True,
+        },
+        'transportistas': {
+            'nombre': 'Transportistas (global)',
+            'icono': 'bi-truck-front',
+            'color': '#be185d',
+            'descripcion': 'Catálogo de transportistas usados en guías de remisión. Afecta a todos los proyectos.',
+            'count': _count(Transportista.objects.all()),
+            'global': True,
         },
         'notificaciones': {
-            'nombre': 'Notificaciones',
+            'nombre': 'Notificaciones (global)',
             'icono': 'bi-bell',
             'color': '#f97316',
-            'descripcion': 'Todas las notificaciones del sistema',
+            'descripcion': 'Todas las notificaciones del sistema (campana del topbar).',
             'count': _count(Notificacion.objects.all()),
+            'global': True,
         },
         'actividad': {
-            'nombre': 'Actividad',
+            'nombre': 'Actividad (global)',
             'icono': 'bi-activity',
             'color': '#64748b',
-            'descripcion': 'Historial de acciones registradas',
+            'descripcion': 'Historial de acciones registradas (log de auditoría).',
             'count': _count(RegistroAccion.objects.all()),
+            'global': True,
         },
     }
 
@@ -623,7 +656,6 @@ def proyecto_restablecer(request, pk):
             eliminados.append('Almacén')
 
         if 'logistica' in seleccionados:
-            from apps.presupuesto.models import InsumoPresupuesto
             # Restaurar contadores usando cantidad_total (fuente de verdad del presupuesto)
             for ins in InsumoPresupuesto.objects.filter(presupuesto__proyecto=proyecto):
                 ins.cantidad = ins.cantidad_total
@@ -632,15 +664,21 @@ def proyecto_restablecer(request, pk):
             DetalleRequerimiento.objects.filter(
                 requerimiento__proyecto=proyecto
             ).update(cantidad_aprobada=None)
-            # Revertir estado de requerimientos aprobados/parciales/atendidos a ENVIADO
+            # Revertir estado de requerimientos revisados a ENVIADO
             Requerimiento.objects.filter(
-                proyecto=proyecto, estado__in=['APROBADO', 'PARCIAL', 'ATENDIDO']
+                proyecto=proyecto,
+                estado__in=['APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO'],
             ).update(estado='ENVIADO', aprobacion_vista=False)
-            # Eliminar guías de remisión
+            # Eliminar guías de remisión del proyecto
             GuiaRemision.objects.filter(proyecto=proyecto).delete()
             eliminados.append('Logística')
 
         if 'guias' in seleccionados:
+            # Devuelve al stock lo descontado por cada guía despachada antes de borrarla.
+            from apps.logistica.views import _revertir_descuento, ESTADOS_GUIA_DESPACHADA
+            for g in GuiaRemision.objects.filter(proyecto=proyecto):
+                if g.estado in ESTADOS_GUIA_DESPACHADA:
+                    _revertir_descuento(g)
             GuiaRemision.objects.filter(proyecto=proyecto).delete()
             eliminados.append('Guías de Remisión')
 
@@ -663,6 +701,14 @@ def proyecto_restablecer(request, pk):
             RegistroMaquinaria.objects.filter(proyecto=proyecto).delete()
             Liquidacion.objects.filter(proyecto=proyecto).delete()
             eliminados.append('Maquinaria')
+
+        if 'proveedores' in seleccionados:
+            Proveedor.objects.all().delete()
+            eliminados.append('Proveedores')
+
+        if 'transportistas' in seleccionados:
+            Transportista.objects.all().delete()
+            eliminados.append('Transportistas')
 
         if 'notificaciones' in seleccionados:
             Notificacion.objects.all().delete()
