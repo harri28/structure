@@ -158,10 +158,10 @@
         // Si no hay nada comprometido aún, no mostramos el ícono (no hay
         // nada que avisar).
         if (yaPedido <= 0) { saldoSpan.style.display = 'none'; return; }
-        var txt = 'Ya has solicitado <strong>' + yaPedido.toLocaleString('es-PE', {maximumFractionDigits: 4}) +
-                  ' ' + unidad + '</strong> anteriormente. ' +
-                  'Te quedan <strong>' + disponible.toLocaleString('es-PE', {maximumFractionDigits: 4}) +
-                  ' ' + unidad + '</strong> por solicitar.';
+        var fmt = function(n){ return n.toLocaleString('es-PE', {maximumFractionDigits: 4}); };
+        var txt = '<strong>DETALLE DE CANTIDAD</strong><br>' +
+                  'Solicitaste ' + fmt(yaPedido) + ' ' + unidad + '<br>' +
+                  'Te queda ' + fmt(disponible) + ' ' + unidad;
         saldoSpan.setAttribute('title', txt);
         saldoSpan.setAttribute('data-bs-original-title', txt);
         saldoSpan.style.display = '';
