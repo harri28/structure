@@ -43,7 +43,7 @@
     <div class="row g-3">
       {% for key, mod in modulos.items %}
       <div class="col-md-6 col-lg-4">
-        <label class="d-flex align-items-start gap-3 p-3 rounded-3 border mod-card{% if mod.global %} mod-global{% endif %}"
+        <label class="d-flex align-items-start gap-3 p-3 rounded-3 border mod-card"
                style="cursor:pointer;transition:border-color .15s,background .15s" data-key="{{ key }}">
           <input type="checkbox" name="modulos" value="{{ key }}" class="mod-chk form-check-input mt-1 flex-shrink-0"
                  style="width:1.1rem;height:1.1rem">
@@ -56,12 +56,6 @@
               </span>
             </div>
             <div class="text-muted" style="font-size:.78rem">{{ mod.descripcion }}</div>
-            {% if mod.global %}
-            <div class="mt-2 d-flex align-items-center gap-1" style="font-size:.72rem;color:#b91c1c;font-weight:600">
-              <i class="bi bi-exclamation-triangle-fill"></i>
-              Afecta a todos los proyectos
-            </div>
-            {% endif %}
           </div>
         </label>
       </div>
@@ -96,9 +90,6 @@
 <style>
 .mod-card:hover { border-color: #94a3b8; background: #f8fafc; }
 .mod-card.seleccionada { border-color: #dc2626 !important; background: #fef2f2; }
-.mod-card.mod-global  { border-color: #fcd34d; background: #fffbeb; }
-.mod-card.mod-global:hover { border-color: #f59e0b; background: #fef3c7; }
-.mod-card.mod-global.seleccionada { border-color: #dc2626 !important; background: #fee2e2; }
 </style>
 
 <script>
