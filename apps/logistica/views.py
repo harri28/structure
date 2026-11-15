@@ -453,15 +453,34 @@ def requerimientos_log(request, proyecto_id):
 @requiere('puede_revisar_reqs_log')
 @proyecto_visible
 def historial_log(request, proyecto_id):
+    """Registro de todos los REQ con totales: solicitado vs aprobado y la
+    diferencia pendiente. Solo lectura."""
+    from decimal import Decimal
     from apps.requerimientos.models import Requerimiento
     proyecto = _get_proyecto(proyecto_id)
-    requerimientos = (Requerimiento.objects
-                      .filter(proyecto=proyecto,
-                              estado__in=['EN_REVISION', 'APROBADO', 'PARCIAL', 'ANULADO'])
-                      .order_by('-fecha', '-numero'))
+    qs = (Requerimiento.objects
+          .filter(proyecto=proyecto,
+                  estado__in=['EN_REVISION', 'APROBADO', 'PARCIAL', 'ANULADO', 'COTIZADO', 'ATENDIDO'])
+          .prefetch_related('detalles')
+          .order_by('-fecha', '-numero'))
+    rows = []
+    for r in qs:
+        total_req = Decimal('0')
+        total_apr = Decimal('0')
+        for d in r.detalles.all():
+            total_req += d.cantidad_requerida or Decimal('0')
+            if d.cantidad_aprobada is not None:
+                total_apr += d.cantidad_aprobada
+        rows.append({
+            'req':       r,
+            'items':     r.detalles.count(),
+            'total_req': total_req,
+            'total_apr': total_apr,
+            'pendiente': max(Decimal('0'), total_req - total_apr),
+        })
     return render(request, 'logistica/req_historial.html', {
         'proyecto':       proyecto,
-        'requerimientos': requerimientos,
+        'requerimientos': rows,
     })
 
 
@@ -620,7 +639,11 @@ def req_revisar_log(request, proyecto_id, pk):
     _vol = _VOLVER.get(from_slug, ('logistica:requerimientos_log', 'Ingreso de Requerimientos'))
     volver_urlname, volver_label = _vol
 
-    if req.estado == 'ENVIADO':
+    # Historial siempre es solo lectura, sin importar el estado del REQ.
+    if from_slug == 'historial':
+        editable = False
+
+    if req.estado == 'ENVIADO' and from_slug != 'historial':
         req.estado = 'EN_REVISION'
         req.save(update_fields=['estado'])
 

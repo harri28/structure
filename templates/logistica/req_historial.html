@@ -26,40 +26,46 @@
         <tr>
           <th>N° REQ</th>
           <th>Fecha</th>
-          <th>Tipo</th>
           <th>Solicitante</th>
           <th>Estado</th>
-          <th style="text-align:center">Ítems</th>
-          <th>Observaciones</th>
+          <th class="text-center">Ítems</th>
+          <th class="text-end">Solicitado</th>
+          <th class="text-end">Aprobado</th>
+          <th class="text-end">Pendiente</th>
         </tr>
       </thead>
       <tbody>
-        {% for r in requerimientos %}
+        {% for row in requerimientos %}
         <tr class="req-row" style="cursor:pointer"
-            onclick="window.location.href='{% url 'logistica:req_revisar_log' proyecto.pk r.pk %}?from=historial'">
-          <td class="fw-semibold">REQ{{ r.numero }}</td>
-          <td>{{ r.fecha|date:"d/m/Y" }}</td>
-          <td>{{ r.get_tipo_display }}</td>
-          <td>{{ r.solicitante|default:"—" }}</td>
+            onclick="window.location.href='{% url 'logistica:req_revisar_log' proyecto.pk row.req.pk %}?from=historial'">
+          <td class="fw-semibold">REQ{{ row.req.numero }}</td>
+          <td>{{ row.req.fecha|date:"d/m/Y" }}</td>
+          <td>{{ row.req.solicitante|default:"—" }}</td>
           <td>
             <span class="badge rounded-1
-              {% if r.estado == 'EN_REVISION' %}bg-warning text-dark
-              {% elif r.estado == 'ANULADO' %}bg-danger
-              {% elif r.estado == 'APROBADO' %}bg-info
-              {% elif r.estado == 'PARCIAL' %}bg-warning text-dark
+              {% if row.req.estado == 'EN_REVISION' %}bg-warning text-dark
+              {% elif row.req.estado == 'ANULADO' %}bg-danger
+              {% elif row.req.estado == 'APROBADO' %}bg-info
+              {% elif row.req.estado == 'PARCIAL' %}bg-warning text-dark
+              {% elif row.req.estado == 'ATENDIDO' %}bg-success
               {% else %}bg-secondary{% endif %}">
-              {{ r.get_estado_display }}
+              {{ row.req.get_estado_display }}
             </span>
           </td>
-          <td style="text-align:center">
+          <td class="text-center">
             <span class="badge rounded-pill bg-primary"
-                  style="font-size:.7rem;padding:.25em .6em">{{ r.detalles.count }}</span>
+                  style="font-size:.7rem;padding:.25em .6em">{{ row.items }}</span>
           </td>
-          <td class="text-muted" style="font-size:.82rem">{{ r.observaciones|default:"—"|truncatechars:60 }}</td>
+          <td class="text-end text-muted">{{ row.total_req|floatformat:2 }}</td>
+          <td class="text-end fw-semibold" style="color:#15803d">{{ row.total_apr|floatformat:2 }}</td>
+          <td class="text-end fw-bold"
+              style="color:{% if row.pendiente > 0 %}#c2410c{% else %}#9ca3af{% endif %}">
+            {{ row.pendiente|floatformat:2 }}
+          </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="7">
+          <td colspan="8">
             <div class="empty-state py-5">
               <i class="bi bi-inbox d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
               <p class="text-muted">Sin requerimientos en el historial</p>
