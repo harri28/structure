@@ -409,6 +409,7 @@
       nuevoSaldo.removeAttribute('data-bs-original-title');
     }
     tpl.style.opacity = '1';
+    tpl.style.display = '';
     tbody.appendChild(tpl);
     const tf = document.querySelector('[name$="-TOTAL_FORMS"]');
     if (tf) tf.value = idx + 1;
