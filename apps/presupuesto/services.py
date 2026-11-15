@@ -64,7 +64,9 @@ def saldo_disponible_insumo(insumo, excluir_req_pk=None):
             output_field=dec,
         )
     )['s'] or Decimal('0')
-    return (insumo.cantidad_total or Decimal('0')) - comprometido
+    # Cantidad presupuestada real = original importada + lo ampliado a mano
+    # desde Insumos → Modificar (modelo AmpliacionInsumo).
+    return insumo.cantidad_total_efectiva() - comprometido
 
 
 def consolidar_por_insumo(items):

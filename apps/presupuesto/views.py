@@ -190,16 +190,45 @@ def detalle(request, pk):
 
 @requiere('puede_ver_presupuesto')
 def insumos(request, pk):
-    from django.db.models import Sum
+    from django.db.models import Sum, Count, DecimalField as DFld
+    from django.db.models.functions import Coalesce
+    from django.core.paginator import Paginator
+    from decimal import Decimal
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     tipo_sel = request.GET.get('tipo', '')
     qs_all = presupuesto.insumos.all()
     qs = qs_all.filter(tipo=tipo_sel) if tipo_sel else qs_all
-    total_sum = qs.aggregate(s=Sum('total'))['s'] or 0
+    # Anotar ampliaciones por insumo para calcular cantidad efectiva y
+    # marcar visualmente los modificados en la grilla.
+    dec = DFld(max_digits=18, decimal_places=4)
+    qs = qs.annotate(
+        ampliado=Coalesce(Sum('ampliaciones__cantidad'),
+                          0, output_field=dec),
+        n_ampliaciones=Count('ampliaciones'),
+    )
+    # total_sum = Σ (cantidad_total + ampliado) × costo_unitario sobre el filtro vigente.
+    total_sum = Decimal('0')
+    for ins in qs:
+        cant_ef = (ins.cantidad_total or 0) + (ins.ampliado or 0)
+        total_sum += Decimal(cant_ef) * (ins.costo_unitario or Decimal('0'))
+
+    # Paginación: 25 por página (ajustable con ?page_size=).
+    try:
+        page_size = int(request.GET.get('page_size', '25'))
+    except ValueError:
+        page_size = 25
+    if page_size not in (10, 25, 50, 100):
+        page_size = 25
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     return render(request, 'presupuesto/insumos.html', {
         'presupuesto':   presupuesto,
         'proyecto':      presupuesto.proyecto,
-        'insumos':       qs,
+        'insumos':       page_obj.object_list,
+        'page_obj':      page_obj,
+        'paginator':     paginator,
+        'page_size':     page_size,
         'insumos_total': qs_all.count(),
         'total_sum':     total_sum,
         'tipos':         TIPOS_RECURSO,
@@ -210,6 +239,77 @@ def insumos(request, pk):
             'equipos':      qs_all.filter(tipo='EQUIPO'),
             'subcontratos': qs_all.filter(tipo='SUBCONTRATO'),
         }
+    })
+
+
+@requiere('puede_editar_presupuesto')
+def insumo_ampliar(request, pk):
+    """AJAX POST: agrega una ampliación de cantidad a un insumo. La cantidad
+    importada original (cantidad_total) no se toca — queda la fila como
+    trazabilidad. La cantidad efectiva pasa a ser cantidad_total + Σ ampliaciones."""
+    from decimal import Decimal, InvalidOperation
+    from django.http import JsonResponse
+    from .models import InsumoPresupuesto, AmpliacionInsumo
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+    try:
+        insumo = InsumoPresupuesto.objects.get(pk=pk)
+    except InsumoPresupuesto.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Insumo no encontrado.'}, status=404)
+
+    raw_cant = (request.POST.get('cantidad') or '').strip()
+    justif = (request.POST.get('justificacion') or '').strip()
+    try:
+        cantidad = Decimal(raw_cant)
+    except (InvalidOperation, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Cantidad inválida.'}, status=400)
+    if cantidad <= 0:
+        return JsonResponse({'ok': False, 'error': 'La cantidad debe ser mayor a 0.'}, status=400)
+
+    AmpliacionInsumo.objects.create(
+        insumo=insumo, cantidad=cantidad,
+        justificacion=justif, usuario=request.user,
+    )
+    log(request, 'EDITAR', 'Presupuesto',
+        f'Insumo "{insumo.descripcion}" ampliado en +{cantidad} {insumo.unidad or "und"} '
+        f'por {request.user.get_full_name() or request.user.username}')
+
+    return JsonResponse({
+        'ok':              True,
+        'cantidad_total':  str(insumo.cantidad_total or Decimal('0')),
+        'ampliado':        str(insumo.cantidad_ampliada()),
+        'total_efectivo':  str(insumo.cantidad_total_efectiva()),
+    })
+
+
+@requiere('puede_editar_presupuesto')
+def insumo_ampliaciones_json(request, pk):
+    """GET: datos del insumo + lista de ampliaciones previas para el modal."""
+    from django.http import JsonResponse
+    from .models import InsumoPresupuesto
+    try:
+        insumo = InsumoPresupuesto.objects.get(pk=pk)
+    except InsumoPresupuesto.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Insumo no encontrado.'}, status=404)
+    amps = [{
+        'cantidad':      str(a.cantidad),
+        'justificacion': a.justificacion or '',
+        'usuario':       (a.usuario.get_full_name() or a.usuario.username) if a.usuario else '—',
+        'fecha':         a.fecha.strftime('%d/%m/%Y %H:%M'),
+    } for a in insumo.ampliaciones.select_related('usuario').all()[:50]]
+    return JsonResponse({
+        'ok': True,
+        'insumo': {
+            'id':             insumo.pk,
+            'codigo':         insumo.codigo,
+            'descripcion':    insumo.descripcion,
+            'unidad':         insumo.unidad or '',
+            'cantidad_total': str(insumo.cantidad_total or 0),
+            'ampliado':       str(insumo.cantidad_ampliada()),
+            'total_efectivo': str(insumo.cantidad_total_efectiva()),
+        },
+        'ampliaciones': amps,
     })
 
 

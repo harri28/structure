@@ -180,6 +180,37 @@ class InsumoPresupuesto(models.Model):
     def __str__(self):
         return f'{self.codigo} - {self.descripcion}'
 
+    def cantidad_ampliada(self):
+        """Suma de todas las ampliaciones manuales (adiciones post-import)."""
+        from django.db.models import Sum
+        return self.ampliaciones.aggregate(s=Sum('cantidad'))['s'] or Decimal('0')
+
+    def cantidad_total_efectiva(self):
+        """Cantidad presupuestada real = la importada + lo ampliado a mano.
+        Se usa para validar el saldo disponible al solicitar requerimientos."""
+        return (self.cantidad_total or Decimal('0')) + self.cantidad_ampliada()
+
+
+class AmpliacionInsumo(models.Model):
+    """Adición manual de cantidad a un insumo ya importado.
+
+    La `cantidad_total` del insumo (del Excel/S10) nunca se toca: quedan
+    estas filas como trazabilidad. La cantidad disponible real = suma.
+    """
+    insumo        = models.ForeignKey(InsumoPresupuesto, on_delete=models.CASCADE, related_name='ampliaciones')
+    cantidad      = models.DecimalField(max_digits=15, decimal_places=4)
+    justificacion = models.TextField(blank=True)
+    usuario       = models.ForeignKey('auth.User', null=True, on_delete=models.SET_NULL)
+    fecha         = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Ampliación de insumo'
+        verbose_name_plural = 'Ampliaciones de insumo'
+        ordering            = ['-fecha']
+
+    def __str__(self):
+        return f'+{self.cantidad} a {self.insumo.descripcion}'
+
 
 class Modificacion(models.Model):
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='modificaciones')

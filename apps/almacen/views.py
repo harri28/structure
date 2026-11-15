@@ -1645,10 +1645,11 @@ def api_insumo_saldo(request, insumo_id):
     except ValueError:
         excluir_req_pk = None
     disponible = saldo_disponible_insumo(ins, excluir_req_pk=excluir_req_pk)
-    ya_pedido = (ins.cantidad_total or Decimal('0')) - disponible
+    total_efectivo = ins.cantidad_total_efectiva()
+    ya_pedido = total_efectivo - disponible
     return JsonResponse({
         'ok':             True,
-        'cantidad_total': str(ins.cantidad_total or Decimal('0')),
+        'cantidad_total': str(total_efectivo),
         'ya_pedido':      str(ya_pedido if ya_pedido > 0 else Decimal('0')),
         'disponible':     str(disponible if disponible > 0 else Decimal('0')),
         'unidad':         ins.unidad or '',
