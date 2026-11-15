@@ -573,28 +573,25 @@ def req_revisar_log(request, proyecto_id, pk):
         errores = []
 
         # ── Procesar ítems existentes ────────────────────────────────
+        # (La opción de "eliminar ítem" con justificación se retiró de la UI;
+        # ahora para quitar un ítem se usa el flujo de sustitución.)
         aprobaciones = {}
-        eliminados   = {}   # det.pk → justificacion
 
         for det in detalles:
-            if request.POST.get(f'eliminar_{det.pk}'):
-                aprobaciones[det.pk] = Decimal('0')
-                eliminados[det.pk]   = request.POST.get(f'justif_eliminar_{det.pk}', '').strip()
+            raw = request.POST.get(f'aprobada_{det.pk}', '').strip()
+            try:
+                aprobada = Decimal(raw) if raw else Decimal('0')
+            except InvalidOperation:
+                aprobada = Decimal('0')
+            if aprobada < 0:
+                errores.append(f'Ítem "{det.descripcion or det.pk}": cantidad negativa.')
+            elif aprobada > det.cantidad_requerida:
+                errores.append(
+                    f'Ítem "{det.descripcion or det.pk}": '
+                    f'cantidad ({aprobada}) supera la requerida ({det.cantidad_requerida}).'
+                )
             else:
-                raw = request.POST.get(f'aprobada_{det.pk}', '').strip()
-                try:
-                    aprobada = Decimal(raw) if raw else Decimal('0')
-                except InvalidOperation:
-                    aprobada = Decimal('0')
-                if aprobada < 0:
-                    errores.append(f'Ítem "{det.descripcion or det.pk}": cantidad negativa.')
-                elif aprobada > det.cantidad_requerida:
-                    errores.append(
-                        f'Ítem "{det.descripcion or det.pk}": '
-                        f'cantidad ({aprobada}) supera la requerida ({det.cantidad_requerida}).'
-                    )
-                else:
-                    aprobaciones[det.pk] = aprobada
+                aprobaciones[det.pk] = aprobada
 
         # ── Validar nuevos ítems ─────────────────────────────────────
         nuevo_count = int(request.POST.get('nuevo_count', '0') or 0)
@@ -667,29 +664,18 @@ def req_revisar_log(request, proyecto_id, pk):
                 'editable': editable,
             })
 
-        # ── Guardar aprobaciones y registrar eliminaciones ───────────
+        # ── Guardar aprobaciones ─────────────────────────────────────
         es_parcial = False
         detalle_por_pk = {d.pk: d for d in detalles}
         for det in detalles:
             # Si este detalle fue marcado para ser sustituido por un nuevo
-            # ítem, forzamos su aprobación a 0 (equivale a eliminarlo).
+            # ítem, forzamos su aprobación a 0 (equivale a neutralizarlo).
             es_sustituido = det.pk in sust_pks
             aprobada = Decimal('0') if es_sustituido else aprobaciones[det.pk]
             det.cantidad_aprobada = aprobada
             det.save(update_fields=['cantidad_aprobada'])
             if aprobada < det.cantidad_requerida:
                 es_parcial = True
-            if det.pk in eliminados and not es_sustituido:
-                HistorialRevisionReq.objects.create(
-                    requerimiento=req,
-                    accion='ELIMINAR',
-                    insumo=det.insumo,
-                    descripcion=det.descripcion or (det.insumo.descripcion if det.insumo else '—'),
-                    unidad=det.unidad or '',
-                    cantidad=det.cantidad_requerida,
-                    justificacion=eliminados[det.pk],
-                    usuario=request.user,
-                )
 
         # ── Crear nuevos ítems ───────────────────────────────────────
         from apps.requerimientos.models import DetalleRequerimiento as _Det
