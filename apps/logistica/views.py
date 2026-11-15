@@ -1155,6 +1155,97 @@ def almacen_log(request, proyecto_id):
     })
 
 
+@requiere('puede_revisar_reqs_log', 'puede_ver_logistica')
+@proyecto_visible
+def req_insumos_log(request, proyecto_id):
+    """Lista de insumos del presupuesto con la cantidad total APROBADA por
+    Logística (sumando cantidad_aprobada de todos los REQ en APROBADO,
+    COTIZADO, PARCIAL o ATENDIDO).
+
+    Contador = 0.00 mientras no haya REQs aprobados para ese insumo.
+    Cuando Logística aprueba un REQ, el contador refleja la suma.
+    """
+    from decimal import Decimal
+    from django.db.models import DecimalField, Sum, Value, Q
+    from django.db.models.functions import Coalesce
+    from django.core.paginator import Paginator
+    from django.db.models.functions import Cast, LPad
+    from django.db.models import CharField
+    from apps.requerimientos.models import DetalleRequerimiento
+    from apps.presupuesto.models import TIPOS_RECURSO
+
+    proyecto = _get_proyecto(proyecto_id)
+    if not hasattr(proyecto, 'presupuesto') or proyecto.presupuesto is None:
+        return render(request, 'logistica/req_insumos_log.html', {
+            'proyecto':  proyecto,
+            'items':     [],
+            'tipos':     TIPOS_RECURSO,
+            'tipo_sel':  '',
+            'q':         '',
+            'page':      None,
+            'total':     0,
+            'sin_presupuesto': True,
+        })
+
+    tipo_sel = request.GET.get('tipo', '').strip()
+    q        = request.GET.get('q', '').strip()
+
+    ESTADOS_APROBADOS = ('APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO')
+    dec = DecimalField(max_digits=18, decimal_places=4)
+
+    qs = proyecto.presupuesto.insumos.all()
+    if tipo_sel:
+        qs = qs.filter(tipo=tipo_sel)
+    if q:
+        qs = qs.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
+
+    # Pre-sumar cantidad_aprobada por insumo con una subquery agrupada.
+    aprobados_por_insumo = dict(
+        DetalleRequerimiento.objects
+        .filter(
+            requerimiento__estado__in=ESTADOS_APROBADOS,
+            requerimiento__proyecto=proyecto,
+            insumo__isnull=False,
+        )
+        .values('insumo_id')
+        .annotate(total=Coalesce(Sum('cantidad_aprobada', output_field=dec),
+                                  Value(Decimal('0'), output_field=dec),
+                                  output_field=dec))
+        .values_list('insumo_id', 'total')
+    )
+
+    qs = qs.annotate(
+        codigo_sort=LPad(Cast('codigo', output_field=CharField()), 10, Value('0')),
+    ).order_by('tipo', 'codigo_sort')
+
+    paginator = Paginator(qs, 30)
+    page = paginator.get_page(request.GET.get('page') or 1)
+
+    items = []
+    for ins in page.object_list:
+        aprobado = aprobados_por_insumo.get(ins.pk, Decimal('0'))
+        items.append({
+            'pk':          ins.pk,
+            'codigo':      ins.codigo,
+            'descripcion': ins.descripcion,
+            'tipo':        ins.tipo,
+            'tipo_display': ins.get_tipo_display(),
+            'unidad':      ins.unidad or 'und',
+            'aprobado':    aprobado,
+        })
+
+    return render(request, 'logistica/req_insumos_log.html', {
+        'proyecto':  proyecto,
+        'items':     items,
+        'tipos':     TIPOS_RECURSO,
+        'tipo_sel':  tipo_sel,
+        'q':         q,
+        'page':      page,
+        'total':     paginator.count,
+        'sin_presupuesto': False,
+    })
+
+
 @requiere('puede_gestionar_ctrl_maq_log')
 @proyecto_visible
 def control_maquinaria(request, proyecto_id):

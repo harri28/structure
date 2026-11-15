@@ -294,19 +294,46 @@ def insumo_ampliar(request, pk):
 
 @requiere('puede_ver_presupuesto', 'puede_editar_presupuesto')
 def insumo_ampliaciones_json(request, pk):
-    """GET: datos del insumo + lista de ampliaciones previas para el modal."""
+    """GET: datos del insumo + historial unificado (ampliaciones de cantidad
+    y cambios de nombre) para el modal/kardex."""
     from django.http import JsonResponse
     from .models import InsumoPresupuesto
     try:
         insumo = InsumoPresupuesto.objects.get(pk=pk)
     except InsumoPresupuesto.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'Insumo no encontrado.'}, status=404)
+
     amps = [{
         'cantidad':      str(a.cantidad),
         'justificacion': a.justificacion or '',
         'usuario':       (a.usuario.get_full_name() or a.usuario.username) if a.usuario else '—',
         'fecha':         a.fecha.strftime('%d/%m/%Y %H:%M'),
     } for a in insumo.ampliaciones.select_related('usuario').all()[:50]]
+
+    # Historial unificado: ampliaciones + cambios de nombre ordenados por fecha desc
+    eventos = []
+    for a in insumo.ampliaciones.select_related('usuario').all():
+        eventos.append({
+            'tipo':          'ampliacion',
+            'fecha_raw':     a.fecha,
+            'fecha':         a.fecha.strftime('%d/%m/%Y %H:%M'),
+            'detalle':       f'+{a.cantidad} {insumo.unidad or ""}'.strip(),
+            'justificacion': a.justificacion or '',
+            'usuario':       (a.usuario.get_full_name() or a.usuario.username) if a.usuario else '—',
+        })
+    for c in insumo.cambios_nombre.select_related('usuario').all():
+        eventos.append({
+            'tipo':          'rename',
+            'fecha_raw':     c.fecha,
+            'fecha':         c.fecha.strftime('%d/%m/%Y %H:%M'),
+            'detalle':       f'"{c.nombre_anterior}" → "{c.nombre_nuevo}"',
+            'justificacion': c.justificacion or '',
+            'usuario':       (c.usuario.get_full_name() or c.usuario.username) if c.usuario else '—',
+        })
+    eventos.sort(key=lambda e: e['fecha_raw'], reverse=True)
+    for e in eventos:
+        e.pop('fecha_raw', None)
+
     from decimal import Decimal
     costo = insumo.costo_unitario or Decimal('0')
     total_efectivo = insumo.cantidad_total_efectiva()
@@ -326,6 +353,50 @@ def insumo_ampliaciones_json(request, pk):
             'total':          str((total_efectivo * costo).quantize(Decimal('0.01'))),
         },
         'ampliaciones': amps,
+        'historial':    eventos,
+    })
+
+
+@requiere('puede_editar_presupuesto')
+def insumo_renombrar(request, pk):
+    """AJAX POST: cambia la descripción (nombre) del insumo y registra el cambio
+    en CambioNombreInsumo con usuario y fecha."""
+    from django.http import JsonResponse
+    from .models import InsumoPresupuesto, CambioNombreInsumo
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+    try:
+        insumo = InsumoPresupuesto.objects.get(pk=pk)
+    except InsumoPresupuesto.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Insumo no encontrado.'}, status=404)
+
+    nuevo = (request.POST.get('descripcion') or '').strip()
+    justif = (request.POST.get('justificacion') or '').strip()
+    if not nuevo:
+        return JsonResponse({'ok': False, 'error': 'La descripción no puede estar vacía.'}, status=400)
+    if len(nuevo) > 300:
+        return JsonResponse({'ok': False, 'error': 'La descripción supera los 300 caracteres.'}, status=400)
+    anterior = insumo.descripcion or ''
+    if nuevo == anterior:
+        return JsonResponse({'ok': False, 'error': 'El nombre no cambió.'}, status=400)
+
+    CambioNombreInsumo.objects.create(
+        insumo=insumo,
+        nombre_anterior=anterior,
+        nombre_nuevo=nuevo,
+        justificacion=justif,
+        usuario=request.user,
+    )
+    insumo.descripcion = nuevo
+    insumo.save(update_fields=['descripcion'])
+    log(request, 'EDITAR', 'Presupuesto',
+        f'Insumo renombrado: "{anterior}" → "{nuevo}" '
+        f'por {request.user.get_full_name() or request.user.username}')
+
+    return JsonResponse({
+        'ok':          True,
+        'descripcion': insumo.descripcion,
     })
 
 

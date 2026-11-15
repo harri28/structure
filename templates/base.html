@@ -280,6 +280,20 @@
       </a>
     </div>
 
+    {% if proyecto_activo.presupuesto %}
+    <div class="sb-section">
+      <div class="sb-label">Presupuesto</div>
+      <a href="{% url 'presupuesto:insumos' proyecto_activo.presupuesto.pk %}"
+         class="sb-link {% if vn == 'presupuesto:insumos' %}active{% endif %}">
+        <i class="bi bi-boxes"></i> Insumos
+      </a>
+      <a href="{% url 'logistica:req_insumos_log' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:req_insumos_log' %}active{% endif %}">
+        <i class="bi bi-clipboard-check"></i> Requerimiento de insumos
+      </a>
+    </div>
+    {% endif %}
+
     {% if permisos.puede_gestionar_almacen_log %}
     <div class="sb-section">
       <div class="sb-label">Almacén</div>

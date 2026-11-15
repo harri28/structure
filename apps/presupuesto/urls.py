@@ -11,6 +11,7 @@ urlpatterns = [
     path('<int:pk>/insumos/',                 views.insumos,  name='insumos'),
     path('insumo/<int:pk>/ampliar/',          views.insumo_ampliar,            name='insumo_ampliar'),
     path('insumo/<int:pk>/ampliaciones/',     views.insumo_ampliaciones_json,  name='insumo_ampliaciones_json'),
+    path('insumo/<int:pk>/renombrar/',        views.insumo_renombrar,          name='insumo_renombrar'),
     path('<int:pk>/igv/toggle/',              views.igv_toggle, name='igv_toggle'),
     path('<int:pk>/avance/',                  views.avance_fisico, name='avance_fisico'),
     path('<int:pk>/importar/',                views.importar, name='importar'),

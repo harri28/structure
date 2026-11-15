@@ -198,64 +198,99 @@
             </div>
           </div>
 
-          <!-- Cantidad a agregar + campos read-only del insumo
-               Grilla de 6 columnas iguales: label en el mismo estilo
-               (fw-semibold .78rem, uppercase) y mismo tamaño de input
-               (form-control-sm estándar) para que la fila luzca pareja. -->
-          <div class="row g-2 mb-3 align-items-end">
-            <div class="col">
-              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">
-                Cantidad a agregar <span class="text-danger">*</span>
-              </label>
-              <input type="number" id="mod-cantidad" class="form-control form-control-sm"
-                     step="0.0001" min="0.0001" placeholder="0.00">
-            </div>
-            <div class="col">
-              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Tipo</label>
-              <input type="text" id="mod-ro-tipo" class="form-control form-control-sm text-center" readonly
-                     style="background:#f8f9fa;color:#374151;font-weight:600">
-            </div>
-            <div class="col">
-              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Unidad</label>
-              <input type="text" id="mod-ro-unidad" class="form-control form-control-sm text-center" readonly
-                     style="background:#f8f9fa;color:#374151">
-            </div>
-            <div class="col">
-              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Cantidad</label>
-              <input type="text" id="mod-ro-cantidad" class="form-control form-control-sm text-end" readonly
-                     style="background:#f8f9fa;color:#374151">
-            </div>
-            <div class="col">
-              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Costo Unit.</label>
-              <input type="text" id="mod-ro-costo" class="form-control form-control-sm text-end" readonly
-                     style="background:#f8f9fa;color:#374151">
-            </div>
-            <div class="col">
-              <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Total</label>
-              <input type="text" id="mod-ro-total" class="form-control form-control-sm text-end" readonly
-                     style="background:#f8f9fa;color:#1d4ed8;font-weight:700">
-            </div>
-          </div>
+          <!-- Tabs: Agregar cantidad / Cambiar nombre -->
+          <ul class="nav nav-pills nav-pills-sm mb-3" id="mod-tabs" role="tablist" style="gap:.4rem">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active py-1 px-3" id="tab-cant" data-bs-toggle="pill" data-bs-target="#pane-cant"
+                      type="button" role="tab" style="font-size:.8rem;border-radius:6px">
+                <i class="bi bi-plus-circle me-1"></i>Agregar cantidad
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link py-1 px-3" id="tab-nom" data-bs-toggle="pill" data-bs-target="#pane-nom"
+                      type="button" role="tab" style="font-size:.8rem;border-radius:6px">
+                <i class="bi bi-pencil me-1"></i>Cambiar nombre
+              </button>
+            </li>
+          </ul>
 
-          <div class="mb-3">
-            <label class="form-label fw-semibold" style="font-size:.78rem">Justificación</label>
-            <input type="text" id="mod-justif" class="form-control form-control-sm"
-                   placeholder="Motivo del incremento (ej. adicional de obra)">
+          <div class="tab-content">
+
+            <!-- Pane: cantidad -->
+            <div class="tab-pane fade show active" id="pane-cant" role="tabpanel">
+              <div class="row g-2 mb-3 align-items-end">
+                <div class="col">
+                  <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">
+                    Cantidad a agregar <span class="text-danger">*</span>
+                  </label>
+                  <input type="number" id="mod-cantidad" class="form-control form-control-sm"
+                         step="0.0001" min="0.0001" placeholder="0.00">
+                </div>
+                <div class="col">
+                  <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Tipo</label>
+                  <input type="text" id="mod-ro-tipo" class="form-control form-control-sm text-center" readonly
+                         style="background:#f8f9fa;color:#374151;font-weight:600">
+                </div>
+                <div class="col">
+                  <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Unidad</label>
+                  <input type="text" id="mod-ro-unidad" class="form-control form-control-sm text-center" readonly
+                         style="background:#f8f9fa;color:#374151">
+                </div>
+                <div class="col">
+                  <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Cantidad</label>
+                  <input type="text" id="mod-ro-cantidad" class="form-control form-control-sm text-end" readonly
+                         style="background:#f8f9fa;color:#374151">
+                </div>
+                <div class="col">
+                  <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Costo Unit.</label>
+                  <input type="text" id="mod-ro-costo" class="form-control form-control-sm text-end" readonly
+                         style="background:#f8f9fa;color:#374151">
+                </div>
+                <div class="col">
+                  <label class="form-label fw-semibold mb-1" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">Total</label>
+                  <input type="text" id="mod-ro-total" class="form-control form-control-sm text-end" readonly
+                         style="background:#f8f9fa;color:#1d4ed8;font-weight:700">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold" style="font-size:.78rem">Justificación</label>
+                <input type="text" id="mod-justif" class="form-control form-control-sm"
+                       placeholder="Motivo del incremento (ej. adicional de obra)">
+              </div>
+            </div>
+
+            <!-- Pane: cambiar nombre -->
+            <div class="tab-pane fade" id="pane-nom" role="tabpanel">
+              <div class="mb-3">
+                <label class="form-label fw-semibold" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.03em">
+                  Nuevo nombre <span class="text-danger">*</span>
+                </label>
+                <input type="text" id="mod-nom-nuevo" class="form-control form-control-sm" maxlength="300"
+                       placeholder="Descripción del insumo">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold" style="font-size:.78rem">Justificación</label>
+                <input type="text" id="mod-nom-just" class="form-control form-control-sm"
+                       placeholder="Motivo del cambio (ej. corrección de tipeo, estandarización)">
+              </div>
+            </div>
+
           </div>
 
           <div id="mod-error" class="text-danger mb-2" style="font-size:.78rem;display:none"></div>
 
-          <!-- Historial de ampliaciones previas -->
+          <!-- Historial unificado: ampliaciones + cambios de nombre -->
           <div id="mod-historial-wrap" style="display:none">
             <div class="fw-semibold mb-1" style="font-size:.78rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">
-              <i class="bi bi-clock-history me-1"></i>Ampliaciones previas
+              <i class="bi bi-clock-history me-1"></i>Modificaciones previas
             </div>
             <table class="table table-sm mb-0" style="font-size:.78rem">
               <thead style="background:#f8fafc">
                 <tr>
                   <th style="width:100px">Fecha</th>
-                  <th style="width:100px" class="text-end">Cantidad</th>
-                  <th>Justificación</th>
+                  <th style="width:90px">Tipo</th>
+                  <th>Detalle</th>
                   <th style="width:130px">Usuario</th>
                 </tr>
               </thead>
@@ -297,15 +332,15 @@
         </div>
         <div id="krd-vacio" style="display:none;padding:1.5rem;text-align:center;color:#6b7280;font-size:.82rem">
           <i class="bi bi-inbox d-block mb-2" style="font-size:1.5rem;opacity:.5"></i>
-          Sin ampliaciones registradas para este insumo.
+          Sin modificaciones registradas para este insumo.
         </div>
         <div id="krd-tabla-wrap" style="display:none">
           <table class="table table-sm mb-0" style="font-size:.78rem">
             <thead class="table-light">
               <tr>
                 <th>Fecha</th>
-                <th class="text-end">Cantidad</th>
-                <th>Justificación</th>
+                <th style="width:90px">Tipo</th>
+                <th>Detalle</th>
                 <th>Usuario</th>
               </tr>
             </thead>
@@ -352,6 +387,18 @@
     return m ? decodeURIComponent(m[1]) : '';
   }
 
+  const inpNomNuevo = document.getElementById('mod-nom-nuevo');
+  const inpNomJust  = document.getElementById('mod-nom-just');
+  const tabCant = document.getElementById('tab-cant');
+  const tabNom  = document.getElementById('tab-nom');
+
+  function resetTabs() {
+    // Volver a mostrar la pestaña Cantidad activa al abrir.
+    if (window.bootstrap && window.bootstrap.Tab) {
+      new bootstrap.Tab(tabCant).show();
+    }
+  }
+
   btnAbrir.addEventListener('click', function() {
     inpBuscar.value = '';
     insumoId = null;
@@ -359,8 +406,11 @@
     drop.style.display = 'none';
     inpCant.value = '';
     inpJust.value = '';
+    if (inpNomNuevo) inpNomNuevo.value = '';
+    if (inpNomJust)  inpNomJust.value = '';
     errDiv.style.display = 'none';
     btnGuardar.disabled = true;
+    resetTabs();
     modal.show();
   });
 
@@ -394,6 +444,8 @@
     // Mostrar código a la izquierda + descripción en la misma línea.
     inpBuscar.value = '[' + (opt.dataset.codigo || '—') + '] ' + opt.dataset.desc;
     drop.style.display = 'none';
+    // Precargar el input de cambiar nombre con la descripción actual.
+    if (inpNomNuevo) inpNomNuevo.value = opt.dataset.desc || '';
     cargarDetalle(insumoId);
   });
 
@@ -433,20 +485,32 @@
         divDet.style.display = '';
         btnGuardar.disabled = false;
 
-        if (data.ampliaciones.length) {
-          histBody.innerHTML = data.ampliaciones.map(a =>
-            `<tr>
-               <td style="color:#6b7280">${a.fecha}</td>
-               <td class="text-end fw-semibold" style="color:#c2410c">+${a.cantidad}</td>
-               <td>${a.justificacion || '—'}</td>
-               <td>${a.usuario}</td>
-             </tr>`
-          ).join('');
+        const historial = data.historial || [];
+        if (historial.length) {
+          histBody.innerHTML = historial.map(h => {
+            const esAmp = h.tipo === 'ampliacion';
+            const badge = esAmp
+              ? '<span class="badge" style="background:#fff7ed;color:#c2410c;font-size:.68rem">Cantidad</span>'
+              : '<span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.68rem">Nombre</span>';
+            const color = esAmp ? '#c2410c' : '#1d4ed8';
+            const det = `<span style="color:${color};font-weight:600">${h.detalle}</span>`
+              + (h.justificacion ? ` <span class="text-muted">· ${h.justificacion}</span>` : '');
+            return `<tr>
+               <td style="color:#6b7280">${h.fecha}</td>
+               <td>${badge}</td>
+               <td>${det}</td>
+               <td>${h.usuario}</td>
+             </tr>`;
+          }).join('');
           histWrap.style.display = '';
         } else {
           histWrap.style.display = 'none';
         }
       });
+  }
+
+  function tabActiva() {
+    return document.querySelector('#mod-tabs .nav-link.active')?.id || 'tab-cant';
   }
 
   btnGuardar.addEventListener('click', function() {
@@ -456,22 +520,37 @@
       errDiv.style.display = 'block';
       return;
     }
-    const cant = inpCant.value.trim();
-    if (!cant || parseFloat(cant) <= 0) {
-      errDiv.textContent = 'La cantidad debe ser mayor a 0.';
-      errDiv.style.display = 'block';
-      return;
+
+    const esRename = tabActiva() === 'tab-nom';
+    let url, body = new FormData();
+
+    if (esRename) {
+      const nuevo = (inpNomNuevo.value || '').trim();
+      if (!nuevo) {
+        errDiv.textContent = 'La descripción no puede estar vacía.';
+        errDiv.style.display = 'block';
+        return;
+      }
+      body.append('descripcion', nuevo);
+      body.append('justificacion', inpNomJust.value);
+      url = '/presupuesto/insumo/' + insumoId + '/renombrar/';
+    } else {
+      const cant = inpCant.value.trim();
+      if (!cant || parseFloat(cant) <= 0) {
+        errDiv.textContent = 'La cantidad debe ser mayor a 0.';
+        errDiv.style.display = 'block';
+        return;
+      }
+      body.append('cantidad', cant);
+      body.append('justificacion', inpJust.value);
+      url = '/presupuesto/insumo/' + insumoId + '/ampliar/';
     }
 
     btnGuardar.disabled = true;
     const orig = btnGuardar.innerHTML;
     btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem"></span> Guardando...';
 
-    const body = new FormData();
-    body.append('cantidad', cant);
-    body.append('justificacion', inpJust.value);
-
-    fetch('/presupuesto/insumo/' + insumoId + '/ampliar/', {
+    fetch(url, {
       method: 'POST',
       headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
       body: body,
@@ -486,7 +565,6 @@
         return;
       }
       modal.hide();
-      // Recargar la lista para reflejar el fondo naranja + nueva cantidad.
       window.location.reload();
     })
     .catch(err => {
@@ -530,19 +608,27 @@
           }
           codigo.textContent = data.insumo.codigo;
           desc.textContent   = data.insumo.descripcion;
-          if (!data.ampliaciones.length) {
-            vacio.innerHTML = '<i class="bi bi-inbox d-block mb-2" style="font-size:1.5rem;opacity:.5"></i>Sin ampliaciones registradas para este insumo.';
+          const historial = data.historial || [];
+          if (!historial.length) {
+            vacio.innerHTML = '<i class="bi bi-inbox d-block mb-2" style="font-size:1.5rem;opacity:.5"></i>Sin modificaciones registradas para este insumo.';
             vacio.style.display = 'block';
             return;
           }
-          body.innerHTML = data.ampliaciones.map(a =>
-            `<tr>
-               <td style="color:#6b7280">${a.fecha}</td>
-               <td class="text-end fw-semibold" style="color:#15803d">+${a.cantidad}</td>
-               <td>${a.justificacion || '<span class="text-muted">—</span>'}</td>
-               <td>${a.usuario}</td>
-             </tr>`
-          ).join('');
+          body.innerHTML = historial.map(h => {
+            const esAmp = h.tipo === 'ampliacion';
+            const badge = esAmp
+              ? '<span class="badge" style="background:#fff7ed;color:#c2410c;font-size:.68rem">Cantidad</span>'
+              : '<span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.68rem">Nombre</span>';
+            const color = esAmp ? '#c2410c' : '#1d4ed8';
+            const det = `<span style="color:${color};font-weight:600">${h.detalle}</span>`
+              + (h.justificacion ? ` <span class="text-muted">· ${h.justificacion}</span>` : '');
+            return `<tr>
+               <td style="color:#6b7280">${h.fecha}</td>
+               <td>${badge}</td>
+               <td>${det}</td>
+               <td>${h.usuario}</td>
+             </tr>`;
+          }).join('');
           wrap.style.display = 'block';
         })
         .catch(err => {

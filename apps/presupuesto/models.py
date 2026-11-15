@@ -212,6 +212,28 @@ class AmpliacionInsumo(models.Model):
         return f'+{self.cantidad} a {self.insumo.descripcion}'
 
 
+class CambioNombreInsumo(models.Model):
+    """Cambio manual del nombre (descripción) de un insumo del presupuesto.
+
+    Igual que AmpliacionInsumo, queda como trazabilidad: fecha, usuario,
+    valor anterior/nuevo y justificación.
+    """
+    insumo            = models.ForeignKey(InsumoPresupuesto, on_delete=models.CASCADE, related_name='cambios_nombre')
+    nombre_anterior   = models.CharField(max_length=300)
+    nombre_nuevo      = models.CharField(max_length=300)
+    justificacion     = models.TextField(blank=True)
+    usuario           = models.ForeignKey('auth.User', null=True, on_delete=models.SET_NULL)
+    fecha             = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Cambio de nombre de insumo'
+        verbose_name_plural = 'Cambios de nombre de insumo'
+        ordering            = ['-fecha']
+
+    def __str__(self):
+        return f'{self.nombre_anterior} → {self.nombre_nuevo}'
+
+
 class Modificacion(models.Model):
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='modificaciones')
     tipo = models.CharField(max_length=20, choices=TIPOS_MODIFICACION)

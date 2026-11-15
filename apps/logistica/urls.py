@@ -42,6 +42,7 @@ urlpatterns = [
 
     # Sub-módulos
     path('proyecto/<int:proyecto_id>/almacen/',            views.almacen_log,        name='almacen_log'),
+    path('proyecto/<int:proyecto_id>/req-insumos/',        views.req_insumos_log,    name='req_insumos_log'),
     path('proyecto/<int:proyecto_id>/control-maquinaria/', views.control_maquinaria, name='control_maquinaria'),
     path('proyecto/<int:proyecto_id>/abastecimiento/',     views.abastecimiento,     name='abastecimiento'),
     path('proyecto/<int:proyecto_id>/reportes/',           views.reportes,           name='reportes'),
