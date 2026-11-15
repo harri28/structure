@@ -33,13 +33,18 @@
       </thead>
       <tbody>
         {% for grupo in items %}
-        <tr class="req-group" style="background:#f0fdf4">
+        <tr class="req-group" data-group="apr-{{ forloop.counter }}" style="background:#f0fdf4">
           <td colspan="5" style="padding:.55rem .75rem;border-top:1px solid #bbf7d0">
             <div class="d-flex align-items-center gap-2 flex-wrap">
+              <button type="button" class="req-group-toggle btn p-0 me-1"
+                      data-group="apr-{{ forloop.counter }}"
+                      title="Mostrar/ocultar ítems"
+                      style="background:none;border:none;color:#166534;line-height:1">
+                <i class="bi bi-chevron-right req-group-arrow" style="font-size:.85rem;transition:transform .15s"></i>
+              </button>
               <a href="{% url 'logistica:req_revisar_log' proyecto.pk grupo.req.pk %}"
                  class="d-flex align-items-center gap-2 text-decoration-none flex-grow-1"
                  style="color:inherit">
-                <i class="bi bi-chevron-right" style="font-size:.78rem;color:#166534"></i>
                 <strong style="color:#166534">REQ{{ grupo.req.numero }}</strong>
                 <span class="text-muted" style="font-size:.78rem">
                   {{ grupo.req.solicitante|default:"—" }} · {{ grupo.req.fecha|date:"d/m/Y" }}
@@ -61,7 +66,7 @@
           </td>
         </tr>
         {% for d in grupo.detalles %}
-        <tr>
+        <tr class="req-item" data-group="apr-{{ forloop.parentloop.counter }}" style="display:none">
           <td style="padding-left:1.75rem"><code>{{ d.insumo.codigo|default:"—" }}</code></td>
           <td>{{ d.insumo.descripcion|default:d.descripcion|default:"—" }}</td>
           <td class="text-center text-muted">{{ d.unidad|default:d.insumo.unidad|default:"—" }}</td>
@@ -82,4 +87,20 @@
     </table>
   </div>
 </div>
+
+<script>
+// Grupos colapsables (ítems ocultos por defecto)
+document.querySelectorAll('.req-group-toggle').forEach(function(btn) {
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    var g = btn.dataset.group;
+    var arrow = btn.querySelector('.req-group-arrow');
+    var items = document.querySelectorAll('.req-item[data-group="' + g + '"]');
+    var ocultos = items.length && items[0].style.display === 'none';
+    items.forEach(function(r){ r.style.display = ocultos ? '' : 'none'; });
+    if (arrow) arrow.style.transform = ocultos ? 'rotate(90deg)' : '';
+  });
+});
+</script>
 {% endblock %}
