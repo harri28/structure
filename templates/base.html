@@ -308,6 +308,13 @@
     </div>
     {% endif %}
 
+    <div class="sb-section">
+      <a href="{% url 'logistica:compras_log' proyecto_activo.pk %}"
+         class="sb-link {% if vn == 'logistica:compras_log' %}active{% endif %}">
+        <i class="bi bi-cart-check"></i> Compras
+      </a>
+    </div>
+
     {% if permisos.puede_gestionar_almacen_log %}
     <div class="sb-section">
       <div class="sb-label">Almacén</div>
