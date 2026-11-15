@@ -453,31 +453,149 @@ def requerimientos_log(request, proyecto_id):
 @requiere('puede_revisar_reqs_log')
 @proyecto_visible
 def historial_log(request, proyecto_id):
-    """Registro de todos los REQ con totales: solicitado vs aprobado y la
-    diferencia pendiente. Solo lectura."""
+    """Kardex por requerimiento: una fila colapsable por REQ con sus
+    movimientos (ingreso, aprobación, cotizaciones, guías). Solo lectura."""
     from decimal import Decimal
     from apps.requerimientos.models import Requerimiento
+
     proyecto = _get_proyecto(proyecto_id)
-    qs = (Requerimiento.objects
-          .filter(proyecto=proyecto,
-                  estado__in=['EN_REVISION', 'APROBADO', 'PARCIAL', 'ANULADO', 'COTIZADO', 'ATENDIDO'])
-          .prefetch_related('detalles')
-          .order_by('-fecha', '-numero'))
+    reqs = (Requerimiento.objects
+            .filter(proyecto=proyecto,
+                    estado__in=['EN_REVISION', 'APROBADO', 'PARCIAL',
+                                'ANULADO', 'COTIZADO', 'ATENDIDO'])
+            .select_related('created_by')
+            .prefetch_related('detalles',
+                              'historial_revision__usuario',
+                              'cotizaciones_origen__detalles',
+                              'guias_remision')
+            .order_by('-fecha', '-numero'))
+
     rows = []
-    for r in qs:
+    for r in reqs:
         total_req = Decimal('0')
         total_apr = Decimal('0')
         for d in r.detalles.all():
             total_req += d.cantidad_requerida or Decimal('0')
             if d.cantidad_aprobada is not None:
                 total_apr += d.cantidad_aprobada
-        rows.append({
-            'req':       r,
-            'items':     r.detalles.count(),
-            'total_req': total_req,
-            'total_apr': total_apr,
-            'pendiente': max(Decimal('0'), total_req - total_apr),
+
+        eventos = []
+        items_n = r.detalles.count()
+
+        # 1) Creación / envío
+        if r.solicitante:
+            u_creacion = r.solicitante
+        elif r.created_by:
+            u_creacion = r.created_by.get_full_name() or r.created_by.username
+        else:
+            u_creacion = '—'
+        eventos.append({
+            'fecha': r.created_at,
+            'tipo': 'INGRESO',
+            'tipo_label': 'Ingreso',
+            'detalle': f'Requerimiento enviado con {items_n} ítem{"s" if items_n != 1 else ""}',
+            'cantidad': total_req,
+            'usuario': u_creacion,
         })
+
+        # 2) Eventos del HistorialRevisionReq (AGREGAR, SUSTITUIR, ANULAR, RECUPERAR)
+        for h in r.historial_revision.all():
+            u = (h.usuario.get_full_name() or h.usuario.username) if h.usuario else '—'
+            det = h.descripcion
+            if h.justificacion:
+                det = f'{det} — {h.justificacion}'
+            eventos.append({
+                'fecha': h.fecha,
+                'tipo': h.accion,
+                'tipo_label': h.get_accion_display(),
+                'detalle': det,
+                'cantidad': h.cantidad if h.cantidad and h.cantidad > 0 else None,
+                'usuario': u,
+            })
+
+        # 3) Aprobación (sintético, sin timestamp exacto). Usa como proxy la
+        #    fecha de la primera cotización del REQ; si no hay, queda sin fecha.
+        if total_apr > 0 and r.estado != 'ANULADO':
+            primera_cot = r.cotizaciones_origen.order_by('created_at').first()
+            fecha_apr = primera_cot.created_at if primera_cot else None
+            parcial = total_apr < total_req
+            label = 'Aprobación parcial' if parcial else 'Aprobación total'
+            det_apr = f'Aprobado {total_apr:.2f} de {total_req:.2f} und'
+            if parcial:
+                det_apr += f' · pendiente {total_req - total_apr:.2f} und'
+            eventos.append({
+                'fecha': fecha_apr,
+                'tipo': 'APROBAR',
+                'tipo_label': label,
+                'detalle': det_apr,
+                'cantidad': total_apr,
+                'usuario': '—',
+            })
+
+        # 4) Cotizaciones
+        for cot in r.cotizaciones_origen.all():
+            cant_cot = sum((d.cantidad for d in cot.detalles.all()), Decimal('0'))
+            eventos.append({
+                'fecha': cot.created_at,
+                'tipo': 'COT_CREAR',
+                'tipo_label': 'Cotización creada',
+                'detalle': f'COT{cot.numero} — {cot.proveedor or "sin proveedor"}',
+                'cantidad': cant_cot,
+                'usuario': '—',
+            })
+            if cot.estado == 'APROBADA':
+                eventos.append({
+                    'fecha': None,
+                    'tipo': 'COT_APROBAR',
+                    'tipo_label': 'Cotización aprobada',
+                    'detalle': f'COT{cot.numero} aprobada',
+                    'cantidad': cant_cot,
+                    'usuario': '—',
+                })
+            elif cot.estado == 'RECHAZADA':
+                eventos.append({
+                    'fecha': None,
+                    'tipo': 'COT_RECHAZAR',
+                    'tipo_label': 'Cotización rechazada',
+                    'detalle': f'COT{cot.numero} rechazada',
+                    'cantidad': cant_cot,
+                    'usuario': '—',
+                })
+
+        # 5) Guías emitidas (FK directa + vía cotizaciones M2M, sin anuladas)
+        guias_pks = set()
+        for g in r.guias_remision.exclude(estado='ANULADO'):
+            guias_pks.add(g.pk)
+        for cot in r.cotizaciones_origen.all():
+            for g in cot.guias_remision.exclude(estado='ANULADO'):
+                guias_pks.add(g.pk)
+        if guias_pks:
+            for g in (GuiaRemision.objects
+                      .filter(pk__in=guias_pks)
+                      .prefetch_related('detalles')):
+                cant_g = sum((d.cantidad for d in g.detalles.all()), Decimal('0'))
+                eventos.append({
+                    'fecha': g.creado_en,
+                    'tipo': 'GUIA',
+                    'tipo_label': 'Guía emitida',
+                    'detalle': f'{g.numero} · {g.get_estado_display()}',
+                    'cantidad': cant_g,
+                    'usuario': '—',
+                })
+
+        # Orden cronológico ascendente; los sin fecha quedan al final.
+        eventos.sort(key=lambda e: (e['fecha'] is None, e['fecha'] or 0))
+
+        rows.append({
+            'req':           r,
+            'items':         items_n,
+            'total_req':     total_req,
+            'total_apr':     total_apr,
+            'pendiente':     max(Decimal('0'), total_req - total_apr),
+            'eventos':       eventos,
+            'eventos_count': len(eventos),
+        })
+
     return render(request, 'logistica/req_historial.html', {
         'proyecto':       proyecto,
         'requerimientos': rows,

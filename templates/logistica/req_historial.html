@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Historial de requerimientos — {{ proyecto.codigo }}{% endblock %}
+{% block title %}Historial (Kardex) — {{ proyecto.codigo }}{% endblock %}
 {% block nav_req_logistica %}active{% endblock %}
 
 {% block breadcrumb %}
@@ -8,68 +8,137 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center">
-  <div>
-    <h4 class="mt-1 d-flex align-items-center gap-2">
-      <i class="bi bi-clock-history" style="color:#2563eb"></i>
-      Historial de requerimientos
-    </h4>
-    <div class="text-muted">Requerimientos en revisión, aprobados y anulados</div>
-    {% include 'logistica/_req_chips.html' with active='historial' %}
+<div class="page-header">
+  <h4 class="mt-1 d-flex align-items-center gap-2">
+    <i class="bi bi-journal-text" style="color:#2563eb"></i>
+    Historial (Kardex)
+  </h4>
+  <div class="text-muted">
+    Registro de todos los movimientos de cada requerimiento: ingreso, aprobación, cotizaciones y guías emitidas.
   </div>
+  {% include 'logistica/_req_chips.html' with active='historial' %}
 </div>
 
 <div class="card">
   <div class="card-body p-0">
     <table class="table-modern">
-      <thead>
-        <tr>
-          <th>N° REQ</th>
-          <th>Fecha</th>
-          <th>Solicitante</th>
-          <th>Estado</th>
-          <th class="text-center">Ítems</th>
-          <th class="text-end">Solicitado</th>
-          <th class="text-end">Aprobado</th>
-          <th class="text-end">Pendiente</th>
-        </tr>
-      </thead>
       <tbody>
         {% for row in requerimientos %}
-        <tr class="req-row" style="cursor:pointer"
-            onclick="window.location.href='{% url 'logistica:req_revisar_log' proyecto.pk row.req.pk %}?from=historial'">
-          <td class="fw-semibold">REQ{{ row.req.numero }}</td>
-          <td>{{ row.req.fecha|date:"d/m/Y" }}</td>
-          <td>{{ row.req.solicitante|default:"—" }}</td>
-          <td>
-            <span class="badge rounded-1
-              {% if row.req.estado == 'EN_REVISION' %}bg-warning text-dark
-              {% elif row.req.estado == 'ANULADO' %}bg-danger
-              {% elif row.req.estado == 'APROBADO' %}bg-info
-              {% elif row.req.estado == 'PARCIAL' %}bg-warning text-dark
-              {% elif row.req.estado == 'ATENDIDO' %}bg-success
-              {% else %}bg-secondary{% endif %}">
-              {{ row.req.get_estado_display }}
-            </span>
-          </td>
-          <td class="text-center">
-            <span class="badge rounded-pill bg-primary"
-                  style="font-size:.7rem;padding:.25em .6em">{{ row.items }}</span>
-          </td>
-          <td class="text-end text-muted">{{ row.total_req|floatformat:2 }}</td>
-          <td class="text-end fw-semibold" style="color:#15803d">{{ row.total_apr|floatformat:2 }}</td>
-          <td class="text-end fw-bold"
-              style="color:{% if row.pendiente > 0 %}#c2410c{% else %}#9ca3af{% endif %}">
-            {{ row.pendiente|floatformat:2 }}
+        <tr class="req-group" data-group="krd-{{ forloop.counter }}" style="background:#eff6ff">
+          <td colspan="5" style="padding:.55rem .75rem;border-top:1px solid #bfdbfe">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <button type="button" class="req-group-toggle btn p-0 me-1"
+                      data-group="krd-{{ forloop.counter }}"
+                      title="Mostrar/ocultar movimientos"
+                      style="background:none;border:none;color:#1e3a8a;line-height:1">
+                <i class="bi bi-chevron-right req-group-arrow" style="font-size:.85rem;transition:transform .15s"></i>
+              </button>
+              <a href="{% url 'logistica:req_revisar_log' proyecto.pk row.req.pk %}?from=historial"
+                 class="d-flex align-items-center gap-2 flex-wrap text-decoration-none flex-grow-1"
+                 style="color:inherit">
+                <strong style="color:#1e3a8a">REQ{{ row.req.numero }}</strong>
+                <span class="text-muted" style="font-size:.78rem">
+                  {{ row.req.solicitante|default:"—" }} · {{ row.req.fecha|date:"d/m/Y" }}
+                </span>
+                <span class="badge rounded-1
+                  {% if row.req.estado == 'EN_REVISION' %}bg-warning text-dark
+                  {% elif row.req.estado == 'ANULADO' %}bg-danger
+                  {% elif row.req.estado == 'APROBADO' %}bg-info
+                  {% elif row.req.estado == 'PARCIAL' %}bg-warning text-dark
+                  {% elif row.req.estado == 'COTIZADO' %}bg-primary
+                  {% elif row.req.estado == 'ATENDIDO' %}bg-success
+                  {% else %}bg-secondary{% endif %}"
+                  style="font-size:.66rem;padding:.25em .55em">
+                  {{ row.req.get_estado_display }}
+                </span>
+                <span class="ms-auto d-flex align-items-center gap-3" style="font-size:.78rem;color:#1e3a8a">
+                  <span><strong>{{ row.items }}</strong> ítem{{ row.items|pluralize }}</span>
+                  <span class="text-muted">Sol:&nbsp;{{ row.total_req|floatformat:2 }}</span>
+                  <span style="color:#15803d"><strong>Apr:&nbsp;{{ row.total_apr|floatformat:2 }}</strong></span>
+                  <span style="color:{% if row.pendiente > 0 %}#c2410c{% else %}#9ca3af{% endif %}">
+                    <strong>Pend:&nbsp;{{ row.pendiente|floatformat:2 }}</strong>
+                  </span>
+                  <span class="badge" style="background:#dbeafe;color:#1e3a8a;font-size:.66rem;padding:.25em .55em">
+                    {{ row.eventos_count }} mov.
+                  </span>
+                </span>
+              </a>
+            </div>
           </td>
         </tr>
+        <tr class="req-item req-item-head" data-group="krd-{{ forloop.counter }}" style="display:none;background:#f8fafc">
+          <th style="padding-left:1.75rem;font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Fecha</th>
+          <th style="font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Movimiento</th>
+          <th style="font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Detalle</th>
+          <th class="text-end" style="font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Cantidad</th>
+          <th style="font-size:.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Usuario</th>
+        </tr>
+        {% for ev in row.eventos %}
+        <tr class="req-item" data-group="krd-{{ forloop.parentloop.counter }}" style="display:none">
+          <td style="padding-left:1.75rem;font-size:.82rem;color:#374151;white-space:nowrap">
+            {% if ev.fecha %}{{ ev.fecha|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td style="white-space:nowrap">
+            {% if ev.tipo == 'INGRESO' %}
+              <span class="badge" style="background:#dbeafe;color:#1e3a8a;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-box-arrow-in-down me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'APROBAR' %}
+              <span class="badge" style="background:#dcfce7;color:#166534;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-check-circle me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'ANULAR' %}
+              <span class="badge" style="background:#fee2e2;color:#991b1b;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-x-circle me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'RECUPERAR' %}
+              <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'AGREGAR' %}
+              <span class="badge" style="background:#ecfccb;color:#3f6212;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-plus-circle me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'SUSTITUIR' %}
+              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-arrow-left-right me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'ELIMINAR' %}
+              <span class="badge" style="background:#fecaca;color:#7f1d1d;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-trash me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'COT_CREAR' %}
+              <span class="badge" style="background:#e0f2fe;color:#075985;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-tags me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'COT_APROBAR' %}
+              <span class="badge" style="background:#cffafe;color:#155e75;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-check2-square me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'COT_RECHAZAR' %}
+              <span class="badge" style="background:#fecaca;color:#7f1d1d;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-x-square me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% elif ev.tipo == 'GUIA' %}
+              <span class="badge" style="background:#fae8ff;color:#6b21a8;font-size:.68rem;padding:.25em .55em">
+                <i class="bi bi-truck me-1"></i>{{ ev.tipo_label }}
+              </span>
+            {% else %}
+              <span class="badge bg-secondary" style="font-size:.68rem">{{ ev.tipo_label }}</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.82rem">{{ ev.detalle }}</td>
+          <td class="text-end" style="font-size:.82rem;white-space:nowrap">
+            {% if ev.cantidad %}{{ ev.cantidad|floatformat:2 }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td style="font-size:.82rem;color:#374151">{{ ev.usuario }}</td>
+        </tr>
+        {% endfor %}
         {% empty %}
         <tr>
-          <td colspan="8">
-            <div class="empty-state py-5">
-              <i class="bi bi-inbox d-block" style="font-size:2rem;opacity:.2;margin-bottom:.5rem"></i>
-              <p class="text-muted">Sin requerimientos en el historial</p>
-            </div>
+          <td colspan="5" class="text-center py-5 text-muted">
+            <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+            <div class="fw-semibold mb-1">Sin requerimientos en el historial</div>
           </td>
         </tr>
         {% endfor %}
@@ -78,4 +147,19 @@
   </div>
 </div>
 
+<script>
+// Grupos colapsables (movimientos ocultos por defecto)
+document.querySelectorAll('.req-group-toggle').forEach(function(btn) {
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    var g = btn.dataset.group;
+    var arrow = btn.querySelector('.req-group-arrow');
+    var items = document.querySelectorAll('.req-item[data-group="' + g + '"]');
+    var ocultos = items.length && items[0].style.display === 'none';
+    items.forEach(function(r){ r.style.display = ocultos ? '' : 'none'; });
+    if (arrow) arrow.style.transform = ocultos ? 'rotate(90deg)' : '';
+  });
+});
+</script>
 {% endblock %}
