@@ -13,73 +13,73 @@
     Requerimientos Aprobados
   </h4>
   <div class="text-muted">
-    Ítems aprobados por Logística listos para cotizar. Los ítems no aprobados viven en
+    Ítems aprobados listos para cotizar. Los ítems no aprobados viven en
     <a href="{% url 'logistica:por_atender_log' proyecto.pk %}">Por atender</a>.
   </div>
   {% include 'logistica/_req_chips.html' with active='aprobados' %}
 </div>
 
-{% if items %}
-  {% for grupo in items %}
-  <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center"
-         style="background:#f0fdf4;border-bottom:1px solid #bbf7d0">
-      <div>
-        <strong style="color:#166534">REQ{{ grupo.req.numero }}</strong>
-        <span class="text-muted ms-2" style="font-size:.78rem">
-          {{ grupo.req.fecha|date:"d/m/Y" }} · {{ grupo.req.solicitante|default:"—" }}
-        </span>
-      </div>
-      <div>
-        <span class="badge" style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700">
-          {{ grupo.detalles|length }} ítem{{ grupo.detalles|length|pluralize }} aprobado{{ grupo.detalles|length|pluralize }}
-        </span>
-        <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk grupo.req.pk %}"
-              class="d-inline ms-2">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm" style="background:#16a34a;color:#fff;font-weight:600">
-            <i class="bi bi-tags me-1"></i>Crear cotización
-          </button>
-        </form>
-      </div>
-    </div>
-    <div class="card-body p-0">
-      <table class="table-modern mb-0" style="font-size:.82rem">
-        <thead style="background:#f8fafc">
-          <tr>
-            <th style="width:80px">Código</th>
-            <th>Descripción</th>
-            <th style="width:70px" class="text-center">Unidad</th>
-            <th style="width:120px" class="text-end">Cant. Solicitada</th>
-            <th style="width:120px" class="text-end">Cant. Aprobada</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for d in grupo.detalles %}
-          <tr>
-            <td><code>{{ d.insumo.codigo|default:"—" }}</code></td>
-            <td>{{ d.insumo.descripcion|default:d.descripcion|default:"—" }}</td>
-            <td class="text-center text-muted">{{ d.unidad|default:d.insumo.unidad|default:"—" }}</td>
-            <td class="text-end text-muted">{{ d.cantidad_requerida|floatformat:2 }}</td>
-            <td class="text-end fw-bold" style="color:#15803d">
-              {{ d.cantidad_aprobada|floatformat:2 }}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endfor %}
-{% else %}
 <div class="card">
-  <div class="card-body text-center py-5 text-muted">
-    <i class="bi bi-inbox d-block mb-2" style="font-size:2.5rem;opacity:.3"></i>
-    <div class="fw-semibold mb-1">Sin ítems aprobados todavía</div>
-    <div style="font-size:.82rem">
-      Los ítems aprobados en Ingreso de Requerimientos aparecen acá.
-    </div>
+  <div class="card-body p-0">
+    <table class="table-modern">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Descripción</th>
+          <th class="text-center">Unidad</th>
+          <th class="text-end">Solicitada</th>
+          <th class="text-end">Aprobada</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grupo in items %}
+        <tr class="req-group" style="background:#f0fdf4">
+          <td colspan="5" style="padding:.55rem .75rem;border-top:1px solid #bbf7d0">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <a href="{% url 'logistica:req_revisar_log' proyecto.pk grupo.req.pk %}"
+                 class="d-flex align-items-center gap-2 text-decoration-none flex-grow-1"
+                 style="color:inherit">
+                <i class="bi bi-chevron-right" style="font-size:.78rem;color:#166534"></i>
+                <strong style="color:#166534">REQ{{ grupo.req.numero }}</strong>
+                <span class="text-muted" style="font-size:.78rem">
+                  {{ grupo.req.solicitante|default:"—" }} · {{ grupo.req.fecha|date:"d/m/Y" }}
+                </span>
+                <span class="badge" style="background:#dcfce7;color:#166534;font-size:.66rem;padding:.25em .55em">
+                  {{ grupo.req.get_estado_display }}
+                </span>
+                <span class="ms-auto me-3" style="font-size:.78rem;color:#166534;font-weight:600">
+                  {{ grupo.detalles|length }} ítem{{ grupo.detalles|length|pluralize }} aprobado{{ grupo.detalles|length|pluralize }}
+                </span>
+              </a>
+              <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk grupo.req.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#16a34a;color:#fff;font-weight:600;padding:.2rem .6rem">
+                  <i class="bi bi-tags me-1"></i>Cotizar
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% for d in grupo.detalles %}
+        <tr>
+          <td style="padding-left:1.75rem"><code>{{ d.insumo.codigo|default:"—" }}</code></td>
+          <td>{{ d.insumo.descripcion|default:d.descripcion|default:"—" }}</td>
+          <td class="text-center text-muted">{{ d.unidad|default:d.insumo.unidad|default:"—" }}</td>
+          <td class="text-end text-muted">{{ d.cantidad_requerida|floatformat:2 }}</td>
+          <td class="text-end fw-bold" style="color:#15803d">{{ d.cantidad_aprobada|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center py-5 text-muted">
+            <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+            <div class="fw-semibold mb-1">Sin ítems aprobados todavía</div>
+            <div style="font-size:.82rem">Los ítems aprobados en Ingreso de Requerimientos aparecen acá.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
-{% endif %}
 {% endblock %}
