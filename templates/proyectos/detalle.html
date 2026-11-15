@@ -109,26 +109,35 @@
           <td style="font-size:.83rem">{{ m.usuario.get_full_name|default:"—" }}</td>
           <td>
             <form method="post" action="{% url 'proyectos:miembro_editar_rol' proyecto.pk m.usuario.pk %}"
-                  class="d-flex align-items-center gap-1">
+                  class="d-flex align-items-center gap-1 form-rol-miembro"
+                  data-usuario="{{ m.usuario.username }}">
               {% csrf_token %}
-              <select name="rol_id" class="form-select form-select-sm"
-                      style="font-size:.74rem;padding:.15rem .4rem;max-width:180px"
-                      onchange="this.form.submit()">
+              <select name="rol_id" class="form-select form-select-sm select-rol-miembro"
+                      style="font-size:.74rem;padding:.15rem .4rem;max-width:180px">
                 <option value="">— Sin rol específico —</option>
                 {% for r in roles_list %}
                 <option value="{{ r.pk }}" {% if m.rol_id == r.pk %}selected{% endif %}>{{ r.nombre }}</option>
                 {% endfor %}
               </select>
-              {% if m.rol %}
-              <span title="Rol específico de este proyecto"
-                    style="font-size:.6rem;padding:.1em .35em;border-radius:3px;
-                           background:#fef3c7;color:#92400e;font-weight:700">PROY</span>
-              {% elif m.usuario.perfil.rol %}
-              <span title="Rol global (heredado del perfil)"
-                    style="font-size:.6rem;padding:.1em .35em;border-radius:3px;
-                           background:#f3f4f6;color:#6b7280;font-weight:700"
-                    >GLOBAL: {{ m.usuario.perfil.rol.nombre }}</span>
-              {% endif %}
+              <span class="badge-rol-estado" style="display:inline-flex;align-items:center;gap:.25rem">
+                {% if m.rol %}
+                <span class="badge-rol-proy" title="Rol específico de este proyecto"
+                      style="font-size:.6rem;padding:.1em .35em;border-radius:3px;
+                             background:#fef3c7;color:#92400e;font-weight:700">PROY</span>
+                {% elif m.usuario.perfil.rol %}
+                <span title="Rol global (heredado del perfil)"
+                      style="font-size:.6rem;padding:.1em .35em;border-radius:3px;
+                             background:#f3f4f6;color:#6b7280;font-weight:700"
+                      >GLOBAL: {{ m.usuario.perfil.rol.nombre }}</span>
+                {% endif %}
+                <span class="rol-ok text-success" style="display:none;font-size:.78rem">
+                  <i class="bi bi-check-lg"></i>
+                </span>
+                <span class="rol-spin text-muted" style="display:none">
+                  <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite;display:inline-block;font-size:.8rem"></i>
+                </span>
+                <span class="rol-err text-danger" style="display:none;font-size:.7rem"></span>
+              </span>
             </form>
           </td>
           <td class="text-muted" style="font-size:.78rem">{{ m.agregado|date:"d/m/Y" }}</td>
@@ -183,4 +192,57 @@
   </div>
   {% endif %}
 </div>
+
+<style>
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+
+<script>
+// Cambio de rol de miembro: fetch AJAX, sin recargar la página.
+document.querySelectorAll('.form-rol-miembro').forEach(function(form) {
+  var select = form.querySelector('.select-rol-miembro');
+  if (!select) return;
+  select.addEventListener('change', function() {
+    var estado = form.querySelector('.badge-rol-estado');
+    var spin   = estado.querySelector('.rol-spin');
+    var ok     = estado.querySelector('.rol-ok');
+    var err    = estado.querySelector('.rol-err');
+    var badgeProy = estado.querySelector('.badge-rol-proy');
+    ok.style.display = 'none'; err.style.display = 'none'; spin.style.display = '';
+    var fd = new FormData(form);
+    fetch(form.action, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      body: fd,
+    }).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function(d) {
+      spin.style.display = 'none';
+      if (d.ok) {
+        ok.style.display = '';
+        setTimeout(function() { ok.style.display = 'none'; }, 1200);
+        // Actualizar badge PROY según el nuevo estado
+        if (d.tiene_rol && !badgeProy) {
+          var b = document.createElement('span');
+          b.className = 'badge-rol-proy';
+          b.title = 'Rol específico de este proyecto';
+          b.style.cssText = 'font-size:.6rem;padding:.1em .35em;border-radius:3px;background:#fef3c7;color:#92400e;font-weight:700';
+          b.textContent = 'PROY';
+          estado.insertBefore(b, estado.firstChild);
+        } else if (!d.tiene_rol && badgeProy) {
+          badgeProy.remove();
+        }
+      } else {
+        err.style.display = '';
+        err.textContent = d.error || 'Error';
+      }
+    }).catch(function(e) {
+      spin.style.display = 'none';
+      err.style.display = '';
+      err.textContent = e.message || 'Error de red';
+    });
+  });
+});
+</script>
 {% endblock %}

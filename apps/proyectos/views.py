@@ -445,9 +445,12 @@ def miembro_agregar(request, pk):
 
 @requiere('puede_administrar_usuarios')
 def miembro_editar_rol(request, pk, usuario_id):
-    """Cambia el rol específico de un miembro del proyecto."""
+    """Cambia el rol específico de un miembro del proyecto. Responde JSON si
+    el request es AJAX (X-Requested-With); en otro caso redirige como antes."""
+    from django.http import JsonResponse
     proyecto = get_object_or_404(Proyecto, pk=pk)
     miembro  = get_object_or_404(ProyectoMiembro, proyecto=proyecto, usuario_id=usuario_id)
+    es_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     if request.method == 'POST':
         from apps.configuracion.models import Rol
         rol_id = request.POST.get('rol_id') or None
@@ -464,8 +467,15 @@ def miembro_editar_rol(request, pk, usuario_id):
                     f'"{rol_nuevo_nombre or "sin rol"}"')
             except Exception:
                 pass
-            messages.success(request,
-                f'Rol actualizado para {miembro.usuario.get_full_name() or miembro.usuario.username}.')
+            if not es_ajax:
+                messages.success(request,
+                    f'Rol actualizado para {miembro.usuario.get_full_name() or miembro.usuario.username}.')
+        if es_ajax:
+            return JsonResponse({
+                'ok': True,
+                'rol_nombre': rol_nuevo_nombre or '',
+                'tiene_rol': bool(miembro.rol_id),
+            })
     return redirect('proyectos:detalle', pk=pk)
 
 
