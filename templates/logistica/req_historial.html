@@ -36,7 +36,7 @@
       <tbody>
         {% for r in requerimientos %}
         <tr class="req-row" style="cursor:pointer"
-            onclick="window.location.href='{% url 'logistica:req_revisar_log' proyecto.pk r.pk %}'">
+            onclick="window.location.href='{% url 'logistica:req_revisar_log' proyecto.pk r.pk %}?from=historial'">
           <td class="fw-semibold">REQ{{ r.numero }}</td>
           <td>{{ r.fecha|date:"d/m/Y" }}</td>
           <td>{{ r.get_tipo_display }}</td>

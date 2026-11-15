@@ -608,6 +608,18 @@ def req_revisar_log(request, proyecto_id, pk):
 
     editable = req.estado in ESTADOS_EDITABLES
 
+    # Pestaña de origen para el botón "Volver": leer ?from=... y mapearlo a
+    # URL + label. Default: 'Ingreso de Requerimientos'.
+    from_slug = (request.GET.get('from') or '').strip()
+    _VOLVER = {
+        'por_atender': ('logistica:por_atender_log', 'Por atender'),
+        'aprobados':   ('logistica:aprobados_log',   'Requerimientos Aprobados'),
+        'historial':   ('logistica:historial_log',   'Historial'),
+        'anulados':    ('logistica:anulados_log',    'Anulados'),
+    }
+    _vol = _VOLVER.get(from_slug, ('logistica:requerimientos_log', 'Ingreso de Requerimientos'))
+    volver_urlname, volver_label = _vol
+
     if req.estado == 'ENVIADO':
         req.estado = 'EN_REVISION'
         req.save(update_fields=['estado'])
@@ -712,6 +724,8 @@ def req_revisar_log(request, proyecto_id, pk):
                 'proyecto': proyecto, 'req': req,
                 'detalles': detalles, 'historial': historial,
                 'editable': editable,
+                'volver_urlname': volver_urlname,
+                'volver_label':   volver_label,
             })
 
         # ── Guardar aprobaciones ─────────────────────────────────────
@@ -852,6 +866,8 @@ def req_revisar_log(request, proyecto_id, pk):
         'editable': editable,
         'items_para_cotizar': items_para_cotizar,
         'siguiente_numero_cot': siguiente_numero_cot,
+        'volver_urlname': volver_urlname,
+        'volver_label':   volver_label,
     })
 
 
