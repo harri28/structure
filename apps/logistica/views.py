@@ -452,20 +452,6 @@ def requerimientos_log(request, proyecto_id):
 
 @requiere('puede_revisar_reqs_log')
 @proyecto_visible
-def consolidados_log(request, proyecto_id):
-    from apps.requerimientos.models import Requerimiento
-    proyecto = _get_proyecto(proyecto_id)
-    requerimientos = (Requerimiento.objects
-                      .filter(proyecto=proyecto, estado__in=['APROBADO', 'PARCIAL'])
-                      .order_by('-fecha', '-numero'))
-    return render(request, 'logistica/req_consolidados.html', {
-        'proyecto':       proyecto,
-        'requerimientos': requerimientos,
-    })
-
-
-@requiere('puede_revisar_reqs_log')
-@proyecto_visible
 def historial_log(request, proyecto_id):
     from apps.requerimientos.models import Requerimiento
     proyecto = _get_proyecto(proyecto_id)
