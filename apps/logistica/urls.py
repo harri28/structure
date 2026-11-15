@@ -25,6 +25,7 @@ urlpatterns = [
     # Requerimientos recibidos
     path('proyecto/<int:proyecto_id>/requerimientos/',                       views.requerimientos_log,  name='requerimientos_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/por-atender/',           views.por_atender_log,     name='por_atender_log'),
+    path('proyecto/<int:proyecto_id>/requerimientos/cambios-insumos/',       views.cambios_insumos_log, name='cambios_insumos_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/consolidados/',          views.consolidados_log,    name='consolidados_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/historial/',             views.historial_log,       name='historial_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/anulados/',              views.anulados_log,        name='anulados_log'),
@@ -32,6 +33,9 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/revisar/',      views.req_revisar_log,    name='req_revisar_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/anular/',       views.req_anular_log,     name='req_anular_log'),
     path('proyecto/<int:proyecto_id>/requerimientos/<int:pk>/recuperar/',    views.req_recuperar_log,  name='req_recuperar_log'),
+    # Acciones AJAX por ítem dentro del REQ (aprobar / sustituir)
+    path('req/<int:req_pk>/item/<int:det_pk>/aprobar/',    views.req_item_aprobar,   name='req_item_aprobar'),
+    path('req/<int:req_pk>/item/<int:det_pk>/sustituir/',  views.req_item_sustituir, name='req_item_sustituir'),
 
     # REALTIME POLL — eliminar junto con ping_reqs en views.py para desactivar
     path('proyecto/<int:proyecto_id>/ping-reqs/', views.ping_reqs, name='ping_reqs'),

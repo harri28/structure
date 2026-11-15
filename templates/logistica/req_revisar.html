@@ -89,12 +89,17 @@
           <th style="width:120px" class="text-end">Cant. requerida</th>
           <th style="width:150px" class="text-center">Cant. a aprobar</th>
           <th style="width:110px" class="text-end" title="Cantidad cubierta por cotizaciones aprobadas">Aprobado</th>
-          <th style="width:44px"></th>
+          {% if editable %}<th style="width:200px" class="text-center">Acciones</th>{% else %}<th style="width:44px"></th>{% endif %}
         </tr>
       </thead>
       <tbody>
         {% for d in detalles %}{% if d.descripcion or d.insumo %}
-        <tr id="fila-{{ d.pk }}" class="item-row">
+        <tr id="fila-{{ d.pk }}" class="item-row"
+            data-insumo-id="{{ d.insumo_id|default_if_none:'' }}"
+            data-insumo-desc="{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}"
+            data-insumo-und="{{ d.unidad|default:'' }}"
+            data-insumo-cant="{{ d.cantidad_requerida|unlocalize }}"
+            data-ya-aprobado="{% if d.cantidad_aprobada is not None %}1{% else %}0{% endif %}">
           <td><code style="font-size:.78rem" id="cod-{{ d.pk }}">{% if d.codigo %}{{ d.codigo }}{% elif d.insumo %}{{ d.insumo.codigo|default:"—" }}{% else %}—{% endif %}</code></td>
           <td style="font-size:.83rem" id="desc-cell-{{ d.pk }}">
             {% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}
@@ -107,7 +112,7 @@
                    id="aprobada_{{ d.pk }}"
                    class="form-control form-control-sm text-end cant-aprobada"
                    style="max-width:130px;margin:0 auto{% if not editable %};background:#f8f9fa;color:#6b7280{% endif %}"
-                   value="{% if editable %}{{ d.cantidad_requerida|unlocalize }}{% else %}{{ d.cantidad_aprobada|unlocalize }}{% endif %}"
+                   value="{% if d.cantidad_aprobada is not None %}{{ d.cantidad_aprobada|unlocalize }}{% elif editable %}{{ d.cantidad_requerida|unlocalize }}{% else %}{{ d.cantidad_aprobada|unlocalize }}{% endif %}"
                    min="0" max="{{ d.cantidad_requerida|unlocalize }}" step="0.0001"
                    data-max="{{ d.cantidad_requerida|unlocalize }}"
                    {% if not editable %}readonly{% else %}required{% endif %}>
@@ -124,17 +129,44 @@
             {% endif %}
             {% endwith %}
           </td>
+          {% if editable %}
           <td class="text-center">
-            {% if editable %}
-            <button type="button" class="btn btn-link p-0 btn-eliminar"
-                    style="color:#dc2626;font-size:1rem;line-height:1"
-                    data-pk="{{ d.pk }}"
-                    data-desc="{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}ítem{% endif %}"
-                    title="Eliminar ítem">
-              <i class="bi bi-trash3"></i>
-            </button>
-            {% endif %}
+            <div class="d-inline-flex gap-1 align-items-center">
+              <button type="button" class="btn btn-sm btn-aprobar-item"
+                      data-pk="{{ d.pk }}"
+                      data-url="{% url 'logistica:req_item_aprobar' req.pk d.pk %}"
+                      {% if d.cantidad_aprobada is not None %}
+                        style="font-size:.72rem;padding:.2em .55em;background:#dcfce7;border:1px solid #86efac;color:#166534"
+                      {% else %}
+                        style="font-size:.72rem;padding:.2em .55em;background:#2563eb;border:1px solid #2563eb;color:#fff"
+                      {% endif %}>
+                <i class="bi {% if d.cantidad_aprobada is not None %}bi-check2{% else %}bi-check-lg{% endif %} me-1"></i>
+                <span class="btn-aprobar-label">{% if d.cantidad_aprobada is not None %}Aprobado{% else %}Aprobar{% endif %}</span>
+              </button>
+              <button type="button" class="btn btn-link p-0 btn-sustituir-item"
+                      style="color:#2563eb;font-size:1rem;line-height:1"
+                      data-pk="{{ d.pk }}"
+                      data-url="{% url 'logistica:req_item_sustituir' req.pk d.pk %}"
+                      data-original-code="{% if d.codigo %}{{ d.codigo }}{% elif d.insumo %}{{ d.insumo.codigo }}{% endif %}"
+                      data-original-desc="{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% endif %}"
+                      data-original-und="{{ d.unidad|default:'' }}"
+                      data-original-cant="{{ d.cantidad_requerida|unlocalize }}"
+                      title="Sustituir / Editar insumo">
+                <i class="bi bi-arrow-repeat"></i>
+              </button>
+              <button type="button" class="btn btn-link p-0 btn-eliminar"
+                      style="color:#dc2626;font-size:1rem;line-height:1"
+                      data-pk="{{ d.pk }}"
+                      data-desc="{% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}ítem{% endif %}"
+                      title="Eliminar ítem">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </div>
+            <div class="small aprobar-feedback mt-1" style="font-size:.7rem;display:none"></div>
           </td>
+          {% else %}
+          <td></td>
+          {% endif %}
         </tr>
         {% endif %}{% empty %}
         <tr><td colspan="7" class="text-center py-4 text-muted">Sin ítems</td></tr>
@@ -144,36 +176,6 @@
   </div>
 </div>
 
-<!-- Sustituir / agregar insumo -->
-{% if editable %}
-<div class="card mb-3">
-  <div class="card-header d-flex justify-content-between align-items-center"
-       style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
-    <span><i class="bi bi-arrow-repeat me-2 text-primary"></i>Sustituir o agregar insumo</span>
-    <button type="button" class="btn btn-primary btn-sm" id="btn-agregar-fila">
-      <i class="bi bi-arrow-repeat me-1"></i>Sustituir insumo
-    </button>
-  </div>
-  <div class="card-body p-0" id="card-nuevos-body">
-    <table class="table table-sm mb-0" id="tabla-nuevos" style="display:none">
-      <thead style="background:#f8fafc">
-        <tr>
-          <th style="width:180px">Reemplaza a</th>
-          <th>Nuevo insumo</th>
-          <th style="width:70px">Und</th>
-          <th style="width:110px">Cantidad</th>
-          <th style="width:180px">Justificación</th>
-          <th style="width:40px"></th>
-        </tr>
-      </thead>
-      <tbody id="nuevos-tbody"></tbody>
-    </table>
-    <div id="nuevos-placeholder" class="text-center text-muted py-3" style="font-size:.82rem">
-      Clic en "Sustituir insumo" para reemplazar un material del REQ (o agregar uno nuevo si "Reemplaza a" queda vacío).
-    </div>
-  </div>
-</div>
-{% endif %}
 
 <!-- Historial de cambios -->
 {% if historial %}
@@ -340,6 +342,74 @@
 </div>
 {% endif %}
 
+<!-- Modal: Cambiar o Editar insumo (sustitución por fila) -->
+{% if editable %}
+<div class="modal fade" id="modal-sustituir" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" style="font-size:.95rem">
+          <i class="bi bi-arrow-repeat me-1 text-primary"></i>Cambiar o Editar insumo
+        </h6>
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+
+        <div class="card mb-3" style="background:#f8fafc;border:1px solid #cbd5e1">
+          <div class="card-body py-2 px-3">
+            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700">Insumo original</div>
+            <div id="sustituir-original-desc" class="fw-semibold" style="font-size:.88rem">—</div>
+            <div class="small text-muted mt-1">
+              <span id="sustituir-original-code"></span>
+              · <span id="sustituir-original-cant"></span>
+              <span id="sustituir-original-und"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-center my-2">
+          <i class="bi bi-arrow-down-circle" style="font-size:1.3rem;color:#6b7280"></i>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label fw-semibold" style="font-size:.78rem">Nuevo insumo <span class="text-danger">*</span></label>
+          <div style="position:relative">
+            <input type="text" id="sustituir-buscar" class="form-control form-control-sm"
+                   placeholder="Buscar por código o descripción..." autocomplete="off">
+            <div id="sustituir-drop" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #dee2e6;border-radius:4px;max-height:200px;overflow-y:auto;z-index:1051;box-shadow:0 4px 12px rgba(0,0,0,.15)"></div>
+          </div>
+          <input type="hidden" id="sustituir-nuevo-id">
+          <div id="sustituir-nuevo-sel" class="mt-2 p-2 border rounded" style="display:none;background:#eff6ff;border-color:#93c5fd !important;font-size:.82rem"></div>
+        </div>
+
+        <div class="row g-2 mb-2">
+          <div class="col-md-5">
+            <label class="form-label fw-semibold" style="font-size:.78rem">Cantidad <span class="text-danger">*</span></label>
+            <input type="number" id="sustituir-cantidad" class="form-control form-control-sm"
+                   step="0.0001" min="0.0001" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="mb-0">
+          <label class="form-label fw-semibold" style="font-size:.78rem">Justificación</label>
+          <textarea id="sustituir-justif" class="form-control form-control-sm" rows="2"
+                    placeholder="Motivo del cambio (ej. no disponible en zona)..."></textarea>
+        </div>
+
+        <div id="sustituir-error" class="text-danger mt-2" style="font-size:.78rem;display:none"></div>
+
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-sustituir-guardar">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Modal: generar cotización (seleccionar / quitar ítems) -->
 <div class="modal fade" id="modal-cotizar" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl">
@@ -458,10 +528,14 @@
 <script>
 (function () {
   var API = '/almacen/api/productos/';
-  var nuevoIdx = 0;
 
   // Solo activar JS de edición si el formulario es editable
   if (!document.getElementById('btn-aprobar')) return;
+
+  function getCsrf() {
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
 
   // ── Eliminar ítem ────────────────────────────────────────────────
   var modalEl   = document.getElementById('modal-eliminar');
@@ -486,7 +560,6 @@
     }
     modal.hide();
 
-    // Marcar fila visualmente
     var fila = document.getElementById('fila-' + pendingPk);
     fila.style.opacity  = '.4';
     fila.style.textDecoration = 'line-through';
@@ -496,7 +569,6 @@
     fila.querySelector('.btn-eliminar').style.color = '#2563eb';
     fila.querySelector('.btn-eliminar').onclick = function () { restaurar(pendingPk); };
 
-    // Inputs ocultos
     var form = document.getElementById('form-revision');
     var hElim = document.createElement('input');
     hElim.type = 'hidden'; hElim.name = 'eliminar_' + pendingPk; hElim.value = '1';
@@ -531,131 +603,216 @@
     if (e2) e2.remove();
   }
 
-  // ── Agregar insumo ───────────────────────────────────────────────
-  document.getElementById('btn-agregar-fila').addEventListener('click', function () {
-    document.getElementById('tabla-nuevos').style.display = '';
-    document.getElementById('nuevos-placeholder').style.display = 'none';
-    agregarFilaNueva();
+  // ── Botón "Aprobar" por ítem (AJAX) ──────────────────────────────
+  // Marca la fila como aprobada visualmente y guarda la cantidad en BD.
+  // Si el usuario edita el input después, el botón vuelve a "Aprobar"
+  // para que pueda re-guardar el nuevo valor.
+  function setAprobado(btn) {
+    btn.style.background = '#dcfce7';
+    btn.style.borderColor = '#86efac';
+    btn.style.color = '#166534';
+    btn.querySelector('.btn-aprobar-label').textContent = 'Aprobado';
+    btn.querySelector('i').className = 'bi bi-check2 me-1';
+  }
+  function setPendiente(btn) {
+    btn.style.background = '#2563eb';
+    btn.style.borderColor = '#2563eb';
+    btn.style.color = '#fff';
+    btn.querySelector('.btn-aprobar-label').textContent = 'Aprobar';
+    btn.querySelector('i').className = 'bi bi-check-lg me-1';
+  }
+
+  document.querySelectorAll('.btn-aprobar-item').forEach(function (btn) {
+    var pk = btn.dataset.pk;
+    var fila = document.getElementById('fila-' + pk);
+    var input = document.getElementById('aprobada_' + pk);
+    var fb = fila.querySelector('.aprobar-feedback');
+
+    // Si el usuario edita el input, el botón vuelve a "Aprobar"
+    input.addEventListener('input', function () {
+      setPendiente(btn);
+      fb.style.display = 'none';
+    });
+
+    btn.addEventListener('click', function () {
+      var val = parseFloat(input.value);
+      var max = parseFloat(input.dataset.max);
+      if (isNaN(val) || val < 0 || val > max) {
+        fb.style.display = 'block';
+        fb.style.color = '#dc2626';
+        fb.textContent = 'Cantidad fuera de rango (0 – ' + max.toFixed(4) + ').';
+        input.classList.add('is-invalid');
+        return;
+      }
+
+      btn.disabled = true;
+      var iconOrig = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem"></span>';
+
+      var body = new FormData();
+      body.append('cantidad', input.value);
+
+      fetch(btn.dataset.url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+        body: body,
+      })
+      .then(function (r) { return r.json().then(function (d) { return [r.ok, d]; }); })
+      .then(function (pair) {
+        var ok = pair[0], data = pair[1];
+        btn.disabled = false;
+        if (!data.ok) {
+          btn.innerHTML = iconOrig;
+          fb.style.display = 'block';
+          fb.style.color = '#dc2626';
+          fb.textContent = data.error || 'Error al guardar.';
+          input.classList.add('is-invalid');
+          return;
+        }
+        // Éxito
+        btn.innerHTML = iconOrig;
+        setAprobado(btn);
+        fb.style.display = 'block';
+        fb.style.color = '#16a34a';
+        fb.textContent = 'Guardado ' + new Date().toLocaleTimeString();
+        input.classList.remove('is-invalid');
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.innerHTML = iconOrig;
+        fb.style.display = 'block';
+        fb.style.color = '#dc2626';
+        fb.textContent = 'Error de red: ' + err.message;
+      });
+    });
   });
 
-  // Dropdown compartido (position:fixed, fuera de la tabla)
-  var sharedDrop = document.createElement('div');
-  sharedDrop.style.cssText = 'display:none;position:fixed;z-index:99999;background:#fff;' +
-    'border:1px solid #dee2e6;border-radius:4px;max-height:200px;overflow-y:auto;' +
-    'box-shadow:0 4px 12px rgba(0,0,0,.15)';
-  document.body.appendChild(sharedDrop);
-  var activeSearch = null;
+  // ── Modal "Cambiar o Editar insumo" (sustitución por fila) ───────
+  var modalSustEl = document.getElementById('modal-sustituir');
+  var modalSust = modalSustEl ? new bootstrap.Modal(modalSustEl) : null;
+  var sustCurrentBtn = null;
 
-  // Opciones del select "Reemplaza a" — construidas desde la tabla de ítems
-  function opcionesReemplaza() {
-    var opts = '<option value="">— agregar sin reemplazar —</option>';
-    document.querySelectorAll('#tabla-items tbody tr.item-row').forEach(function (fila) {
-      var pk = fila.id.replace('fila-', '');
-      var descEl = fila.querySelector('[id^="desc-cell-"]');
-      var desc = descEl ? descEl.textContent.trim().slice(0, 60) : ('item #' + pk);
-      opts += '<option value="' + pk + '">' + desc + '</option>';
+  if (modalSustEl) {
+    var inpBuscar = document.getElementById('sustituir-buscar');
+    var drop      = document.getElementById('sustituir-drop');
+    var selDiv    = document.getElementById('sustituir-nuevo-sel');
+    var idHidden  = document.getElementById('sustituir-nuevo-id');
+    var errDiv    = document.getElementById('sustituir-error');
+
+    document.querySelectorAll('.btn-sustituir-item').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        sustCurrentBtn = btn;
+        document.getElementById('sustituir-original-desc').textContent = btn.dataset.originalDesc || '—';
+        document.getElementById('sustituir-original-code').textContent = btn.dataset.originalCode || '';
+        document.getElementById('sustituir-original-cant').textContent = btn.dataset.originalCant || '';
+        document.getElementById('sustituir-original-und').textContent  = ' ' + (btn.dataset.originalUnd || '');
+        inpBuscar.value = '';
+        idHidden.value = '';
+        selDiv.style.display = 'none';
+        selDiv.innerHTML = '';
+        document.getElementById('sustituir-cantidad').value = btn.dataset.originalCant || '';
+        document.getElementById('sustituir-justif').value = '';
+        errDiv.style.display = 'none';
+        drop.style.display = 'none';
+        modalSust.show();
+      });
     });
-    return opts;
-  }
 
-  function agregarFilaNueva() {
-    var n     = nuevoIdx++;
-    var tbody = document.getElementById('nuevos-tbody');
-    var tr    = document.createElement('tr');
-    tr.id     = 'nuevo-row-' + n;
-    tr.innerHTML =
-      '<td>' +
-        '<select name="nuevo_' + n + '_sustituye_a" class="form-select form-select-sm">' +
-          opcionesReemplaza() +
-        '</select>' +
-      '</td>' +
-      '<td style="min-width:220px">' +
-        '<input type="text" class="form-control form-control-sm nuevo-search" placeholder="Buscar insumo..." autocomplete="off" data-idx="' + n + '">' +
-        '<input type="hidden" name="nuevo_' + n + '_insumo" id="n' + n + '-insumo">' +
-        '<input type="hidden" name="nuevo_' + n + '_desc"   id="n' + n + '-desc">' +
-        '<input type="hidden" name="nuevo_' + n + '_unidad" id="n' + n + '-unidad">' +
-      '</td>' +
-      '<td><input type="text" class="form-control form-control-sm" id="n' + n + '-unidad-disp" placeholder="und" readonly style="background:#f8f9fa;color:#6b7280"></td>' +
-      '<td><input type="number" name="nuevo_' + n + '_cantidad" step="0.0001" min="0.0001" class="form-control form-control-sm" placeholder="0.00" required></td>' +
-      '<td><input type="text" name="nuevo_' + n + '_justif" class="form-control form-control-sm" placeholder="Motivo del cambio..."></td>' +
-      '<td class="text-center">' +
-        '<button type="button" class="btn btn-link p-0" style="color:#dc2626" onclick="this.closest(\'tr\').remove();actualizarCount()">' +
-          '<i class="bi bi-x-lg"></i>' +
-        '</button>' +
-      '</td>';
-    tbody.appendChild(tr);
-    actualizarCount();
-    iniciarBusqueda(tr.querySelector('.nuevo-search'));
-  }
-
-  function actualizarCount() {
-    document.getElementById('nuevo-count').value =
-      document.querySelectorAll('#nuevos-tbody tr').length;
-  }
-  window.actualizarCount = actualizarCount;
-
-  function iniciarBusqueda(inp) {
-    var n = inp.dataset.idx;
-
-    inp.addEventListener('focus', function () { activeSearch = inp; });
-
-    inp.addEventListener('input', function () {
-      var q = inp.value.trim();
-      if (!q) { sharedDrop.style.display = 'none'; return; }
-      activeSearch = inp;
+    inpBuscar.addEventListener('input', function () {
+      var q = inpBuscar.value.trim();
+      if (!q) { drop.style.display = 'none'; return; }
       fetch(API + '?q=' + encodeURIComponent(q))
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          if (activeSearch !== inp) return;
-          var rect = inp.getBoundingClientRect();
-          sharedDrop.style.top   = rect.bottom + window.scrollY + 'px';
-          sharedDrop.style.left  = rect.left + 'px';
-          sharedDrop.style.width = rect.width + 'px';
           if (!data.length) {
-            sharedDrop.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:.8rem">Sin resultados</div>';
+            drop.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:.8rem">Sin resultados</div>';
           } else {
-            sharedDrop.innerHTML = data.map(function (p) {
-              return '<div class="nuevo-opt" data-id="' + p.id +
+            drop.innerHTML = data.map(function (p) {
+              return '<div class="sust-opt" data-id="' + p.id +
                 '" data-desc="' + p.descripcion.replace(/"/g,'&quot;') +
-                '" data-unidad="' + (p.unidad||'') + '" data-idx="' + n + '"' +
+                '" data-unidad="' + (p.unidad||'') +
+                '" data-codigo="' + (p.codigo||'') + '"' +
                 ' style="padding:6px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.8rem">' +
                 '<strong style="color:#d97706">' + p.codigo + '</strong> ' + p.descripcion +
                 '</div>';
             }).join('');
           }
-          sharedDrop.style.display = 'block';
+          drop.style.display = 'block';
         });
     });
+
+    drop.addEventListener('click', function (e) {
+      var opt = e.target.closest('.sust-opt');
+      if (!opt) return;
+      idHidden.value = opt.dataset.id;
+      inpBuscar.value = opt.dataset.desc;
+      selDiv.innerHTML = '<strong style="color:#d97706">' + (opt.dataset.codigo || '—') + '</strong> ' +
+        opt.dataset.desc + ' <span class="text-muted">· ' + (opt.dataset.unidad || '') + '</span>';
+      selDiv.style.display = 'block';
+      drop.style.display = 'none';
+    });
+
+    drop.addEventListener('mouseover', function (e) {
+      var opt = e.target.closest('.sust-opt');
+      if (opt) opt.style.background = '#eff6ff';
+    });
+    drop.addEventListener('mouseout', function (e) {
+      var opt = e.target.closest('.sust-opt');
+      if (opt) opt.style.background = '';
+    });
+
+    document.getElementById('btn-sustituir-guardar').addEventListener('click', function () {
+      errDiv.style.display = 'none';
+      var nuevoId = idHidden.value;
+      var cantidad = document.getElementById('sustituir-cantidad').value;
+      var justif = document.getElementById('sustituir-justif').value;
+      if (!nuevoId) {
+        errDiv.style.display = 'block';
+        errDiv.textContent = 'Elegí un insumo de reemplazo.';
+        return;
+      }
+      if (!cantidad || parseFloat(cantidad) <= 0) {
+        errDiv.style.display = 'block';
+        errDiv.textContent = 'Ingresá una cantidad mayor a 0.';
+        return;
+      }
+
+      var btn = this;
+      btn.disabled = true;
+      var orig = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem"></span> Guardando...';
+
+      var body = new FormData();
+      body.append('nuevo_insumo_id', nuevoId);
+      body.append('cantidad', cantidad);
+      body.append('justificacion', justif);
+
+      fetch(sustCurrentBtn.dataset.url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+        body: body,
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        if (!data.ok) {
+          errDiv.style.display = 'block';
+          errDiv.textContent = data.error || 'Error al guardar.';
+          return;
+        }
+        modalSust.hide();
+        // Recarga la página para ver el nuevo detalle en la tabla.
+        window.location.reload();
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        errDiv.style.display = 'block';
+        errDiv.textContent = 'Error de red: ' + err.message;
+      });
+    });
   }
-
-  sharedDrop.addEventListener('click', function (e) {
-    var opt = e.target.closest('.nuevo-opt');
-    if (!opt) return;
-    var idx = opt.dataset.idx;
-    var searchInp = document.querySelector('.nuevo-search[data-idx="' + idx + '"]');
-    if (searchInp) searchInp.value = opt.dataset.desc;
-    document.getElementById('n' + idx + '-insumo').value      = opt.dataset.id;
-    document.getElementById('n' + idx + '-desc').value        = opt.dataset.desc;
-    document.getElementById('n' + idx + '-unidad').value      = opt.dataset.unidad;
-    document.getElementById('n' + idx + '-unidad-disp').value = opt.dataset.unidad;
-    sharedDrop.style.display = 'none';
-    activeSearch = null;
-  });
-
-  sharedDrop.addEventListener('mouseover', function (e) {
-    var opt = e.target.closest('.nuevo-opt');
-    if (opt) opt.style.background = '#eff6ff';
-  });
-  sharedDrop.addEventListener('mouseout', function (e) {
-    var opt = e.target.closest('.nuevo-opt');
-    if (opt) opt.style.background = '';
-  });
-
-  document.addEventListener('click', function (e) {
-    if (!sharedDrop.contains(e.target) && e.target !== activeSearch) {
-      sharedDrop.style.display = 'none';
-    }
-  });
 
   // ── Validación cantidades originales ─────────────────────────────
   var inputs = document.querySelectorAll('.cant-aprobada');
@@ -687,15 +844,6 @@
       if (isNaN(val) || val < 0 || val > max) {
         inp.classList.add('is-invalid');
         if (!fb.textContent) fb.textContent = 'Valor fuera de rango (0 – ' + max.toFixed(4) + ').';
-        tieneError = true;
-      }
-    });
-    // Validar que nuevos tengan insumo seleccionado
-    document.querySelectorAll('#nuevos-tbody tr').forEach(function (row) {
-      var hInsumo = row.querySelector('input[id$="-insumo"]');
-      var search  = row.querySelector('.nuevo-search');
-      if (search && !hInsumo.value) {
-        search.classList.add('is-invalid');
         tieneError = true;
       }
     });

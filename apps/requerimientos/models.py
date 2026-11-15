@@ -100,6 +100,12 @@ class HistorialRevisionReq(models.Model):
     requerimiento = models.ForeignKey(Requerimiento, on_delete=models.CASCADE, related_name='historial_revision')
     accion        = models.CharField(max_length=10, choices=ACCIONES)
     insumo        = models.ForeignKey(InsumoPresupuesto, null=True, blank=True, on_delete=models.SET_NULL)
+    insumo_original = models.ForeignKey(
+        InsumoPresupuesto, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='historial_como_original',
+        verbose_name='Insumo original (para sustituciones)',
+    )
     descripcion   = models.CharField(max_length=400)
     unidad        = models.CharField(max_length=20, blank=True)
     cantidad      = models.DecimalField(max_digits=15, decimal_places=4)

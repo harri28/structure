@@ -928,6 +928,192 @@ def req_recuperar_log(request, proyecto_id, pk):
     return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=pk)
 
 
+@requiere('puede_revisar_reqs_log')
+def req_item_aprobar(request, req_pk, det_pk):
+    """Guarda cantidad_aprobada de UN solo ítem via AJAX. No cambia el estado
+    del REQ — eso sigue pasando al clicar 'Aprobar Requerimiento' en el form
+    grande. Validación: cantidad ≥ 0, ≤ cantidad_requerida, respeta el saldo
+    global del insumo en el presupuesto. Responde JSON."""
+    from decimal import Decimal, InvalidOperation
+    from django.http import JsonResponse
+    from apps.requerimientos.models import Requerimiento, DetalleRequerimiento
+    from apps.presupuesto.services import saldo_disponible_insumo
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+
+    req = get_object_or_404(Requerimiento, pk=req_pk)
+    if req.estado not in ('ENVIADO', 'EN_REVISION'):
+        return JsonResponse({
+            'ok': False,
+            'error': 'El requerimiento ya no está en revisión.',
+        }, status=400)
+
+    det = get_object_or_404(DetalleRequerimiento, pk=det_pk, requerimiento=req)
+
+    raw = (request.POST.get('cantidad') or '').strip()
+    try:
+        cantidad = Decimal(raw)
+    except (InvalidOperation, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Cantidad inválida.'}, status=400)
+
+    if cantidad < 0:
+        return JsonResponse({'ok': False, 'error': 'La cantidad no puede ser negativa.'}, status=400)
+    if cantidad > det.cantidad_requerida:
+        return JsonResponse({
+            'ok': False,
+            'error': f'No puede superar la cantidad requerida ({det.cantidad_requerida}).',
+        }, status=400)
+
+    # Saldo global del insumo (excluye este REQ para no contarse a sí mismo).
+    if det.insumo_id:
+        disp = saldo_disponible_insumo(det.insumo, excluir_req_pk=req.pk)
+        # Sumar lo que ya aprobamos en otros detalles del MISMO REQ para
+        # este insumo — porque el excluir_req_pk los excluye a todos.
+        otros_aprobados_mismo_req = DetalleRequerimiento.objects.filter(
+            requerimiento=req, insumo_id=det.insumo_id,
+        ).exclude(pk=det.pk).aggregate(
+            s=Sum('cantidad_aprobada'),
+        )['s'] or Decimal('0')
+        if cantidad + otros_aprobados_mismo_req > disp:
+            return JsonResponse({
+                'ok': False,
+                'error': (f'"{det.insumo.descripcion}": pediste {cantidad} pero '
+                          f'solo quedan {disp - otros_aprobados_mismo_req} '
+                          f'{det.insumo.unidad or "und"} disponibles en el presupuesto.'),
+            }, status=400)
+
+    det.cantidad_aprobada = cantidad
+    det.save(update_fields=['cantidad_aprobada'])
+
+    if req.estado == 'ENVIADO':
+        req.estado = 'EN_REVISION'
+        req.save(update_fields=['estado'])
+
+    log(request, 'EDITAR', 'Logística',
+        f'REQ{req.numero} ítem "{det.descripcion or det.insumo}" aprobado por '
+        f'{cantidad} por {request.user.get_full_name() or request.user.username}')
+
+    return JsonResponse({
+        'ok': True,
+        'cantidad_aprobada': str(cantidad),
+    })
+
+
+@requiere('puede_revisar_reqs_log')
+def req_item_sustituir(request, req_pk, det_pk):
+    """Sustituye el insumo de UN detalle por otro (AJAX). Crea un nuevo
+    DetalleRequerimiento con el insumo nuevo + neutraliza el original
+    (cantidad_aprobada=0) + registra en historial como SUSTITUIR con
+    insumo_original para trazabilidad."""
+    from decimal import Decimal, InvalidOperation
+    from django.http import JsonResponse
+    from apps.requerimientos.models import Requerimiento, DetalleRequerimiento, HistorialRevisionReq
+    from apps.presupuesto.models import InsumoPresupuesto
+    from apps.presupuesto.services import saldo_disponible_insumo
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+
+    req = get_object_or_404(Requerimiento, pk=req_pk)
+    if req.estado not in ('ENVIADO', 'EN_REVISION'):
+        return JsonResponse({
+            'ok': False,
+            'error': 'El requerimiento ya no está en revisión.',
+        }, status=400)
+
+    det_original = get_object_or_404(DetalleRequerimiento, pk=det_pk, requerimiento=req)
+
+    nuevo_insumo_id = (request.POST.get('nuevo_insumo_id') or '').strip()
+    cant_raw = (request.POST.get('cantidad') or '').strip()
+    justif = (request.POST.get('justificacion') or '').strip()
+
+    if not nuevo_insumo_id:
+        return JsonResponse({'ok': False, 'error': 'Elegí un insumo de reemplazo.'}, status=400)
+    try:
+        nuevo_insumo = InsumoPresupuesto.objects.get(pk=int(nuevo_insumo_id))
+    except (ValueError, InsumoPresupuesto.DoesNotExist):
+        return JsonResponse({'ok': False, 'error': 'Insumo de reemplazo inválido.'}, status=400)
+
+    try:
+        cantidad = Decimal(cant_raw)
+    except (InvalidOperation, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Cantidad inválida.'}, status=400)
+    if cantidad <= 0:
+        return JsonResponse({'ok': False, 'error': 'La cantidad debe ser mayor a 0.'}, status=400)
+
+    disp = saldo_disponible_insumo(nuevo_insumo, excluir_req_pk=req.pk)
+    if cantidad > disp:
+        return JsonResponse({
+            'ok': False,
+            'error': (f'"{nuevo_insumo.descripcion}": pediste {cantidad} pero '
+                      f'solo quedan {disp} {nuevo_insumo.unidad or "und"} '
+                      f'disponibles en el presupuesto.'),
+        }, status=400)
+
+    original_desc = (det_original.descripcion
+                     or (det_original.insumo.descripcion if det_original.insumo else '—'))
+    original_insumo = det_original.insumo
+
+    det_original.cantidad_aprobada = Decimal('0')
+    det_original.save(update_fields=['cantidad_aprobada'])
+
+    nuevo_det = DetalleRequerimiento.objects.create(
+        requerimiento=req,
+        insumo=nuevo_insumo,
+        codigo=nuevo_insumo.codigo or '',
+        descripcion=nuevo_insumo.descripcion,
+        unidad=nuevo_insumo.unidad or '',
+        cantidad=cantidad,
+        cantidad_requerida=cantidad,
+        cantidad_aprobada=cantidad,
+    )
+
+    HistorialRevisionReq.objects.create(
+        requerimiento=req,
+        accion='SUSTITUIR',
+        insumo=nuevo_insumo,
+        insumo_original=original_insumo,
+        descripcion=f'{original_desc} → {nuevo_insumo.descripcion}',
+        unidad=nuevo_insumo.unidad or '',
+        cantidad=cantidad,
+        justificacion=justif,
+        usuario=request.user,
+    )
+
+    if req.estado == 'ENVIADO':
+        req.estado = 'EN_REVISION'
+        req.save(update_fields=['estado'])
+
+    log(request, 'EDITAR', 'Logística',
+        f'REQ{req.numero} insumo "{original_desc}" sustituido por '
+        f'"{nuevo_insumo.descripcion}" ({cantidad} {nuevo_insumo.unidad or "und"}) '
+        f'por {request.user.get_full_name() or request.user.username}')
+
+    return JsonResponse({
+        'ok': True,
+        'nuevo_det_pk': nuevo_det.pk,
+        'original_det_pk': det_original.pk,
+    })
+
+
+@requiere('puede_revisar_reqs_log')
+@proyecto_visible
+def cambios_insumos_log(request, proyecto_id):
+    """Lista de sustituciones de insumos del proyecto (acción SUSTITUIR del
+    HistorialRevisionReq), agrupadas cronológicamente."""
+    from apps.requerimientos.models import HistorialRevisionReq
+    proyecto = _get_proyecto(proyecto_id)
+    cambios = (HistorialRevisionReq.objects
+               .filter(requerimiento__proyecto=proyecto, accion='SUSTITUIR')
+               .select_related('requerimiento', 'insumo', 'insumo_original', 'usuario')
+               .order_by('-fecha'))
+    return render(request, 'logistica/req_cambios.html', {
+        'proyecto': proyecto,
+        'cambios':  cambios,
+    })
+
+
 @requiere('puede_gestionar_logistica')
 def guia_imprimir(request, pk):
     from apps.configuracion.models import ConfigEmpresa
