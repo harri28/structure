@@ -491,6 +491,15 @@
     });
   }
 
+  // Abrir modal si la URL trae ?nueva_oc=1 (viene de aprobar cotización)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('nueva_oc') === '1' && modalEl) {
+      const m = bootstrap.Modal.getOrCreateInstance(modalEl);
+      m.show();
+    }
+  } catch(_) {}
+
   // ── Guardar ─────────────────────────────────────────────────────────
   document.getElementById('btn-oc-guardar').addEventListener('click', function(){
     const err = document.getElementById('oc-err');

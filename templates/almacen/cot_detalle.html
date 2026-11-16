@@ -42,6 +42,7 @@
 {% if cot.estado == 'PENDIENTE' %}
 <form method="post" action="{% url 'almacen:cot_aprobar' cot.pk %}" id="form-aprobar-cot">
   {% csrf_token %}
+  <input type="hidden" name="redirect_to" value="compras_nueva_oc">
 {% endif %}
 
 <div class="card">
@@ -107,46 +108,14 @@
 
 {% if cot.estado == 'PENDIENTE' %}
 <div class="d-flex gap-2 justify-content-end mt-3">
-  <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modal-rechazar-cot">
-    <i class="bi bi-x-circle me-1"></i>Rechazar cotización
-  </button>
   <button type="submit" class="btn btn-success btn-sm" id="btn-aprobar-cot">
-    <i class="bi bi-check-circle me-1"></i>Aprobar cotización
+    <i class="bi bi-file-earmark-plus me-1"></i>Generar Orden de Compra
   </button>
 </div>
 </form>
 
 <div class="small text-muted mt-2" id="cot-sin-items" style="display:none">
-  Quitaste todos los ítems. Si el proveedor no atiende nada, usá <strong>Rechazar cotización</strong>.
-</div>
-
-<!-- Modal: Rechazar cotización -->
-<div class="modal fade" id="modal-rechazar-cot" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <form method="post" action="{% url 'almacen:cot_rechazar' cot.pk %}">
-      {% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header py-2">
-          <h6 class="modal-title" style="font-size:.95rem">
-            <i class="bi bi-x-circle text-danger me-1"></i>Rechazar COT{{ cot.numero }}
-          </h6>
-          <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <p class="mb-2">¿Confirmás que el proveedor <strong>{{ cot.proveedor|default:"(sin razón social)" }}</strong> no atenderá esta cotización?</p>
-          <p class="text-muted small mb-0">
-            La cotización pasará a <strong>RECHAZADA</strong> y todo el saldo volverá al REQ{% if cot.requerimiento_origen %} <strong>REQ{{ cot.requerimiento_origen.numero }}</strong>{% endif %} para generar otra cotización.
-          </p>
-        </div>
-        <div class="modal-footer py-2">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger btn-sm">
-            <i class="bi bi-x-circle me-1"></i>Rechazar cotización
-          </button>
-        </div>
-      </div>
-    </form>
-  </div>
+  Quitaste todos los ítems.
 </div>
 {% endif %}
 
