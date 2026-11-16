@@ -104,16 +104,28 @@
       </div>
       <div class="modal-body">
         <div class="row g-3 mb-3">
-          <div class="col-md-8 position-relative">
+          <div class="col-md-5 position-relative">
             <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Proveedor <span class="text-danger">*</span></label>
             <input type="text" id="oc-proveedor-input" class="form-control form-control-sm" autocomplete="off"
-                   placeholder="Buscá en tu catálogo de proveedores...">
+                   placeholder="Buscá por razón social...">
             <input type="hidden" id="oc-proveedor-id" value="">
             <div id="oc-proveedor-sugs" class="list-group position-absolute shadow-sm w-100"
-                 style="z-index:1056;max-height:220px;overflow-y:auto;display:none;top:100%"></div>
+                 style="z-index:1080;max-height:220px;overflow-y:auto;display:none;top:100%"></div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Fecha de entrega esperada</label>
+          <div class="col-md-2 position-relative">
+            <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">RUC / DNI</label>
+            <input type="text" id="oc-ruc-input" class="form-control form-control-sm" autocomplete="off" maxlength="11"
+                   placeholder="20…">
+            <div id="oc-ruc-sugs" class="list-group position-absolute shadow-sm"
+                 style="z-index:1080;max-height:220px;overflow-y:auto;display:none;top:100%;min-width:280px"></div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Dirección</label>
+            <input type="text" id="oc-direccion-input" class="form-control form-control-sm" autocomplete="off"
+                   placeholder="Jr. / Av.">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Fecha entrega</label>
             <input type="date" id="oc-fecha" class="form-control form-control-sm">
           </div>
         </div>
@@ -215,43 +227,81 @@
     return m ? decodeURIComponent(m[1]) : '';
   }
 
-  // ── Proveedor autocomplete ──────────────────────────────────────────
+  // ── Proveedor autocomplete (por razón social y por RUC) ─────────────
   const pInp  = document.getElementById('oc-proveedor-input');
   const pId   = document.getElementById('oc-proveedor-id');
   const pSugs = document.getElementById('oc-proveedor-sugs');
-  let tProv = null;
-  function pHide() { pSugs.style.display='none'; pSugs.innerHTML=''; }
-  function pRender(items) {
+  const pRuc  = document.getElementById('oc-ruc-input');
+  const pRucSugs = document.getElementById('oc-ruc-sugs');
+  const pDir  = document.getElementById('oc-direccion-input');
+
+  function fillProvFields(p) {
+    pInp.value = p.razon_social || '';
+    pId.value  = p.id || '';
+    pRuc.value = p.ruc || '';
+    pDir.value = p.direccion || '';
+  }
+
+  function renderSugs(container, items, emptyMsg) {
     if (!items.length) {
-      pSugs.innerHTML = '<div class="list-group-item text-muted small">Sin coincidencias. Registrá al proveedor desde Logística → Proveedores.</div>';
+      container.innerHTML = '<div class="list-group-item text-muted small">' + emptyMsg + '</div>';
     } else {
-      pSugs.innerHTML = items.map(p =>
-        `<button type="button" class="list-group-item list-group-item-action py-1" data-id="${p.id}" data-razon="${(p.razon_social||'').replace(/"/g,'&quot;')}" data-ruc="${p.ruc||''}">
+      container.innerHTML = items.map(p =>
+        `<button type="button" class="list-group-item list-group-item-action py-1"
+                 data-id="${p.id}"
+                 data-razon="${(p.razon_social||'').replace(/"/g,'&quot;')}"
+                 data-ruc="${p.ruc||''}"
+                 data-dir="${(p.direccion||'').replace(/"/g,'&quot;')}">
           <div class="fw-semibold" style="font-size:.84rem">${p.razon_social||'—'}</div>
-          <div class="text-muted" style="font-size:.74rem">${p.ruc?'<code>'+p.ruc+'</code>':'<em>sin RUC</em>'}</div>
+          <div class="text-muted" style="font-size:.74rem">${p.ruc?'<code>'+p.ruc+'</code>':'<em>sin RUC</em>'}${p.direccion?' · '+p.direccion:''}</div>
         </button>`
       ).join('');
     }
-    pSugs.style.display = '';
-    pSugs.querySelectorAll('[data-id]').forEach(b => {
+    container.style.display = '';
+    container.querySelectorAll('[data-id]').forEach(b => {
       b.addEventListener('click', () => {
-        pInp.value = b.dataset.razon;
-        pId.value  = b.dataset.id;
-        pHide();
+        fillProvFields({
+          id:           b.dataset.id,
+          razon_social: b.dataset.razon,
+          ruc:          b.dataset.ruc,
+          direccion:    b.dataset.dir,
+        });
+        pSugs.style.display = 'none';    pSugs.innerHTML = '';
+        pRucSugs.style.display = 'none'; pRucSugs.innerHTML = '';
       });
     });
   }
-  function pBuscar() {
-    fetch(URL_PROV_BUSCAR + '?q=' + encodeURIComponent(pInp.value || ''), {
+
+  function buscarProv(q, container) {
+    fetch(URL_PROV_BUSCAR + '?q=' + encodeURIComponent(q || ''), {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
-    }).then(r => r.json()).then(d => pRender(d.items || [])).catch(pHide);
+    })
+    .then(r => r.json())
+    .then(d => renderSugs(container, d.items || [],
+                          'Sin coincidencias. Registrá al proveedor desde Logística → Proveedores.'))
+    .catch(() => { container.style.display = 'none'; container.innerHTML = ''; });
   }
+
+  let tProv = null, tRuc = null;
   if (pInp) {
-    pInp.addEventListener('input', () => { pId.value = ''; clearTimeout(tProv); tProv = setTimeout(pBuscar, 180); });
-    pInp.addEventListener('focus', pBuscar);
+    pInp.addEventListener('input', () => {
+      pId.value = '';
+      clearTimeout(tProv);
+      tProv = setTimeout(() => buscarProv(pInp.value, pSugs), 180);
+    });
+    pInp.addEventListener('focus', () => buscarProv(pInp.value, pSugs));
+  }
+  if (pRuc) {
+    pRuc.addEventListener('input', () => {
+      pId.value = '';
+      clearTimeout(tRuc);
+      tRuc = setTimeout(() => buscarProv(pRuc.value, pRucSugs), 180);
+    });
+    pRuc.addEventListener('focus', () => { if (pRuc.value) buscarProv(pRuc.value, pRucSugs); });
   }
   document.addEventListener('click', ev => {
-    if (pInp && !pInp.contains(ev.target) && !pSugs.contains(ev.target)) pHide();
+    if (pInp && !pInp.contains(ev.target) && !pSugs.contains(ev.target))     { pSugs.style.display = 'none'; pSugs.innerHTML = ''; }
+    if (pRuc && !pRuc.contains(ev.target) && !pRucSugs.contains(ev.target))  { pRucSugs.style.display = 'none'; pRucSugs.innerHTML = ''; }
   });
 
   // ── Ítems: tabla dinámica ───────────────────────────────────────────
