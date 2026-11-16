@@ -119,11 +119,11 @@
         <div class="stat-label mt-1">Valorización estimada — mes actual</div>
         <div class="mt-3 d-flex gap-4">
           <div class="text-center">
-            <div class="fw-bold" style="font-size:1.1rem;color:#16a34a">S/ 1'240,850</div>
-            <div class="stat-label">Acumulado</div>
+            <div class="fw-bold" style="font-size:1.1rem;color:#16a34a">S/ 0,00</div>
+            <div class="stat-label" title="Suma de valorizaciones ejecutadas hasta la fecha">Acumulado</div>
           </div>
           <div class="text-center">
-            <div class="fw-bold" style="font-size:1.1rem;color:var(--text-muted)">S/ 2'150,000</div>
+            <div class="fw-bold" style="font-size:1.1rem;color:var(--text-muted)">S/ {{ presupuesto.total_presupuesto|miles:2 }}</div>
             <div class="stat-label">Presupuesto total</div>
           </div>
         </div>
