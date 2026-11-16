@@ -29,8 +29,8 @@
           <th>Origen</th>
           <th>Destino</th>
           <th>Transportista / Placa</th>
-          <th class="text-center">Estado</th>
-          <th class="text-center" style="width:55px">PDF</th>
+          <th>Estado</th>
+          <th class="text-center" style="width:70px">Imprimir</th>
         </tr>
       </thead>
       <tbody>
@@ -58,17 +58,17 @@
             {{ g.transportista.razon_social|default:"—" }}
             {% if g.placa %}<br><code style="font-size:.7rem">{{ g.placa }}</code>{% endif %}
           </td>
-          <td class="text-center">
+          <td>
             {% with b=g.estado_badge %}
             <span class="badge bg-{{ b.0 }}"><i class="bi {{ b.1 }} me-1"></i>{{ g.get_estado_display }}</span>
             {% endwith %}
           </td>
           <td class="text-center">
             {% if g.estado != 'PENDIENTE' %}
-            <a href="{% url 'logistica:guia_imprimir' g.pk %}" target="_blank"
-               title="Ver PDF" style="color:#2563eb;font-size:1.1rem;line-height:1"
-               onclick="event.stopPropagation()">
-              <i class="bi bi-journal-text"></i>
+            <a href="#" title="Imprimir guía"
+               style="color:#2563eb;font-size:1.1rem;line-height:1"
+               onclick="event.stopPropagation(); event.preventDefault(); imprimirGuia({{ g.pk }})">
+              <i class="bi bi-printer"></i>
             </a>
             {% endif %}
           </td>
@@ -84,6 +84,30 @@
     </table>
   </div>
 </div>
+
+<script>
+// Abre el diálogo de impresión del navegador cargando la guía en un iframe
+// oculto. Sin saltar a otra pestaña y sin bloqueo de popup.
+function imprimirGuia(pk) {
+  const url = '/logistica/guia/' + pk + '/imprimir/';
+  let iframe = document.getElementById('g-print-frame');
+  if (iframe) iframe.remove();
+  iframe = document.createElement('iframe');
+  iframe.id = 'g-print-frame';
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  iframe.src = url;
+  iframe.addEventListener('load', () => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (e) {
+      // Fallback: abrir en nueva pestaña
+      window.open(url, '_blank');
+    }
+  });
+  document.body.appendChild(iframe);
+}
+</script>
 
 {# ───────────── Modal: Nueva Guía de Remisión ───────────── #}
 <div class="modal fade" id="modal-guia" tabindex="-1" aria-hidden="true">
