@@ -32,31 +32,75 @@
   {% csrf_token %}
   {% if modo_ajuste %}<input type="hidden" name="modo_ajuste" value="1">{% endif %}
 
-  <div class="card mb-3">
+  <div class="card mb-3" id="card-datos-gen">
     <div class="card-header">Datos Generales</div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-2">
-          <label class="form-label fw-semibold">N° Requerimiento</label>
-          <input type="text" class="form-control fw-bold"
-                 value="N° {{ req.numero_global|default:numero_global }}" readonly
-                 style="background:#f8faff;border-color:#93c5fd;color:#1d4ed8;letter-spacing:.04em">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Razón Social</label>
-          <input type="text" class="form-control" value="{{ empresa.razon_social }}" readonly>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label fw-semibold">RUC</label>
-          <input type="text" class="form-control" value="{{ empresa.ruc }}" readonly>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Fecha de Solicitud</label>
-          <input type="date" name="fecha" value="{{ form.fecha.value|default:'' }}" class="form-control" required id="id_fecha_general">
+    <div class="card-body py-2">
+
+      {# ─── Vista compacta ─── #}
+      <div id="dg-vista" style="font-size:.84rem;color:#111827">
+        <div class="d-flex align-items-center flex-wrap gap-4">
+          <div>
+            <span class="fw-bold">N° Requerimiento:</span>
+            <span class="ms-1" style="color:#1d4ed8;font-weight:600">N° {{ req.numero_global|default:numero_global }}</span>
+          </div>
+          <div>
+            <span class="fw-bold">Razón Social:</span>
+            <span class="ms-1">{{ empresa.razon_social|default:"—" }}</span>
+          </div>
+          <div>
+            <span class="fw-bold">RUC:</span>
+            <span class="ms-1">{{ empresa.ruc|default:"—" }}</span>
+          </div>
+          <div>
+            <span class="fw-bold">Fecha:</span>
+            <span class="ms-1" id="dg-fecha-view">{{ form.fecha.value|default:"—" }}</span>
+          </div>
+          <button type="button" class="btn btn-sm btn-link ms-auto p-0" id="dg-btn-editar"
+                  style="color:#6b7280;font-size:.76rem;text-decoration:none">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </button>
         </div>
       </div>
+
+      {# ─── Edición: solo la fecha ─── #}
+      <div id="dg-edicion" style="display:none">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Fecha de Solicitud</label>
+            <input type="date" name="fecha" value="{{ form.fecha.value|default:'' }}"
+                   class="form-control" required id="id_fecha_general">
+          </div>
+        </div>
+        <div class="mt-2 text-end">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="dg-btn-cerrar">
+            <i class="bi bi-check-lg me-1"></i>Listo
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
+
+  <script>
+  (function(){
+    var vista   = document.getElementById('dg-vista');
+    var edicion = document.getElementById('dg-edicion');
+    var btnEd   = document.getElementById('dg-btn-editar');
+    var btnCer  = document.getElementById('dg-btn-cerrar');
+    var inp     = document.getElementById('id_fecha_general');
+    var span    = document.getElementById('dg-fecha-view');
+    if (!vista || !edicion) return;
+    btnEd.addEventListener('click', function(){
+      vista.style.display = 'none';
+      edicion.style.display = '';
+    });
+    btnCer.addEventListener('click', function(){
+      if (span && inp) span.textContent = (inp.value || '').trim() || '—';
+      vista.style.display = '';
+      edicion.style.display = 'none';
+    });
+  })();
+  </script>
 
   <div class="card mb-3" id="card-orden-req">
     <div class="card-header">Orden de Requerimiento</div>
