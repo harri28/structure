@@ -235,17 +235,41 @@
   }
   const btn = document.getElementById('btn-guia-guardar');
   if (!btn) { console.error('[guia] btn-guia-guardar no existe en el DOM'); return; }
+
+  // Muestra un mensaje de error dentro del modal (nunca con window.alert).
+  function mostrarErrorGuia(msg) {
+    const modalBody = document.querySelector('#modal-guia .modal-body');
+    if (!modalBody) { console.error('[guia]', msg); return; }
+    let box = document.getElementById('g-err');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'g-err';
+      box.className = 'alert alert-danger py-2 mt-3';
+      box.style.fontSize = '.85rem';
+      modalBody.appendChild(box);
+    } else {
+      // Si existe pero está escondido dentro del form, lo movemos al final del
+      // modal-body para que siempre se vea arriba del footer.
+      if (box.parentNode !== modalBody) modalBody.appendChild(box);
+    }
+    box.textContent = msg;
+    box.style.display = '';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function limpiarErrorGuia() {
+    const box = document.getElementById('g-err');
+    if (box) { box.style.display = 'none'; box.textContent = ''; }
+  }
+
   btn.addEventListener('click', function(ev){
     try {
       ev.preventDefault();
-      const err = document.getElementById('g-err');
+      limpiarErrorGuia();
       const form = document.getElementById('form-guia');
-      if (!form) { alert('Form no encontrado.'); return; }
-      if (err) { err.style.display = 'none'; }
+      if (!form) { mostrarErrorGuia('Form no encontrado.'); return; }
       const fd = new FormData(form);
       if (!fd.getAll('ocs').length) {
-        if (err) { err.textContent = 'Selecciona al menos una orden de compra.'; err.style.display = ''; }
-        else { alert('Selecciona al menos una orden de compra.'); }
+        mostrarErrorGuia('Selecciona al menos una orden de compra.');
         return;
       }
       btn.disabled = true;
@@ -257,18 +281,16 @@
       .then(r => r.json())
       .then(d => {
         if (d.ok) { window.location.href = d.url; return; }
-        if (err) { err.textContent = d.error || 'Error al generar la guía.'; err.style.display = ''; }
-        else { alert(d.error || 'Error al generar la guía.'); }
+        mostrarErrorGuia(d.error || 'Error al generar la guía.');
         btn.disabled = false;
       })
       .catch(e => {
-        if (err) { err.textContent = 'Error de red: ' + e.message; err.style.display = ''; }
-        else { alert('Error de red: ' + e.message); }
+        mostrarErrorGuia('Error de red: ' + e.message);
         btn.disabled = false;
       });
     } catch (ex) {
       console.error('[guia] click handler threw:', ex);
-      alert('Error inesperado: ' + ex.message);
+      mostrarErrorGuia('Error inesperado: ' + ex.message);
       btn.disabled = false;
     }
   });
