@@ -117,7 +117,7 @@ def _registrar_entrada_almacen(guia, proyecto):
 
 
 def _siguiente_numero_guia(proyecto):
-    """Correlativo anual por proyecto: RG{nnnnn}-{YYYY}."""
+    """Correlativo anual por proyecto: GR{nnnnn}-{YYYY}."""
     import datetime
     anio = datetime.date.today().year
     sufijo = f'-{anio}'
@@ -126,11 +126,11 @@ def _siguiente_numero_guia(proyecto):
                    .filter(proyecto=proyecto, numero__endswith=sufijo)
                    .values_list('numero', flat=True)):
         try:
-            correlativo = numero.replace(sufijo, '').replace('RG', '')
+            correlativo = numero.replace(sufijo, '').replace('GR', '').replace('RG', '')
             mayor = max(mayor, int(correlativo))
         except ValueError:
             continue
-    return f'RG{str(mayor + 1).zfill(5)}{sufijo}'
+    return f'GR{str(mayor + 1).zfill(5)}{sufijo}'
 
 
 ESTADOS_GUIA_ACTIVA = ['PENDIENTE', 'EN_TRANSITO', 'ENTREGADO']
