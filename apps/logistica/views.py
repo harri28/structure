@@ -760,6 +760,12 @@ def req_revisar_log(request, proyecto_id, pk):
     # Historial siempre es solo lectura, sin importar el estado del REQ.
     if from_slug == 'historial':
         editable = False
+    # Desde 'Por Atender': forzamos editable para que Logística pueda cerrar
+    # los pendientes aunque el REQ ya esté en PARCIAL (o incluso ATENDIDO
+    # por despachos previos). El REQ solo aparece acá si tiene items con
+    # cantidad_aprobada < cantidad_requerida.
+    elif from_slug == 'por_atender' and req.estado in ('PARCIAL', 'ATENDIDO'):
+        editable = True
 
     if req.estado == 'ENVIADO' and from_slug != 'historial':
         req.estado = 'EN_REVISION'
@@ -867,6 +873,7 @@ def req_revisar_log(request, proyecto_id, pk):
                 'editable': editable,
                 'volver_urlname': volver_urlname,
                 'volver_label':   volver_label,
+                'from_slug':      from_slug,
             })
 
         # ── Guardar aprobaciones ─────────────────────────────────────
@@ -1009,6 +1016,7 @@ def req_revisar_log(request, proyecto_id, pk):
         'siguiente_numero_cot': siguiente_numero_cot,
         'volver_urlname': volver_urlname,
         'volver_label':   volver_label,
+        'from_slug':      from_slug,
     })
 
 
@@ -1137,7 +1145,9 @@ def req_item_aprobar(request, req_pk, det_pk):
         return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
 
     req = get_object_or_404(Requerimiento, pk=req_pk)
-    if req.estado not in ('ENVIADO', 'EN_REVISION'):
+    # APROBADO y PARCIAL también entran acá para que Logística pueda cerrar
+    # desde 'Por Atender' los ítems que quedaron con diferencia pendiente.
+    if req.estado not in ('ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL'):
         return JsonResponse({
             'ok': False,
             'error': 'El requerimiento ya no está en revisión.',
