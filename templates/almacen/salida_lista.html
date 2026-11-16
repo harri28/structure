@@ -32,8 +32,6 @@
             <th style="width:110px">N° Guía</th>
             <th style="width:100px">Fecha S.</th>
             <th style="width:90px" class="text-end">Cantidad</th>
-            <th style="width:90px" class="text-end">P.U</th>
-            <th style="width:100px" class="text-end">Parcial</th>
             <th style="min-width:150px">Observaciones</th>
           </tr>
         </thead>
@@ -47,15 +45,13 @@
             <td style="font-size:.82rem">{% if d.guia %}<code>{{ d.guia.numero }}</code>{% else %}—{% endif %}</td>
             <td style="font-size:.82rem;color:#6b7280">{{ d.salida.fecha|date:"d/m/Y" }}{% if d.salida.hora %} <span class="text-muted">{{ d.salida.hora|time:"H:i" }}</span>{% endif %}</td>
             <td class="text-end" style="font-size:.83rem">{{ d.cantidad|floatformat:2 }}</td>
-            <td class="text-end" style="font-size:.83rem">{{ d.precio_unitario|floatformat:4 }}</td>
-            <td class="text-end fw-semibold" style="font-size:.83rem">{{ d.subtotal|floatformat:2 }}</td>
             <td style="font-size:.78rem;color:#6b7280">{{ d.observaciones|default:d.salida.observaciones|default:"—" }}</td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="10" class="text-center py-5 text-muted">
+            <td colspan="8" class="text-center py-5 text-muted">
               <i class="bi bi-arrow-up-circle d-block mb-2" style="font-size:2rem;opacity:.3"></i>
-              Sin atenciones registradas. Presioná <strong>Nueva Atención</strong> para empezar.
+              Sin atenciones registradas. Presiona <strong>Nueva Atención</strong> para empezar.
             </td>
           </tr>
           {% endfor %}
