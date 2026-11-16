@@ -96,11 +96,14 @@
 <div class="modal fade" id="modal-oc" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl">
     <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title" style="font-size:1rem">
+      <div class="modal-header py-2 d-flex align-items-center gap-3">
+        <h6 class="modal-title mb-0" style="font-size:1rem">
           <i class="bi bi-file-text me-2" style="color:#4f46e5"></i>Nueva Orden de Compra
         </h6>
-        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+        <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.82rem;padding:.4em .7em">
+          N° <strong>{{ siguiente_numero_oc }}</strong>
+        </span>
+        <button type="button" class="btn-close btn-sm ms-auto" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <div class="row g-3 mb-3">

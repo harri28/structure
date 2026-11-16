@@ -1660,6 +1660,7 @@ def compras_log(request, proyecto_id):
         'q':        q,
         'total':    qs.count(),
         'TIPOS_PAGO_OC': TIPOS_PAGO_OC,
+        'siguiente_numero_oc': _siguiente_numero_oc(proyecto),
     })
 
 
