@@ -1277,7 +1277,7 @@ def req_item_sustituir(request, req_pk, det_pk):
     justif = (request.POST.get('justificacion') or '').strip()
 
     if not nuevo_insumo_id:
-        return JsonResponse({'ok': False, 'error': 'Elegí un insumo de reemplazo.'}, status=400)
+        return JsonResponse({'ok': False, 'error': 'Elige un insumo de reemplazo.'}, status=400)
     try:
         nuevo_insumo = InsumoPresupuesto.objects.get(pk=int(nuevo_insumo_id))
     except (ValueError, InsumoPresupuesto.DoesNotExist):
@@ -1622,7 +1622,7 @@ def oc_crear_ajax(request, proyecto_id):
     prov_id = data.get('proveedor_id') or None
     proveedor = Proveedor.objects.filter(pk=prov_id).first() if prov_id else None
     if not proveedor:
-        return JsonResponse({'ok': False, 'error': 'Elegí un proveedor del catálogo.'}, status=400)
+        return JsonResponse({'ok': False, 'error': 'Elige un proveedor del catálogo.'}, status=400)
 
     try:
         fecha = datetime.date.fromisoformat((data.get('fecha_entrega') or '').strip())
@@ -1644,7 +1644,7 @@ def oc_crear_ajax(request, proyecto_id):
 
     items_raw = data.get('items') or []
     if not items_raw:
-        return JsonResponse({'ok': False, 'error': 'Agregá al menos un ítem.'}, status=400)
+        return JsonResponse({'ok': False, 'error': 'Agrega al menos un ítem.'}, status=400)
 
     items = []
     for it in items_raw:

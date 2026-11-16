@@ -268,7 +268,7 @@
     const numero = ruc.value.trim();
     rucErr.style.display = 'none';
     if (!numero || !(numero.length === 8 || numero.length === 11) || !/^\d+$/.test(numero)) {
-      rucErr.textContent = 'Ingresá 8 dígitos (DNI) u 11 (RUC).';
+      rucErr.textContent = 'Ingresa 8 dígitos (DNI) u 11 (RUC).';
       rucErr.style.display = 'block';
       return;
     }

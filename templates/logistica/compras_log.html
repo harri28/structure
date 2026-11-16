@@ -107,7 +107,7 @@
           <div class="col-md-5 position-relative">
             <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Proveedor <span class="text-danger">*</span></label>
             <input type="text" id="oc-proveedor-input" class="form-control form-control-sm" autocomplete="off"
-                   placeholder="Buscá por razón social...">
+                   placeholder="Busca por razón social...">
             <input type="hidden" id="oc-proveedor-id" value="">
             <div id="oc-proveedor-sugs" class="list-group position-absolute shadow-sm w-100"
                  style="z-index:1080;max-height:220px;overflow-y:auto;display:none;top:100%"></div>
@@ -495,7 +495,7 @@
   document.getElementById('btn-oc-guardar').addEventListener('click', function(){
     const err = document.getElementById('oc-err');
     err.style.display = 'none';
-    if (!pId.value) { err.textContent = 'Elegí un proveedor del catálogo.'; err.style.display=''; return; }
+    if (!pId.value) { err.textContent = 'Elige un proveedor del catálogo.'; err.style.display=''; return; }
     const items = [];
     tbody.querySelectorAll('tr').forEach(tr => {
       const cant = parseFloat(tr.querySelector('.it-cant').value) || 0;
@@ -508,7 +508,7 @@
         items.push({ insumo_id: ins_id || null, descripcion: desc, unidad: um, cantidad: cant, precio_unitario: pu });
       }
     });
-    if (!items.length) { err.textContent = 'Agregá al menos un ítem con cantidad.'; err.style.display=''; return; }
+    if (!items.length) { err.textContent = 'Agrega al menos un ítem con cantidad.'; err.style.display=''; return; }
 
     // Bloquear si hay alguna cantidad por encima del saldo
     if (tbody.querySelector('.it-cant.is-invalid')) {
