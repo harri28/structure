@@ -774,6 +774,27 @@ def req_revisar_log(request, proyecto_id, pk):
     detalles = list(req.detalles.select_related('insumo').all())
     _backfill_codigos(detalles, proyecto)
 
+    # En modo Por Atender, cada detalle expone:
+    #   - aprobado_previo: lo ya aprobado antes de abrir esta pantalla
+    #   - pendiente: cantidad_requerida - aprobado_previo (nunca negativa)
+    # El template usa esos valores para que el input muestre la DIFERENCIA
+    # y el max sea esa misma diferencia. Al guardar, la cantidad enviada
+    # se interpreta como incremental y se suma al aprobado_previo.
+    modo_por_atender = (from_slug == 'por_atender')
+    if modo_por_atender:
+        _detalles_pendientes = []
+        for d in detalles:
+            previo = d.cantidad_aprobada or Decimal('0')
+            pend = (d.cantidad_requerida or Decimal('0')) - previo
+            if pend < 0:
+                pend = Decimal('0')
+            d.aprobado_previo = previo
+            d.pendiente = pend
+            if pend > 0:
+                _detalles_pendientes.append(d)
+        # En Por atender solo mostramos los items con diferencia pendiente.
+        detalles = _detalles_pendientes
+
     if request.method == 'POST':
         if not editable:
             messages.error(request, 'Este requerimiento ya fue aprobado; usa Anular o Recuperar.')
@@ -789,9 +810,16 @@ def req_revisar_log(request, proyecto_id, pk):
         for det in detalles:
             raw = request.POST.get(f'aprobada_{det.pk}', '').strip()
             try:
-                aprobada = Decimal(raw) if raw else Decimal('0')
+                entrada = Decimal(raw) if raw else Decimal('0')
             except InvalidOperation:
-                aprobada = Decimal('0')
+                entrada = Decimal('0')
+            # En Por atender el input es INCREMENTAL (la diferencia). El
+            # total aprobado = ya aprobado + lo escrito ahora.
+            if modo_por_atender:
+                previo_det = det.cantidad_aprobada or Decimal('0')
+                aprobada = previo_det + entrada
+            else:
+                aprobada = entrada
             if aprobada < 0:
                 errores.append(f'Ítem "{det.descripcion or det.pk}": cantidad negativa.')
             elif aprobada > det.cantidad_requerida:
@@ -874,6 +902,7 @@ def req_revisar_log(request, proyecto_id, pk):
                 'volver_urlname': volver_urlname,
                 'volver_label':   volver_label,
                 'from_slug':      from_slug,
+                'modo_por_atender': modo_por_atender,
             })
 
         # ── Guardar aprobaciones ─────────────────────────────────────
@@ -1017,6 +1046,7 @@ def req_revisar_log(request, proyecto_id, pk):
         'volver_urlname': volver_urlname,
         'volver_label':   volver_label,
         'from_slug':      from_slug,
+        'modo_por_atender': modo_por_atender,
     })
 
 
@@ -1157,9 +1187,15 @@ def req_item_aprobar(request, req_pk, det_pk):
 
     raw = (request.POST.get('cantidad') or '').strip()
     try:
-        cantidad = Decimal(raw)
+        entrada = Decimal(raw)
     except (InvalidOperation, ValueError):
         return JsonResponse({'ok': False, 'error': 'Cantidad inválida.'}, status=400)
+
+    # Si viene con incremental=1 (desde Por atender), el valor entrante se
+    # suma al ya aprobado del ítem en vez de reemplazarlo.
+    incremental = request.POST.get('incremental') == '1'
+    previo_det = det.cantidad_aprobada or Decimal('0')
+    cantidad = (previo_det + entrada) if incremental else entrada
 
     if cantidad < 0:
         return JsonResponse({'ok': False, 'error': 'La cantidad no puede ser negativa.'}, status=400)

@@ -105,16 +105,31 @@
             {% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}
           </td>
           <td style="font-size:.82rem;color:#6b7280">{{ d.unidad|default:"—" }}</td>
-          <td class="text-end fw-semibold" style="font-size:.83rem">{{ d.cantidad_requerida|floatformat:4 }}</td>
+          <td class="text-end fw-semibold" style="font-size:.83rem">
+            {% if modo_por_atender %}
+              <div>{{ d.cantidad_requerida|floatformat:4 }}</div>
+              <div class="text-muted" style="font-size:.72rem">Ya aprob.: {{ d.aprobado_previo|floatformat:4 }}</div>
+            {% else %}
+              {{ d.cantidad_requerida|floatformat:4 }}
+            {% endif %}
+          </td>
           <td class="text-center">
             <input type="number"
                    name="aprobada_{{ d.pk }}"
                    id="aprobada_{{ d.pk }}"
                    class="form-control form-control-sm text-end cant-aprobada"
                    style="max-width:130px;margin:0 auto{% if not editable %};background:#f8f9fa;color:#6b7280{% endif %}"
-                   value="{% if d.cantidad_aprobada is not None %}{{ d.cantidad_aprobada|unlocalize }}{% elif editable %}{{ d.cantidad_requerida|unlocalize }}{% else %}{{ d.cantidad_aprobada|unlocalize }}{% endif %}"
-                   min="0" max="{{ d.cantidad_requerida|unlocalize }}" step="0.0001"
-                   data-max="{{ d.cantidad_requerida|unlocalize }}"
+                   {% if modo_por_atender %}
+                     value="{{ d.pendiente|unlocalize }}"
+                     min="0" max="{{ d.pendiente|unlocalize }}" step="0.0001"
+                     data-max="{{ d.pendiente|unlocalize }}"
+                     data-previo="{{ d.aprobado_previo|unlocalize }}"
+                     data-incremental="1"
+                   {% else %}
+                     value="{% if d.cantidad_aprobada is not None %}{{ d.cantidad_aprobada|unlocalize }}{% elif editable %}{{ d.cantidad_requerida|unlocalize }}{% else %}{{ d.cantidad_aprobada|unlocalize }}{% endif %}"
+                     min="0" max="{{ d.cantidad_requerida|unlocalize }}" step="0.0001"
+                     data-max="{{ d.cantidad_requerida|unlocalize }}"
+                   {% endif %}
                    {% if not editable %}readonly{% else %}required{% endif %}>
             <div class="invalid-feedback text-start" style="font-size:.72rem"></div>
           </td>
@@ -472,6 +487,9 @@
 
       var body = new FormData();
       body.append('cantidad', input.value);
+      if (input.dataset.incremental === '1') {
+        body.append('incremental', '1');
+      }
 
       fetch(btn.dataset.url, {
         method: 'POST',
