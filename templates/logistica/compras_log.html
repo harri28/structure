@@ -138,8 +138,8 @@
             <i class="bi bi-plus me-1"></i>Agregar ítem
           </button>
         </div>
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0" id="oc-tabla-items" style="font-size:.84rem">
+        <div style="overflow:visible">
+          <table class="table table-sm align-middle mb-0" id="oc-tabla-items" style="font-size:.84rem;overflow:visible">
             <thead class="table-light">
               <tr>
                 <th style="width:36%">Insumo</th>
@@ -157,15 +157,13 @@
           Subtotal:&nbsp;<span class="fw-semibold ms-2" id="oc-subtotal">S/ 0.00</span>
         </div>
 
-        <div class="row g-3">
-          <div class="col-md-4">
+        <div class="d-flex align-items-end justify-content-between flex-wrap gap-2">
+          <div style="max-width:180px">
             <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Costo de envío</label>
-            <input type="number" id="oc-envio" class="form-control form-control-sm text-end" step="0.01" min="0" value="0">
+            <input type="number" id="oc-envio" class="form-control form-control-sm text-end" step="0.01" min="0" placeholder="0.00">
           </div>
-          <div class="col-md-8 d-flex align-items-end justify-content-end">
-            <div class="fw-bold" style="font-size:1rem">
-              Total:&nbsp;<span style="color:#1d4ed8" id="oc-total">S/ 0.00</span>
-            </div>
+          <div class="fw-bold" style="font-size:1rem">
+            Total:&nbsp;<span style="color:#1d4ed8" id="oc-total">S/ 0.00</span>
           </div>
         </div>
 
@@ -268,19 +266,28 @@
   }
 
   function recalcRow(tr) {
-    const cant = parseFloat(tr.querySelector('.it-cant').value) || 0;
-    const pu   = parseFloat(tr.querySelector('.it-pu').value) || 0;
-    const sub  = cant * pu;
-    const subInp = tr.querySelector('.it-sub');
-    if (document.activeElement !== subInp) subInp.value = sub.toFixed(2);
+    const cantStr = tr.querySelector('.it-cant').value;
+    const puStr   = tr.querySelector('.it-pu').value;
+    const subInp  = tr.querySelector('.it-sub');
+    if (document.activeElement !== subInp) {
+      if (cantStr === '' || puStr === '') {
+        subInp.value = '';
+      } else {
+        const sub = (parseFloat(cantStr) || 0) * (parseFloat(puStr) || 0);
+        subInp.value = sub ? sub.toFixed(2) : '';
+      }
+    }
     recalcTotales();
   }
 
   function recalcFromSub(tr) {
     const cant = parseFloat(tr.querySelector('.it-cant').value) || 0;
-    const sub  = parseFloat(tr.querySelector('.it-sub').value) || 0;
+    const subStr = tr.querySelector('.it-sub').value;
     const puInp = tr.querySelector('.it-pu');
-    if (cant > 0) puInp.value = (sub / cant).toFixed(4);
+    if (cant > 0 && subStr !== '') {
+      const sub = parseFloat(subStr) || 0;
+      puInp.value = sub ? (sub / cant).toFixed(4) : '';
+    }
     recalcTotales();
   }
 
@@ -299,14 +306,15 @@
   function addRow() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="position:relative">
+      <td style="position:relative;overflow:visible">
         <input type="text" class="form-control form-control-sm it-ins-input" autocomplete="off" placeholder="Buscar insumo..." data-ins-id="">
-        <div class="list-group position-absolute shadow-sm it-ins-sugs" style="z-index:1057;max-height:220px;overflow-y:auto;display:none;width:100%;top:100%"></div>
+        <div class="list-group position-absolute shadow-sm it-ins-sugs"
+             style="z-index:1080;max-height:260px;overflow-y:auto;display:none;top:100%;left:0;min-width:360px;max-width:520px"></div>
       </td>
       <td><input type="text" class="form-control form-control-sm it-um" readonly style="background:#f8f9fa"></td>
-      <td><input type="number" class="form-control form-control-sm text-end it-cant" min="0" step="1" value="0"></td>
-      <td><input type="number" class="form-control form-control-sm text-end it-pu" min="0" step="0.0001" value="0"></td>
-      <td><input type="number" class="form-control form-control-sm text-end it-sub" min="0" step="0.01" value="0"></td>
+      <td><input type="number" class="form-control form-control-sm text-end it-cant" min="0" step="1" placeholder="0"></td>
+      <td><input type="number" class="form-control form-control-sm text-end it-pu" min="0" step="0.0001" placeholder="0.00"></td>
+      <td><input type="number" class="form-control form-control-sm text-end it-sub" min="0" step="0.01" placeholder="0.00"></td>
       <td class="text-end"><button type="button" class="btn-tbl danger it-del" title="Eliminar"><i class="bi bi-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
@@ -331,8 +339,8 @@
           sugs.innerHTML = '<div class="list-group-item text-muted small">Sin coincidencias en insumos aprobados.</div>';
         } else {
           sugs.innerHTML = items.map(i =>
-            `<button type="button" class="list-group-item list-group-item-action py-1" data-id="${i.id}" data-cod="${i.codigo||''}" data-desc="${(i.descripcion||'').replace(/"/g,'&quot;')}" data-um="${i.unidad||''}">
-              <div class="fw-semibold" style="font-size:.78rem"><code>${i.codigo||'—'}</code> · ${i.descripcion||''}</div>
+            `<button type="button" class="list-group-item list-group-item-action py-1" data-id="${i.id}" data-cod="${i.codigo||''}" data-desc="${(i.descripcion||'').replace(/"/g,'&quot;')}" data-um="${i.unidad||''}" style="text-align:left">
+              <div class="fw-semibold" style="font-size:.78rem;white-space:normal;line-height:1.3"><code>${i.codigo||'—'}</code> · ${i.descripcion||''}</div>
             </button>`
           ).join('');
         }
