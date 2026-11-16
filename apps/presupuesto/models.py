@@ -289,3 +289,72 @@ class PartidaModificacion(models.Model):
 
     def __str__(self):
         return f'[{self.subtipo}] {self.codigo} - {self.nombre}'
+
+
+class AvanceMensual(models.Model):
+    """Registro mensual (acumulado al cierre del mes) del avance de la obra.
+    Alimenta la Curva S y los KPIs físico/financiero."""
+    MESES = [
+        (1, 'Ene'), (2, 'Feb'), (3, 'Mar'),  (4, 'Abr'),
+        (5, 'May'), (6, 'Jun'), (7, 'Jul'),  (8, 'Ago'),
+        (9, 'Sep'), (10, 'Oct'), (11, 'Nov'), (12, 'Dic'),
+    ]
+    proyecto         = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='avances_mensuales')
+    anio             = models.PositiveSmallIntegerField('Año')
+    mes              = models.PositiveSmallIntegerField('Mes', choices=MESES)
+    programado_pct   = models.DecimalField('Programado (%)',  max_digits=5, decimal_places=2, default=Decimal('0'))
+    ejecutado_pct    = models.DecimalField('Ejecutado (%)',   max_digits=5, decimal_places=2, default=Decimal('0'))
+    monto_programado = models.DecimalField('Monto programado (S/)', max_digits=15, decimal_places=2, default=Decimal('0'))
+    monto_ejecutado  = models.DecimalField('Monto ejecutado (S/)',  max_digits=15, decimal_places=2, default=Decimal('0'))
+    observaciones    = models.TextField(blank=True)
+    created_by       = models.ForeignKey('auth.User', null=True, blank=True, on_delete=models.SET_NULL,
+                                         related_name='avances_registrados')
+    created_at       = models.DateTimeField(auto_now_add=True)
+    updated_at       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = 'Avance mensual'
+        verbose_name_plural = 'Avances mensuales'
+        unique_together     = [('proyecto', 'anio', 'mes')]
+        ordering            = ['anio', 'mes']
+
+    def __str__(self):
+        return f'{self.proyecto.codigo} — {self.get_mes_display()} {self.anio}'
+
+
+class IncidenciaObra(models.Model):
+    """Incidencia o evento ocurrido en obra durante el mes."""
+    TIPOS = [
+        ('INCIDENCIA', 'Incidencia'),
+        ('EVENTO',     'Evento'),
+    ]
+    SEVERIDADES = [
+        ('ALTA',  'Alta'),
+        ('MEDIA', 'Media'),
+        ('BAJA',  'Baja'),
+    ]
+    ESTADOS = [
+        ('ABIERTA', 'Abierta'),
+        ('CERRADA', 'Cerrada'),
+    ]
+    proyecto     = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='incidencias_obra')
+    fecha        = models.DateField()
+    tipo         = models.CharField(max_length=20, choices=TIPOS, default='INCIDENCIA')
+    severidad    = models.CharField(max_length=10, choices=SEVERIDADES, default='MEDIA')
+    partida      = models.ForeignKey(Partida, null=True, blank=True, on_delete=models.SET_NULL,
+                                     related_name='incidencias')
+    descripcion  = models.TextField()
+    responsable  = models.CharField(max_length=200, blank=True)
+    estado       = models.CharField(max_length=10, choices=ESTADOS, default='ABIERTA')
+    created_by   = models.ForeignKey('auth.User', null=True, blank=True, on_delete=models.SET_NULL,
+                                     related_name='incidencias_registradas')
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = 'Incidencia de obra'
+        verbose_name_plural = 'Incidencias de obra'
+        ordering            = ['-fecha', '-id']
+
+    def __str__(self):
+        return f'[{self.get_tipo_display()}] {self.fecha} — {self.descripcion[:60]}'

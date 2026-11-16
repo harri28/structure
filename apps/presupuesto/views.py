@@ -75,33 +75,185 @@ def lista(request, proyecto_id):
 
 @requiere('puede_ver_presupuesto')
 def avance_fisico(request, pk):
-    """Registro de Avance Físico. Modulo en construccion: no hay persistencia
-    todavía, los KPIs y tablas quedan vacíos hasta que se implemente."""
-    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    """Registro de Avance Físico: KPIs, Curva S e Incidencias/Eventos
+    leídos de AvanceMensual + IncidenciaObra."""
+    from decimal import Decimal
+    from apps.presupuesto.models import AvanceMensual, IncidenciaObra
 
-    kpis = {
-        'avance_fisico':     0,
-        'avance_financiero': 0,
-        'desviacion':        0,
-        'partidas_ok':       0,
-        'partidas_total':    0,
-        'valorizacion_mes':  0,
-    }
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    proyecto = presupuesto.proyecto
+
+    avances = list(AvanceMensual.objects
+                   .filter(proyecto=proyecto)
+                   .order_by('anio', 'mes'))
+    ultimo = avances[-1] if avances else None
+
+    total_presup = presupuesto.total_presupuesto() or Decimal('0')
+    monto_acum = sum((a.monto_ejecutado for a in avances), Decimal('0'))
+
+    if ultimo:
+        kpis = {
+            'avance_fisico':     float(ultimo.ejecutado_pct),
+            'avance_financiero': float((monto_acum / total_presup * 100) if total_presup else 0),
+            'desviacion':        float(ultimo.ejecutado_pct - ultimo.programado_pct),
+            'partidas_ok':       0,
+            'partidas_total':    presupuesto.partidas.count(),
+            'valorizacion_mes':  float(ultimo.monto_ejecutado),
+        }
+    else:
+        kpis = {
+            'avance_fisico': 0, 'avance_financiero': 0, 'desviacion': 0,
+            'partidas_ok': 0, 'partidas_total': presupuesto.partidas.count(),
+            'valorizacion_mes': 0,
+        }
+
+    # Curva S: meses como etiquetas "Ene 26", valores acumulados.
+    meses_lbl, serie_prog, serie_ejec = [], [], []
+    for a in avances:
+        meses_lbl.append(f'{a.get_mes_display()} {str(a.anio)[-2:]}')
+        serie_prog.append(float(a.programado_pct))
+        serie_ejec.append(float(a.ejecutado_pct))
+
+    incidencias_qs = (IncidenciaObra.objects
+                      .filter(proyecto=proyecto)
+                      .select_related('partida')
+                      .order_by('-fecha', '-id'))
+    incidencias_list = list(incidencias_qs)
     incidencias_kpis = {
-        'abiertas': 0, 'cerradas': 0, 'eventos': 0, 'altas': 0,
+        'abiertas': sum(1 for i in incidencias_list if i.estado == 'ABIERTA'),
+        'cerradas': sum(1 for i in incidencias_list if i.estado == 'CERRADA'),
+        'eventos':  sum(1 for i in incidencias_list if i.tipo == 'EVENTO'),
+        'altas':    sum(1 for i in incidencias_list if i.severidad == 'ALTA'),
     }
+
+    partidas_lista = list(presupuesto.partidas
+                          .filter(nivel__lte=2)
+                          .order_by('codigo')[:40])
 
     return render(request, 'presupuesto/avance_fisico.html', {
         'presupuesto':       presupuesto,
-        'proyecto':          presupuesto.proyecto,
+        'proyecto':          proyecto,
         'kpis':              kpis,
-        'partidas':          [],
-        'incidencias':       [],
+        'avances':           avances,
+        'incidencias':       incidencias_list,
         'incidencias_kpis':  incidencias_kpis,
-        'curva_s_json':      json.dumps({'meses': [], 'programado': [], 'ejecutado': []}),
-        'avance_partidas_json': json.dumps({'labels': [], 'programado': [], 'ejecutado': []}),
-        'en_desarrollo':     True,
+        'partidas_proy':     partidas_lista,
+        'monto_acumulado':   monto_acum,
+        'curva_s_json': json.dumps({
+            'meses': meses_lbl, 'programado': serie_prog, 'ejecutado': serie_ejec,
+        }),
     })
+
+
+@requiere('puede_editar_presupuesto')
+@require_POST
+def avance_guardar(request, pk):
+    """Crea o actualiza un AvanceMensual (clave única proyecto+anio+mes)."""
+    from decimal import Decimal, InvalidOperation
+    from django.http import JsonResponse
+    from apps.presupuesto.models import AvanceMensual
+
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    proyecto = presupuesto.proyecto
+
+    try:
+        anio = int(request.POST.get('anio') or 0)
+        mes  = int(request.POST.get('mes') or 0)
+        if not (2000 < anio < 2100 and 1 <= mes <= 12):
+            raise ValueError
+        prog = Decimal(request.POST.get('programado_pct') or '0')
+        ejec = Decimal(request.POST.get('ejecutado_pct') or '0')
+        mprog = Decimal(request.POST.get('monto_programado') or '0')
+        mejec = Decimal(request.POST.get('monto_ejecutado') or '0')
+    except (ValueError, InvalidOperation):
+        return JsonResponse({'ok': False, 'error': 'Datos inválidos.'}, status=400)
+    if not (0 <= prog <= 100) or not (0 <= ejec <= 100):
+        return JsonResponse({'ok': False, 'error': 'Los % deben estar entre 0 y 100.'}, status=400)
+
+    obs = (request.POST.get('observaciones') or '').strip()
+    pk_edit = request.POST.get('pk') or ''
+
+    if pk_edit:
+        obj = get_object_or_404(AvanceMensual, pk=int(pk_edit), proyecto=proyecto)
+        obj.anio = anio; obj.mes = mes
+        obj.programado_pct = prog; obj.ejecutado_pct = ejec
+        obj.monto_programado = mprog; obj.monto_ejecutado = mejec
+        obj.observaciones = obs
+        obj.save()
+    else:
+        AvanceMensual.objects.update_or_create(
+            proyecto=proyecto, anio=anio, mes=mes,
+            defaults={
+                'programado_pct': prog, 'ejecutado_pct': ejec,
+                'monto_programado': mprog, 'monto_ejecutado': mejec,
+                'observaciones': obs, 'created_by': request.user,
+            },
+        )
+    return JsonResponse({'ok': True})
+
+
+@requiere('puede_editar_presupuesto')
+@require_POST
+def avance_eliminar(request, pk, avance_pk):
+    from django.http import JsonResponse
+    from apps.presupuesto.models import AvanceMensual
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    AvanceMensual.objects.filter(pk=avance_pk, proyecto=presupuesto.proyecto).delete()
+    return JsonResponse({'ok': True})
+
+
+@requiere('puede_editar_presupuesto')
+@require_POST
+def incidencia_guardar(request, pk):
+    """Crea o actualiza una IncidenciaObra."""
+    import datetime
+    from django.http import JsonResponse
+    from apps.presupuesto.models import IncidenciaObra, Partida
+
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    proyecto = presupuesto.proyecto
+
+    fecha_raw = (request.POST.get('fecha') or '').strip()
+    try:
+        fecha = datetime.date.fromisoformat(fecha_raw)
+    except ValueError:
+        return JsonResponse({'ok': False, 'error': 'Fecha inválida.'}, status=400)
+    tipo = request.POST.get('tipo') or 'INCIDENCIA'
+    severidad = request.POST.get('severidad') or 'MEDIA'
+    descripcion = (request.POST.get('descripcion') or '').strip()
+    if not descripcion:
+        return JsonResponse({'ok': False, 'error': 'La descripción es obligatoria.'}, status=400)
+    responsable = (request.POST.get('responsable') or '').strip()
+    estado = request.POST.get('estado') or 'ABIERTA'
+    partida_pk = (request.POST.get('partida') or '').strip() or None
+    partida = None
+    if partida_pk:
+        partida = Partida.objects.filter(pk=partida_pk, presupuesto=presupuesto).first()
+
+    pk_edit = request.POST.get('pk') or ''
+    if pk_edit:
+        inc = get_object_or_404(IncidenciaObra, pk=int(pk_edit), proyecto=proyecto)
+        inc.fecha = fecha; inc.tipo = tipo; inc.severidad = severidad
+        inc.descripcion = descripcion; inc.responsable = responsable
+        inc.estado = estado; inc.partida = partida
+        inc.save()
+    else:
+        IncidenciaObra.objects.create(
+            proyecto=proyecto, fecha=fecha, tipo=tipo, severidad=severidad,
+            descripcion=descripcion, responsable=responsable, estado=estado,
+            partida=partida, created_by=request.user,
+        )
+    return JsonResponse({'ok': True})
+
+
+@requiere('puede_editar_presupuesto')
+@require_POST
+def incidencia_eliminar(request, pk, inc_pk):
+    from django.http import JsonResponse
+    from apps.presupuesto.models import IncidenciaObra
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    IncidenciaObra.objects.filter(pk=inc_pk, proyecto=presupuesto.proyecto).delete()
+    return JsonResponse({'ok': True})
 
 
 @requiere('puede_editar_presupuesto')

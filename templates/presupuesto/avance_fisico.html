@@ -11,22 +11,11 @@
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
     <h4 class="mb-0"><i class="bi bi-graph-up-arrow me-2" style="color:#0ea5e9"></i>Registro de Avance Físico</h4>
-    <div class="text-muted" style="font-size:.82rem">Módulo en construcción — sin datos registrados todavía</div>
+    <div class="text-muted" style="font-size:.82rem">Curva S, KPIs e incidencias cargados desde la obra</div>
   </div>
 </div>
 
 {% include 'presupuesto/_pres_nav.html' with active_tab='avance' %}
-
-<div class="alert d-flex align-items-start gap-3 mt-3"
-     style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px">
-  <i class="bi bi-tools fs-4 mt-1 flex-shrink-0"></i>
-  <div style="font-size:.86rem">
-    <div class="fw-bold mb-1">Módulo en desarrollo</div>
-    El registro de avance físico (curva S, KPIs, incidencias y eventos) todavía no está
-    conectado a la base de datos. Los cuadros arrancan vacíos y van a mostrar datos reales
-    cuando se implemente la funcionalidad.
-  </div>
-</div>
 
 <ul class="nav nav-pills mt-3 mb-1" id="avanceSubTabs" role="tablist">
   <li class="nav-item" role="presentation">
@@ -54,7 +43,7 @@
           <i class="bi bi-speedometer2" style="color:#0ea5e9"></i>
         </div>
         <div>
-          <div class="stat-val" style="color:#0ea5e9">{{ kpis.avance_fisico }}%</div>
+          <div class="stat-val" style="color:#0ea5e9">{{ kpis.avance_fisico|floatformat:1 }}%</div>
           <div class="stat-label">Avance Físico</div>
         </div>
       </div>
@@ -67,7 +56,7 @@
           <i class="bi bi-cash-coin" style="color:#7c3aed"></i>
         </div>
         <div>
-          <div class="stat-val" style="color:#7c3aed">{{ kpis.avance_financiero }}%</div>
+          <div class="stat-val" style="color:#7c3aed">{{ kpis.avance_financiero|floatformat:1 }}%</div>
           <div class="stat-label">Avance Financiero</div>
         </div>
       </div>
@@ -80,8 +69,8 @@
           <i class="bi bi-arrow-up-right-circle" style="color:#16a34a"></i>
         </div>
         <div>
-          <div class="stat-val" style="color:#16a34a">+{{ kpis.desviacion }} pp</div>
-          <div class="stat-label">Desviación (Físico − Financiero)</div>
+          <div class="stat-val" style="color:#16a34a">{{ kpis.desviacion|floatformat:1 }} pp</div>
+          <div class="stat-label">Desviación (Ejec. − Prog.)</div>
         </div>
       </div>
     </div>
@@ -90,18 +79,18 @@
     <div class="card stat-card" style="border-top-color:#d97706">
       <div class="card-body d-flex align-items-center gap-3">
         <div class="stat-icon" style="background:#fef3c7">
-          <i class="bi bi-check2-square" style="color:#d97706"></i>
+          <i class="bi bi-list-ol" style="color:#d97706"></i>
         </div>
         <div>
-          <div class="stat-val" style="color:#d97706">{{ kpis.partidas_ok }}/{{ kpis.partidas_total }}</div>
-          <div class="stat-label">Partidas al día</div>
+          <div class="stat-val" style="color:#d97706">{{ avances|length }}</div>
+          <div class="stat-label">Meses registrados</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Gráficos -->
+<!-- Gráfico + Valorización -->
 <div class="row g-3 mt-1">
   <div class="col-lg-7">
     <div class="card h-100">
@@ -116,10 +105,10 @@
       <div class="card-header">Valorización del mes</div>
       <div class="card-body d-flex flex-column align-items-center justify-content-center text-center" style="min-height:230px">
         <div class="stat-val" style="font-size:2.4rem;color:var(--accent)">S/ {{ kpis.valorizacion_mes|floatformat:2 }}</div>
-        <div class="stat-label mt-1">Valorización estimada — mes actual</div>
+        <div class="stat-label mt-1">Ejecutado en el último mes registrado</div>
         <div class="mt-3 d-flex gap-4">
           <div class="text-center">
-            <div class="fw-bold" style="font-size:1.1rem;color:#16a34a">S/ 0,00</div>
+            <div class="fw-bold" style="font-size:1.1rem;color:#16a34a">S/ {{ monto_acumulado|floatformat:2 }}</div>
             <div class="stat-label" title="Suma de valorizaciones ejecutadas hasta la fecha">Acumulado</div>
           </div>
           <div class="text-center">
@@ -132,54 +121,69 @@
   </div>
 </div>
 
-<div class="row g-3 mt-1">
-  <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header">Avance por Partida (Programado vs. Ejecutado)</div>
-      <div class="card-body">
-        <canvas id="chartPartidas" height="260"></canvas>
-      </div>
-    </div>
+<!-- Tabla de avances mensuales -->
+<div class="card mt-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-calendar3 me-1"></i>Avances mensuales</span>
+    {% if permisos.puede_editar_presupuesto %}
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAvance"
+            onclick="prepararAvance(null)">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo registro mensual
+    </button>
+    {% endif %}
   </div>
-  <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header">Partidas con mayor desviación</div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm mb-0" style="font-size:.82rem">
-            <thead>
-              <tr>
-                <th>Partida</th>
-                <th class="text-end">Prog.</th>
-                <th class="text-end">Ejec.</th>
-                <th class="text-end">Desv.</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for p in partidas %}
-              <tr>
-                <td>
-                  <span class="text-muted">{{ p.codigo }}</span> {{ p.nombre }}
-                </td>
-                <td class="text-end">{{ p.programado }}%</td>
-                <td class="text-end">{{ p.ejecutado }}%</td>
-                <td class="text-end {% if p.desviacion < 0 %}text-danger{% else %}text-success{% endif %}">
-                  {{ p.desviacion }} pp
-                </td>
-                <td>
-                  {% if p.estado == 'OK' %}
-                  <span class="badge" style="background:#dcfce7;color:#16a34a">Al día</span>
-                  {% else %}
-                  <span class="badge" style="background:#fee2e2;color:#dc2626">Atraso</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table-modern mb-0" style="font-size:.84rem">
+        <thead>
+          <tr>
+            <th>Periodo</th>
+            <th class="text-end">Programado (%)</th>
+            <th class="text-end">Ejecutado (%)</th>
+            <th class="text-end">Monto programado (S/)</th>
+            <th class="text-end">Monto ejecutado (S/)</th>
+            <th>Observaciones</th>
+            {% if permisos.puede_editar_presupuesto %}<th class="text-end"></th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in avances %}
+          <tr>
+            <td class="fw-semibold">{{ a.get_mes_display }} {{ a.anio }}</td>
+            <td class="text-end">{{ a.programado_pct }}</td>
+            <td class="text-end fw-semibold" style="color:#0ea5e9">{{ a.ejecutado_pct }}</td>
+            <td class="text-end text-muted">{{ a.monto_programado|miles:2 }}</td>
+            <td class="text-end" style="color:#16a34a">{{ a.monto_ejecutado|miles:2 }}</td>
+            <td class="text-muted" style="font-size:.78rem">{{ a.observaciones|default:"—"|truncatechars:60 }}</td>
+            {% if permisos.puede_editar_presupuesto %}
+            <td class="text-end">
+              <button type="button" class="btn-tbl" title="Editar"
+                      data-bs-toggle="modal" data-bs-target="#modalAvance"
+                      data-pk="{{ a.pk }}"
+                      data-anio="{{ a.anio }}" data-mes="{{ a.mes }}"
+                      data-prog="{{ a.programado_pct }}" data-ejec="{{ a.ejecutado_pct }}"
+                      data-mprog="{{ a.monto_programado }}" data-mejec="{{ a.monto_ejecutado }}"
+                      data-obs="{{ a.observaciones|escapejs }}"
+                      onclick="prepararAvance(this)">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button type="button" class="btn-tbl danger" title="Eliminar"
+                      onclick="eliminarAvance({{ a.pk }}, '{{ a.get_mes_display }} {{ a.anio }}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="{% if permisos.puede_editar_presupuesto %}7{% else %}6{% endif %}" class="text-center py-4 text-muted">
+              <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+              Sin registros mensuales todavía. Carga el primer mes para empezar a ver la Curva S.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -247,29 +251,33 @@
   <!-- Bitácora -->
   <div class="card mt-3">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <span>Bitácora de campo</span>
-      <button type="button" class="btn btn-primary btn-sm" disabled title="Prototipo — no guarda datos">
+      <span><i class="bi bi-journal-text me-1"></i>Bitácora de campo</span>
+      {% if permisos.puede_editar_presupuesto %}
+      <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalIncidencia"
+              onclick="prepararIncidencia(null)">
         <i class="bi bi-plus-lg me-1"></i>Nueva incidencia
       </button>
+      {% endif %}
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-sm table-hover mb-0" style="font-size:.82rem">
+        <table class="table-modern mb-0" style="font-size:.82rem">
           <thead>
             <tr>
               <th>Fecha</th>
               <th>Tipo</th>
               <th>Severidad</th>
-              <th>Partida relacionada</th>
+              <th>Partida</th>
               <th>Descripción</th>
               <th>Responsable</th>
               <th>Estado</th>
+              {% if permisos.puede_editar_presupuesto %}<th></th>{% endif %}
             </tr>
           </thead>
           <tbody>
             {% for i in incidencias %}
             <tr>
-              <td class="text-nowrap">{{ i.fecha }}</td>
+              <td class="text-nowrap">{{ i.fecha|date:"d/m/Y" }}</td>
               <td>
                 {% if i.tipo == 'INCIDENCIA' %}
                 <span class="badge" style="background:#fee2e2;color:#dc2626"><i class="bi bi-exclamation-triangle me-1"></i>Incidencia</span>
@@ -286,15 +294,43 @@
                 <span class="badge" style="background:#f3f4f6;color:#6b7280">Baja</span>
                 {% endif %}
               </td>
-              <td class="text-muted">{{ i.partida }}</td>
-              <td>{{ i.descripcion }}</td>
-              <td class="text-nowrap">{{ i.responsable }}</td>
+              <td class="text-muted" style="font-size:.78rem">
+                {% if i.partida %}{{ i.partida.codigo }} {{ i.partida.nombre|truncatechars:35 }}{% else %}—{% endif %}
+              </td>
+              <td>{{ i.descripcion|truncatechars:80 }}</td>
+              <td class="text-nowrap">{{ i.responsable|default:"—" }}</td>
               <td>
                 {% if i.estado == 'ABIERTA' %}
                 <span class="badge" style="background:#fee2e2;color:#dc2626">Abierta</span>
                 {% else %}
                 <span class="badge" style="background:#dcfce7;color:#16a34a">Cerrada</span>
                 {% endif %}
+              </td>
+              {% if permisos.puede_editar_presupuesto %}
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn-tbl" title="Editar"
+                        data-bs-toggle="modal" data-bs-target="#modalIncidencia"
+                        data-pk="{{ i.pk }}"
+                        data-fecha="{{ i.fecha|date:'Y-m-d' }}"
+                        data-tipo="{{ i.tipo }}" data-severidad="{{ i.severidad }}"
+                        data-estado="{{ i.estado }}" data-partida="{{ i.partida_id|default:'' }}"
+                        data-desc="{{ i.descripcion|escapejs }}"
+                        data-resp="{{ i.responsable|escapejs }}"
+                        onclick="prepararIncidencia(this)">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button type="button" class="btn-tbl danger" title="Eliminar"
+                        onclick="eliminarIncidencia({{ i.pk }})">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+              {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="{% if permisos.puede_editar_presupuesto %}8{% else %}7{% endif %}" class="text-center py-4 text-muted">
+                <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+                Sin incidencias registradas.
               </td>
             </tr>
             {% endfor %}
@@ -306,6 +342,139 @@
 
 </div><!-- /tab-incidencias -->
 </div><!-- /tab-content -->
+
+{% if permisos.puede_editar_presupuesto %}
+<!-- ──────────────── Modal Avance Mensual ──────────────── -->
+<div class="modal fade" id="modalAvance" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formAvance" onsubmit="return guardarAvance(event)">
+        {% csrf_token %}
+        <input type="hidden" name="pk" id="av-pk">
+        <div class="modal-header">
+          <h6 class="modal-title" id="av-titulo"><i class="bi bi-calendar3 me-1"></i>Nuevo registro mensual</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold">Año</label>
+              <input type="number" class="form-control" name="anio" id="av-anio" min="2020" max="2100" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">Mes</label>
+              <select class="form-select" name="mes" id="av-mes" required>
+                <option value="">—</option>
+                <option value="1">Enero</option><option value="2">Febrero</option>
+                <option value="3">Marzo</option><option value="4">Abril</option>
+                <option value="5">Mayo</option><option value="6">Junio</option>
+                <option value="7">Julio</option><option value="8">Agosto</option>
+                <option value="9">Septiembre</option><option value="10">Octubre</option>
+                <option value="11">Noviembre</option><option value="12">Diciembre</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">Programado (%)</label>
+              <input type="number" class="form-control" name="programado_pct" id="av-prog" step="0.01" min="0" max="100" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">Ejecutado (%)</label>
+              <input type="number" class="form-control" name="ejecutado_pct" id="av-ejec" step="0.01" min="0" max="100" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">Monto programado (S/)</label>
+              <input type="number" class="form-control" name="monto_programado" id="av-mprog" step="0.01" min="0">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">Monto ejecutado (S/)</label>
+              <input type="number" class="form-control" name="monto_ejecutado" id="av-mejec" step="0.01" min="0">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Observaciones</label>
+              <textarea class="form-control" name="observaciones" id="av-obs" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="text-danger mt-2" id="av-err" style="font-size:.82rem;display:none"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────── Modal Incidencia ──────────────── -->
+<div class="modal fade" id="modalIncidencia" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="formIncidencia" onsubmit="return guardarIncidencia(event)">
+        {% csrf_token %}
+        <input type="hidden" name="pk" id="inc-pk">
+        <div class="modal-header">
+          <h6 class="modal-title" id="inc-titulo"><i class="bi bi-exclamation-triangle me-1"></i>Nueva incidencia</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Fecha</label>
+              <input type="date" class="form-control" name="fecha" id="inc-fecha" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Tipo</label>
+              <select class="form-select" name="tipo" id="inc-tipo">
+                <option value="INCIDENCIA">Incidencia</option>
+                <option value="EVENTO">Evento</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Severidad</label>
+              <select class="form-select" name="severidad" id="inc-sev">
+                <option value="ALTA">Alta</option>
+                <option value="MEDIA" selected>Media</option>
+                <option value="BAJA">Baja</option>
+              </select>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Partida relacionada <span class="text-muted">(opcional)</span></label>
+              <select class="form-select" name="partida" id="inc-partida">
+                <option value="">— Sin partida —</option>
+                {% for p in partidas_proy %}
+                <option value="{{ p.pk }}">{{ p.codigo }} · {{ p.nombre|truncatechars:60 }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Estado</label>
+              <select class="form-select" name="estado" id="inc-estado">
+                <option value="ABIERTA" selected>Abierta</option>
+                <option value="CERRADA">Cerrada</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea class="form-control" name="descripcion" id="inc-desc" rows="3" required></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Responsable</label>
+              <input type="text" class="form-control" name="responsable" id="inc-resp"
+                     placeholder="Ej. Ing. Residente">
+            </div>
+          </div>
+          <div class="text-danger mt-2" id="inc-err" style="font-size:.82rem;display:none"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
@@ -313,7 +482,6 @@
 <script>
 (function () {
   var curva = {{ curva_s_json|safe }};
-  var avance = {{ avance_partidas_json|safe }};
   var accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2563eb';
 
   new Chart(document.getElementById('chartCurvaS'), {
@@ -321,24 +489,12 @@
     data: {
       labels: curva.meses,
       datasets: [
-        {
-          label: 'Programado',
-          data: curva.programado,
-          borderColor: '#9ca3af',
-          backgroundColor: 'transparent',
-          borderDash: [5, 4],
-          tension: .3,
-          pointRadius: 2,
-        },
-        {
-          label: 'Ejecutado',
-          data: curva.ejecutado,
-          borderColor: accent,
-          backgroundColor: accent + '22',
-          fill: true,
-          tension: .3,
-          pointRadius: 2,
-        },
+        { label: 'Programado', data: curva.programado,
+          borderColor: '#9ca3af', backgroundColor: 'transparent',
+          borderDash: [5, 4], tension: .3, pointRadius: 2 },
+        { label: 'Ejecutado', data: curva.ejecutado,
+          borderColor: accent, backgroundColor: accent + '22',
+          fill: true, tension: .3, pointRadius: 2 },
       ],
     },
     options: {
@@ -348,23 +504,106 @@
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
     },
   });
-
-  new Chart(document.getElementById('chartPartidas'), {
-    type: 'bar',
-    data: {
-      labels: avance.labels,
-      datasets: [
-        { label: 'Programado', data: avance.programado, backgroundColor: '#d1d5db' },
-        { label: 'Ejecutado',  data: avance.ejecutado,  backgroundColor: accent },
-      ],
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
-    },
-  });
 })();
+
+{% if permisos.puede_editar_presupuesto %}
+// ── Modal Avance Mensual ──────────────────────────────────────────
+function prepararAvance(btn) {
+  var err = document.getElementById('av-err');
+  err.style.display = 'none'; err.textContent = '';
+  if (!btn) {
+    document.getElementById('av-titulo').innerHTML = '<i class="bi bi-calendar3 me-1"></i>Nuevo registro mensual';
+    document.getElementById('formAvance').reset();
+    document.getElementById('av-pk').value = '';
+    var hoy = new Date();
+    document.getElementById('av-anio').value = hoy.getFullYear();
+    document.getElementById('av-mes').value = hoy.getMonth() + 1;
+    return;
+  }
+  document.getElementById('av-titulo').innerHTML = '<i class="bi bi-pencil me-1"></i>Editar registro mensual';
+  document.getElementById('av-pk').value    = btn.dataset.pk;
+  document.getElementById('av-anio').value  = btn.dataset.anio;
+  document.getElementById('av-mes').value   = btn.dataset.mes;
+  document.getElementById('av-prog').value  = btn.dataset.prog;
+  document.getElementById('av-ejec').value  = btn.dataset.ejec;
+  document.getElementById('av-mprog').value = btn.dataset.mprog;
+  document.getElementById('av-mejec').value = btn.dataset.mejec;
+  document.getElementById('av-obs').value   = btn.dataset.obs;
+}
+
+function guardarAvance(ev) {
+  ev.preventDefault();
+  var err = document.getElementById('av-err');
+  err.style.display = 'none';
+  var fd = new FormData(document.getElementById('formAvance'));
+  fetch('{% url "presupuesto:avance_guardar" presupuesto.pk %}', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    body: fd,
+  }).then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
+    .then(function(res){
+      if (res.ok && res.d.ok) { location.reload(); }
+      else { err.textContent = res.d.error || 'Error al guardar'; err.style.display = ''; }
+    }).catch(function(e){ err.textContent = e.message; err.style.display = ''; });
+  return false;
+}
+
+function eliminarAvance(pk, label) {
+  if (!confirm('¿Eliminar el registro de ' + label + '?')) return;
+  var csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  fetch('/presupuesto/{{ presupuesto.pk }}/avance/mensual/' + pk + '/eliminar/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+  }).then(function(){ location.reload(); });
+}
+
+// ── Modal Incidencia ──────────────────────────────────────────────
+function prepararIncidencia(btn) {
+  var err = document.getElementById('inc-err');
+  err.style.display = 'none'; err.textContent = '';
+  if (!btn) {
+    document.getElementById('inc-titulo').innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Nueva incidencia';
+    document.getElementById('formIncidencia').reset();
+    document.getElementById('inc-pk').value = '';
+    document.getElementById('inc-fecha').value = new Date().toISOString().slice(0, 10);
+    return;
+  }
+  document.getElementById('inc-titulo').innerHTML = '<i class="bi bi-pencil me-1"></i>Editar incidencia';
+  document.getElementById('inc-pk').value     = btn.dataset.pk;
+  document.getElementById('inc-fecha').value  = btn.dataset.fecha;
+  document.getElementById('inc-tipo').value   = btn.dataset.tipo;
+  document.getElementById('inc-sev').value    = btn.dataset.severidad;
+  document.getElementById('inc-estado').value = btn.dataset.estado;
+  document.getElementById('inc-partida').value = btn.dataset.partida || '';
+  document.getElementById('inc-desc').value   = btn.dataset.desc;
+  document.getElementById('inc-resp').value   = btn.dataset.resp;
+}
+
+function guardarIncidencia(ev) {
+  ev.preventDefault();
+  var err = document.getElementById('inc-err');
+  err.style.display = 'none';
+  var fd = new FormData(document.getElementById('formIncidencia'));
+  fetch('{% url "presupuesto:incidencia_guardar" presupuesto.pk %}', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    body: fd,
+  }).then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
+    .then(function(res){
+      if (res.ok && res.d.ok) { location.reload(); }
+      else { err.textContent = res.d.error || 'Error al guardar'; err.style.display = ''; }
+    }).catch(function(e){ err.textContent = e.message; err.style.display = ''; });
+  return false;
+}
+
+function eliminarIncidencia(pk) {
+  if (!confirm('¿Eliminar esta incidencia?')) return;
+  var csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  fetch('/presupuesto/{{ presupuesto.pk }}/avance/incidencia/' + pk + '/eliminar/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+  }).then(function(){ location.reload(); });
+}
+{% endif %}
 </script>
 {% endblock %}

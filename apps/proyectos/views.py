@@ -527,6 +527,7 @@ def proyecto_restablecer(request, pk):
     from apps.presupuesto.models import (
         Presupuesto, Partida, InsumoPresupuesto, Modificacion,
         AmpliacionInsumo, CambioNombreInsumo,
+        AvanceMensual, IncidenciaObra,
     )
     from apps.registro.models import Notificacion
     from django.db.models import Q
@@ -626,6 +627,13 @@ def proyecto_restablecer(request, pk):
             'color': '#ec4899',
             'descripcion': 'Registros diarios de maquinaria y liquidaciones del proyecto.',
             'count': _count(RegistroDiario.objects.filter(proyecto=proyecto)) + _count(RegistroMaquinaria.objects.filter(proyecto=proyecto)),
+        },
+        'avance_fisico': {
+            'nombre': 'Avance Físico',
+            'icono': 'bi-graph-up-arrow',
+            'color': '#0ea5e9',
+            'descripcion': 'Avances mensuales (Curva S) e Incidencias/Eventos de obra registrados en Presupuesto → Registro de Avance Físico.',
+            'count': _count(AvanceMensual.objects.filter(proyecto=proyecto)) + _count(IncidenciaObra.objects.filter(proyecto=proyecto)),
         },
         'notificaciones': {
             'nombre': 'Notificaciones del proyecto',
@@ -741,6 +749,11 @@ def proyecto_restablecer(request, pk):
             RegistroMaquinaria.objects.filter(proyecto=proyecto).delete()
             Liquidacion.objects.filter(proyecto=proyecto).delete()
             eliminados.append('Maquinaria')
+
+        if 'avance_fisico' in seleccionados:
+            AvanceMensual.objects.filter(proyecto=proyecto).delete()
+            IncidenciaObra.objects.filter(proyecto=proyecto).delete()
+            eliminados.append('Avance Físico')
 
         if 'notificaciones' in seleccionados:
             _notifs_del_proyecto().delete()
