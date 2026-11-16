@@ -1390,9 +1390,6 @@ def cot_aprobar(request, pk):
         messages.error(request, 'La cotización no tiene ítems.')
         return redirect('almacen:cot_detalle', pk=cot.pk)
 
-    # Flujo nuevo: el precio se captura en la Orden de Compra, no acá.
-    precio_opcional = request.POST.get('redirect_to') == 'compras_nueva_oc'
-
     cambios = []
     eliminados = []
     errores = []
@@ -1419,7 +1416,7 @@ def cot_aprobar(request, pk):
         if cantidad > det.cantidad:
             errores.append(f'{rotulo}: la cantidad aprobada ({cantidad}) no puede superar la solicitada ({det.cantidad}).')
             continue
-        if not precio_opcional and precio <= 0:
+        if precio <= 0:
             errores.append(f'{rotulo}: el precio unitario es obligatorio.')
             continue
         cambios.append((det, cantidad, precio))
@@ -1435,9 +1432,7 @@ def cot_aprobar(request, pk):
     # Validación cruzada contra el saldo del REQ: con las cantidades que están por
     # aprobarse acá + las ya aprobadas en OTRAS cotizaciones de este mismo REQ, no
     # se puede superar la cantidad_aprobada del detalle del requerimiento.
-    # Se omite cuando el flujo va a generar la OC (el control de saldo real pasa a
-    # vivir en Compras, no en la cotización).
-    if cot.requerimiento_origen_id and not precio_opcional:
+    if cot.requerimiento_origen_id:
         items_a_aprobar = [{
             'insumo_id': det.insumo_id,
             'descripcion': det.descripcion,
@@ -1473,10 +1468,6 @@ def cot_aprobar(request, pk):
     if cot.requerimiento_origen_id:
         from apps.logistica.views import _recalcular_estado_req
         _recalcular_estado_req(cot.requerimiento_origen)
-    if request.POST.get('redirect_to') == 'compras_nueva_oc':
-        from django.urls import reverse
-        url = reverse('logistica:compras_log', args=[cot.proyecto_id])
-        return redirect(f'{url}?nueva_oc=1')
     messages.success(request, f'Cotización COT{cot.numero} aprobada.')
     if request.POST.get('volver') == 'lista':
         return redirect('almacen:cot_lista', proyecto_id=cot.proyecto_id)
