@@ -773,14 +773,15 @@ def salida_lista(request, proyecto_id):
         .order_by('-salida__fecha', '-salida__created_at', '-pk')
     )
 
-    # Preview del siguiente correlativo (SLD-NNNN) para el modal "Nueva Atención"
+    # Preview del siguiente correlativo (NA{nnnnn}-{YYYY}) para el modal "Nueva Atención"
+    import datetime
     from django.db.models import Max
     ult = proyecto.salidas.aggregate(m=Max('numero'))['m']
     try:
         siguiente_num = int(ult or '0') + 1
     except (ValueError, TypeError):
         siguiente_num = (proyecto.salidas.count() or 0) + 1
-    siguiente_sld = f'SLD-{str(siguiente_num).zfill(4)}'
+    siguiente_sld = f'NA{str(siguiente_num).zfill(5)}-{datetime.date.today().year}'
 
     return render(request, 'almacen/salida_lista.html', {
         'proyecto': proyecto,

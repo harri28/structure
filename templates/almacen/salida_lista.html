@@ -69,33 +69,31 @@
 <div class="modal fade" id="modalAtencion" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-sm-down">
     <div class="modal-content">
-      <div class="modal-header py-2">
-        <h5 class="modal-title" style="font-size:.95rem"><i class="bi bi-plus-lg me-1"></i>Nueva Atención</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      <div class="modal-header py-2 d-flex align-items-center gap-3">
+        <h5 class="modal-title mb-0" style="font-size:1rem">
+          <i class="bi bi-plus-lg me-1" style="color:#4f46e5"></i>Nueva Atención
+        </h5>
+        <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.82rem;padding:.4em .7em">
+          N° <strong id="at-codigo" data-default="{{ siguiente_sld }}">{{ siguiente_sld }}</strong>
+        </span>
+        <button type="button" class="btn-close btn-sm ms-auto" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
         <form id="form-atencion" class="form-compact">
           {% csrf_token %}
 
           <div class="row g-2 mb-2">
-            <div class="col-sm-6">
-              <label class="form-label fw-semibold">Código</label>
-              <p id="at-codigo" class="form-control-plaintext fw-bold mb-0" data-default="{{ siguiente_sld }}" style="color:#2563eb;min-height:38px;display:flex;align-items:center">{{ siguiente_sld }}</p>
-            </div>
             <div class="col-sm-6 position-relative">
               <label class="form-label fw-semibold">Responsable</label>
               <input type="hidden" id="at-trabajador-id">
               <input type="text" id="at-responsable" class="form-control" autocomplete="off" placeholder="Nombre del que recibe">
               <div id="at-resp-resultados" class="list-group position-absolute w-100 shadow" style="max-height:220px;overflow-y:auto;z-index:1080;display:none;background:#fff;border:1px solid #d1d5db;border-radius:.375rem"></div>
             </div>
-          </div>
-
-          <div class="row g-2 mb-2">
-            <div class="col-sm-6">
+            <div class="col-sm-3">
               <label class="form-label fw-semibold">Fecha</label>
               <input type="date" id="at-fecha" class="form-control" value="{% now 'Y-m-d' %}">
             </div>
-            <div class="col-sm-6">
+            <div class="col-sm-3">
               <label class="form-label fw-semibold">Hora</label>
               <input type="time" id="at-hora" class="form-control" value="{% now 'H:i' %}">
             </div>
@@ -139,7 +137,7 @@
       <div class="modal-footer py-2">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" id="btn-guardar-atencion" class="btn btn-primary btn-sm">
-          <i class="bi bi-check-lg me-1"></i>Guardar Atención
+          <i class="bi bi-check-lg me-1"></i>Registrar y Generar Atención
         </button>
       </div>
     </div>
@@ -240,63 +238,69 @@
     }
 
     var timer = null;
+    function cargarSugerencias() {
+      var q = descInput.value.trim();
+      posicionarDropdown();
+      fetch(URL_INSUMOS + '?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok || !d.items || d.items.length === 0) {
+          dropdown.innerHTML = '<div class="list-group-item text-muted small">Sin materiales en stock</div>';
+          posicionarDropdown();
+          dropdown.style.display = 'block'; return;
+        }
+        // IDs ya elegidos en otras filas para marcarlos como no seleccionables
+        var yaElegidos = {};
+        Array.prototype.forEach.call(tbody.querySelectorAll('.at-item-insumo-id'), function (h) {
+          if (h !== insumoHidden && h.value) yaElegidos[h.value] = true;
+        });
+        dropdown.innerHTML = '';
+        d.items.forEach(function (it) {
+          var el = document.createElement('button');
+          el.type = 'button';
+          el.className = 'list-group-item list-group-item-action py-2';
+          el.style.fontSize = '.83rem';
+          var yaUsado = yaElegidos[it.id];
+          if (!it.seleccionable || yaUsado) {
+            el.disabled = true;
+            el.style.opacity = '.45';
+            el.style.cursor = 'not-allowed';
+            el.title = yaUsado ? 'Ya está en otra fila' : 'Sin stock en almacén';
+          }
+          el.innerHTML =
+            '<div class="d-flex justify-content-between">' +
+              '<div><strong style="color:#2563eb">' + (it.codigo || '') + '</strong> · ' + it.descripcion + '</div>' +
+              '<div class="small text-muted">Stock: <strong>' + it.stock_almacen + '</strong> ' + it.unidad + '</div>' +
+            '</div>';
+          el.addEventListener('click', function () {
+            if (!it.seleccionable || yaUsado) return;
+            insumoHidden.value = it.id;
+            descInput.value    = it.descripcion;
+            unidadCell.textContent = it.unidad || '—';
+            stockCell.textContent  = it.stock_almacen + ' ' + it.unidad;
+            stockCell.setAttribute('data-stock', String(it.stock_almacen));
+            dropdown.style.display = 'none';
+            cantInput.focus();
+          });
+          dropdown.appendChild(el);
+        });
+        posicionarDropdown();
+        dropdown.style.display = 'block';
+      });
+    }
+
     descInput.addEventListener('input', function () {
       insumoHidden.value = '';
       unidadCell.textContent = '—';
       stockCell.textContent = '—';
       stockCell.setAttribute('data-stock', '');
       clearTimeout(timer);
-      var q = descInput.value.trim();
-      if (q.length < 2) { dropdown.style.display = 'none'; return; }
-      posicionarDropdown();
-      timer = setTimeout(function () {
-        fetch(URL_INSUMOS + '?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (!d.ok || !d.items || d.items.length === 0) {
-            dropdown.innerHTML = '<div class="list-group-item text-muted small">Sin resultados</div>';
-            posicionarDropdown();
-            dropdown.style.display = 'block'; return;
-          }
-          // IDs ya elegidos en otras filas para marcarlos como no seleccionables
-          var yaElegidos = {};
-          Array.prototype.forEach.call(tbody.querySelectorAll('.at-item-insumo-id'), function (h) {
-            if (h !== insumoHidden && h.value) yaElegidos[h.value] = true;
-          });
-          dropdown.innerHTML = '';
-          d.items.forEach(function (it) {
-            var el = document.createElement('button');
-            el.type = 'button';
-            el.className = 'list-group-item list-group-item-action py-2';
-            el.style.fontSize = '.83rem';
-            var yaUsado = yaElegidos[it.id];
-            if (!it.seleccionable || yaUsado) {
-              el.disabled = true;
-              el.style.opacity = '.45';
-              el.style.cursor = 'not-allowed';
-              el.title = yaUsado ? 'Ya está en otra fila' : 'Sin stock en almacén';
-            }
-            el.innerHTML =
-              '<div class="d-flex justify-content-between">' +
-                '<div><strong style="color:#2563eb">' + (it.codigo || '') + '</strong> · ' + it.descripcion + '</div>' +
-                '<div class="small text-muted">Stock: <strong>' + it.stock_almacen + '</strong> ' + it.unidad + '</div>' +
-              '</div>';
-            el.addEventListener('click', function () {
-              if (!it.seleccionable || yaUsado) return;
-              insumoHidden.value = it.id;
-              descInput.value    = it.descripcion;
-              unidadCell.textContent = it.unidad || '—';
-              stockCell.textContent  = it.stock_almacen + ' ' + it.unidad;
-              stockCell.setAttribute('data-stock', String(it.stock_almacen));
-              dropdown.style.display = 'none';
-              cantInput.focus();
-            });
-            dropdown.appendChild(el);
-          });
-          posicionarDropdown();
-          dropdown.style.display = 'block';
-        });
-      }, 250);
+      timer = setTimeout(cargarSugerencias, 250);
+    });
+    // Al hacer click/focus en el input vacío, mostrar la lista completa de stock.
+    descInput.addEventListener('focus', function () {
+      clearTimeout(timer);
+      cargarSugerencias();
     });
 
     removeBtn.addEventListener('click', function () { removeRow(tr); });
