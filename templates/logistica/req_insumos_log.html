@@ -73,10 +73,10 @@
       </thead>
       <tbody>
         {% for ins in items %}
-        <tr>
-          <td><code style="color:#1d4ed8">{{ ins.codigo }}</code></td>
+        <tr{% if not ins.aprobado or ins.aprobado == 0 %} style="color:#9ca3af;opacity:.65"{% endif %}>
+          <td><code style="color:{% if ins.aprobado > 0 %}#1d4ed8{% else %}#9ca3af{% endif %}">{{ ins.codigo }}</code></td>
           <td>{{ ins.descripcion }}</td>
-          <td class="text-center text-muted">{{ ins.unidad }}</td>
+          <td class="text-center">{{ ins.unidad }}</td>
           <td class="text-end fw-bold"
               style="color:{% if ins.aprobado > 0 %}#15803d{% else %}#9ca3af{% endif %}">
             {{ ins.aprobado|floatformat:2 }}
