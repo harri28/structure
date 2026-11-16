@@ -234,35 +234,43 @@
     return m ? decodeURIComponent(m[1]) : '';
   }
   const btn = document.getElementById('btn-guia-guardar');
-  if (!btn) return;
-  btn.addEventListener('click', function(){
-    const err = document.getElementById('g-err');
-    err.style.display = 'none';
-    const form = document.getElementById('form-guia');
-    const fd = new FormData(form);
-    if (!fd.getAll('ocs').length) {
-      err.textContent = 'Selecciona al menos una orden de compra.';
-      err.style.display = '';
-      return;
+  if (!btn) { console.error('[guia] btn-guia-guardar no existe en el DOM'); return; }
+  btn.addEventListener('click', function(ev){
+    try {
+      ev.preventDefault();
+      const err = document.getElementById('g-err');
+      const form = document.getElementById('form-guia');
+      if (!form) { alert('Form no encontrado.'); return; }
+      if (err) { err.style.display = 'none'; }
+      const fd = new FormData(form);
+      if (!fd.getAll('ocs').length) {
+        if (err) { err.textContent = 'Selecciona al menos una orden de compra.'; err.style.display = ''; }
+        else { alert('Selecciona al menos una orden de compra.'); }
+        return;
+      }
+      btn.disabled = true;
+      fetch(URL_CREAR, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd,
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) { window.location.href = d.url; return; }
+        if (err) { err.textContent = d.error || 'Error al generar la guía.'; err.style.display = ''; }
+        else { alert(d.error || 'Error al generar la guía.'); }
+        btn.disabled = false;
+      })
+      .catch(e => {
+        if (err) { err.textContent = 'Error de red: ' + e.message; err.style.display = ''; }
+        else { alert('Error de red: ' + e.message); }
+        btn.disabled = false;
+      });
+    } catch (ex) {
+      console.error('[guia] click handler threw:', ex);
+      alert('Error inesperado: ' + ex.message);
+      btn.disabled = false;
     }
-    btn.disabled = true;
-    fetch(URL_CREAR, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
-      body: fd,
-    })
-    .then(r => r.json())
-    .then(d => {
-      if (d.ok) { window.location.href = d.url; return; }
-      err.textContent = d.error || 'Error al generar la guía.';
-      err.style.display = '';
-      btn.disabled = false;
-    })
-    .catch(e => {
-      err.textContent = 'Error de red: ' + e.message;
-      err.style.display = '';
-      btn.disabled = false;
-    });
   });
 })();
 
@@ -518,21 +526,24 @@
   // Reset del modal al cerrarse: la próxima vez que se abra no debe mostrar
   // selección ni ítems de la sesión anterior.
   function resetModal() {
-    seleccion = [];
-    unirMode = false;
-    unirHidden.value = '0';
-    btnUnir.style.display = '';
-    btnRevertir.style.display = 'none';
-    dupAlert.style.display = 'none';
-    dropdown.style.display = 'none';
-    inp.value = '';
-    // Reset campos del form (fecha traslado, motivo, origen, destino, etc.)
-    const form = document.getElementById('form-guia');
-    if (form) form.reset();
-    motivoOtro.style.display = 'none';
-    pintarSeleccion();
-    const err = document.getElementById('g-err');
-    if (err) err.style.display = 'none';
+    try {
+      seleccion = [];
+      unirMode = false;
+      if (unirHidden)   unirHidden.value = '0';
+      if (btnUnir)      btnUnir.style.display = '';
+      if (btnRevertir)  btnRevertir.style.display = 'none';
+      if (dupAlert)     dupAlert.style.display = 'none';
+      if (dropdown)     dropdown.style.display = 'none';
+      if (inp)          inp.value = '';
+      const form = document.getElementById('form-guia');
+      if (form) form.reset();
+      if (motivoOtro)   motivoOtro.style.display = 'none';
+      pintarSeleccion();
+      const err = document.getElementById('g-err');
+      if (err) err.style.display = 'none';
+    } catch (ex) {
+      console.error('[guia] resetModal threw:', ex);
+    }
   }
 
   const modalEl = document.getElementById('modal-guia');
