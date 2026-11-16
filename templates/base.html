@@ -240,10 +240,9 @@
         <i class="bi bi-speedometer2"></i> Dashboard Logística
       </a>
       {% if permisos.puede_revisar_reqs_log %}
-      {% with reqs_vns='logistica:requerimientos_log,logistica:req_revisar_log,logistica:req_detalle_log,logistica:por_atender_log,logistica:aprobados_log,logistica:historial_log,logistica:anulados_log' %}
       <div class="sb-module-row">
         <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
-           class="sb-link {% if vn in reqs_vns %}active{% endif %}">
+           class="sb-link">
           <i class="bi bi-file-earmark-text"></i> Requerimientos
           {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
         </a>
@@ -276,7 +275,6 @@
           <i class="bi bi-journal-text"></i> Historial
         </a>
       </div>
-      {% endwith %}
       {% endif %}
       {% if permisos.puede_gestionar_cotizaciones_log %}
       <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
