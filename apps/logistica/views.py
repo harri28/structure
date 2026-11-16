@@ -1667,23 +1667,31 @@ def oc_crear_ajax(request, proyecto_id):
     if not items:
         return JsonResponse({'ok': False, 'error': 'Los ítems enviados no son válidos.'}, status=400)
 
+    # No permitir el mismo insumo repetido en la misma OC.
+    vistos = set()
+    for it in items:
+        if it['insumo']:
+            if it['insumo'].pk in vistos:
+                return JsonResponse({
+                    'ok': False,
+                    'error': f'El insumo "{it["insumo"].descripcion}" aparece más de una vez. '
+                             f'Juntá la cantidad en una sola fila.',
+                }, status=400)
+            vistos.add(it['insumo'].pk)
+
     # Validar que la cantidad de cada item con insumo asociado no supere el
     # saldo comprable (aprobada total − ya comprada en otras OC).
     saldos = _saldos_comprables(proyecto)
-    consumo = {}
     errores_saldo = []
     for it in items:
         if not it['insumo']:
             continue
         iid = it['insumo'].pk
-        consumo[iid] = consumo.get(iid, Decimal('0')) + it['cantidad']
-    for iid, pedido in consumo.items():
         disponible = saldos.get(iid, Decimal('0'))
-        if pedido > disponible:
-            ins = InsumoPresupuesto.objects.filter(pk=iid).first()
-            nombre = ins.descripcion if ins else f'insumo #{iid}'
+        if it['cantidad'] > disponible:
             errores_saldo.append(
-                f'"{nombre}": querés comprar {pedido} pero solo quedan {disponible} aprobadas por comprar.'
+                f'"{it["insumo"].descripcion}": querés comprar {it["cantidad"]} pero solo quedan '
+                f'{disponible} aprobadas por comprar.'
             )
     if errores_saldo:
         return JsonResponse({'ok': False, 'error': ' '.join(errores_saldo)}, status=400)

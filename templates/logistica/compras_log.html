@@ -385,15 +385,23 @@
 
     let tIns = null;
     function hide(){ sugs.style.display='none'; sugs.innerHTML=''; }
+    function idsYaUsados() {
+      const ids = new Set();
+      tbody.querySelectorAll('.it-ins-input').forEach(inp => {
+        if (inp !== iIns && inp.dataset.insId) ids.add(inp.dataset.insId);
+      });
+      return ids;
+    }
     function buscar() {
       fetch(URL_INS_BUSCAR + '?q=' + encodeURIComponent(iIns.value || ''), {
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
       })
       .then(r => r.json())
       .then(d => {
-        const items = d.items || [];
+        const yaUsados = idsYaUsados();
+        const items = (d.items || []).filter(i => !yaUsados.has(String(i.id)));
         if (!items.length) {
-          sugs.innerHTML = '<div class="list-group-item text-muted small">Sin coincidencias en insumos aprobados.</div>';
+          sugs.innerHTML = '<div class="list-group-item text-muted small">Sin coincidencias disponibles. (Los insumos ya agregados a esta OC no se vuelven a listar.)</div>';
         } else {
           sugs.innerHTML = items.map(i =>
             `<button type="button" class="list-group-item list-group-item-action py-1"
