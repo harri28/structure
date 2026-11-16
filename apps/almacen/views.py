@@ -794,10 +794,14 @@ def salida_lista(request, proyecto_id):
 @proyecto_visible
 def api_insumos_buscar(request, proyecto_id):
     """Autocomplete de insumos del proyecto para el modal de Atención.
-    Marca cada insumo con `seleccionable` (True si stock_almacen > 0)."""
+    Solo devuelve insumos con stock_almacen > 0 (los que están en bodega
+    disponibles para despacho)."""
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     q = (request.GET.get('q') or '').strip()
-    qs = InsumoPresupuesto.objects.filter(presupuesto__proyecto=proyecto)
+    qs = InsumoPresupuesto.objects.filter(
+        presupuesto__proyecto=proyecto,
+        stock_almacen__gt=0,
+    )
     if q:
         qs = qs.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
     qs = qs.order_by('codigo', 'descripcion')[:50]
