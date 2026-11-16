@@ -610,6 +610,15 @@ document.querySelectorAll('table.table:not(.table-modern)').forEach(function (t)
     { id: 'nav-config-admin', abiertoPorDefecto: false }
   ];
 
+  // Reset único de localStorage al cambiar el default — navegadores con
+  // sesiones viejas tenían grupos marcados como '1' (abiertos) y mantenían
+  // ese estado aunque cambiáramos el default en el servidor.
+  var SIDEBAR_VER = 'v2-closed';
+  if (localStorage.getItem('sb-ver') !== SIDEBAR_VER) {
+    grupos.forEach(function (g) { localStorage.removeItem('sb-' + g.id); });
+    try { localStorage.setItem('sb-ver', SIDEBAR_VER); } catch (e) {}
+  }
+
   grupos.forEach(function (g) {
     var col = document.getElementById(g.id);
     if (!col) return;
