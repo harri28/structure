@@ -1390,6 +1390,9 @@ def cot_aprobar(request, pk):
         messages.error(request, 'La cotización no tiene ítems.')
         return redirect('almacen:cot_detalle', pk=cot.pk)
 
+    # Flujo nuevo: el precio se captura en la Orden de Compra, no acá.
+    precio_opcional = request.POST.get('redirect_to') == 'compras_nueva_oc'
+
     cambios = []
     eliminados = []
     errores = []
@@ -1411,12 +1414,12 @@ def cot_aprobar(request, pk):
             errores.append(f'{rotulo}: precio unitario inválido.')
             continue
         if cantidad <= 0:
-            errores.append(f'{rotulo}: la cantidad debe ser mayor a 0 (o usá "Quitar").')
+            errores.append(f'{rotulo}: la cantidad debe ser mayor a 0.')
             continue
         if cantidad > det.cantidad:
             errores.append(f'{rotulo}: la cantidad aprobada ({cantidad}) no puede superar la solicitada ({det.cantidad}).')
             continue
-        if precio <= 0:
+        if not precio_opcional and precio <= 0:
             errores.append(f'{rotulo}: el precio unitario es obligatorio.')
             continue
         cambios.append((det, cantidad, precio))
