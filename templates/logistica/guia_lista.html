@@ -194,8 +194,9 @@
                 <thead style="background:#f8fafc">
                   <tr>
                     <th>Descripción</th>
-                    <th style="width:15%">Unidad</th>
-                    <th style="width:15%" class="text-end">Cantidad</th>
+                    <th style="width:12%">Código</th>
+                    <th style="width:12%">Unidad</th>
+                    <th style="width:14%" class="text-end">Cantidad</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -268,7 +269,7 @@
   // Recorre la selección y devuelve los ítems expandidos y los grupos
   function construirItems() {
     const expandidos = [];  // {it, ocNumero}
-    const grupos = new Map();  // clave → {descripcion, unidad, cantidad, ocNumeros:Set}
+    const grupos = new Map();  // clave → {descripcion, codigo, unidad, cantidad, ocNumeros:Set}
     seleccion.forEach(pk => {
       const oc = porPk(pk);
       if (!oc) return;
@@ -279,6 +280,7 @@
         if (!grupos.has(k)) {
           grupos.set(k, {
             descripcion: it.descripcion,
+            codigo: it.codigo || '',
             unidad: it.unidad || '',
             cantidad: 0,
             ocNumeros: new Set(),
@@ -293,7 +295,9 @@
   }
 
   function formatCant(n) {
-    return (Math.round(n * 1000) / 1000).toString().replace(/\.?0+$/, '') || '0';
+    // Redondea a 3 decimales y usa parseFloat para quitar ceros sobrantes
+    // SIN tocar los dígitos enteros (evita que "200" quede como "2").
+    return parseFloat((Math.round(n * 1000) / 1000).toFixed(3)).toString();
   }
 
   function pintarSeleccion() {
@@ -342,6 +346,7 @@
           [...g.ocNumeros].join(' + ') + (g.ocNumeros.size > 1 ? ' · fusionado' : ''));
         td1.appendChild(sub);
         tr.appendChild(td1);
+        tr.appendChild(el('td', { style: 'font-size:.78rem;color:#374151' }, g.codigo || '—'));
         tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, g.unidad || '—'));
         tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem;color:#1d4ed8' }, formatCant(g.cantidad)));
         tbody.appendChild(tr);
@@ -353,6 +358,7 @@
         const td1 = el('td', { style: 'font-size:.83rem' }, e.it.descripcion);
         td1.appendChild(el('div', { style: 'font-size:.7rem;color:#6b7280' }, e.ocNumero));
         tr.appendChild(td1);
+        tr.appendChild(el('td', { style: 'font-size:.78rem;color:#374151' }, e.it.codigo || '—'));
         tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, e.it.unidad || '—'));
         tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem' }, e.it.cantidad));
         tbody.appendChild(tr);
