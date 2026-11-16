@@ -93,6 +93,15 @@ def dashboard(request, proyecto_id):
                         output_field=DecimalField(max_digits=18, decimal_places=4)))
         .values_list('insumo_id', 'm')
     )
+    # Fecha de la última compra por insumo (para ordenar "detalle por insumo")
+    from django.db.models import Max
+    ult_compra_por_insumo = dict(
+        DetalleOrdenCompraLog.objects
+        .filter(orden__in=ocs_qs, insumo_id__isnull=False)
+        .values('insumo_id')
+        .annotate(ult=Max('orden__created_at'))
+        .values_list('insumo_id', 'ult')
+    )
 
     # ── Filas (insumo + presupuestado + comprado) ──────────────────
     insumos_qs = InsumoPresupuesto.objects.filter(presupuesto__proyecto=proyecto)
@@ -116,9 +125,15 @@ def dashboard(request, proyecto_id):
             'diferencia': dif,
             'abs_dif': abs(dif),
             'sobregiro': comp > pres,
+            'ult_compra': ult_compra_por_insumo.get(ins.pk),
         })
-    # Orden: mayor presupuesto primero (o mayor comprado si no hay presupuesto)
-    filas.sort(key=lambda r: max(r['presupuestado'], r['comprado']), reverse=True)
+    # Orden: insumos con compra más reciente primero; los que nunca se compraron
+    # quedan al final ordenados por mayor monto presupuestado.
+    from datetime import datetime, timezone
+    _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    filas.sort(key=lambda r: (r['ult_compra'] or _EPOCH, r['presupuestado']), reverse=True)
+    # filas_top = últimas 10 compras (primeros 10 tras el orden)
+    filas_top = filas[:10]
 
     # Dataset para el gráfico (limito a 20 para legibilidad; total en tabla queda completo)
     filas_grafico = filas[:20]
@@ -151,6 +166,8 @@ def dashboard(request, proyecto_id):
         'pct_avance':          pct_avance,
         'saldo_disponible':    saldo_disponible,
         'filas':               filas,
+        'filas_top':           filas_top,
+        'filas_total':         len(filas),
         'chart_labels':        chart_labels,
         'chart_desc':          chart_desc,
         'chart_presup':        chart_presup,

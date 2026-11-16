@@ -136,10 +136,18 @@
   </div>
 </div>
 
-{# ───────────── Tabla detallada ───────────── #}
+{# ───────────── Tabla detallada (últimas 10 compras) ───────────── #}
 <div class="card">
-  <div class="card-header py-2" style="font-size:.85rem;font-weight:700;background:#f8fafc">
-    <i class="bi bi-table me-1"></i> Detalle por insumo
+  <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background:#f8fafc">
+    <span style="font-size:.85rem;font-weight:700">
+      <i class="bi bi-table me-1"></i> Detalle por insumo
+      <span class="text-muted ms-2" style="font-size:.72rem;font-weight:400">(últimas compras)</span>
+    </span>
+    {% if filas_total > filas_top|length %}
+    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-detalle-insumos">
+      Ver más ({{ filas_total }}) <i class="bi bi-arrow-right ms-1"></i>
+    </button>
+    {% endif %}
   </div>
   <div class="card-body p-0">
     <table class="table table-sm mb-0" style="font-size:.82rem">
@@ -154,7 +162,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for f in filas %}
+        {% for f in filas_top %}
         <tr{% if f.sobregiro %} style="background:#fef2f2"{% endif %}>
           <td><code style="color:#1d4ed8">{{ f.codigo }}</code></td>
           <td>{{ f.descripcion }}</td>
@@ -172,6 +180,90 @@
     </table>
   </div>
 </div>
+
+{# ───────────── Modal Ver más: todas las filas paginadas ───────────── #}
+{% if filas_total > filas_top|length %}
+<div class="modal fade" id="modal-detalle-insumos" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header py-2 d-flex align-items-center gap-3">
+        <h6 class="modal-title mb-0" style="font-size:1rem">
+          <i class="bi bi-table me-2" style="color:#4f46e5"></i>Detalle completo por insumo
+        </h6>
+        <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.82rem;padding:.4em .7em">
+          Total: <strong>{{ filas_total }}</strong>
+        </span>
+        <button type="button" class="btn-close btn-sm ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <table class="table table-sm mb-0" style="font-size:.82rem" id="t-detalle-full">
+          <thead style="background:#f8fafc;position:sticky;top:0">
+            <tr>
+              <th style="width:80px">Código</th>
+              <th>Descripción</th>
+              <th style="width:60px">UND</th>
+              <th class="text-end" style="width:130px">Presupuestado</th>
+              <th class="text-end" style="width:130px">Comprado</th>
+              <th class="text-end" style="width:130px">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-detalle-full">
+            {% for f in filas %}
+            <tr data-page-idx="{{ forloop.counter0 }}"{% if f.sobregiro %} style="background:#fef2f2"{% endif %}>
+              <td><code style="color:#1d4ed8">{{ f.codigo }}</code></td>
+              <td>{{ f.descripcion }}</td>
+              <td class="text-muted">{{ f.unidad }}</td>
+              <td class="text-end">S/ {{ f.presupuestado|floatformat:2|miles }}</td>
+              <td class="text-end">S/ {{ f.comprado|floatformat:2|miles }}</td>
+              <td class="text-end fw-semibold" style="color:{% if f.sobregiro %}#dc2626{% else %}#111{% endif %}">
+                S/ {{ f.diferencia|floatformat:2|miles }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer py-2 d-flex align-items-center justify-content-between">
+        <div style="font-size:.78rem;color:#6b7280" id="paginacion-info"></div>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-outline-secondary" id="pg-prev"><i class="bi bi-chevron-left"></i></button>
+          <button type="button" class="btn btn-outline-secondary" disabled id="pg-cur" style="min-width:90px"></button>
+          <button type="button" class="btn btn-outline-secondary" id="pg-next"><i class="bi bi-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  const PAGE_SIZE = 20;
+  const rows = Array.from(document.querySelectorAll('#tbody-detalle-full tr'));
+  if (!rows.length) return;
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  let pag = 1;
+  const info = document.getElementById('paginacion-info');
+  const cur = document.getElementById('pg-cur');
+  const prev = document.getElementById('pg-prev');
+  const next = document.getElementById('pg-next');
+
+  function render() {
+    const start = (pag - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    rows.forEach((tr, i) => {
+      tr.style.display = (i >= start && i < end) ? '' : 'none';
+    });
+    cur.textContent = 'Pág. ' + pag + ' / ' + totalPages;
+    info.textContent = 'Mostrando ' + (Math.min(end, total) - start) + ' de ' + total + ' insumos';
+    prev.disabled = pag <= 1;
+    next.disabled = pag >= totalPages;
+  }
+  prev.addEventListener('click', () => { if (pag > 1) { pag--; render(); } });
+  next.addEventListener('click', () => { if (pag < totalPages) { pag++; render(); } });
+  render();
+})();
+</script>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
