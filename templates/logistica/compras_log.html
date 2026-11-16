@@ -357,7 +357,10 @@
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="position:relative;overflow:visible">
-        <input type="text" class="form-control form-control-sm it-ins-input" autocomplete="off" placeholder="Buscar insumo..." data-ins-id="">
+        <div class="d-flex align-items-center gap-2">
+          <code class="it-ins-cod" style="background:#eff6ff;color:#1d4ed8;padding:.2em .55em;border-radius:4px;font-size:.74rem;font-weight:600;min-width:34px;text-align:center;display:none;flex-shrink:0"></code>
+          <input type="text" class="form-control form-control-sm it-ins-input" autocomplete="off" placeholder="Buscar insumo..." data-ins-id="" style="flex:1;min-width:0">
+        </div>
         <div class="list-group position-absolute shadow-sm it-ins-sugs"
              style="z-index:1080;max-height:260px;overflow-y:auto;display:none;top:100%;left:0;min-width:360px;max-width:520px"></div>
       </td>
@@ -371,6 +374,7 @@
     const iIns  = tr.querySelector('.it-ins-input');
     const iId   = iIns.dataset;
     const iUm   = tr.querySelector('.it-um');
+    const iCod  = tr.querySelector('.it-ins-cod');
     const iCant = tr.querySelector('.it-cant');
     const iPu   = tr.querySelector('.it-pu');
     const iSub  = tr.querySelector('.it-sub');
@@ -400,6 +404,10 @@
             iIns.value = b.dataset.desc;
             iIns.dataset.insId = b.dataset.id;
             iUm.value = b.dataset.um;
+            if (iCod) {
+              iCod.textContent = b.dataset.cod || '';
+              iCod.style.display = (b.dataset.cod ? '' : 'none');
+            }
             hide();
             // fila nueva automática si esta fila es la última
             if (tr === tbody.lastElementChild) addRow();
@@ -409,7 +417,13 @@
       })
       .catch(hide);
     }
-    iIns.addEventListener('input', () => { iIns.dataset.insId = ''; clearTimeout(tIns); tIns = setTimeout(buscar, 180); });
+    iIns.addEventListener('input', () => {
+      iIns.dataset.insId = '';
+      iUm.value = '';
+      if (iCod) { iCod.textContent = ''; iCod.style.display = 'none'; }
+      clearTimeout(tIns);
+      tIns = setTimeout(buscar, 180);
+    });
     iIns.addEventListener('focus', buscar);
     document.addEventListener('click', ev => {
       if (!iIns.contains(ev.target) && !sugs.contains(ev.target)) hide();
