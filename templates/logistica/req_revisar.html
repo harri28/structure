@@ -105,14 +105,7 @@
             {% if d.descripcion %}{{ d.descripcion }}{% elif d.insumo %}{{ d.insumo.descripcion }}{% else %}—{% endif %}
           </td>
           <td style="font-size:.82rem;color:#6b7280">{{ d.unidad|default:"—" }}</td>
-          <td class="text-end fw-semibold" style="font-size:.83rem">
-            {% if modo_por_atender %}
-              <div>{{ d.cantidad_requerida|floatformat:4 }}</div>
-              <div class="text-muted" style="font-size:.72rem">Ya aprob.: {{ d.aprobado_previo|floatformat:4 }}</div>
-            {% else %}
-              {{ d.cantidad_requerida|floatformat:4 }}
-            {% endif %}
-          </td>
+          <td class="text-end fw-semibold" style="font-size:.83rem">{{ d.cantidad_requerida|floatformat:4 }}</td>
           <td class="text-center">
             <input type="number"
                    name="aprobada_{{ d.pk }}"
@@ -134,15 +127,19 @@
             <div class="invalid-feedback text-start" style="font-size:.72rem"></div>
           </td>
           <td class="text-end" style="font-size:.83rem">
-            {% with obj=d.cantidad_aprobada|default:d.cantidad_requerida %}
-            {% if d.cot_aprobada <= 0 %}
-              <span class="text-muted">—</span>
-            {% elif d.cot_aprobada >= obj %}
-              <span class="fw-semibold text-success" title="Cubierto totalmente"><i class="bi bi-check2-circle me-1"></i>{{ d.cot_aprobada|floatformat:4 }}</span>
+            {% if modo_por_atender %}
+              <span class="fw-semibold" style="color:#166534" title="Cantidad ya aprobada antes de abrir Por atender">{{ d.aprobado_previo|floatformat:4 }}</span>
             {% else %}
-              <span class="fw-semibold" style="color:#d97706" title="Cubierto parcialmente">{{ d.cot_aprobada|floatformat:4 }}</span>
+              {% with obj=d.cantidad_aprobada|default:d.cantidad_requerida %}
+              {% if d.cot_aprobada <= 0 %}
+                <span class="text-muted">—</span>
+              {% elif d.cot_aprobada >= obj %}
+                <span class="fw-semibold text-success" title="Cubierto totalmente"><i class="bi bi-check2-circle me-1"></i>{{ d.cot_aprobada|floatformat:4 }}</span>
+              {% else %}
+                <span class="fw-semibold" style="color:#d97706" title="Cubierto parcialmente">{{ d.cot_aprobada|floatformat:4 }}</span>
+              {% endif %}
+              {% endwith %}
             {% endif %}
-            {% endwith %}
           </td>
           {% if editable %}
           <td>
