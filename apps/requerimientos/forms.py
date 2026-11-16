@@ -35,8 +35,9 @@ class DetalleRequerimientoForm(forms.ModelForm):
             'descripcion': forms.HiddenInput(),
         }
 
-    def __init__(self, *args, modo_ajuste=False, **kwargs):
+    def __init__(self, *args, modo_ajuste=False, modo_borrador=False, **kwargs):
         self.modo_ajuste = modo_ajuste
+        self.modo_borrador = modo_borrador
         super().__init__(*args, **kwargs)
         self.fields['cantidad'].required = False
         self.fields['cantidad_requerida'].required = False
@@ -57,7 +58,10 @@ class DetalleRequerimientoForm(forms.ModelForm):
             return data
         cantidad = data.get('cantidad') or 0
         cant_req = data.get('cantidad_requerida') or 0
-        # Un ítem sin cantidad a solicitar llegaría a Logística como 0: se exige > 0.
+        # Si se está guardando como borrador, se permite cantidad 0 (se completará
+        # después antes de enviar a Logística).
+        if self.modo_borrador:
+            return data
         if cant_req <= 0:
             self.add_error('cantidad_requerida', 'Ingresa la cantidad a solicitar (mayor a 0).')
             return data

@@ -132,11 +132,11 @@ def crear(request, proyecto_id):
     modo_ajuste = request.GET.get('ajuste') == '1' or request.POST.get('modo_ajuste') == '1'
     if request.method == 'POST':
         form = RequerimientoForm(request.POST, proyecto=proyecto)
+        accion = request.POST.get('accion', 'borrador')
         formset = DetalleRequerimientoFormSet(
             request.POST, prefix='detalles',
-            form_kwargs={'modo_ajuste': modo_ajuste},
+            form_kwargs={'modo_ajuste': modo_ajuste, 'modo_borrador': accion == 'borrador'},
         )
-        accion = request.POST.get('accion', 'borrador')
         if form.is_valid() and formset.is_valid():
             # Validar saldo global del presupuesto por insumo (salvo
             # modo_ajuste, que precisamente autoriza exceder lo presupuestado).
@@ -324,11 +324,11 @@ def editar(request, pk):
     empresa  = ConfigEmpresa.get()
     if request.method == 'POST':
         form = RequerimientoForm(request.POST, instance=req, proyecto=proyecto)
+        accion = request.POST.get('accion', '')
         formset = DetalleRequerimientoFormSet(
             request.POST, instance=req, prefix='detalles',
-            form_kwargs={'modo_ajuste': req.es_ajuste},
+            form_kwargs={'modo_ajuste': req.es_ajuste, 'modo_borrador': accion == 'borrador'},
         )
-        accion = request.POST.get('accion', '')
         if form.is_valid() and formset.is_valid():
             # Validar saldo global (excluyendo este REQ para no contarse a sí
             # mismo si ya estaba en un estado comprometido).

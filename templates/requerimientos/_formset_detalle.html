@@ -357,7 +357,8 @@
     if (e.target.classList.contains('cant-req')) validarCantReq(e.target);
   });
 
-  // Bloquear envío si alguna fila tiene cant. requerida inválida; marcar filas vacías como DELETE
+  // Bloquear envío si alguna fila tiene cant. requerida inválida; marcar filas vacías como DELETE.
+  // El guardado como "borrador" NO valida cantidades (se puede dejar incompleto).
   document.querySelector('form')?.addEventListener('submit', function(ev) {
     // Marcar filas sin insumo ni descripción como DELETE para que Django las ignore
     document.querySelectorAll('.formset-row').forEach(function(row) {
@@ -372,6 +373,10 @@
         if (del) del.checked = true;
       }
     });
+    // Saltar validación cuando el usuario guarda como borrador
+    const submitter = ev.submitter;
+    if (submitter && submitter.name === 'accion' && submitter.value === 'borrador') return;
+
     let ok = true;
     document.querySelectorAll('.formset-row').forEach(function(row) {
       const del = row.querySelector('input[type=checkbox][name$="-DELETE"]');
