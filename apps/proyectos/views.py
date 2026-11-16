@@ -517,14 +517,14 @@ def proyecto_restablecer(request, pk):
 
     proyecto = get_object_or_404(Proyecto, pk=pk)
 
-    from apps.requerimientos.models import Requerimiento, DetalleRequerimiento
+    from apps.requerimientos.models import Requerimiento, DetalleRequerimiento, HistorialRevisionReq
     from apps.almacen.models import Entrada, Salida, Cotizacion, OrdenCompra
     from apps.logistica.models import GuiaRemision
     from apps.maquinaria.models import (
         RegistroDiario, RegistroMaquinaria, Liquidacion,
         Trabajador, DocumentoTrabajador, Cuadrilla, IntegranteCuadrilla, Asistencia,
     )
-    from apps.presupuesto.models import Presupuesto, Partida, InsumoPresupuesto
+    from apps.presupuesto.models import Presupuesto, Partida, InsumoPresupuesto, Modificacion
 
     def _count(qs):
         try:
@@ -537,8 +537,8 @@ def proyecto_restablecer(request, pk):
             'nombre': 'Presupuesto',
             'icono': 'bi-table',
             'color': '#6366f1',
-            'descripcion': 'Partidas, insumos, ACU, modificaciones, ampliaciones y cambios de nombre de insumo.',
-            'count': _count(Partida.objects.filter(presupuesto__proyecto=proyecto)),
+            'descripcion': 'Partidas, insumos, ACU, ampliaciones, cambios de nombre de insumo y modificaciones (adicionales/deductivos).',
+            'count': _count(Partida.objects.filter(presupuesto__proyecto=proyecto)) + _count(Modificacion.objects.filter(proyecto=proyecto)),
         },
         'requerimientos': {
             'nombre': 'Requerimientos',
@@ -619,11 +619,14 @@ def proyecto_restablecer(request, pk):
         eliminados = []
 
         if 'presupuesto' in seleccionados:
+            # Modificaciones (adicionales/deductivos) tienen FK directo a proyecto,
+            # no a Presupuesto — hay que borrarlas explícitamente.
+            Modificacion.objects.filter(proyecto=proyecto).delete()
             try:
                 proyecto.presupuesto.delete()
-                eliminados.append('Presupuesto')
             except Presupuesto.DoesNotExist:
                 pass
+            eliminados.append('Presupuesto')
 
         if 'requerimientos' in seleccionados:
             Requerimiento.objects.filter(proyecto=proyecto).delete()
@@ -653,6 +656,10 @@ def proyecto_restablecer(request, pk):
                 proyecto=proyecto,
                 estado__in=['APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO'],
             ).update(estado='ENVIADO', aprobacion_vista=False)
+            # Borrar historial de revisión (agregados, sustituciones, anulaciones)
+            HistorialRevisionReq.objects.filter(
+                requerimiento__proyecto=proyecto
+            ).delete()
             # Eliminar guías de remisión del proyecto
             GuiaRemision.objects.filter(proyecto=proyecto).delete()
             eliminados.append('Logística')
