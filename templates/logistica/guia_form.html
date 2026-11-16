@@ -51,18 +51,23 @@
           </div>
           {% if not guia %}
           <div class="col-12">
-            <label class="form-label">N° de Cotización Aprobada *</label>
-            <input type="text" id="cot-search" class="form-control" autocomplete="off"
-                   placeholder="Buscar cotización aprobada por N°, proveedor o REQ…">
-            <div id="cot-dropdown" style="display:none;margin-top:.25rem;
+            <label class="form-label">N° de Orden de Compra *</label>
+            <input type="text" id="oc-search" class="form-control" autocomplete="off"
+                   placeholder="Buscar orden de compra por N° o proveedor…">
+            <div id="oc-dropdown" style="display:none;margin-top:.25rem;
                  background:#fff;border:1px solid #dee2e6;border-radius:6px;
                  max-height:240px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.08)"></div>
-            <div id="cot-chips" class="d-flex flex-wrap gap-2 mt-2"></div>
-            <div id="cot-hidden"></div>
-            <div class="form-text" style="font-size:.72rem">Puedes agregar varias cotizaciones. Sus ítems se cargan abajo y el stock en obra se descuenta al generar la guía.</div>
+            <div id="oc-chips" class="d-flex flex-wrap gap-2 mt-2"></div>
+            <div id="oc-hidden"></div>
+            <div class="form-text" style="font-size:.72rem">Puedes agregar varias órdenes de compra. Sus ítems se cargan abajo y el stock en obra se descuenta al generar la guía.</div>
           </div>
           {% else %}
-          {% if guia.cotizaciones.exists %}
+          {% if guia.ocs.exists %}
+          <div class="col-12">
+            <div class="text-muted text-uppercase fw-semibold" style="font-size:.68rem;letter-spacing:.04em">Órdenes de Compra</div>
+            {% for oc in guia.ocs.all %}<span class="badge bg-light text-dark border me-1">{{ oc.numero }}</span>{% endfor %}
+          </div>
+          {% elif guia.cotizaciones.exists %}
           <div class="col-12">
             <div class="text-muted text-uppercase fw-semibold" style="font-size:.68rem;letter-spacing:.04em">Cotizaciones</div>
             {% for c in guia.cotizaciones.all %}<span class="badge bg-light text-dark border me-1">COT{{ c.numero }}</span>{% endfor %}
@@ -195,16 +200,16 @@
 })();
 </script>
 {% if not guia %}
-{{ cotizaciones_data|json_script:"cot-data" }}
-{{ cotizaciones_seleccion|json_script:"cot-seleccion" }}
+{{ ocs_data|json_script:"oc-data" }}
+{{ ocs_seleccion|json_script:"oc-seleccion" }}
 <script>
 (function () {
-  var data = JSON.parse(document.getElementById('cot-data').textContent);
-  var seleccion = JSON.parse(document.getElementById('cot-seleccion').textContent);
-  var inp      = document.getElementById('cot-search');
-  var dropdown = document.getElementById('cot-dropdown');
-  var chips    = document.getElementById('cot-chips');
-  var hidden   = document.getElementById('cot-hidden');
+  var data = JSON.parse(document.getElementById('oc-data').textContent);
+  var seleccion = JSON.parse(document.getElementById('oc-seleccion').textContent);
+  var inp      = document.getElementById('oc-search');
+  var dropdown = document.getElementById('oc-dropdown');
+  var chips    = document.getElementById('oc-chips');
+  var hidden   = document.getElementById('oc-hidden');
   var card     = document.getElementById('card-bienes');
   var tbody    = document.querySelector('#tabla-bienes tbody');
   if (!inp) return;
@@ -217,25 +222,25 @@
     if (texto !== undefined) e.textContent = texto;
     return e;
   }
-  function porPk(pk) { return data.filter(function (c) { return c.pk === pk; })[0]; }
+  function porPk(pk) { return data.filter(function (oc) { return oc.pk === pk; })[0]; }
 
   function pintarSeleccion() {
     chips.innerHTML = '';
     hidden.innerHTML = '';
     tbody.innerHTML = '';
     seleccion.forEach(function (pk) {
-      var c = porPk(pk);
-      if (!c) return;
-      var chip = el('span', { 'class': 'badge bg-primary d-inline-flex align-items-center gap-1', style: 'font-size:.78rem;padding:.4em .6em' }, c.numero + (c.proveedor ? ' · ' + c.proveedor : ''));
+      var oc = porPk(pk);
+      if (!oc) return;
+      var chip = el('span', { 'class': 'badge bg-primary d-inline-flex align-items-center gap-1', style: 'font-size:.78rem;padding:.4em .6em' }, oc.numero + (oc.proveedor ? ' · ' + oc.proveedor : ''));
       var x = el('button', { type: 'button', 'class': 'btn-close btn-close-white', style: 'font-size:.6rem', 'aria-label': 'Quitar' });
       x.addEventListener('click', function () { quitar(pk); });
       chip.appendChild(x);
       chips.appendChild(chip);
-      hidden.appendChild(el('input', { type: 'hidden', name: 'cotizaciones', value: pk }));
-      c.items.forEach(function (it) {
+      hidden.appendChild(el('input', { type: 'hidden', name: 'ocs', value: pk }));
+      oc.items.forEach(function (it) {
         var tr = el('tr');
         var td1 = el('td', { style: 'font-size:.83rem' }, it.descripcion);
-        td1.appendChild(el('div', { style: 'font-size:.7rem;color:#6b7280' }, c.numero + (c.req ? ' · ' + c.req : '')));
+        td1.appendChild(el('div', { style: 'font-size:.7rem;color:#6b7280' }, oc.numero));
         tr.appendChild(td1);
         tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, it.unidad || '—'));
         tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem' }, it.cantidad));
@@ -261,23 +266,23 @@
 
   function pintarLista() {
     var q = inp.value.trim().toLowerCase();
-    var lista = data.filter(function (c) {
-      if (seleccion.indexOf(c.pk) !== -1) return false;
-      return !q || (c.numero + ' ' + c.proveedor + ' ' + c.req).toLowerCase().indexOf(q) !== -1;
+    var lista = data.filter(function (oc) {
+      if (seleccion.indexOf(oc.pk) !== -1) return false;
+      return !q || (oc.numero + ' ' + oc.proveedor).toLowerCase().indexOf(q) !== -1;
     });
     dropdown.innerHTML = '';
     if (!lista.length) {
       dropdown.appendChild(el('div', { style: 'padding:10px 14px;font-size:.8rem;color:#9ca3af' },
-        data.length ? 'Sin coincidencias' : 'No hay cotizaciones aprobadas disponibles'));
+        data.length ? 'Sin coincidencias' : 'No hay órdenes de compra disponibles'));
     } else {
-      lista.forEach(function (c) {
+      lista.forEach(function (oc) {
         var op = el('div', { style: 'padding:8px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.82rem' });
-        op.appendChild(el('strong', { style: 'color:#2563eb' }, c.numero));
+        op.appendChild(el('strong', { style: 'color:#2563eb' }, oc.numero));
         op.appendChild(el('span', { style: 'color:#6b7280;margin-left:.5rem' },
-          (c.proveedor || '—') + (c.req ? ' · ' + c.req : '') + ' · ' + c.items.length + ' ítem' + (c.items.length === 1 ? '' : 's')));
+          (oc.proveedor || '—') + ' · ' + oc.items.length + ' ítem' + (oc.items.length === 1 ? '' : 's')));
         op.addEventListener('mouseover', function () { op.style.background = '#eff6ff'; });
         op.addEventListener('mouseout', function () { op.style.background = ''; });
-        op.addEventListener('click', function () { agregar(c.pk); });
+        op.addEventListener('click', function () { agregar(oc.pk); });
         dropdown.appendChild(op);
       });
     }

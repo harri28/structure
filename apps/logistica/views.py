@@ -118,7 +118,8 @@ ESTADOS_GUIA_DESPACHADA = ['EN_TRANSITO', 'ENTREGADO']
 
 
 def _cotizaciones_disponibles(proyecto):
-    """Cotizaciones APROBADAS del proyecto que aún no viajan en una guía activa."""
+    """Cotizaciones APROBADAS del proyecto que aún no viajan en una guía activa.
+    LEGACY — el flujo nuevo usa `_ocs_disponibles` (Órdenes de Compra)."""
     from apps.almacen.models import Cotizacion
     return (Cotizacion.objects
             .filter(proyecto=proyecto, estado='APROBADA')
@@ -126,6 +127,17 @@ def _cotizaciones_disponibles(proyecto):
             .select_related('requerimiento_origen')
             .prefetch_related('detalles__insumo')
             .order_by('-fecha', '-pk'))
+
+
+def _ocs_disponibles(proyecto):
+    """Órdenes de Compra del proyecto que aún no viajan en una guía activa."""
+    from apps.logistica.models import OrdenCompraLog
+    return (OrdenCompraLog.objects
+            .filter(proyecto=proyecto)
+            .exclude(guias_remision__estado__in=ESTADOS_GUIA_ACTIVA)
+            .select_related('proveedor')
+            .prefetch_related('detalles__insumo')
+            .order_by('-created_at', '-pk'))
 
 
 def _descripcion_item(d):
@@ -138,7 +150,8 @@ def _unidad_item(d):
 
 def _despachar_cotizaciones(guia, cotizaciones):
     """Copia los ítems de las cotizaciones a la guía y descuenta el stock en obra
-    (InsumoPresupuesto.cantidad) por la cantidad de cada ítem. Nunca baja de cero."""
+    (InsumoPresupuesto.cantidad) por la cantidad de cada ítem. Nunca baja de cero.
+    LEGACY — ahora las guías se arman desde Órdenes de Compra."""
     from apps.presupuesto.models import InsumoPresupuesto
     descuentos = {}
     for cot in cotizaciones:
@@ -156,11 +169,37 @@ def _despachar_cotizaciones(guia, cotizaciones):
         ins.save(update_fields=['cantidad'])
 
 
+def _despachar_ocs(guia, ocs):
+    """Copia los ítems de las Órdenes de Compra a la guía y descuenta el stock en
+    obra (InsumoPresupuesto.cantidad) por la cantidad de cada ítem. Nunca baja de
+    cero."""
+    from apps.presupuesto.models import InsumoPresupuesto
+    descuentos = {}
+    for oc in ocs:
+        for d in oc.detalles.all():
+            DetalleGuia.objects.create(
+                guia=guia,
+                descripcion=_descripcion_item(d),
+                unidad=_unidad_item(d),
+                cantidad=d.cantidad.quantize(Decimal('0.001')),
+            )
+            if d.insumo_id:
+                descuentos[d.insumo_id] = descuentos.get(d.insumo_id, Decimal('0')) + d.cantidad
+    for ins in InsumoPresupuesto.objects.select_for_update().filter(pk__in=descuentos):
+        ins.cantidad = max(Decimal('0'), ins.cantidad - descuentos[ins.pk])
+        ins.save(update_fields=['cantidad'])
+
+
 def _revertir_descuento(guia):
     """Devuelve al stock en obra lo descontado por la guía (al anularla o eliminarla).
-    Nunca supera la cantidad original importada (cantidad_total)."""
+    Nunca supera la cantidad original importada (cantidad_total). Considera tanto las
+    OCs (flujo actual) como las cotizaciones legacy."""
     from apps.presupuesto.models import InsumoPresupuesto
     devoluciones = {}
+    for oc in guia.ocs.prefetch_related('detalles'):
+        for d in oc.detalles.all():
+            if d.insumo_id:
+                devoluciones[d.insumo_id] = devoluciones.get(d.insumo_id, Decimal('0')) + d.cantidad
     for cot in guia.cotizaciones.prefetch_related('detalles'):
         for d in cot.detalles.all():
             if d.insumo_id:
@@ -238,7 +277,7 @@ def guia_crear(request, proyecto_id):
     import datetime
     from django.db import transaction
     proyecto = _get_proyecto(proyecto_id)
-    disponibles = list(_cotizaciones_disponibles(proyecto))
+    disponibles = list(_ocs_disponibles(proyecto))
     seleccion = []
 
     if request.method == 'POST':
@@ -248,34 +287,32 @@ def guia_crear(request, proyecto_id):
         form = GuiaRemisionForm(post)
 
         ids = []
-        for raw in request.POST.getlist('cotizaciones'):
+        for raw in request.POST.getlist('ocs'):
             if raw.isdigit() and int(raw) not in ids:
                 ids.append(int(raw))
-        elegidas = [c for c in disponibles if c.pk in ids]
-        seleccion = [c.pk for c in elegidas]
+        elegidas = [oc for oc in disponibles if oc.pk in ids]
+        seleccion = [oc.pk for oc in elegidas]
 
-        cots_ok = bool(elegidas) and len(elegidas) == len(ids)
+        ocs_ok = bool(elegidas) and len(elegidas) == len(ids)
         if not ids:
-            messages.error(request, 'Selecciona al menos una cotización aprobada.')
-        elif not cots_ok:
-            messages.error(request, 'Alguna cotización ya no está disponible (no está aprobada o ya viaja en otra guía).')
+            messages.error(request, 'Selecciona al menos una orden de compra.')
+        elif not ocs_ok:
+            messages.error(request, 'Alguna orden de compra ya no está disponible (ya viaja en otra guía).')
 
-        if form.is_valid() and cots_ok:
+        if form.is_valid() and ocs_ok:
             with transaction.atomic():
                 guia = form.save(commit=False)
                 guia.proyecto = proyecto
                 guia.estado = 'EN_TRANSITO'
                 guia.save()
-                guia.cotizaciones.set(elegidas)
-                _despachar_cotizaciones(guia, elegidas)
-                for req in _reqs_de_guia(guia):
-                    _recalcular_estado_req(req)
+                guia.ocs.set(elegidas)
+                _despachar_ocs(guia, elegidas)
             # NOTA: la Entrada no se crea automáticamente. El Almacenero la registra
             # manualmente desde Almacén → Guías → Registrar guía.
             log(request, 'CREAR', 'Logística', f'Guía {guia.numero} despachada en {proyecto.codigo}')
             notificar(
                 f'Nueva Guía {guia.numero}',
-                mensaje=f'{proyecto.codigo} — Despachada por Logística. Registrá su recepción.',
+                mensaje=f'{proyecto.codigo} — Despachada por Logística. Registra su recepción.',
                 tipo='info',
                 url=f'/almacen/proyecto/{proyecto.pk}/guias/',
             )
@@ -284,22 +321,21 @@ def guia_crear(request, proyecto_id):
     else:
         form = GuiaRemisionForm(initial={'numero': _siguiente_numero_guia(proyecto)})
 
-    cotizaciones_data = [{
-        'pk': c.pk,
-        'numero': f'COT{c.numero}',
-        'proveedor': c.proveedor or '',
-        'req': f'REQ{c.requerimiento_origen.numero}' if c.requerimiento_origen_id else '',
+    ocs_data = [{
+        'pk': oc.pk,
+        'numero': oc.numero,
+        'proveedor': (oc.proveedor.razon_social if oc.proveedor_id else '') or '',
         'items': [{
             'descripcion': _descripcion_item(d),
             'unidad': _unidad_item(d),
             'cantidad': '{:f}'.format(d.cantidad.quantize(Decimal('0.001')).normalize()),
-        } for d in c.detalles.all()],
-    } for c in disponibles]
+        } for d in oc.detalles.all()],
+    } for oc in disponibles]
 
     return render(request, 'logistica/guia_form.html', {
         'proyecto': proyecto, 'form': form,
-        'cotizaciones_data': cotizaciones_data,
-        'cotizaciones_seleccion': seleccion,
+        'ocs_data': ocs_data,
+        'ocs_seleccion': seleccion,
         'titulo': 'Nueva Guía de Remisión',
     })
 
@@ -348,14 +384,14 @@ def guia_estado(request, pk):
     nuevo = request.POST.get('estado', '')
     if nuevo in dict(ESTADOS_GUIA) and nuevo != guia.estado:
         anterior = guia.estado
-        tiene_cots = guia.cotizaciones.exists()
-        if tiene_cots and anterior == 'ANULADO':
+        tiene_origen = guia.ocs.exists() or guia.cotizaciones.exists()
+        if tiene_origen and anterior == 'ANULADO':
             messages.error(request, 'Una guía anulada no se puede reactivar; genera una nueva.')
             return redirect('logistica:guia_detalle', pk=guia.pk)
         with transaction.atomic():
             guia.estado = nuevo
             guia.save(update_fields=['estado'])
-            if tiene_cots:
+            if tiene_origen:
                 if nuevo == 'ANULADO' and anterior in ESTADOS_GUIA_DESPACHADA:
                     _revertir_descuento(guia)
                 for req in _reqs_de_guia(guia):

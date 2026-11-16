@@ -84,10 +84,18 @@ class GuiaRemision(models.Model):
         on_delete=models.SET_NULL,
         related_name='guias_remision',
     )
-    # Cotizaciones aprobadas cuyos ítems viajan en esta guía. Una cotización solo
-    # puede estar en una guía activa (no anulada): evita descontar el stock dos veces.
+    # Cotizaciones aprobadas cuyos ítems viajan en esta guía. LEGACY — el flujo
+    # nuevo usa `ocs` (Órdenes de Compra). Se conserva para no romper guías ya
+    # creadas con el flujo anterior.
     cotizaciones   = models.ManyToManyField(
         'almacen.Cotizacion',
+        blank=True,
+        related_name='guias_remision',
+    )
+    # Órdenes de Compra cuyos ítems viajan en esta guía. Una OC solo puede estar
+    # en una guía activa (no anulada): evita descontar el stock dos veces.
+    ocs            = models.ManyToManyField(
+        'logistica.OrdenCompraLog',
         blank=True,
         related_name='guias_remision',
     )
