@@ -525,6 +525,17 @@ def proyecto_restablecer(request, pk):
         Trabajador, DocumentoTrabajador, Cuadrilla, IntegranteCuadrilla, Asistencia,
     )
     from apps.presupuesto.models import Presupuesto, Partida, InsumoPresupuesto, Modificacion
+    from apps.registro.models import Notificacion
+    from django.db.models import Q
+
+    def _notifs_del_proyecto():
+        """Notificaciones que mencionan el proyecto (por código en título/mensaje
+        o por url que contiene /proyecto/<pk>/)."""
+        return Notificacion.objects.filter(
+            Q(titulo__icontains=proyecto.codigo) |
+            Q(mensaje__icontains=proyecto.codigo) |
+            Q(url__icontains=f'/proyecto/{proyecto.pk}/')
+        )
 
     def _count(qs):
         try:
@@ -602,6 +613,13 @@ def proyecto_restablecer(request, pk):
             'color': '#ec4899',
             'descripcion': 'Registros diarios de maquinaria y liquidaciones del proyecto.',
             'count': _count(RegistroDiario.objects.filter(proyecto=proyecto)) + _count(RegistroMaquinaria.objects.filter(proyecto=proyecto)),
+        },
+        'notificaciones': {
+            'nombre': 'Notificaciones del proyecto',
+            'icono': 'bi-bell',
+            'color': '#f97316',
+            'descripcion': 'Notificaciones de la campana que mencionan este proyecto (nuevos REQ, aprobaciones, guías, etc.).',
+            'count': _count(_notifs_del_proyecto()),
         },
     }
 
@@ -692,6 +710,10 @@ def proyecto_restablecer(request, pk):
             RegistroMaquinaria.objects.filter(proyecto=proyecto).delete()
             Liquidacion.objects.filter(proyecto=proyecto).delete()
             eliminados.append('Maquinaria')
+
+        if 'notificaciones' in seleccionados:
+            _notifs_del_proyecto().delete()
+            eliminados.append('Notificaciones del proyecto')
 
         messages.success(request, f'Restablecido: {", ".join(eliminados)}.')
         return redirect('proyectos:detalle', pk=pk)
