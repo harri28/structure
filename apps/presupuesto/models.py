@@ -44,7 +44,7 @@ class Presupuesto(models.Model):
         verbose_name='Utilidad (%)'
     )
     igv_pct = models.DecimalField(
-        max_digits=6, decimal_places=2, default=Decimal('18'),
+        max_digits=6, decimal_places=2, default=Decimal('0'),
         verbose_name='IGV (%)'
     )
     supervision_pct = models.DecimalField(
