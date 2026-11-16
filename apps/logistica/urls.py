@@ -10,6 +10,7 @@ urlpatterns = [
     # Guías de Remisión
     path('proyecto/<int:proyecto_id>/guias/',             views.guia_lista,          name='guia_lista'),
     path('proyecto/<int:proyecto_id>/guias/nueva/',       views.guia_crear,          name='guia_crear'),
+    path('proyecto/<int:proyecto_id>/guias/crear-ajax/',  views.guia_crear_ajax,     name='guia_crear_ajax'),
     path('guia/<int:pk>/',                           views.guia_detalle,   name='guia_detalle'),
     path('guia/<int:pk>/bienes/',                    views.guia_bienes_api, name='guia_bienes_api'),
     path('guia/<int:pk>/imprimir/',                  views.guia_imprimir,   name='guia_imprimir'),

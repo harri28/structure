@@ -71,9 +71,25 @@ def guia_lista(request, proyecto_id):
     proyecto = _get_proyecto(proyecto_id)
     qs = (GuiaRemision.objects.filter(proyecto=proyecto)
           .select_related('transportista', 'requerimiento'))
+
+    # Datos para el modal "Nueva Guía"
+    ocs_data = [{
+        'pk': oc.pk,
+        'numero': oc.numero,
+        'proveedor': (oc.proveedor.razon_social if oc.proveedor_id else '') or '',
+        'items': [{
+            'descripcion': _descripcion_item(d),
+            'unidad': _unidad_item(d),
+            'cantidad': '{:f}'.format(d.cantidad.quantize(Decimal('0.001')).normalize()),
+        } for d in oc.detalles.all()],
+    } for oc in _ocs_disponibles(proyecto)]
+
     return render(request, 'logistica/guia_lista.html', {
         'proyecto': proyecto,
         'guias':    qs,
+        'siguiente_numero_guia': _siguiente_numero_guia(proyecto),
+        'ocs_data': ocs_data,
+        'MOTIVOS_TRASLADO': MOTIVOS_TRASLADO,
     })
 
 
@@ -99,18 +115,20 @@ def _registrar_entrada_almacen(guia, proyecto):
 
 
 def _siguiente_numero_guia(proyecto):
-    """Siguiente correlativo de guía del proyecto: GR-{año}-{nnn}."""
+    """Correlativo anual por proyecto: RG{nnnnn}-{YYYY}."""
     import datetime
-    prefijo = f'GR-{datetime.date.today().year}-'
+    anio = datetime.date.today().year
+    sufijo = f'-{anio}'
     mayor = 0
     for numero in (GuiaRemision.objects
-                   .filter(proyecto=proyecto, numero__startswith=prefijo)
+                   .filter(proyecto=proyecto, numero__endswith=sufijo)
                    .values_list('numero', flat=True)):
         try:
-            mayor = max(mayor, int(numero.replace(prefijo, '')))
+            correlativo = numero.replace(sufijo, '').replace('RG', '')
+            mayor = max(mayor, int(correlativo))
         except ValueError:
             continue
-    return f'{prefijo}{str(mayor + 1).zfill(3)}'
+    return f'RG{str(mayor + 1).zfill(5)}{sufijo}'
 
 
 ESTADOS_GUIA_ACTIVA = ['PENDIENTE', 'EN_TRANSITO', 'ENTREGADO']
@@ -337,6 +355,93 @@ def guia_crear(request, proyecto_id):
         'ocs_data': ocs_data,
         'ocs_seleccion': seleccion,
         'titulo': 'Nueva Guía de Remisión',
+    })
+
+
+@require_POST
+@requiere('puede_gestionar_logistica')
+@proyecto_visible
+def guia_crear_ajax(request, proyecto_id):
+    """Crea una Guía de Remisión desde el modal flotante de guia_lista.
+    Espera POST con: ocs (lista de IDs), fecha_traslado, motivo, motivo_otro,
+    peso_kg, origen, destino, conductor, placa, licencia, observaciones.
+    Devuelve JSON {ok, numero, url} o {ok:False, error}."""
+    import datetime, json
+    from django.db import transaction
+    from django.urls import reverse
+    proyecto = _get_proyecto(proyecto_id)
+
+    ids = []
+    for raw in request.POST.getlist('ocs'):
+        try:
+            v = int(raw)
+            if v not in ids:
+                ids.append(v)
+        except (TypeError, ValueError):
+            continue
+    if not ids:
+        return JsonResponse({'ok': False, 'error': 'Selecciona al menos una orden de compra.'}, status=400)
+
+    disponibles = list(_ocs_disponibles(proyecto))
+    elegidas = [oc for oc in disponibles if oc.pk in ids]
+    if len(elegidas) != len(ids):
+        return JsonResponse({'ok': False, 'error': 'Alguna orden de compra ya no está disponible (ya viaja en otra guía).'}, status=400)
+
+    fecha_traslado = (request.POST.get('fecha_traslado') or '').strip()
+    if not fecha_traslado:
+        return JsonResponse({'ok': False, 'error': 'La fecha de traslado es obligatoria.'}, status=400)
+
+    origen  = (request.POST.get('origen')  or '').strip()
+    destino = (request.POST.get('destino') or '').strip()
+    if not origen or not destino:
+        return JsonResponse({'ok': False, 'error': 'Punto de partida y punto de llegada son obligatorios.'}, status=400)
+
+    motivo = (request.POST.get('motivo') or 'TRASLADO_OBRA').strip()
+    if motivo not in dict(MOTIVOS_TRASLADO):
+        motivo = 'TRASLADO_OBRA'
+    motivo_otro = (request.POST.get('motivo_otro') or '').strip()
+    if motivo == 'OTRO' and not motivo_otro:
+        return JsonResponse({'ok': False, 'error': 'Indica el motivo cuando eliges "Otro".'}, status=400)
+
+    peso_raw = (request.POST.get('peso_kg') or '').strip()
+    peso_kg = None
+    if peso_raw:
+        try:
+            peso_kg = Decimal(peso_raw)
+        except Exception:
+            return JsonResponse({'ok': False, 'error': 'Peso bruto inválido.'}, status=400)
+
+    with transaction.atomic():
+        guia = GuiaRemision.objects.create(
+            proyecto=proyecto,
+            numero=_siguiente_numero_guia(proyecto),
+            fecha_emision=datetime.date.today(),
+            fecha_traslado=fecha_traslado,
+            motivo=motivo,
+            motivo_otro=motivo_otro,
+            origen=origen,
+            destino=destino,
+            conductor=(request.POST.get('conductor') or '').strip(),
+            placa=(request.POST.get('placa') or '').strip(),
+            licencia=(request.POST.get('licencia') or '').strip(),
+            peso_kg=peso_kg,
+            observaciones=(request.POST.get('observaciones') or '').strip(),
+            estado='EN_TRANSITO',
+        )
+        guia.ocs.set(elegidas)
+        _despachar_ocs(guia, elegidas)
+
+    log(request, 'CREAR', 'Logística', f'Guía {guia.numero} despachada en {proyecto.codigo}')
+    notificar(
+        f'Nueva Guía {guia.numero}',
+        mensaje=f'{proyecto.codigo} — Despachada por Logística. Registra su recepción.',
+        tipo='info',
+        url=f'/almacen/proyecto/{proyecto.pk}/guias/',
+    )
+    return JsonResponse({
+        'ok': True,
+        'numero': guia.numero,
+        'url': reverse('logistica:guia_detalle', args=[guia.pk]),
     })
 
 

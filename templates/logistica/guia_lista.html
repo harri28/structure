@@ -10,9 +10,11 @@
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <h4><i class="bi bi-send me-2" style="color:#2563eb"></i>Guías de Remisión</h4>
-  <a href="{% url 'logistica:guia_crear' proyecto.pk %}" class="btn btn-primary btn-sm">
+  {% if permisos.puede_gestionar_logistica %}
+  <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-guia">
     <i class="bi bi-plus-lg me-1"></i>Nueva Guía
-  </a>
+  </button>
+  {% endif %}
 </div>
 
 <div class="card">
@@ -74,7 +76,7 @@
         {% empty %}
         <tr>
           <td colspan="9" class="text-center py-4 text-muted">
-            No hay guías registradas todavía. Generá una desde una cotización aprobada.
+            No hay guías registradas todavía. Genera una desde "Nueva Guía".
           </td>
         </tr>
         {% endfor %}
@@ -82,4 +84,263 @@
     </table>
   </div>
 </div>
+
+{# ───────────── Modal: Nueva Guía de Remisión ───────────── #}
+<div class="modal fade" id="modal-guia" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header py-2 d-flex align-items-center gap-3">
+        <h6 class="modal-title mb-0" style="font-size:1rem">
+          <i class="bi bi-send me-2" style="color:#4f46e5"></i>Nueva Guía de Remisión
+        </h6>
+        <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.82rem;padding:.4em .7em">
+          N° <strong>{{ siguiente_numero_guia }}</strong>
+        </span>
+        <button type="button" class="btn-close btn-sm ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="form-guia" class="form-compact">
+          {% csrf_token %}
+
+          {# Fila principal: N° de OC + fechas #}
+          <div class="row g-3 align-items-start">
+            <div class="col-md-7">
+              <label class="form-label">N° de Orden de Compra *</label>
+              <input type="text" id="g-oc-search" class="form-control form-control-sm" autocomplete="off"
+                     placeholder="Buscar orden de compra por N° o proveedor...">
+              <div id="g-oc-dropdown" style="display:none;margin-top:.25rem;background:#fff;border:1px solid #dee2e6;border-radius:6px;max-height:240px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.08);position:absolute;z-index:1080;width:calc(100% - 1.5rem)"></div>
+              <div id="g-oc-chips" class="d-flex flex-wrap gap-2 mt-2"></div>
+              <div id="g-oc-hidden"></div>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Fecha emisión</label>
+              <div class="form-control form-control-sm" style="background:#f8fafc" id="g-fecha-emision">{% now "d/m/Y" %}</div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Fecha traslado *</label>
+              <input type="date" id="g-fecha-traslado" name="fecha_traslado" class="form-control form-control-sm" required>
+            </div>
+          </div>
+
+          {# Datos del traslado #}
+          <div class="row g-3 mt-1">
+            <div class="col-md-4">
+              <label class="form-label">Motivo del Traslado</label>
+              <select id="g-motivo" name="motivo" class="form-select form-select-sm">
+                {% for val, lbl in MOTIVOS_TRASLADO %}
+                <option value="{{ val }}">{{ lbl }}</option>
+                {% endfor %}
+              </select>
+              <input type="text" id="g-motivo-otro" name="motivo_otro" class="form-control form-control-sm mt-2" placeholder="Especificar otro motivo..." style="display:none">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Peso (kg)</label>
+              <input type="number" step="0.01" id="g-peso" name="peso_kg" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Punto de Partida *</label>
+              <input type="text" id="g-origen" name="origen" class="form-control form-control-sm" placeholder="Almacén central..." required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Punto de Llegada *</label>
+              <input type="text" id="g-destino" name="destino" class="form-control form-control-sm" placeholder="Obra / destino" required>
+            </div>
+          </div>
+
+          {# Transporte #}
+          <div class="row g-3 mt-1">
+            <div class="col-md-5">
+              <label class="form-label">Transportista</label>
+              <input type="text" id="g-conductor" name="conductor" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Placa</label>
+              <input type="text" id="g-placa" name="placa" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">N° Licencia</label>
+              <input type="text" id="g-licencia" name="licencia" class="form-control form-control-sm">
+            </div>
+          </div>
+
+          {# Bienes a trasladar #}
+          <div class="card mt-3" id="g-card-bienes" style="display:none">
+            <div class="card-header py-2" style="background:#f8fafc;font-size:.82rem;font-weight:700">
+              <i class="bi bi-boxes me-1"></i> Bienes a Trasladar
+            </div>
+            <div class="card-body p-0">
+              <table class="table table-sm mb-0" id="g-tabla-bienes">
+                <thead style="background:#f8fafc">
+                  <tr>
+                    <th>Descripción</th>
+                    <th style="width:15%">Unidad</th>
+                    <th style="width:15%" class="text-end">Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          {# Observaciones #}
+          <div class="mt-3">
+            <label class="form-label">Observaciones</label>
+            <textarea id="g-obs" name="observaciones" class="form-control form-control-sm" rows="2"></textarea>
+          </div>
+
+          <div id="g-err" class="alert alert-danger py-2 mt-3" style="display:none;font-size:.85rem"></div>
+        </form>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-guia-guardar">
+          <i class="bi bi-check-lg me-1"></i>Guardar y generar guía
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ ocs_data|json_script:"g-oc-data" }}
+<script>
+(function(){
+  const URL_CREAR = "{% url 'logistica:guia_crear_ajax' proyecto.pk %}";
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  const data = JSON.parse(document.getElementById('g-oc-data').textContent);
+  let seleccion = [];
+  const inp = document.getElementById('g-oc-search');
+  const dropdown = document.getElementById('g-oc-dropdown');
+  const chips = document.getElementById('g-oc-chips');
+  const hidden = document.getElementById('g-oc-hidden');
+  const card = document.getElementById('g-card-bienes');
+  const tbody = document.querySelector('#g-tabla-bienes tbody');
+  const motivoSel = document.getElementById('g-motivo');
+  const motivoOtro = document.getElementById('g-motivo-otro');
+
+  function el(tag, props, texto) {
+    const e = document.createElement(tag);
+    Object.keys(props || {}).forEach(k => {
+      if (k === 'style') e.style.cssText = props[k]; else e.setAttribute(k, props[k]);
+    });
+    if (texto !== undefined) e.textContent = texto;
+    return e;
+  }
+  function porPk(pk) { return data.find(oc => oc.pk === pk); }
+
+  function pintarSeleccion() {
+    chips.innerHTML = '';
+    hidden.innerHTML = '';
+    tbody.innerHTML = '';
+    seleccion.forEach(pk => {
+      const oc = porPk(pk);
+      if (!oc) return;
+      const chip = el('span', { 'class': 'badge bg-primary d-inline-flex align-items-center gap-1', style: 'font-size:.78rem;padding:.4em .6em' }, oc.numero + (oc.proveedor ? ' · ' + oc.proveedor : ''));
+      const x = el('button', { type: 'button', 'class': 'btn-close btn-close-white', style: 'font-size:.6rem', 'aria-label': 'Quitar' });
+      x.addEventListener('click', () => quitar(pk));
+      chip.appendChild(x);
+      chips.appendChild(chip);
+      hidden.appendChild(el('input', { type: 'hidden', name: 'ocs', value: pk }));
+      oc.items.forEach(it => {
+        const tr = el('tr');
+        const td1 = el('td', { style: 'font-size:.83rem' }, it.descripcion);
+        td1.appendChild(el('div', { style: 'font-size:.7rem;color:#6b7280' }, oc.numero));
+        tr.appendChild(td1);
+        tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, it.unidad || '—'));
+        tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem' }, it.cantidad));
+        tbody.appendChild(tr);
+      });
+    });
+    card.style.display = seleccion.length ? '' : 'none';
+  }
+
+  function agregar(pk) {
+    if (seleccion.indexOf(pk) === -1) seleccion.push(pk);
+    inp.value = '';
+    dropdown.style.display = 'none';
+    pintarSeleccion();
+  }
+  function quitar(pk) {
+    seleccion = seleccion.filter(x => x !== pk);
+    pintarSeleccion();
+  }
+
+  function pintarLista() {
+    const q = inp.value.trim().toLowerCase();
+    const lista = data.filter(oc => {
+      if (seleccion.indexOf(oc.pk) !== -1) return false;
+      return !q || (oc.numero + ' ' + oc.proveedor).toLowerCase().indexOf(q) !== -1;
+    });
+    dropdown.innerHTML = '';
+    if (!lista.length) {
+      dropdown.appendChild(el('div', { style: 'padding:10px 14px;font-size:.8rem;color:#9ca3af' },
+        data.length ? 'Sin coincidencias' : 'No hay órdenes de compra disponibles'));
+    } else {
+      lista.forEach(oc => {
+        const op = el('div', { style: 'padding:8px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:.82rem' });
+        op.appendChild(el('strong', { style: 'color:#2563eb' }, oc.numero));
+        op.appendChild(el('span', { style: 'color:#6b7280;margin-left:.5rem' },
+          (oc.proveedor || '—') + ' · ' + oc.items.length + ' ítem' + (oc.items.length === 1 ? '' : 's')));
+        op.addEventListener('mouseover', () => { op.style.background = '#eff6ff'; });
+        op.addEventListener('mouseout', () => { op.style.background = ''; });
+        op.addEventListener('click', () => agregar(oc.pk));
+        dropdown.appendChild(op);
+      });
+    }
+    dropdown.style.display = 'block';
+  }
+
+  inp.addEventListener('focus', pintarLista);
+  inp.addEventListener('input', pintarLista);
+  document.addEventListener('click', e => {
+    if (!inp.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+  });
+
+  motivoSel.addEventListener('change', () => {
+    motivoOtro.style.display = motivoSel.value === 'OTRO' ? '' : 'none';
+  });
+
+  // Inicializar: fecha traslado = hoy
+  const modalEl = document.getElementById('modal-guia');
+  if (modalEl) {
+    modalEl.addEventListener('shown.bs.modal', () => {
+      const ft = document.getElementById('g-fecha-traslado');
+      if (!ft.value) ft.value = new Date().toISOString().slice(0, 10);
+    });
+  }
+
+  document.getElementById('btn-guia-guardar').addEventListener('click', () => {
+    const err = document.getElementById('g-err');
+    err.style.display = 'none';
+    if (!seleccion.length) {
+      err.textContent = 'Selecciona al menos una orden de compra.';
+      err.style.display = '';
+      return;
+    }
+    const form = document.getElementById('form-guia');
+    const fd = new FormData(form);
+    fetch(URL_CREAR, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      body: fd,
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        window.location.href = d.url;
+      } else {
+        err.textContent = d.error || 'Error al generar la guía.';
+        err.style.display = '';
+      }
+    })
+    .catch(e => {
+      err.textContent = 'Error de red: ' + e.message;
+      err.style.display = '';
+    });
+  });
+})();
+</script>
 {% endblock %}
