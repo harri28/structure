@@ -524,7 +524,10 @@ def proyecto_restablecer(request, pk):
         RegistroDiario, RegistroMaquinaria, Liquidacion,
         Trabajador, DocumentoTrabajador, Cuadrilla, IntegranteCuadrilla, Asistencia,
     )
-    from apps.presupuesto.models import Presupuesto, Partida, InsumoPresupuesto, Modificacion
+    from apps.presupuesto.models import (
+        Presupuesto, Partida, InsumoPresupuesto, Modificacion,
+        AmpliacionInsumo, CambioNombreInsumo,
+    )
     from apps.registro.models import Notificacion
     from django.db.models import Q
 
@@ -550,6 +553,16 @@ def proyecto_restablecer(request, pk):
             'color': '#6366f1',
             'descripcion': 'Partidas, insumos, ACU, ampliaciones, cambios de nombre de insumo y modificaciones (adicionales/deductivos).',
             'count': _count(Partida.objects.filter(presupuesto__proyecto=proyecto)) + _count(Modificacion.objects.filter(proyecto=proyecto)),
+        },
+        'modif_insumos': {
+            'nombre': 'Modificaciones de insumos',
+            'icono': 'bi-pencil-square',
+            'color': '#a855f7',
+            'descripcion': 'Ampliaciones de cantidad y cambios de nombre de insumos del presupuesto. Restaura los nombres originales y el contador a la cantidad importada, sin tocar partidas ni ACU.',
+            'count': (
+                _count(AmpliacionInsumo.objects.filter(insumo__presupuesto__proyecto=proyecto)) +
+                _count(CambioNombreInsumo.objects.filter(insumo__presupuesto__proyecto=proyecto))
+            ),
         },
         'requerimientos': {
             'nombre': 'Requerimientos',
@@ -635,6 +648,24 @@ def proyecto_restablecer(request, pk):
             return render(request, 'proyectos/restablecer.html', {'proyecto': proyecto, 'modulos': modulos})
 
         eliminados = []
+
+        if 'modif_insumos' in seleccionados:
+            # Para cada insumo con cambios de nombre, restaurar al nombre ANTERIOR
+            # del cambio más antiguo (el "original" pre-modificación), luego borrar
+            # los cambios. Las ampliaciones solo se borran (cantidad_total queda).
+            insumos_qs = InsumoPresupuesto.objects.filter(presupuesto__proyecto=proyecto)
+            for ins in insumos_qs:
+                primer_cambio = ins.cambios_nombre.order_by('fecha').first()
+                if primer_cambio:
+                    ins.descripcion = primer_cambio.nombre_anterior
+                    ins.save(update_fields=['descripcion'])
+            CambioNombreInsumo.objects.filter(
+                insumo__presupuesto__proyecto=proyecto
+            ).delete()
+            AmpliacionInsumo.objects.filter(
+                insumo__presupuesto__proyecto=proyecto
+            ).delete()
+            eliminados.append('Modificaciones de insumos')
 
         if 'presupuesto' in seleccionados:
             # Modificaciones (adicionales/deductivos) tienen FK directo a proyecto,
