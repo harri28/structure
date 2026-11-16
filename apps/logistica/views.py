@@ -1538,27 +1538,53 @@ def _siguiente_numero_oc(proyecto):
     return f'{prefijo}{str(mayor + 1).zfill(4)}'
 
 
+def _saldos_comprables(proyecto):
+    """{insumo_id: Decimal} con lo que queda por comprar =
+    (Σ cantidad_aprobada en REQs revisados) − (Σ cantidades ya en OC del proyecto)."""
+    from decimal import Decimal
+    from django.db.models import Sum
+    from apps.requerimientos.models import DetalleRequerimiento
+
+    estados_ok = ('APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO')
+    aprobados = dict(
+        DetalleRequerimiento.objects
+        .filter(requerimiento__proyecto=proyecto,
+                requerimiento__estado__in=estados_ok,
+                cantidad_aprobada__gt=0,
+                insumo_id__isnull=False)
+        .values('insumo_id')
+        .annotate(s=Sum('cantidad_aprobada'))
+        .values_list('insumo_id', 's')
+    )
+    comprados = dict(
+        DetalleOrdenCompraLog.objects
+        .filter(orden__proyecto=proyecto, insumo_id__isnull=False)
+        .values('insumo_id')
+        .annotate(s=Sum('cantidad'))
+        .values_list('insumo_id', 's')
+    )
+    saldos = {}
+    for ins_id, aprob in aprobados.items():
+        saldo = (aprob or Decimal('0')) - (comprados.get(ins_id) or Decimal('0'))
+        if saldo < 0:
+            saldo = Decimal('0')
+        saldos[ins_id] = saldo
+    return saldos
+
+
 @requiere('puede_ver_logistica')
 @proyecto_visible
 def oc_insumos_buscar_ajax(request, proyecto_id):
-    """GET AJAX: insumos del proyecto con cantidad_aprobada > 0 (desbloqueados
-    en algún REQ aprobado/parcial/cotizado/atendido). Para el autocomplete
-    del modal Nueva OC."""
-    from django.db.models import Sum, Q
-    from apps.requerimientos.models import DetalleRequerimiento
+    """GET AJAX: insumos del proyecto con saldo_comprable > 0. El saldo es
+    cantidad_aprobada total − lo ya comprado en OrdenCompraLog previas."""
+    from django.db.models import Q
     from apps.presupuesto.models import InsumoPresupuesto
 
     proyecto = _get_proyecto(proyecto_id)
     q = (request.GET.get('q') or '').strip()
 
-    estados_ok = ('APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO')
-    aprobados = (DetalleRequerimiento.objects
-                 .filter(requerimiento__proyecto=proyecto,
-                         requerimiento__estado__in=estados_ok,
-                         cantidad_aprobada__gt=0)
-                 .values('insumo_id')
-                 .annotate(aprobada=Sum('cantidad_aprobada')))
-    ids = [a['insumo_id'] for a in aprobados if a['insumo_id']]
+    saldos = _saldos_comprables(proyecto)
+    ids = [ins_id for ins_id, saldo in saldos.items() if saldo > 0]
     if not ids:
         return JsonResponse({'items': []})
 
@@ -1572,6 +1598,7 @@ def oc_insumos_buscar_ajax(request, proyecto_id):
             'codigo':      ins.codigo or '',
             'descripcion': ins.descripcion or '',
             'unidad':      ins.unidad or '',
+            'saldo':       str(saldos.get(ins.pk, 0)),
         } for ins in qs],
     })
 
@@ -1639,6 +1666,27 @@ def oc_crear_ajax(request, proyecto_id):
         })
     if not items:
         return JsonResponse({'ok': False, 'error': 'Los ítems enviados no son válidos.'}, status=400)
+
+    # Validar que la cantidad de cada item con insumo asociado no supere el
+    # saldo comprable (aprobada total − ya comprada en otras OC).
+    saldos = _saldos_comprables(proyecto)
+    consumo = {}
+    errores_saldo = []
+    for it in items:
+        if not it['insumo']:
+            continue
+        iid = it['insumo'].pk
+        consumo[iid] = consumo.get(iid, Decimal('0')) + it['cantidad']
+    for iid, pedido in consumo.items():
+        disponible = saldos.get(iid, Decimal('0'))
+        if pedido > disponible:
+            ins = InsumoPresupuesto.objects.filter(pk=iid).first()
+            nombre = ins.descripcion if ins else f'insumo #{iid}'
+            errores_saldo.append(
+                f'"{nombre}": querés comprar {pedido} pero solo quedan {disponible} aprobadas por comprar.'
+            )
+    if errores_saldo:
+        return JsonResponse({'ok': False, 'error': ' '.join(errores_saldo)}, status=400)
 
     from django.db import transaction
     with transaction.atomic():
