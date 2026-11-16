@@ -128,6 +128,9 @@
   <a href="{% url 'almacen:guias_almacen_lista' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
     Cancelar
   </a>
+  <button type="button" class="btn btn-outline-primary btn-sm" onclick="imprimirGuia({{ guia.pk }})">
+    <i class="bi bi-printer me-1"></i>Imprimir
+  </button>
   {% if guia_registrada %}
   <button type="button" class="btn btn-secondary btn-sm" disabled style="cursor:not-allowed;opacity:.65">
     <i class="bi bi-check-circle-fill me-1"></i>Guía Registrada
@@ -138,4 +141,21 @@
   </a>
   {% endif %}
 </div>
+
+<script>
+function imprimirGuia(pk) {
+  const url = '/logistica/guia/' + pk + '/imprimir/';
+  let iframe = document.getElementById('g-print-frame');
+  if (iframe) iframe.remove();
+  iframe = document.createElement('iframe');
+  iframe.id = 'g-print-frame';
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  iframe.src = url;
+  iframe.addEventListener('load', () => {
+    try { iframe.contentWindow.focus(); iframe.contentWindow.print(); }
+    catch (e) { window.open(url, '_blank'); }
+  });
+  document.body.appendChild(iframe);
+}
+</script>
 {% endblock %}

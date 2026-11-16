@@ -31,7 +31,7 @@
           <th>Destino</th>
           <th>Transportista</th>
           <th class="text-center">Ítems</th>
-          <th class="text-end" style="width:180px">Acción</th>
+          <th class="text-end" style="width:70px">Acción</th>
         </tr>
       </thead>
       <tbody>
@@ -63,8 +63,10 @@
             <span class="badge rounded-pill bg-primary" style="font-size:.7rem;padding:.25em .6em">{{ g.detalles.count }}</span>
           </td>
           <td class="text-end">
-            <a href="{% url 'almacen:guia_almacen_detalle' g.pk %}" class="btn btn-outline-primary btn-sm">
-              <i class="bi bi-eye me-1"></i>Ver Guía
+            <a href="{% url 'almacen:guia_almacen_detalle' g.pk %}"
+               title="Ver guía" style="color:#2563eb;font-size:1.1rem;line-height:1"
+               onclick="event.stopPropagation()">
+              <i class="bi bi-eye"></i>
             </a>
           </td>
         </tr>
