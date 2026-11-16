@@ -240,11 +240,43 @@
         <i class="bi bi-speedometer2"></i> Dashboard Logística
       </a>
       {% if permisos.puede_revisar_reqs_log %}
-      <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
-         class="sb-link {% if vn == 'logistica:requerimientos_log' or vn == 'logistica:req_revisar_log' or vn == 'logistica:req_detalle_log' or vn == 'logistica:por_atender_log' or vn == 'logistica:aprobados_log' or vn == 'logistica:historial_log' or vn == 'logistica:anulados_log' %}active{% endif %}">
-        <i class="bi bi-file-earmark-text"></i> Requerimientos
-        {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
-      </a>
+      {% with reqs_vns='logistica:requerimientos_log,logistica:req_revisar_log,logistica:req_detalle_log,logistica:por_atender_log,logistica:aprobados_log,logistica:historial_log,logistica:anulados_log' %}
+      <div class="sb-module-row">
+        <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
+           class="sb-link {% if vn in reqs_vns %}active{% endif %}">
+          <i class="bi bi-file-earmark-text"></i> Requerimientos
+          {% if req_enviados %}<span class="badge bg-danger ms-auto" style="font-size:.62rem;padding:.2em .4em">{{ req_enviados }}</span>{% endif %}
+        </a>
+        <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse"
+                data-bs-target="#nav-reqs-log"
+                aria-expanded="false"
+                aria-label="Expandir Requerimientos">
+          <i class="bi bi-chevron-right sb-arrow"></i>
+        </button>
+      </div>
+      <div class="collapse" id="nav-reqs-log">
+        <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:requerimientos_log' %}active{% endif %}">
+          <i class="bi bi-list-ul"></i> Ingreso de Requerimientos
+        </a>
+        <a href="{% url 'logistica:aprobados_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:aprobados_log' %}active{% endif %}">
+          <i class="bi bi-check2-circle"></i> Aprobados
+        </a>
+        <a href="{% url 'logistica:por_atender_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:por_atender_log' %}active{% endif %}">
+          <i class="bi bi-hourglass-split"></i> Por atender
+        </a>
+        <a href="{% url 'logistica:anulados_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:anulados_log' %}active{% endif %}">
+          <i class="bi bi-x-circle"></i> Anulados
+        </a>
+        <a href="{% url 'logistica:historial_log' proyecto_activo.pk %}"
+           class="sb-link sb-sublink {% if vn == 'logistica:historial_log' %}active{% endif %}">
+          <i class="bi bi-journal-text"></i> Historial
+        </a>
+      </div>
+      {% endwith %}
       {% endif %}
       {% if permisos.puede_gestionar_cotizaciones_log %}
       <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
@@ -495,7 +527,7 @@
 // antes de que Bootstrap inicialice. Evita que un HTML con 'collapse show' en
 // caché del navegador haga que los grupos aparezcan abiertos.
 (function(){
-  var sideGroups = ['nav-presupuesto','nav-reqs','nav-almacen','nav-config-admin'];
+  var sideGroups = ['nav-presupuesto','nav-reqs','nav-almacen','nav-config-admin','nav-reqs-log','nav-presupuesto-log'];
   sideGroups.forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.classList.remove('show');
@@ -619,10 +651,12 @@ document.querySelectorAll('table.table:not(.table-modern)').forEach(function (t)
   // Todos cerrados por defecto. Si el user está viendo un sub-módulo, el
   // grupo correspondiente se abre automáticamente (chequeo tieneActivo abajo).
   var grupos = [
-    { id: 'nav-presupuesto',  abiertoPorDefecto: false },
-    { id: 'nav-reqs',         abiertoPorDefecto: false },
-    { id: 'nav-almacen',      abiertoPorDefecto: false },
-    { id: 'nav-config-admin', abiertoPorDefecto: false }
+    { id: 'nav-presupuesto',     abiertoPorDefecto: false },
+    { id: 'nav-reqs',            abiertoPorDefecto: false },
+    { id: 'nav-almacen',         abiertoPorDefecto: false },
+    { id: 'nav-config-admin',    abiertoPorDefecto: false },
+    { id: 'nav-reqs-log',        abiertoPorDefecto: false },
+    { id: 'nav-presupuesto-log', abiertoPorDefecto: false }
   ];
 
   // Reset único de localStorage al cambiar el default — navegadores con
