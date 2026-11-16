@@ -193,16 +193,16 @@
         <i class="bi bi-arrow-down-circle"></i> Registro de Entradas
       </a>
       {% endif %}
-      <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
-         class="sb-link sb-sublink {% block nav_stock %}{% endblock %}">
-        <i class="bi bi-archive"></i> Stock
-      </a>
       {% if permisos.puede_gestionar_salidas %}
       <a href="{% url 'almacen:salida_lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_salidas %}{% endblock %}">
         <i class="bi bi-arrow-up-circle"></i> Registro de Salidas
       </a>
       {% endif %}
+      <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
+         class="sb-link sb-sublink {% block nav_stock %}{% endblock %}">
+        <i class="bi bi-archive"></i> Stock
+      </a>
       <a href="{% url 'almacen:consumo' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_consumo %}{% endblock %}">
         <i class="bi bi-graph-up-arrow"></i> Consumo
