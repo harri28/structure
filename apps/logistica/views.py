@@ -41,25 +41,128 @@ def _get_proyecto(pk):
 @requiere('puede_ver_logistica')
 @proyecto_visible
 def dashboard(request, proyecto_id):
-    proyecto = _get_proyecto(proyecto_id)
-    # Excluir ANULADAS del listado y del total (siguen existiendo en la BD para trazabilidad)
-    qs = GuiaRemision.objects.filter(proyecto=proyecto).exclude(estado='ANULADO')
-    recientes = qs.select_related('transportista').order_by('-creado_en')[:8]
-
+    """Dashboard de Logística: KPIs económicos (presupuestado vs comprado por
+    insumo), gráfico comparativo y resumen compacto de requerimientos.
+    Filtros: fecha_desde, fecha_hasta, proveedor, q (busca insumo)."""
+    from decimal import Decimal
+    from django.db.models import Sum, F, DecimalField, Count
+    from django.db.models.functions import Coalesce
     from apps.requerimientos.models import Requerimiento
+    from apps.presupuesto.models import InsumoPresupuesto
+
+    proyecto = _get_proyecto(proyecto_id)
+
+    # ── Filtros ────────────────────────────────────────────────────
+    fecha_desde = (request.GET.get('desde') or '').strip()
+    fecha_hasta = (request.GET.get('hasta') or '').strip()
+    proveedor_id = (request.GET.get('proveedor') or '').strip()
+    q_insumo = (request.GET.get('q') or '').strip()
+
+    # ── KPIs globales (sin filtros) ────────────────────────────────
+    total_presupuestado = (InsumoPresupuesto.objects
+        .filter(presupuesto__proyecto=proyecto)
+        .aggregate(s=Coalesce(Sum(F('cantidad_total') * F('costo_unitario'),
+                                  output_field=DecimalField(max_digits=18, decimal_places=4)),
+                              Decimal('0')))['s'])
+
+    total_comprado_global = (DetalleOrdenCompraLog.objects
+        .filter(orden__proyecto=proyecto, orden__deleted_at__isnull=True)
+        .aggregate(s=Coalesce(Sum(F('cantidad') * F('precio_unitario'),
+                                  output_field=DecimalField(max_digits=18, decimal_places=4)),
+                              Decimal('0')))['s'])
+
+    pct_avance = Decimal('0')
+    if total_presupuestado and total_presupuestado > 0:
+        pct_avance = (total_comprado_global / total_presupuestado * Decimal('100')).quantize(Decimal('0.01'))
+    saldo_disponible = (total_presupuestado or Decimal('0')) - (total_comprado_global or Decimal('0'))
+
+    # ── Comprado por insumo (aplica filtros al queryset de OCs) ────
+    ocs_qs = OrdenCompraLog.objects.filter(proyecto=proyecto, deleted_at__isnull=True)
+    if fecha_desde:
+        ocs_qs = ocs_qs.filter(created_at__date__gte=fecha_desde)
+    if fecha_hasta:
+        ocs_qs = ocs_qs.filter(created_at__date__lte=fecha_hasta)
+    if proveedor_id.isdigit():
+        ocs_qs = ocs_qs.filter(proveedor_id=int(proveedor_id))
+
+    comprado_por_insumo = dict(
+        DetalleOrdenCompraLog.objects
+        .filter(orden__in=ocs_qs, insumo_id__isnull=False)
+        .values('insumo_id')
+        .annotate(m=Sum(F('cantidad') * F('precio_unitario'),
+                        output_field=DecimalField(max_digits=18, decimal_places=4)))
+        .values_list('insumo_id', 'm')
+    )
+
+    # ── Filas (insumo + presupuestado + comprado) ──────────────────
+    insumos_qs = InsumoPresupuesto.objects.filter(presupuesto__proyecto=proyecto)
+    if q_insumo:
+        from django.db.models import Q
+        insumos_qs = insumos_qs.filter(Q(codigo__icontains=q_insumo) | Q(descripcion__icontains=q_insumo))
+
+    filas = []
+    for ins in insumos_qs:
+        pres = (ins.cantidad_total or Decimal('0')) * (ins.costo_unitario or Decimal('0'))
+        comp = comprado_por_insumo.get(ins.pk) or Decimal('0')
+        if pres == 0 and comp == 0:
+            continue  # ocultar insumos sin movimiento ni presupuesto en 0
+        dif = pres - comp
+        filas.append({
+            'codigo': ins.codigo or '—',
+            'descripcion': ins.descripcion,
+            'unidad': ins.unidad or '',
+            'presupuestado': pres,
+            'comprado': comp,
+            'diferencia': dif,
+            'abs_dif': abs(dif),
+            'sobregiro': comp > pres,
+        })
+    # Orden: mayor presupuesto primero (o mayor comprado si no hay presupuesto)
+    filas.sort(key=lambda r: max(r['presupuestado'], r['comprado']), reverse=True)
+
+    # Dataset para el gráfico (limito a 20 para legibilidad; total en tabla queda completo)
+    filas_grafico = filas[:20]
+    chart_labels    = [f["codigo"] for f in filas_grafico]
+    chart_desc      = [f["descripcion"] for f in filas_grafico]
+    chart_presup    = [float(f["presupuestado"]) for f in filas_grafico]
+    chart_comprado  = [float(f["comprado"]) for f in filas_grafico]
+
+    # ── Requerimientos por estado (compacto) ───────────────────────
+    reqs_por_estado = dict(
+        Requerimiento.objects.filter(proyecto=proyecto)
+        .values('estado').annotate(n=Count('pk')).values_list('estado', 'n')
+    )
+    # Alerta de requerimientos ENVIADOs (sin revisar aún) — refrescable por poll
     reqs_nuevos = Requerimiento.objects.filter(
         proyecto=proyecto, estado='ENVIADO'
     ).order_by('-created_at')
 
+    # Lista de proveedores con OCs (para el filtro)
+    proveedores_filtro = (Proveedor.objects
+        .filter(ordenes_compra__proyecto=proyecto,
+                ordenes_compra__deleted_at__isnull=True)
+        .distinct()
+        .order_by('razon_social'))
+
     return render(request, 'logistica/dashboard.html', {
-        'proyecto':    proyecto,
-        'total':       qs.count(),
-        'pendientes':  qs.filter(estado='PENDIENTE').count(),
-        'en_transito': qs.filter(estado='EN_TRANSITO').count(),
-        'entregadas':  qs.filter(estado='ENTREGADO').count(),
-        'recientes':   recientes,
-        'reqs_nuevos': reqs_nuevos,
-        'reqs_n':      reqs_nuevos.count(),
+        'proyecto':            proyecto,
+        'total_presupuestado': total_presupuestado or Decimal('0'),
+        'total_comprado':      total_comprado_global or Decimal('0'),
+        'pct_avance':          pct_avance,
+        'saldo_disponible':    saldo_disponible,
+        'filas':               filas,
+        'chart_labels':        chart_labels,
+        'chart_desc':          chart_desc,
+        'chart_presup':        chart_presup,
+        'chart_comprado':      chart_comprado,
+        'reqs_por_estado':     reqs_por_estado,
+        'reqs_nuevos':         reqs_nuevos,
+        'reqs_n':              reqs_nuevos.count(),
+        'proveedores_filtro':  proveedores_filtro,
+        'filtro_desde':        fecha_desde,
+        'filtro_hasta':        fecha_hasta,
+        'filtro_proveedor':    proveedor_id,
+        'filtro_q':            q_insumo,
     })
 
 

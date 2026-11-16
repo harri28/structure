@@ -9,164 +9,164 @@
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
-  <h4 class="d-flex align-items-center gap-2">
+  <h4 class="d-flex align-items-center gap-2 mb-0">
     <i class="bi bi-truck-front" style="color:#2563eb"></i>
     Logística — {{ proyecto.codigo }}
   </h4>
-  <a href="{% url 'logistica:guia_crear' proyecto.pk %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-lg me-1"></i>Nueva Guía
-  </a>
 </div>
 
-<!-- ── Requerimientos pendientes de revisión ───────────────────── -->
+{# Zona de alerta de requerimientos — refrescada por el poll #}
 <div id="req-alert-zone">
 {% if reqs_n %}
-<div class="card mb-4" style="border:2px solid #f59e0b;background:#fffbeb">
+<div class="card mb-3" style="border:2px solid #f59e0b;background:#fffbeb">
   <div class="card-header d-flex justify-content-between align-items-center py-2"
        style="background:#fef3c7;border-bottom:1px solid #fde68a">
     <span style="font-size:.85rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:.5rem">
-      <span style="width:28px;height:28px;border-radius:50%;background:#f59e0b;
-                   display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
-        <i class="bi bi-bell-fill" style="color:#fff;font-size:.75rem"></i>
-      </span>
+      <i class="bi bi-bell-fill"></i>
       {{ reqs_n }} requerimiento{{ reqs_n|pluralize }} nuevo{{ reqs_n|pluralize }} por revisar
     </span>
     <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}"
        class="btn btn-sm" style="background:#f59e0b;color:#fff;font-size:.75rem;padding:.25rem .75rem;border-radius:6px;font-weight:600">
-      Revisar todos <i class="bi bi-arrow-right ms-1"></i>
+      Revisar <i class="bi bi-arrow-right ms-1"></i>
     </a>
-  </div>
-  <div class="card-body p-0">
-    <table class="table-modern">
-      <thead>
-        <tr>
-          <th style="width:90px">N° Req.</th>
-          <th style="width:90px">Fecha</th>
-          <th style="width:100px">Tipo</th>
-          <th>Solicitante</th>
-          <th style="width:120px">Sector / Obra</th>
-          <th style="width:90px">Estado</th>
-          <th style="width:60px"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in reqs_nuevos %}
-        <tr>
-          <td>
-            <span class="fw-bold" style="font-size:.82rem;color:#92400e">{{ r.numero }}</span>
-          </td>
-          <td style="font-size:.78rem;color:#6b7280">{{ r.fecha|date:"d/m/Y" }}</td>
-          <td style="font-size:.78rem">{{ r.get_tipo_display }}</td>
-          <td style="font-size:.82rem">{{ r.solicitante|default:"—" }}</td>
-          <td style="font-size:.78rem;color:#6b7280">{{ r.sector_obra|default:"—" }}</td>
-          <td>
-            {% if r.estado == 'EN_REVISION' %}
-            <span class="badge bg-warning text-dark" style="font-size:.68rem">En revisión</span>
-            {% else %}
-            <span class="badge bg-primary" style="font-size:.68rem">Nuevo</span>
-            {% endif %}
-          </td>
-          <td class="text-center">
-            <a href="{% url 'logistica:req_detalle_log' proyecto.pk r.pk %}" class="btn-tbl" title="Ver requerimiento">
-              <i class="bi bi-eye"></i>
-            </a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
   </div>
 </div>
 {% endif %}
 </div>
 
-<!-- KPI cards -->
-<div class="row g-3 mb-4">
-  {% with cards=total|default:0 %}
+{# ───────────── KPIs económicos ───────────── #}
+<div class="row g-3 mb-3">
   <div class="col-6 col-md-3">
-    <div class="card text-center" style="border-left:4px solid #6b7280">
+    <div class="card" style="border-left:4px solid #6366f1">
       <div class="card-body py-3">
-        <div style="font-size:1.8rem;font-weight:800;color:#111">{{ total }}</div>
-        <div style="font-size:.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Total guías</div>
+        <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em">Presupuestado</div>
+        <div class="fw-bold" style="font-size:1.35rem;color:#111">S/ {{ total_presupuestado|floatformat:2|miles }}</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card text-center" style="border-left:4px solid #d97706">
+    <div class="card" style="border-left:4px solid #0ea5e9">
       <div class="card-body py-3">
-        <div style="font-size:1.8rem;font-weight:800;color:#d97706">{{ pendientes }}</div>
-        <div style="font-size:.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Pendientes</div>
+        <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em">Comprado</div>
+        <div class="fw-bold" style="font-size:1.35rem;color:#0369a1">S/ {{ total_comprado|floatformat:2|miles }}</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card text-center" style="border-left:4px solid #2563eb">
+    <div class="card" style="border-left:4px solid {% if pct_avance > 100 %}#dc2626{% else %}#16a34a{% endif %}">
       <div class="card-body py-3">
-        <div style="font-size:1.8rem;font-weight:800;color:#2563eb">{{ en_transito }}</div>
-        <div style="font-size:.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">En Tránsito</div>
+        <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em">Avance económico</div>
+        <div class="fw-bold" style="font-size:1.35rem;color:{% if pct_avance > 100 %}#dc2626{% else %}#16a34a{% endif %}">{{ pct_avance|floatformat:2 }}%</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card text-center" style="border-left:4px solid #16a34a">
+    <div class="card" style="border-left:4px solid {% if saldo_disponible < 0 %}#dc2626{% else %}#64748b{% endif %}">
       <div class="card-body py-3">
-        <div style="font-size:1.8rem;font-weight:800;color:#16a34a">{{ entregadas }}</div>
-        <div style="font-size:.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Entregadas</div>
+        <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em">Saldo disponible</div>
+        <div class="fw-bold" style="font-size:1.35rem;color:{% if saldo_disponible < 0 %}#dc2626{% else %}#111{% endif %}">S/ {{ saldo_disponible|floatformat:2|miles }}</div>
       </div>
     </div>
   </div>
-  {% endwith %}
 </div>
 
-<!-- Últimas guías -->
+{# ───────────── Requerimientos por estado (chips compactos) ───────────── #}
+{% if reqs_por_estado %}
+<div class="card mb-3">
+  <div class="card-body py-2 d-flex align-items-center flex-wrap gap-2">
+    <span class="text-muted me-2" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.04em">Requerimientos</span>
+    {% for estado, n in reqs_por_estado.items %}
+    <span class="badge bg-light text-dark border" style="font-size:.78rem;padding:.4em .7em">
+      {{ estado }} · <strong>{{ n }}</strong>
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ───────────── Filtros ───────────── #}
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end" style="font-size:.82rem">
+      <div class="col-sm-3">
+        <label class="text-muted" style="font-size:.7rem">Desde</label>
+        <input type="date" name="desde" value="{{ filtro_desde }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-sm-3">
+        <label class="text-muted" style="font-size:.7rem">Hasta</label>
+        <input type="date" name="hasta" value="{{ filtro_hasta }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-sm-3">
+        <label class="text-muted" style="font-size:.7rem">Proveedor</label>
+        <select name="proveedor" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          {% for p in proveedores_filtro %}
+          <option value="{{ p.pk }}" {% if filtro_proveedor == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.razon_social }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <label class="text-muted" style="font-size:.7rem">Buscar insumo</label>
+        <input type="text" name="q" value="{{ filtro_q }}" class="form-control form-control-sm" placeholder="Código o descripción">
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+        {% if filtro_desde or filtro_hasta or filtro_proveedor or filtro_q %}
+        <a href="{% url 'logistica:dashboard' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ───────────── Gráfico: Comprado vs Presupuestado ───────────── #}
+<div class="card mb-3">
+  <div class="card-header py-2" style="font-size:.85rem;font-weight:700;background:#f8fafc">
+    <i class="bi bi-bar-chart-line me-1"></i> Comprado vs Presupuestado por insumo
+    <span class="text-muted ms-2" style="font-size:.72rem;font-weight:400">({{ filas|length }} insumos con movimiento — gráfico muestra los 20 con mayor monto)</span>
+  </div>
+  <div class="card-body">
+    {% if chart_labels %}
+    <div style="position:relative;height:{{ chart_labels|length|add:0 }}0px;min-height:300px;max-height:600px">
+      <canvas id="chart-comp-pres"></canvas>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-4" style="font-size:.85rem">Sin datos para el filtro actual.</div>
+    {% endif %}
+  </div>
+</div>
+
+{# ───────────── Tabla detallada ───────────── #}
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <span>Actividad reciente</span>
-    <a href="{% url 'logistica:guia_lista' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
-      Ver todas <i class="bi bi-arrow-right ms-1"></i>
-    </a>
+  <div class="card-header py-2" style="font-size:.85rem;font-weight:700;background:#f8fafc">
+    <i class="bi bi-table me-1"></i> Detalle por insumo
   </div>
   <div class="card-body p-0">
-    <table class="table table-sm table-hover mb-0">
-      <thead>
+    <table class="table table-sm mb-0" style="font-size:.82rem">
+      <thead style="background:#f8fafc">
         <tr>
-          <th>N° Guía</th>
-          <th>Fecha</th>
-          <th>Motivo</th>
-          <th>Destino</th>
-          <th>Transportista</th>
-          <th class="text-center">Estado</th>
-          <th style="width:44px"></th>
+          <th style="width:80px">Código</th>
+          <th>Descripción</th>
+          <th style="width:60px">UND</th>
+          <th class="text-end" style="width:130px">Presupuestado</th>
+          <th class="text-end" style="width:130px">Comprado</th>
+          <th class="text-end" style="width:130px">Diferencia</th>
         </tr>
       </thead>
       <tbody>
-        {% for g in recientes %}
-        <tr>
-          <td><a href="{% url 'logistica:guia_detalle' g.pk %}" style="font-weight:600;color:#2563eb">{{ g.numero }}</a></td>
-          <td style="font-size:.8rem">{{ g.fecha_emision|date:"d/m/Y" }}</td>
-          <td style="font-size:.8rem">{{ g.motivo_texto }}</td>
-          <td style="font-size:.8rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.destino }}</td>
-          <td style="font-size:.8rem">{{ g.transportista.razon_social|default:"—" }}</td>
-          <td class="text-center">
-            {% with b=g.estado_badge %}
-            <span class="badge bg-{{ b.0 }}">
-              <i class="bi {{ b.1 }} me-1"></i>{{ g.get_estado_display }}
-            </span>
-            {% endwith %}
-          </td>
-          <td class="text-center">
-            <a href="{% url 'logistica:guia_detalle' g.pk %}" class="btn btn-outline-secondary btn-sm" style="padding:1px 7px;font-size:.75rem">
-              <i class="bi bi-eye"></i>
-            </a>
+        {% for f in filas %}
+        <tr{% if f.sobregiro %} style="background:#fef2f2"{% endif %}>
+          <td><code style="color:#1d4ed8">{{ f.codigo }}</code></td>
+          <td>{{ f.descripcion }}</td>
+          <td class="text-muted">{{ f.unidad }}</td>
+          <td class="text-end">S/ {{ f.presupuestado|floatformat:2|miles }}</td>
+          <td class="text-end">S/ {{ f.comprado|floatformat:2|miles }}</td>
+          <td class="text-end fw-semibold" style="color:{% if f.sobregiro %}#dc2626{% else %}#111{% endif %}">
+            S/ {{ f.diferencia|floatformat:2|miles }}
           </td>
         </tr>
         {% empty %}
-        <tr>
-          <td colspan="7" class="text-center py-4 text-muted">
-            <i class="bi bi-truck-front" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.3"></i>
-            Sin guías registradas. <a href="{% url 'logistica:guia_crear' proyecto.pk %}">Crear la primera</a>
-          </td>
-        </tr>
+        <tr><td colspan="6" class="text-center text-muted py-4">Sin insumos con presupuesto ni compras.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -175,10 +175,51 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- ── REALTIME POLL ────────────────────────────────────────────────
-     Para desactivar: eliminar este bloque + ping_reqs en views.py
-     + el path 'ping_reqs' en urls.py
-──────────────────────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_desc|json_script:"chart-desc" }}
+{{ chart_presup|json_script:"chart-presup" }}
+{{ chart_comprado|json_script:"chart-comprado" }}
+<script>
+(function () {
+  var canvas = document.getElementById('chart-comp-pres');
+  if (!canvas || typeof Chart === 'undefined') return;
+  var labels   = JSON.parse(document.getElementById('chart-labels').textContent);
+  var desc     = JSON.parse(document.getElementById('chart-desc').textContent);
+  var presup   = JSON.parse(document.getElementById('chart-presup').textContent);
+  var comprado = JSON.parse(document.getElementById('chart-comprado').textContent);
+  if (!labels.length) return;
+
+  new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Presupuestado', data: presup, backgroundColor: 'rgba(99,102,241,.75)', borderColor: '#6366f1', borderWidth: 1 },
+        { label: 'Comprado',      data: comprado, backgroundColor: 'rgba(14,165,233,.75)', borderColor: '#0ea5e9', borderWidth: 1 },
+      ],
+    },
+    options: {
+      indexAxis: 'y',
+      maintainAspectRatio: false,
+      scales: {
+        x: { beginAtZero: true, ticks: { callback: v => 'S/ ' + Number(v).toLocaleString('es-PE') } },
+      },
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            title: items => items.length ? desc[items[0].dataIndex] || labels[items[0].dataIndex] : '',
+            label: ctx => ctx.dataset.label + ': S/ ' + Number(ctx.parsed.x).toLocaleString('es-PE', { minimumFractionDigits: 2 }),
+          },
+        },
+      },
+    },
+  });
+})();
+</script>
+
+{# ─── REALTIME POLL (alerta de nuevos requerimientos) ─── #}
 <script>
 (function () {
   var PING   = '{% url "logistica:ping_reqs" proyecto.pk %}';
@@ -187,66 +228,49 @@
   var BURST  = 2000;
   var ultimoId = null;
 
-  var _toastEl = null;
-  function _getToast() {
-    if (_toastEl) return _toastEl;
-    var wrap = document.createElement('div');
-    wrap.innerHTML =
-      '<div id="rt-toast" class="toast align-items-center border-0" role="alert"' +
-      ' style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;min-width:280px;' +
-      'background:#fef3c7;border:1px solid #fde68a!important">' +
-      '<div class="d-flex">' +
-      '<div class="toast-body fw-semibold" id="rt-toast-msg" style="color:#92400e"></div>' +
-      '<button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>' +
-      '</div></div>';
-    document.body.appendChild(wrap);
-    _toastEl = document.getElementById('rt-toast');
-    return _toastEl;
-  }
-
   function mostrarToast(msg) {
     try {
-      var el = _getToast();
-      document.getElementById('rt-toast-msg').innerHTML =
-        '<i class="bi bi-bell-fill me-2"></i>' + msg;
-      bootstrap.Toast.getOrCreateInstance(el, {delay: 6000}).show();
+      var wrap = document.createElement('div');
+      wrap.innerHTML =
+        '<div class="toast align-items-center border-0 show" role="alert"' +
+        ' style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;min-width:280px;' +
+        'background:#fef3c7;border:1px solid #fde68a!important">' +
+        '<div class="d-flex">' +
+        '<div class="toast-body fw-semibold" style="color:#92400e">' +
+        '<i class="bi bi-bell-fill me-2"></i>' + msg +
+        '</div></div></div>';
+      document.body.appendChild(wrap);
+      setTimeout(() => wrap.remove(), 6000);
     } catch (e) {}
   }
 
   function refrescarZona() {
-    fetch(DASH, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-      .then(function (r) { return r.text(); })
-      .then(function (html) {
+    fetch(DASH, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.text())
+      .then(html => {
         var tmp = document.createElement('div');
         tmp.innerHTML = html;
         var nueva  = tmp.querySelector('#req-alert-zone');
         var actual = document.getElementById('req-alert-zone');
         if (nueva && actual) actual.innerHTML = nueva.innerHTML;
-      })
-      .catch(function () {});
+      }).catch(() => {});
   }
 
   function poll() {
-    fetch(PING, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (ultimoId === null) {
-          ultimoId = data.ultimo_id;
-          return;
-        }
+    fetch(PING, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.json())
+      .then(data => {
+        if (ultimoId === null) { ultimoId = data.ultimo_id; return; }
         if (data.ultimo_id > ultimoId) {
           ultimoId = data.ultimo_id;
           mostrarToast('Nuevo requerimiento por revisar');
           refrescarZona();
           setTimeout(refrescarZona, BURST);
         }
-      })
-      .catch(function () {});
+      }).catch(() => {});
   }
-
   setTimeout(poll, 1500);
   setInterval(poll, NORMAL);
 })();
 </script>
-<!-- ── fin REALTIME POLL ──────────────────────────────────────────── -->
 {% endblock %}
