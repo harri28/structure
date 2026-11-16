@@ -47,13 +47,6 @@
                   {{ grupo.detalles|length }} ítem{{ grupo.detalles|length|pluralize }} aprobado{{ grupo.detalles|length|pluralize }}
                 </span>
               </a>
-              <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk grupo.req.pk %}" class="d-inline">
-                {% csrf_token %}
-                <input type="hidden" name="from" value="aprobados">
-                <button type="submit" class="btn btn-sm" style="background:#16a34a;color:#fff;font-weight:600;padding:.2rem .6rem">
-                  <i class="bi bi-tags me-1"></i>Cotizar
-                </button>
-              </form>
             </div>
           </td>
         </tr>
