@@ -490,6 +490,21 @@
 
 </aside>
 
+<script>
+// Fuerza el estado cerrado de los grupos del sidebar apenas se parsea el HTML,
+// antes de que Bootstrap inicialice. Evita que un HTML con 'collapse show' en
+// caché del navegador haga que los grupos aparezcan abiertos.
+(function(){
+  var sideGroups = ['nav-presupuesto','nav-reqs','nav-almacen','nav-config-admin'];
+  sideGroups.forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('show');
+    var btn = document.querySelector('[data-bs-target="#'+id+'"]');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  });
+})();
+</script>
+
 <!-- ── Overlay mobile ─────────────────────────────────────────── -->
 <div id="sidebar-overlay"></div>
 
