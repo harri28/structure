@@ -1,7 +1,8 @@
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
+from django.urls import reverse
 from django.db.models import Q, Sum
 from apps.proyectos.models import Proyecto
 from apps.presupuesto.models import InsumoPresupuesto, TIPOS_RECURSO
@@ -1194,15 +1195,23 @@ def cot_desde_req(request, proyecto_id, req_pk):
                 'unidad': d.unidad,
             })
 
+    # Pestaña de origen (para mantener la navegación coherente al volver).
+    _from = (request.POST.get('from') or '').strip()
+    _from_qs = f'?from={_from}' if _from in ('aprobados', 'por_atender', 'historial', 'anulados') else ''
+
     if not items_candidatos:
         messages.error(request, 'Debés incluir al menos un ítem en la cotización.')
-        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=req.pk)
+        return HttpResponseRedirect(
+            reverse('logistica:req_revisar_log', kwargs={'proyecto_id': proyecto_id, 'pk': req.pk}) + _from_qs
+        )
 
     errores = _errores_contra_saldo(req, items_candidatos)
     if errores:
         for e in errores:
             messages.error(request, e)
-        return redirect('logistica:req_revisar_log', proyecto_id=proyecto_id, pk=req.pk)
+        return HttpResponseRedirect(
+            reverse('logistica:req_revisar_log', kwargs={'proyecto_id': proyecto_id, 'pk': req.pk}) + _from_qs
+        )
 
     base = str(req.numero)
     cots_previas = req.cotizaciones_origen.count()
@@ -1242,7 +1251,14 @@ def cot_desde_req(request, proyecto_id, req_pk):
     log(request, 'CREAR', 'Almacén',
         f'Cotización COT{cot.numero} generada desde REQ{req.numero} en {proyecto.codigo}')
     messages.success(request, f'Cotización COT{cot.numero} generada.')
-    return redirect('logistica:req_revisar_log', proyecto_id=proyecto.pk, pk=req.pk)
+    # Si venimos desde la pestaña Aprobados (flujo: listar → "Cotizar"),
+    # volvemos directo al listado para que el usuario vea el REQ moverse
+    # a estado COTIZADO sin quedar atrapado en el detalle.
+    if _from == 'aprobados':
+        return redirect('logistica:aprobados_log', proyecto_id=proyecto.pk)
+    return HttpResponseRedirect(
+        reverse('logistica:req_revisar_log', kwargs={'proyecto_id': proyecto.pk, 'pk': req.pk}) + _from_qs
+    )
 
 
 @requiere('puede_gestionar_cotizaciones', 'puede_gestionar_cotizaciones_log')

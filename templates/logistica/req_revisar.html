@@ -318,6 +318,7 @@
   <div class="modal-dialog modal-xl">
     <form method="post" action="{% url 'almacen:cot_desde_req' proyecto.pk req.pk %}" id="form-cotizar">
       {% csrf_token %}
+      {% if from_slug %}<input type="hidden" name="from" value="{{ from_slug }}">{% endif %}
       <div class="modal-content">
         <div class="modal-header py-2">
           <h6 class="modal-title d-flex align-items-center gap-2" style="font-size:.95rem">
