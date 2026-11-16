@@ -760,6 +760,10 @@ def req_revisar_log(request, proyecto_id, pk):
     # Historial siempre es solo lectura, sin importar el estado del REQ.
     if from_slug == 'historial':
         editable = False
+    # Desde 'Aprobados' el REQ también es solo lectura: ya pasó por la fase
+    # de aprobación; acá la siguiente acción es generar cotización.
+    elif from_slug == 'aprobados':
+        editable = False
     # Desde 'Por Atender': forzamos editable para que Logística pueda cerrar
     # los pendientes aunque el REQ ya esté en PARCIAL (o incluso ATENDIDO
     # por despachos previos). El REQ solo aparece acá si tiene items con

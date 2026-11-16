@@ -218,7 +218,7 @@
 
 <!-- Acciones -->
 <div class="d-flex gap-2 justify-content-end">
-  <a href="{% url 'logistica:requerimientos_log' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
+  <a href="{% url volver_urlname|default:'logistica:requerimientos_log' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">
     {% if editable %}Cancelar{% else %}Volver{% endif %}
   </a>
   {% if editable %}
@@ -231,6 +231,10 @@
   {% endif %}
   <button type="submit" class="btn btn-success btn-sm" id="btn-aprobar">
     <i class="bi bi-check-lg me-1"></i>Aprobar requerimiento
+  </button>
+  {% elif from_slug == 'aprobados' and items_para_cotizar %}
+  <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modal-cotizar">
+    <i class="bi bi-receipt me-1"></i>Generar cotización
   </button>
   {% elif req.estado == 'PARCIAL' %}
   <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modal-anular">
