@@ -253,28 +253,30 @@
           <i class="bi bi-chevron-right sb-arrow"></i>
         </button>
       </div>
+      {% with from_slug=request.GET.from|default:'' %}
       <div class="collapse" id="nav-reqs-log">
         <a href="{% url 'logistica:requerimientos_log' proyecto_activo.pk %}"
-           class="sb-link sb-sublink {% if vn == 'logistica:requerimientos_log' %}active{% endif %}">
+           class="sb-link sb-sublink {% if vn == 'logistica:requerimientos_log' or vn == 'logistica:req_revisar_log' and from_slug == '' %}active{% endif %}">
           <i class="bi bi-list-ul"></i> Ingreso de Requerimientos
         </a>
         <a href="{% url 'logistica:aprobados_log' proyecto_activo.pk %}"
-           class="sb-link sb-sublink {% if vn == 'logistica:aprobados_log' %}active{% endif %}">
+           class="sb-link sb-sublink {% if vn == 'logistica:aprobados_log' or from_slug == 'aprobados' %}active{% endif %}">
           <i class="bi bi-check2-circle"></i> Aprobados
         </a>
         <a href="{% url 'logistica:por_atender_log' proyecto_activo.pk %}"
-           class="sb-link sb-sublink {% if vn == 'logistica:por_atender_log' %}active{% endif %}">
+           class="sb-link sb-sublink {% if vn == 'logistica:por_atender_log' or from_slug == 'por_atender' %}active{% endif %}">
           <i class="bi bi-hourglass-split"></i> Por atender
         </a>
         <a href="{% url 'logistica:anulados_log' proyecto_activo.pk %}"
-           class="sb-link sb-sublink {% if vn == 'logistica:anulados_log' %}active{% endif %}">
+           class="sb-link sb-sublink {% if vn == 'logistica:anulados_log' or from_slug == 'anulados' %}active{% endif %}">
           <i class="bi bi-x-circle"></i> Anulados
         </a>
         <a href="{% url 'logistica:historial_log' proyecto_activo.pk %}"
-           class="sb-link sb-sublink {% if vn == 'logistica:historial_log' %}active{% endif %}">
+           class="sb-link sb-sublink {% if vn == 'logistica:historial_log' or from_slug == 'historial' %}active{% endif %}">
           <i class="bi bi-journal-text"></i> Historial
         </a>
       </div>
+      {% endwith %}
       {% endif %}
       {% if permisos.puede_gestionar_cotizaciones_log %}
       <a href="{% url 'almacen:cot_lista' proyecto_activo.pk %}"
