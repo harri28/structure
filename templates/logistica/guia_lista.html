@@ -193,8 +193,8 @@
               <table class="table table-sm mb-0" id="g-tabla-bienes">
                 <thead style="background:#f8fafc">
                   <tr>
-                    <th>Descripción</th>
-                    <th style="width:12%">Código</th>
+                    <th style="width:70px;padding-right:0" class="text-center">Código</th>
+                    <th style="padding-left:.35rem">Descripción</th>
                     <th style="width:12%">Unidad</th>
                     <th style="width:14%" class="text-end">Cantidad</th>
                   </tr>
@@ -337,16 +337,29 @@
       if (unirMode) { unirMode = false; unirHidden.value = '0'; btnUnir.style.display = ''; btnRevertir.style.display = 'none'; }
     }
 
+    function tdCod(cod) {
+      const td = el('td', { 'class': 'text-center', style: 'padding-right:0' });
+      if (cod) {
+        td.appendChild(el('code', {
+          style: 'background:#eff6ff;color:#1d4ed8;padding:.2em .5em;border-radius:4px;font-size:.74rem;font-weight:600'
+        }, cod));
+      } else {
+        td.textContent = '—';
+        td.style.color = '#9ca3af';
+      }
+      return td;
+    }
+
     if (unirMode) {
       // Pintar agrupado (un row por grupo)
       grupos.forEach(g => {
         const tr = el('tr');
-        const td1 = el('td', { style: 'font-size:.83rem' }, g.descripcion);
+        tr.appendChild(tdCod(g.codigo));
+        const tdDesc = el('td', { style: 'font-size:.83rem;padding-left:.35rem' }, g.descripcion);
         const sub = el('div', { style: 'font-size:.7rem;color:#6b7280' },
           [...g.ocNumeros].join(' + ') + (g.ocNumeros.size > 1 ? ' · fusionado' : ''));
-        td1.appendChild(sub);
-        tr.appendChild(td1);
-        tr.appendChild(el('td', { style: 'font-size:.78rem;color:#374151' }, g.codigo || '—'));
+        tdDesc.appendChild(sub);
+        tr.appendChild(tdDesc);
         tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, g.unidad || '—'));
         tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem;color:#1d4ed8' }, formatCant(g.cantidad)));
         tbody.appendChild(tr);
@@ -355,10 +368,10 @@
       // Pintar expandido (un row por ítem de OC)
       expandidos.forEach(e => {
         const tr = el('tr');
-        const td1 = el('td', { style: 'font-size:.83rem' }, e.it.descripcion);
-        td1.appendChild(el('div', { style: 'font-size:.7rem;color:#6b7280' }, e.ocNumero));
-        tr.appendChild(td1);
-        tr.appendChild(el('td', { style: 'font-size:.78rem;color:#374151' }, e.it.codigo || '—'));
+        tr.appendChild(tdCod(e.it.codigo));
+        const tdDesc = el('td', { style: 'font-size:.83rem;padding-left:.35rem' }, e.it.descripcion);
+        tdDesc.appendChild(el('div', { style: 'font-size:.7rem;color:#6b7280' }, e.ocNumero));
+        tr.appendChild(tdDesc);
         tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, e.it.unidad || '—'));
         tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem' }, e.it.cantidad));
         tbody.appendChild(tr);
