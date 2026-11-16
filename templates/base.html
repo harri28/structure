@@ -44,9 +44,6 @@
     <a href="{% url 'panel_dashboard' %}" class="sb-link {% block nav_dashboard %}{% endblock %}">
       <i class="bi bi-grid-1x2"></i> Inicio
     </a>
-    <a href="{% url 'configuracion:perfil' %}" class="sb-link {% block nav_perfil %}{% endblock %}">
-      <i class="bi bi-person-circle"></i> Perfil
-    </a>
     <a href="{% url 'proyectos:lista' %}" class="sb-link {% block nav_proyectos %}{% endblock %}">
       <i class="bi bi-folder2-open"></i> Proyectos
     </a>
@@ -58,6 +55,9 @@
     </a>
     <a href="{% url 'registro:auditoria' %}" class="sb-link {% block nav_auditoria_sa %}{% endblock %}">
       <i class="bi bi-shield-lock"></i> Auditoría
+    </a>
+    <a href="{% url 'configuracion:perfil' %}" class="sb-link {% block nav_perfil %}{% endblock %}">
+      <i class="bi bi-person-circle"></i> Perfil
     </a>
   </div>
 
