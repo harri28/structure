@@ -1172,7 +1172,7 @@ def req_revisar_log(request, proyecto_id, pk):
     items_para_cotizar = []
     siguiente_numero_cot = ''
     if req.estado in ('APROBADO', 'COTIZADO', 'PARCIAL'):
-        from apps.almacen.views import _saldo_cotizable
+        from apps.almacen.views import _saldo_cotizable, _clave_item_cot
         from apps.almacen.models import Cotizacion as _Cot
         saldos = _saldo_cotizable(req)
         for det in detalles:
