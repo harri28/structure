@@ -259,38 +259,79 @@
   }
   function porPk(pk) { return data.find(oc => oc.pk === pk); }
 
-  // clave para agrupar ítems iguales: código del insumo (prioridad) o descripción
+  function normCodigo(it) { return (it.codigo || '').trim().toLowerCase(); }
+  function normNombre(it) { return (it.descripcion || '').trim().toLowerCase(); }
+
+  // clave SOLO para el conteo de duplicados: dos ítems son iguales si
+  // comparten código (no vacío), o si comparten nombre.
   function claveItem(it) {
-    const cod = (it.codigo || '').trim().toLowerCase();
+    const cod = normCodigo(it);
     if (cod) return 'c:' + cod;
-    return 'd:' + (it.descripcion || '').trim().toLowerCase();
+    return 'n:' + normNombre(it);
   }
 
-  // Recorre la selección y devuelve los ítems expandidos y los grupos
+  // Agrupación real para la vista fusionada: dos pasadas.
+  //  1) agrupa por código (solo ítems con código no vacío).
+  //  2) para los ítems restantes (sin código o con código único), agrupa por nombre.
+  // El código nunca se concatena ni se suma: se hereda del primer ítem del grupo.
   function construirItems() {
     const expandidos = [];  // {it, ocNumero}
-    const grupos = new Map();  // clave → {descripcion, codigo, unidad, cantidad, ocNumeros:Set}
     seleccion.forEach(pk => {
       const oc = porPk(pk);
       if (!oc) return;
-      oc.items.forEach(it => {
-        expandidos.push({ it, ocNumero: oc.numero });
-        const k = claveItem(it);
-        const cant = parseFloat(it.cantidad) || 0;
-        if (!grupos.has(k)) {
-          grupos.set(k, {
-            descripcion: it.descripcion,
-            codigo: it.codigo || '',
-            unidad: it.unidad || '',
-            cantidad: 0,
-            ocNumeros: new Set(),
-          });
-        }
-        const g = grupos.get(k);
-        g.cantidad += cant;
-        g.ocNumeros.add(oc.numero);
-      });
+      oc.items.forEach(it => expandidos.push({ it, ocNumero: oc.numero }));
     });
+
+    const grupos = [];        // lista de {descripcion, codigo, unidad, cantidad, ocNumeros:Set}
+    const porCodigo = new Map();  // cod → index en grupos
+    const porNombre = new Map();  // nombre → index en grupos
+
+    function nuevoGrupo(e) {
+      const g = {
+        descripcion: e.it.descripcion,
+        codigo: e.it.codigo || '',
+        unidad: e.it.unidad || '',
+        cantidad: 0,
+        ocNumeros: new Set(),
+        count: 0,
+      };
+      grupos.push(g);
+      return g;
+    }
+    function sumarEn(g, e) {
+      g.cantidad += parseFloat(e.it.cantidad) || 0;
+      g.ocNumeros.add(e.ocNumero);
+      g.count += 1;
+    }
+
+    // Pasada 1: agrupar por código (si existe)
+    expandidos.forEach(e => {
+      const cod = normCodigo(e.it);
+      if (!cod) return;
+      if (porCodigo.has(cod)) {
+        sumarEn(grupos[porCodigo.get(cod)], e);
+      } else {
+        const g = nuevoGrupo(e);
+        sumarEn(g, e);
+        porCodigo.set(cod, grupos.length - 1);
+        porNombre.set(normNombre(e.it), grupos.length - 1);
+      }
+    });
+
+    // Pasada 2: items sin código → agrupar por nombre; si el nombre ya existe en
+    // un grupo (con o sin código), se adjunta ahí.
+    expandidos.forEach(e => {
+      if (normCodigo(e.it)) return;  // ya procesado arriba
+      const nom = normNombre(e.it);
+      if (porNombre.has(nom)) {
+        sumarEn(grupos[porNombre.get(nom)], e);
+      } else {
+        const g = nuevoGrupo(e);
+        sumarEn(g, e);
+        porNombre.set(nom, grupos.length - 1);
+      }
+    });
+
     return { expandidos, grupos };
   }
 
@@ -317,17 +358,9 @@
 
     const { expandidos, grupos } = construirItems();
 
-    // Cantidad de claves con duplicados reales (>1 aparición)
+    // Grupos con más de un ítem = duplicados detectados
     let dupKeys = 0;
-    grupos.forEach(g => { if (g.ocNumeros.size > 1 || (expandidos.filter(e => claveItem(e.it) === null).length > 1)) {} });
-    // recuento correcto: contar grupos que tienen >1 ítem
-    dupKeys = 0;
-    const counts = new Map();
-    expandidos.forEach(e => {
-      const k = claveItem(e.it);
-      counts.set(k, (counts.get(k) || 0) + 1);
-    });
-    counts.forEach(v => { if (v > 1) dupKeys++; });
+    grupos.forEach(g => { if (g.count > 1) dupKeys++; });
 
     if (dupKeys > 0) {
       dupAlert.style.display = '';

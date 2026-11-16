@@ -193,35 +193,71 @@ def _despachar_cotizaciones(guia, cotizaciones):
 def _despachar_ocs(guia, ocs, unir_duplicados=False):
     """Copia los ítems de las Órdenes de Compra a la guía y descuenta el stock en
     obra (InsumoPresupuesto.cantidad) por la cantidad de cada ítem. Nunca baja de
-    cero. Si unir_duplicados=True, los ítems con el mismo código de insumo o la
-    misma descripción se fusionan en una sola fila sumando cantidades."""
+    cero. Si unir_duplicados=True, los ítems se fusionan: primero por código de
+    insumo (si existe), y si los códigos no coinciden, por descripción."""
     from apps.presupuesto.models import InsumoPresupuesto
     descuentos = {}
     if unir_duplicados:
-        agrupados = {}  # clave → {descripcion, unidad, cantidad}
-        orden = []
+        # Aplanar ítems en el mismo orden que el frontend
+        items = []
         for oc in ocs:
             for d in oc.detalles.all():
-                codigo = (d.insumo.codigo if d.insumo_id and d.insumo.codigo else '').strip().lower()
-                desc = _descripcion_item(d).strip().lower()
-                clave = ('c', codigo) if codigo else ('d', desc)
-                if clave not in agrupados:
-                    agrupados[clave] = {
-                        'descripcion': _descripcion_item(d),
-                        'unidad': _unidad_item(d),
-                        'cantidad': Decimal('0'),
-                    }
-                    orden.append(clave)
-                agrupados[clave]['cantidad'] += d.cantidad
-                if d.insumo_id:
-                    descuentos[d.insumo_id] = descuentos.get(d.insumo_id, Decimal('0')) + d.cantidad
-        for clave in orden:
-            info = agrupados[clave]
+                items.append({
+                    'codigo': (d.insumo.codigo if d.insumo_id and d.insumo.codigo else '').strip().lower(),
+                    'nombre': _descripcion_item(d).strip().lower(),
+                    'descripcion': _descripcion_item(d),
+                    'unidad': _unidad_item(d),
+                    'cantidad': d.cantidad,
+                    'insumo_id': d.insumo_id,
+                })
+
+        grupos = []
+        por_codigo = {}  # cod → index en grupos
+        por_nombre = {}  # nombre → index en grupos
+
+        def nuevo_grupo(it):
+            grupos.append({
+                'descripcion': it['descripcion'],
+                'unidad': it['unidad'],
+                'cantidad': Decimal('0'),
+            })
+            return len(grupos) - 1
+
+        # Pasada 1: por código
+        for it in items:
+            cod = it['codigo']
+            if not cod:
+                continue
+            if cod in por_codigo:
+                grupos[por_codigo[cod]]['cantidad'] += it['cantidad']
+            else:
+                idx = nuevo_grupo(it)
+                grupos[idx]['cantidad'] += it['cantidad']
+                por_codigo[cod] = idx
+                por_nombre[it['nombre']] = idx
+            if it['insumo_id']:
+                descuentos[it['insumo_id']] = descuentos.get(it['insumo_id'], Decimal('0')) + it['cantidad']
+
+        # Pasada 2: por nombre (solo ítems sin código)
+        for it in items:
+            if it['codigo']:
+                continue
+            nom = it['nombre']
+            if nom in por_nombre:
+                grupos[por_nombre[nom]]['cantidad'] += it['cantidad']
+            else:
+                idx = nuevo_grupo(it)
+                grupos[idx]['cantidad'] += it['cantidad']
+                por_nombre[nom] = idx
+            if it['insumo_id']:
+                descuentos[it['insumo_id']] = descuentos.get(it['insumo_id'], Decimal('0')) + it['cantidad']
+
+        for g in grupos:
             DetalleGuia.objects.create(
                 guia=guia,
-                descripcion=info['descripcion'],
-                unidad=info['unidad'],
-                cantidad=info['cantidad'].quantize(Decimal('0.001')),
+                descripcion=g['descripcion'],
+                unidad=g['unidad'],
+                cantidad=g['cantidad'].quantize(Decimal('0.001')),
             )
     else:
         for oc in ocs:
