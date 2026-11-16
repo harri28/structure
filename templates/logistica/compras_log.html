@@ -154,7 +154,8 @@
           <table class="table table-sm align-middle mb-0" id="oc-tabla-items" style="font-size:.84rem;overflow:visible">
             <thead class="table-light">
               <tr>
-                <th style="width:50%">Insumo</th>
+                <th style="width:5%" class="text-center">ID</th>
+                <th style="width:45%">Insumo</th>
                 <th style="width:10%">U.M.</th>
                 <th style="width:10%" class="text-end">Cantidad</th>
                 <th style="width:12%" class="text-end">P. Unitario</th>
@@ -356,11 +357,11 @@
   function addRow() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td class="text-center">
+        <code class="it-ins-cod" style="background:#eff6ff;color:#1d4ed8;padding:.2em .5em;border-radius:4px;font-size:.74rem;font-weight:600;display:none"></code>
+      </td>
       <td style="position:relative;overflow:visible">
-        <div class="d-flex align-items-center gap-2">
-          <code class="it-ins-cod" style="background:#eff6ff;color:#1d4ed8;padding:.2em .55em;border-radius:4px;font-size:.74rem;font-weight:600;min-width:34px;text-align:center;display:none;flex-shrink:0"></code>
-          <input type="text" class="form-control form-control-sm it-ins-input" autocomplete="off" placeholder="Buscar insumo..." data-ins-id="" style="flex:1;min-width:0">
-        </div>
+        <input type="text" class="form-control form-control-sm it-ins-input" autocomplete="off" placeholder="Buscar insumo..." data-ins-id="">
         <div class="list-group position-absolute shadow-sm it-ins-sugs"
              style="z-index:1080;max-height:260px;overflow-y:auto;display:none;top:100%;left:0;min-width:360px;max-width:520px"></div>
       </td>
