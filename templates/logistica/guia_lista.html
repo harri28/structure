@@ -225,6 +225,47 @@
 
 {{ ocs_data|json_script:"g-oc-data" }}
 <script>
+// Click handler del botón Guardar: se registra FUERA de la IIFE grande para
+// que no dependa de que esa IIFE termine sin errores.
+(function registrarGuardar(){
+  const URL_CREAR = "{% url 'logistica:guia_crear_ajax' proyecto.pk %}";
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  const btn = document.getElementById('btn-guia-guardar');
+  if (!btn) return;
+  btn.addEventListener('click', function(){
+    const err = document.getElementById('g-err');
+    err.style.display = 'none';
+    const form = document.getElementById('form-guia');
+    const fd = new FormData(form);
+    if (!fd.getAll('ocs').length) {
+      err.textContent = 'Selecciona al menos una orden de compra.';
+      err.style.display = '';
+      return;
+    }
+    btn.disabled = true;
+    fetch(URL_CREAR, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      body: fd,
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) { window.location.href = d.url; return; }
+      err.textContent = d.error || 'Error al generar la guía.';
+      err.style.display = '';
+      btn.disabled = false;
+    })
+    .catch(e => {
+      err.textContent = 'Error de red: ' + e.message;
+      err.style.display = '';
+      btn.disabled = false;
+    });
+  });
+})();
+
 (function(){
   const URL_CREAR = "{% url 'logistica:guia_crear_ajax' proyecto.pk %}";
   function getCsrf() {
@@ -483,35 +524,8 @@
     });
   }
 
-  document.getElementById('btn-guia-guardar').addEventListener('click', () => {
-    const err = document.getElementById('g-err');
-    err.style.display = 'none';
-    if (!seleccion.length) {
-      err.textContent = 'Selecciona al menos una orden de compra.';
-      err.style.display = '';
-      return;
-    }
-    const form = document.getElementById('form-guia');
-    const fd = new FormData(form);
-    fetch(URL_CREAR, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
-      body: fd,
-    })
-    .then(r => r.json())
-    .then(d => {
-      if (d.ok) {
-        window.location.href = d.url;
-      } else {
-        err.textContent = d.error || 'Error al generar la guía.';
-        err.style.display = '';
-      }
-    })
-    .catch(e => {
-      err.textContent = 'Error de red: ' + e.message;
-      err.style.display = '';
-    });
-  });
+  // (El click handler de "Guardar y generar guía" vive en la IIFE anterior
+  //  registrarGuardar() para no depender del éxito de esta IIFE.)
 })();
 </script>
 {% endblock %}
