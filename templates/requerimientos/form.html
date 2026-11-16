@@ -58,32 +58,91 @@
     </div>
   </div>
 
-  <div class="card mb-3">
+  <div class="card mb-3" id="card-orden-req">
     <div class="card-header">Orden de Requerimiento</div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-12">
-          <label class="form-label fw-semibold">Obra</label>
-          <input type="text" name="obra" value="{{ form.obra.value|default:'' }}"
-                 class="form-control" placeholder="Nombre de la obra">
+    <div class="card-body py-2">
+
+      {# ─── Vista compacta (de solo lectura) ─── #}
+      <div id="or-vista">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+          <span class="text-muted text-uppercase" style="font-size:.68rem;letter-spacing:.06em;font-weight:600">Obra:</span>
+          <span class="fw-semibold" data-or-view="obra">{{ form.obra.value|default:"—" }}</span>
+          <button type="button" class="btn btn-sm btn-link ms-auto p-0" id="or-btn-editar"
+                  style="color:#6b7280;font-size:.76rem;text-decoration:none">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </button>
         </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Solicitante</label>
-          {{ form.solicitante }}
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Cargo del Solicitante</label>
-          <input type="text" name="cargo_solicitante" value="{{ form.cargo_solicitante.value|default:'' }}"
-                 class="form-control" placeholder="Ej: Jefe de obra">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Sector de la Obra</label>
-          <input type="text" name="sector_obra" value="{{ form.sector_obra.value|default:'' }}"
-                 class="form-control" placeholder="Ubicación del sector">
+        <div class="d-flex flex-wrap gap-4" style="font-size:.84rem">
+          <div>
+            <span class="text-muted text-uppercase" style="font-size:.68rem;letter-spacing:.06em;font-weight:600">Solicitante:</span>
+            <span class="ms-1 fw-semibold" data-or-view="solicitante">{{ form.solicitante.value|default:"—" }}</span>
+          </div>
+          <div>
+            <span class="text-muted text-uppercase" style="font-size:.68rem;letter-spacing:.06em;font-weight:600">Cargo:</span>
+            <span class="ms-1" data-or-view="cargo_solicitante">{{ form.cargo_solicitante.value|default:"—" }}</span>
+          </div>
+          <div>
+            <span class="text-muted text-uppercase" style="font-size:.68rem;letter-spacing:.06em;font-weight:600">Sector:</span>
+            <span class="ms-1" data-or-view="sector_obra">{{ form.sector_obra.value|default:"—" }}</span>
+          </div>
         </div>
       </div>
+
+      {# ─── Edición (oculta por defecto) ─── #}
+      <div id="or-edicion" style="display:none">
+        <div class="row g-3">
+          <div class="col-md-12">
+            <label class="form-label fw-semibold">Obra</label>
+            <input type="text" name="obra" value="{{ form.obra.value|default:'' }}"
+                   class="form-control" placeholder="Nombre de la obra">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Solicitante</label>
+            {{ form.solicitante }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Cargo del Solicitante</label>
+            <input type="text" name="cargo_solicitante" value="{{ form.cargo_solicitante.value|default:'' }}"
+                   class="form-control" placeholder="Ej: Jefe de obra">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Sector de la Obra</label>
+            <input type="text" name="sector_obra" value="{{ form.sector_obra.value|default:'' }}"
+                   class="form-control" placeholder="Ubicación del sector">
+          </div>
+        </div>
+        <div class="mt-2 text-end">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="or-btn-cerrar">
+            <i class="bi bi-check-lg me-1"></i>Listo
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
+
+  <script>
+  (function(){
+    var vista   = document.getElementById('or-vista');
+    var edicion = document.getElementById('or-edicion');
+    var btnEd   = document.getElementById('or-btn-editar');
+    var btnCer  = document.getElementById('or-btn-cerrar');
+    if (!vista || !edicion) return;
+    btnEd.addEventListener('click', function(){
+      vista.style.display = 'none';
+      edicion.style.display = '';
+    });
+    btnCer.addEventListener('click', function(){
+      // Refrescar los valores mostrados desde los inputs editados.
+      edicion.querySelectorAll('[name]').forEach(function(inp){
+        var span = vista.querySelector('[data-or-view="' + inp.name + '"]');
+        if (span) span.textContent = (inp.value || '').trim() || '—';
+      });
+      vista.style.display = '';
+      edicion.style.display = 'none';
+    });
+  })();
+  </script>
 
   <div class="card mb-3">
     <div class="card-header">Relación de Productos</div>
