@@ -78,6 +78,8 @@ def guia_lista(request, proyecto_id):
         'numero': oc.numero,
         'proveedor': (oc.proveedor.razon_social if oc.proveedor_id else '') or '',
         'items': [{
+            'codigo': (d.insumo.codigo if d.insumo_id and d.insumo.codigo else '') or '',
+            'insumo_id': d.insumo_id,
             'descripcion': _descripcion_item(d),
             'unidad': _unidad_item(d),
             'cantidad': '{:f}'.format(d.cantidad.quantize(Decimal('0.001')).normalize()),
@@ -188,22 +190,50 @@ def _despachar_cotizaciones(guia, cotizaciones):
         ins.save(update_fields=['cantidad'])
 
 
-def _despachar_ocs(guia, ocs):
+def _despachar_ocs(guia, ocs, unir_duplicados=False):
     """Copia los ítems de las Órdenes de Compra a la guía y descuenta el stock en
     obra (InsumoPresupuesto.cantidad) por la cantidad de cada ítem. Nunca baja de
-    cero."""
+    cero. Si unir_duplicados=True, los ítems con el mismo código de insumo o la
+    misma descripción se fusionan en una sola fila sumando cantidades."""
     from apps.presupuesto.models import InsumoPresupuesto
     descuentos = {}
-    for oc in ocs:
-        for d in oc.detalles.all():
+    if unir_duplicados:
+        agrupados = {}  # clave → {descripcion, unidad, cantidad}
+        orden = []
+        for oc in ocs:
+            for d in oc.detalles.all():
+                codigo = (d.insumo.codigo if d.insumo_id and d.insumo.codigo else '').strip().lower()
+                desc = _descripcion_item(d).strip().lower()
+                clave = ('c', codigo) if codigo else ('d', desc)
+                if clave not in agrupados:
+                    agrupados[clave] = {
+                        'descripcion': _descripcion_item(d),
+                        'unidad': _unidad_item(d),
+                        'cantidad': Decimal('0'),
+                    }
+                    orden.append(clave)
+                agrupados[clave]['cantidad'] += d.cantidad
+                if d.insumo_id:
+                    descuentos[d.insumo_id] = descuentos.get(d.insumo_id, Decimal('0')) + d.cantidad
+        for clave in orden:
+            info = agrupados[clave]
             DetalleGuia.objects.create(
                 guia=guia,
-                descripcion=_descripcion_item(d),
-                unidad=_unidad_item(d),
-                cantidad=d.cantidad.quantize(Decimal('0.001')),
+                descripcion=info['descripcion'],
+                unidad=info['unidad'],
+                cantidad=info['cantidad'].quantize(Decimal('0.001')),
             )
-            if d.insumo_id:
-                descuentos[d.insumo_id] = descuentos.get(d.insumo_id, Decimal('0')) + d.cantidad
+    else:
+        for oc in ocs:
+            for d in oc.detalles.all():
+                DetalleGuia.objects.create(
+                    guia=guia,
+                    descripcion=_descripcion_item(d),
+                    unidad=_unidad_item(d),
+                    cantidad=d.cantidad.quantize(Decimal('0.001')),
+                )
+                if d.insumo_id:
+                    descuentos[d.insumo_id] = descuentos.get(d.insumo_id, Decimal('0')) + d.cantidad
     for ins in InsumoPresupuesto.objects.select_for_update().filter(pk__in=descuentos):
         ins.cantidad = max(Decimal('0'), ins.cantidad - descuentos[ins.pk])
         ins.save(update_fields=['cantidad'])
@@ -430,7 +460,8 @@ def guia_crear_ajax(request, proyecto_id):
             estado='EN_TRANSITO',
         )
         guia.ocs.set(elegidas)
-        _despachar_ocs(guia, elegidas)
+        unir = request.POST.get('unir_duplicados') == '1'
+        _despachar_ocs(guia, elegidas, unir_duplicados=unir)
 
     log(request, 'CREAR', 'Logística', f'Guía {guia.numero} despachada en {proyecto.codigo}')
     notificar(

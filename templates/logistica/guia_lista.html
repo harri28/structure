@@ -163,6 +163,27 @@
             </div>
           </div>
 
+          {# Detector de insumos duplicados #}
+          <div id="g-dup-alert" class="mt-2" style="display:none">
+            <div class="d-flex align-items-center justify-content-between gap-2 py-2 px-3"
+                 style="background:#fef9c3;border:1px solid #fde047;border-radius:6px">
+              <div style="font-size:.85rem;color:#854d0e">
+                <i class="bi bi-lightbulb me-1"></i>
+                <strong>Se ha detectado insumos iguales</strong>
+                <span class="text-muted ms-1" id="g-dup-count" style="font-size:.78rem"></span>
+              </div>
+              <div class="d-flex gap-2">
+                <button type="button" id="g-btn-unir" class="btn btn-sm btn-warning">
+                  <i class="bi bi-arrows-collapse me-1"></i>Unir insumos
+                </button>
+                <button type="button" id="g-btn-revertir" class="btn btn-sm btn-outline-secondary" style="display:none">
+                  <i class="bi bi-arrow-counterclockwise me-1"></i>Revertir
+                </button>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="unir_duplicados" id="g-unir-hidden" value="0">
+
           {# Bienes a trasladar #}
           <div class="card mt-3" id="g-card-bienes" style="display:none">
             <div class="card-header py-2" style="background:#f8fafc;font-size:.82rem;font-weight:700">
@@ -212,6 +233,7 @@
 
   const data = JSON.parse(document.getElementById('g-oc-data').textContent);
   let seleccion = [];
+  let unirMode = false;
   const inp = document.getElementById('g-oc-search');
   const dropdown = document.getElementById('g-oc-dropdown');
   const chips = document.getElementById('g-oc-chips');
@@ -220,6 +242,11 @@
   const tbody = document.querySelector('#g-tabla-bienes tbody');
   const motivoSel = document.getElementById('g-motivo');
   const motivoOtro = document.getElementById('g-motivo-otro');
+  const dupAlert = document.getElementById('g-dup-alert');
+  const dupCount = document.getElementById('g-dup-count');
+  const btnUnir = document.getElementById('g-btn-unir');
+  const btnRevertir = document.getElementById('g-btn-revertir');
+  const unirHidden = document.getElementById('g-unir-hidden');
 
   function el(tag, props, texto) {
     const e = document.createElement(tag);
@@ -230,6 +257,44 @@
     return e;
   }
   function porPk(pk) { return data.find(oc => oc.pk === pk); }
+
+  // clave para agrupar ítems iguales: código del insumo (prioridad) o descripción
+  function claveItem(it) {
+    const cod = (it.codigo || '').trim().toLowerCase();
+    if (cod) return 'c:' + cod;
+    return 'd:' + (it.descripcion || '').trim().toLowerCase();
+  }
+
+  // Recorre la selección y devuelve los ítems expandidos y los grupos
+  function construirItems() {
+    const expandidos = [];  // {it, ocNumero}
+    const grupos = new Map();  // clave → {descripcion, unidad, cantidad, ocNumeros:Set}
+    seleccion.forEach(pk => {
+      const oc = porPk(pk);
+      if (!oc) return;
+      oc.items.forEach(it => {
+        expandidos.push({ it, ocNumero: oc.numero });
+        const k = claveItem(it);
+        const cant = parseFloat(it.cantidad) || 0;
+        if (!grupos.has(k)) {
+          grupos.set(k, {
+            descripcion: it.descripcion,
+            unidad: it.unidad || '',
+            cantidad: 0,
+            ocNumeros: new Set(),
+          });
+        }
+        const g = grupos.get(k);
+        g.cantidad += cant;
+        g.ocNumeros.add(oc.numero);
+      });
+    });
+    return { expandidos, grupos };
+  }
+
+  function formatCant(n) {
+    return (Math.round(n * 1000) / 1000).toString().replace(/\.?0+$/, '') || '0';
+  }
 
   function pintarSeleccion() {
     chips.innerHTML = '';
@@ -244,18 +309,72 @@
       chip.appendChild(x);
       chips.appendChild(chip);
       hidden.appendChild(el('input', { type: 'hidden', name: 'ocs', value: pk }));
-      oc.items.forEach(it => {
+    });
+
+    const { expandidos, grupos } = construirItems();
+
+    // Cantidad de claves con duplicados reales (>1 aparición)
+    let dupKeys = 0;
+    grupos.forEach(g => { if (g.ocNumeros.size > 1 || (expandidos.filter(e => claveItem(e.it) === null).length > 1)) {} });
+    // recuento correcto: contar grupos que tienen >1 ítem
+    dupKeys = 0;
+    const counts = new Map();
+    expandidos.forEach(e => {
+      const k = claveItem(e.it);
+      counts.set(k, (counts.get(k) || 0) + 1);
+    });
+    counts.forEach(v => { if (v > 1) dupKeys++; });
+
+    if (dupKeys > 0) {
+      dupAlert.style.display = '';
+      dupCount.textContent = '(' + dupKeys + ' insumo' + (dupKeys === 1 ? '' : 's') + ' repetido' + (dupKeys === 1 ? '' : 's') + ')';
+    } else {
+      dupAlert.style.display = 'none';
+      if (unirMode) { unirMode = false; unirHidden.value = '0'; btnUnir.style.display = ''; btnRevertir.style.display = 'none'; }
+    }
+
+    if (unirMode) {
+      // Pintar agrupado (un row por grupo)
+      grupos.forEach(g => {
         const tr = el('tr');
-        const td1 = el('td', { style: 'font-size:.83rem' }, it.descripcion);
-        td1.appendChild(el('div', { style: 'font-size:.7rem;color:#6b7280' }, oc.numero));
+        const td1 = el('td', { style: 'font-size:.83rem' }, g.descripcion);
+        const sub = el('div', { style: 'font-size:.7rem;color:#6b7280' },
+          [...g.ocNumeros].join(' + ') + (g.ocNumeros.size > 1 ? ' · fusionado' : ''));
+        td1.appendChild(sub);
         tr.appendChild(td1);
-        tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, it.unidad || '—'));
-        tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem' }, it.cantidad));
+        tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, g.unidad || '—'));
+        tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem;color:#1d4ed8' }, formatCant(g.cantidad)));
         tbody.appendChild(tr);
       });
-    });
+    } else {
+      // Pintar expandido (un row por ítem de OC)
+      expandidos.forEach(e => {
+        const tr = el('tr');
+        const td1 = el('td', { style: 'font-size:.83rem' }, e.it.descripcion);
+        td1.appendChild(el('div', { style: 'font-size:.7rem;color:#6b7280' }, e.ocNumero));
+        tr.appendChild(td1);
+        tr.appendChild(el('td', { style: 'font-size:.82rem;color:#6b7280' }, e.it.unidad || '—'));
+        tr.appendChild(el('td', { 'class': 'text-end fw-semibold', style: 'font-size:.83rem' }, e.it.cantidad));
+        tbody.appendChild(tr);
+      });
+    }
     card.style.display = seleccion.length ? '' : 'none';
   }
+
+  btnUnir.addEventListener('click', () => {
+    unirMode = true;
+    unirHidden.value = '1';
+    btnUnir.style.display = 'none';
+    btnRevertir.style.display = '';
+    pintarSeleccion();
+  });
+  btnRevertir.addEventListener('click', () => {
+    unirMode = false;
+    unirHidden.value = '0';
+    btnUnir.style.display = '';
+    btnRevertir.style.display = 'none';
+    pintarSeleccion();
+  });
 
   function agregar(pk) {
     if (seleccion.indexOf(pk) === -1) seleccion.push(pk);
