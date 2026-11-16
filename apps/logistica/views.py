@@ -912,7 +912,7 @@ def req_revisar_log(request, proyecto_id, pk):
     proyecto = _get_proyecto(proyecto_id)
     req = get_object_or_404(Requerimiento, pk=pk, proyecto=proyecto)
 
-    ESTADOS_VISIBLES  = ('ENVIADO', 'EN_REVISION', 'APROBADO', 'PARCIAL', 'ANULADO', 'ATENDIDO')
+    ESTADOS_VISIBLES  = ('ENVIADO', 'EN_REVISION', 'APROBADO', 'COTIZADO', 'PARCIAL', 'ANULADO', 'ATENDIDO')
     # APROBADO entra también a editables: desde 'Por Atender' Logística puede
     # completar la aprobación de los ítems que quedaron con diferencia pendiente.
     ESTADOS_EDITABLES = ('ENVIADO', 'EN_REVISION', 'APROBADO')
