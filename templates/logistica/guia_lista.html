@@ -515,13 +515,33 @@
     motivoOtro.style.display = motivoSel.value === 'OTRO' ? '' : 'none';
   });
 
-  // Inicializar: fecha traslado = hoy
+  // Reset del modal al cerrarse: la próxima vez que se abra no debe mostrar
+  // selección ni ítems de la sesión anterior.
+  function resetModal() {
+    seleccion = [];
+    unirMode = false;
+    unirHidden.value = '0';
+    btnUnir.style.display = '';
+    btnRevertir.style.display = 'none';
+    dupAlert.style.display = 'none';
+    dropdown.style.display = 'none';
+    inp.value = '';
+    // Reset campos del form (fecha traslado, motivo, origen, destino, etc.)
+    const form = document.getElementById('form-guia');
+    if (form) form.reset();
+    motivoOtro.style.display = 'none';
+    pintarSeleccion();
+    const err = document.getElementById('g-err');
+    if (err) err.style.display = 'none';
+  }
+
   const modalEl = document.getElementById('modal-guia');
   if (modalEl) {
     modalEl.addEventListener('shown.bs.modal', () => {
       const ft = document.getElementById('g-fecha-traslado');
       if (!ft.value) ft.value = new Date().toISOString().slice(0, 10);
     });
+    modalEl.addEventListener('hidden.bs.modal', resetModal);
   }
 
   // (El click handler de "Guardar y generar guía" vive en la IIFE anterior
