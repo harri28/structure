@@ -148,10 +148,11 @@ def _cotizaciones_disponibles(proyecto):
 
 
 def _ocs_disponibles(proyecto):
-    """Órdenes de Compra del proyecto que aún no viajan en una guía activa."""
+    """Órdenes de Compra del proyecto que aún no viajan en una guía activa.
+    Excluye OCs eliminadas (soft delete)."""
     from apps.logistica.models import OrdenCompraLog
     return (OrdenCompraLog.objects
-            .filter(proyecto=proyecto)
+            .filter(proyecto=proyecto, deleted_at__isnull=True)
             .exclude(guias_remision__estado__in=ESTADOS_GUIA_ACTIVA)
             .select_related('proveedor')
             .prefetch_related('detalles__insumo')
@@ -1634,12 +1635,12 @@ def req_insumos_log(request, proyecto_id):
 @requiere('puede_ver_logistica')
 @proyecto_visible
 def compras_log(request, proyecto_id):
-    """Lista de Órdenes de Compra del proyecto."""
+    """Lista de Órdenes de Compra del proyecto (excluye las eliminadas)."""
     from django.db.models import Q
     proyecto = _get_proyecto(proyecto_id)
     q = (request.GET.get('q') or '').strip()
     qs = (OrdenCompraLog.objects
-          .filter(proyecto=proyecto)
+          .filter(proyecto=proyecto, deleted_at__isnull=True)
           .select_related('proveedor')
           .prefetch_related('detalles'))
     if q:
@@ -1701,7 +1702,9 @@ def _saldos_comprables(proyecto):
     )
     comprados = dict(
         DetalleOrdenCompraLog.objects
-        .filter(orden__proyecto=proyecto, insumo_id__isnull=False)
+        .filter(orden__proyecto=proyecto,
+                orden__deleted_at__isnull=True,
+                insumo_id__isnull=False)
         .values('insumo_id')
         .annotate(s=Sum('cantidad'))
         .values_list('insumo_id', 's')
@@ -1910,15 +1913,74 @@ def oc_detalle_ajax(request, proyecto_id, pk):
 @proyecto_visible
 @require_POST
 def oc_eliminar_ajax(request, proyecto_id, pk):
+    """Soft delete: marca deleted_at. La OC sigue en BD pero sale de la lista
+    activa; su cantidad deja de contar en _saldos_comprables y se puede restaurar
+    desde la pestaña "Compras eliminadas"."""
+    import datetime
     proyecto = _get_proyecto(proyecto_id)
     try:
-        oc = OrdenCompraLog.objects.get(pk=pk, proyecto=proyecto)
+        oc = OrdenCompraLog.objects.get(pk=pk, proyecto=proyecto, deleted_at__isnull=True)
     except OrdenCompraLog.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'No encontrada.'}, status=404)
-    numero = oc.numero
-    oc.delete()
-    log(request, 'ELIMINAR', 'Logística', f'Orden de compra {numero} eliminada de {proyecto.codigo}')
+    if oc.guias_remision.exclude(estado='ANULADO').exists():
+        return JsonResponse({
+            'ok': False,
+            'error': 'No se puede eliminar: la orden ya está en una guía de remisión activa.',
+        }, status=400)
+    oc.deleted_at = datetime.datetime.now()
+    oc.deleted_by = request.user if request.user.is_authenticated else None
+    oc.save(update_fields=['deleted_at', 'deleted_by'])
+    log(request, 'ELIMINAR', 'Logística', f'Orden de compra {oc.numero} eliminada de {proyecto.codigo}')
     return JsonResponse({'ok': True})
+
+
+@require_POST
+@requiere('puede_gestionar_logistica')
+@proyecto_visible
+def oc_restaurar_ajax(request, proyecto_id, pk):
+    """Restaura una OC eliminada (quita deleted_at)."""
+    proyecto = _get_proyecto(proyecto_id)
+    try:
+        oc = OrdenCompraLog.objects.get(pk=pk, proyecto=proyecto, deleted_at__isnull=False)
+    except OrdenCompraLog.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'No encontrada.'}, status=404)
+    oc.deleted_at = None
+    oc.deleted_by = None
+    oc.save(update_fields=['deleted_at', 'deleted_by'])
+    log(request, 'EDITAR', 'Logística', f'Orden de compra {oc.numero} restaurada en {proyecto.codigo}')
+    return JsonResponse({'ok': True})
+
+
+@requiere('puede_ver_logistica')
+@proyecto_visible
+def compras_eliminadas_log(request, proyecto_id):
+    """Lista de Órdenes de Compra eliminadas (soft delete) del proyecto."""
+    from django.db.models import Q
+    proyecto = _get_proyecto(proyecto_id)
+    q = (request.GET.get('q') or '').strip()
+    qs = (OrdenCompraLog.objects
+          .filter(proyecto=proyecto, deleted_at__isnull=False)
+          .select_related('proveedor', 'deleted_by')
+          .prefetch_related('detalles')
+          .order_by('-deleted_at'))
+    if q:
+        qs = qs.filter(Q(numero__icontains=q) |
+                       Q(proveedor__razon_social__icontains=q) |
+                       Q(proveedor__ruc__icontains=q) |
+                       Q(numero_factura__icontains=q))
+    items = []
+    for oc in qs:
+        items.append({
+            'obj':   oc,
+            'items_n': oc.detalles.count(),
+            'total': oc.total(),
+        })
+    return render(request, 'logistica/compras_eliminadas_log.html', {
+        'proyecto': proyecto,
+        'items':    items,
+        'q':        q,
+        'total':    qs.count(),
+    })
 
 
 @requiere('puede_ver_logistica')

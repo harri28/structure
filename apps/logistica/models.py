@@ -166,6 +166,8 @@ class OrdenCompraLog(models.Model):
     observaciones    = models.TextField(blank=True)
     created_by       = models.ForeignKey('auth.User', null=True, blank=True, on_delete=models.SET_NULL, related_name='ordenes_compra_creadas')
     created_at       = models.DateTimeField(auto_now_add=True)
+    deleted_at       = models.DateTimeField(null=True, blank=True)
+    deleted_by       = models.ForeignKey('auth.User', null=True, blank=True, on_delete=models.SET_NULL, related_name='ordenes_compra_eliminadas')
 
     class Meta:
         verbose_name        = 'Orden de Compra'

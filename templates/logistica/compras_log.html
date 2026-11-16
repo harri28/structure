@@ -19,6 +19,19 @@
   {% endif %}
 </div>
 
+<ul class="nav nav-tabs mb-3" style="font-size:.85rem">
+  <li class="nav-item">
+    <a class="nav-link active" href="{% url 'logistica:compras_log' proyecto.pk %}">
+      <i class="bi bi-cart-check me-1"></i>Compras
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{% url 'logistica:compras_eliminadas_log' proyecto.pk %}">
+      <i class="bi bi-trash me-1"></i>Compras eliminadas
+    </a>
+  </li>
+</ul>
+
 <div class="d-flex align-items-center gap-2 mb-3">
   <form method="get" class="input-group" style="max-width:380px">
     <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
