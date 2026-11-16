@@ -63,26 +63,26 @@
     <div class="card-body py-2">
 
       {# ─── Vista compacta (de solo lectura) ─── #}
-      <div id="or-vista">
+      <div id="or-vista" style="font-size:.84rem;color:#111827">
         <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-          <span class="text-muted text-uppercase" style="font-size:.68rem;letter-spacing:.06em;font-weight:600">Obra:</span>
-          <span class="fw-semibold" data-or-view="obra">{{ form.obra.value|default:"—" }}</span>
+          <span class="fw-bold">Obra:</span>
+          <span data-or-view="obra">{{ form.obra.value|default:"—" }}</span>
           <button type="button" class="btn btn-sm btn-link ms-auto p-0" id="or-btn-editar"
                   style="color:#6b7280;font-size:.76rem;text-decoration:none">
             <i class="bi bi-pencil me-1"></i>Editar
           </button>
         </div>
-        <div class="d-flex flex-wrap gap-4" style="font-size:.84rem">
+        <div class="d-flex flex-wrap gap-4">
           <div>
-            <span class="text-muted text-uppercase" style="font-size:.68rem;letter-spacing:.06em;font-weight:600">Solicitante:</span>
-            <span class="ms-1 fw-semibold" data-or-view="solicitante">{{ form.solicitante.value|default:"—" }}</span>
+            <span class="fw-bold">Solicitante:</span>
+            <span class="ms-1" data-or-view="solicitante">{{ form.solicitante.value|default:"—" }}</span>
           </div>
           <div>
-            <span class="text-muted text-uppercase" style="font-size:.68rem;letter-spacing:.06em;font-weight:600">Cargo:</span>
+            <span class="fw-bold">Cargo:</span>
             <span class="ms-1" data-or-view="cargo_solicitante">{{ form.cargo_solicitante.value|default:"—" }}</span>
           </div>
           <div>
-            <span class="text-muted text-uppercase" style="font-size:.68rem;letter-spacing:.06em;font-weight:600">Sector:</span>
+            <span class="fw-bold">Sector:</span>
             <span class="ms-1" data-or-view="sector_obra">{{ form.sector_obra.value|default:"—" }}</span>
           </div>
         </div>
