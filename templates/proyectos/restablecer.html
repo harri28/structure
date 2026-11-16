@@ -18,26 +18,6 @@
   </div>
 </div>
 
-<!-- Advertencia -->
-<div class="alert d-flex gap-3 align-items-start mb-3"
-     style="background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;border-radius:10px">
-  <i class="bi bi-exclamation-triangle-fill fs-4 mt-1 flex-shrink-0"></i>
-  <div>
-    <div class="fw-bold mb-1">Esta acción es irreversible</div>
-    <div style="font-size:.87rem">Los datos eliminados no se pueden recuperar. Selecciona solo los módulos que deseas vaciar y confirma con el código del proyecto.</div>
-  </div>
-</div>
-
-<!-- Nota: avance BI es prototipo con datos hardcoded -->
-<div class="alert d-flex gap-3 align-items-start mb-4"
-     style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px">
-  <i class="bi bi-info-circle-fill fs-5 mt-1 flex-shrink-0"></i>
-  <div style="font-size:.84rem">
-    La pestaña <strong>Avance Físico</strong> (Curva S, KPIs, Incidencias y Eventos)
-    es un prototipo BI con datos de ejemplo — no se guardan en la base de datos, por eso
-    no aparecen acá y siempre vas a ver los mismos valores aunque restablezcas el proyecto.
-  </div>
-</div>
 
 <form method="post" id="form-restablecer">
 {% csrf_token %}
