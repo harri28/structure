@@ -9,18 +9,481 @@
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
-    <h4><i class="bi bi-cart-check me-2"></i>Compras</h4>
+    <h4 class="mb-0"><i class="bi bi-cart-check me-2" style="color:#4f46e5"></i>Compras</h4>
+    <div class="text-muted" style="font-size:.82rem">Órdenes de Compra emitidas para el proyecto.</div>
   </div>
+  {% if permisos.puede_gestionar_logistica %}
+  <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-oc">
+    <i class="bi bi-plus-lg me-1"></i>Nueva Orden de Compra
+  </button>
+  {% endif %}
+</div>
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <form method="get" class="input-group" style="max-width:380px">
+    <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+           placeholder="Buscar por N° orden, proveedor, RUC, factura...">
+    <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+    {% if q %}<a href="{% url 'logistica:compras_log' proyecto.pk %}" class="btn btn-sm btn-outline-secondary" title="Limpiar"><i class="bi bi-x-lg"></i></a>{% endif %}
+  </form>
+  <span class="ms-auto text-muted" style="font-size:.78rem">{{ total }} órdenes</span>
 </div>
 
 <div class="card">
-  <div class="card-body text-center py-5">
-    <i class="bi bi-tools d-block mb-3" style="font-size:3rem;color:#f59e0b;opacity:.8"></i>
-    <h5 class="fw-bold mb-2" style="color:#0a0a0a">En desarrollo</h5>
-    <p class="text-muted mb-0" style="font-size:.9rem">
-      Este módulo todavía está en construcción.<br>
-      Pronto podrás gestionar las compras del proyecto desde acá.
-    </p>
+  <div class="card-body p-0">
+    <table class="table-modern mb-0" style="font-size:.84rem">
+      <thead>
+        <tr>
+          <th>N° Orden</th>
+          <th>Proveedor</th>
+          <th>Tipo pago</th>
+          <th class="text-center">Ítems</th>
+          <th class="text-end">Total</th>
+          <th>Fecha</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in items %}
+        <tr>
+          <td class="fw-semibold"><code style="color:#1d4ed8">{{ row.obj.numero }}</code></td>
+          <td>
+            <div>{{ row.obj.proveedor.razon_social|default:"—" }}</div>
+            {% if row.obj.proveedor.ruc %}<div class="text-muted" style="font-size:.74rem">{{ row.obj.proveedor.ruc }}</div>{% endif %}
+          </td>
+          <td>
+            {% if row.obj.tipo_pago == 'EFECTIVO' %}
+              <span class="badge" style="background:#dcfce7;color:#166534">EFECTIVO</span>
+            {% elif row.obj.tipo_pago == 'TRANSFERENCIA' %}
+              <span class="badge" style="background:#dbeafe;color:#1d4ed8">TRANSFER.</span>
+            {% elif row.obj.tipo_pago == 'CREDITO' %}
+              <span class="badge" style="background:#fef3c7;color:#92400e">CRÉDITO</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ row.obj.get_tipo_pago_display }}</span>
+            {% endif %}
+          </td>
+          <td class="text-center">{{ row.items_n }}</td>
+          <td class="text-end fw-semibold">S/ {{ row.total|floatformat:2 }}</td>
+          <td class="text-muted" style="font-size:.78rem">{{ row.obj.created_at|date:"d M Y" }}</td>
+          <td class="text-end">
+            <button type="button" class="btn-tbl" title="Ver detalle"
+                    onclick="verOC({{ row.obj.pk }})">
+              <i class="bi bi-eye"></i>
+            </button>
+            {% if permisos.puede_gestionar_logistica %}
+            <button type="button" class="btn-tbl danger" title="Eliminar"
+                    onclick="eliminarOC({{ row.obj.pk }}, '{{ row.obj.numero }}')">
+              <i class="bi bi-trash"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-5 text-muted">
+            <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3"></i>
+            Sin órdenes de compra registradas.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
+
+{% if permisos.puede_gestionar_logistica %}
+<!-- ───────────── Modal: Nueva Orden de Compra ───────────── -->
+<div class="modal fade" id="modal-oc" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" style="font-size:1rem">
+          <i class="bi bi-file-text me-2" style="color:#4f46e5"></i>Nueva Orden de Compra
+        </h6>
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-8 position-relative">
+            <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Proveedor <span class="text-danger">*</span></label>
+            <input type="text" id="oc-proveedor-input" class="form-control form-control-sm" autocomplete="off"
+                   placeholder="Buscá en tu catálogo de proveedores...">
+            <input type="hidden" id="oc-proveedor-id" value="">
+            <div id="oc-proveedor-sugs" class="list-group position-absolute shadow-sm w-100"
+                 style="z-index:1056;max-height:220px;overflow-y:auto;display:none;top:100%"></div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Fecha de entrega esperada</label>
+            <input type="date" id="oc-fecha" class="form-control form-control-sm">
+          </div>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Tipo de pago <span class="text-danger">*</span></label>
+            <select id="oc-tipo-pago" class="form-select form-select-sm">
+              {% for codigo, label in TIPOS_PAGO_OC %}
+              <option value="{{ codigo }}"{% if codigo == 'EFECTIVO' %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">N° de factura</label>
+            <input type="text" id="oc-factura" class="form-control form-control-sm" maxlength="50" placeholder="F001-00040598">
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between mt-3 mb-2">
+          <div class="fw-bold" style="font-size:.9rem">Insumos</div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="oc-add-item">
+            <i class="bi bi-plus me-1"></i>Agregar ítem
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" id="oc-tabla-items" style="font-size:.84rem">
+            <thead class="table-light">
+              <tr>
+                <th style="width:36%">Insumo</th>
+                <th style="width:14%">U.M.</th>
+                <th style="width:12%" class="text-end">Cantidad</th>
+                <th style="width:16%" class="text-end">P. Unitario</th>
+                <th style="width:16%" class="text-end">Sub. Total</th>
+                <th style="width:6%"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="d-flex justify-content-end mt-1 mb-3" style="font-size:.84rem">
+          Subtotal:&nbsp;<span class="fw-semibold ms-2" id="oc-subtotal">S/ 0.00</span>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Costo de envío</label>
+            <input type="number" id="oc-envio" class="form-control form-control-sm text-end" step="0.01" min="0" value="0">
+          </div>
+          <div class="col-md-8 d-flex align-items-end justify-content-end">
+            <div class="fw-bold" style="font-size:1rem">
+              Total:&nbsp;<span style="color:#1d4ed8" id="oc-total">S/ 0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label fw-semibold mb-1" style="font-size:.76rem;text-transform:uppercase;letter-spacing:.03em">Observaciones</label>
+          <textarea id="oc-obs" class="form-control form-control-sm" rows="2"></textarea>
+        </div>
+
+        <div class="text-danger mt-2" id="oc-err" style="font-size:.78rem;display:none"></div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-sm" id="btn-oc-guardar"
+                style="background:#4f46e5;color:#fff;font-weight:600">
+          <i class="bi bi-save me-1"></i>Registrar orden de compra
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ───────────── Modal: Ver OC ───────────── -->
+<div class="modal fade" id="modal-oc-ver" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" id="oc-ver-title" style="font-size:1rem">
+          <i class="bi bi-eye me-2"></i>Orden de Compra
+        </h6>
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="oc-ver-body" style="font-size:.84rem">
+        <div class="text-muted">Cargando…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const URL_PROV_BUSCAR = "{% url 'logistica:proveedor_buscar_ajax' proyecto.pk %}";
+  const URL_OC_CREAR    = "{% url 'logistica:oc_crear_ajax' proyecto.pk %}";
+  const URL_INS_BUSCAR  = "{% url 'logistica:oc_insumos_buscar_ajax' proyecto.pk %}";
+  const URL_OC_BASE     = "/logistica/proyecto/{{ proyecto.pk }}/compras/";
+
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  // ── Proveedor autocomplete ──────────────────────────────────────────
+  const pInp  = document.getElementById('oc-proveedor-input');
+  const pId   = document.getElementById('oc-proveedor-id');
+  const pSugs = document.getElementById('oc-proveedor-sugs');
+  let tProv = null;
+  function pHide() { pSugs.style.display='none'; pSugs.innerHTML=''; }
+  function pRender(items) {
+    if (!items.length) {
+      pSugs.innerHTML = '<div class="list-group-item text-muted small">Sin coincidencias. Registrá al proveedor desde Logística → Proveedores.</div>';
+    } else {
+      pSugs.innerHTML = items.map(p =>
+        `<button type="button" class="list-group-item list-group-item-action py-1" data-id="${p.id}" data-razon="${(p.razon_social||'').replace(/"/g,'&quot;')}" data-ruc="${p.ruc||''}">
+          <div class="fw-semibold" style="font-size:.84rem">${p.razon_social||'—'}</div>
+          <div class="text-muted" style="font-size:.74rem">${p.ruc?'<code>'+p.ruc+'</code>':'<em>sin RUC</em>'}</div>
+        </button>`
+      ).join('');
+    }
+    pSugs.style.display = '';
+    pSugs.querySelectorAll('[data-id]').forEach(b => {
+      b.addEventListener('click', () => {
+        pInp.value = b.dataset.razon;
+        pId.value  = b.dataset.id;
+        pHide();
+      });
+    });
+  }
+  function pBuscar() {
+    fetch(URL_PROV_BUSCAR + '?q=' + encodeURIComponent(pInp.value || ''), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(r => r.json()).then(d => pRender(d.items || [])).catch(pHide);
+  }
+  if (pInp) {
+    pInp.addEventListener('input', () => { pId.value = ''; clearTimeout(tProv); tProv = setTimeout(pBuscar, 180); });
+    pInp.addEventListener('focus', pBuscar);
+  }
+  document.addEventListener('click', ev => {
+    if (pInp && !pInp.contains(ev.target) && !pSugs.contains(ev.target)) pHide();
+  });
+
+  // ── Ítems: tabla dinámica ───────────────────────────────────────────
+  const tbody    = document.querySelector('#oc-tabla-items tbody');
+  const subtotal = document.getElementById('oc-subtotal');
+  const total    = document.getElementById('oc-total');
+  const envio    = document.getElementById('oc-envio');
+
+  function fmt(n) {
+    const v = Number(n) || 0;
+    return 'S/ ' + v.toFixed(2);
+  }
+
+  function recalcRow(tr) {
+    const cant = parseFloat(tr.querySelector('.it-cant').value) || 0;
+    const pu   = parseFloat(tr.querySelector('.it-pu').value) || 0;
+    const sub  = cant * pu;
+    const subInp = tr.querySelector('.it-sub');
+    if (document.activeElement !== subInp) subInp.value = sub.toFixed(2);
+    recalcTotales();
+  }
+
+  function recalcFromSub(tr) {
+    const cant = parseFloat(tr.querySelector('.it-cant').value) || 0;
+    const sub  = parseFloat(tr.querySelector('.it-sub').value) || 0;
+    const puInp = tr.querySelector('.it-pu');
+    if (cant > 0) puInp.value = (sub / cant).toFixed(4);
+    recalcTotales();
+  }
+
+  function recalcTotales() {
+    let s = 0;
+    tbody.querySelectorAll('tr').forEach(tr => {
+      const cant = parseFloat(tr.querySelector('.it-cant').value) || 0;
+      const pu   = parseFloat(tr.querySelector('.it-pu').value) || 0;
+      s += cant * pu;
+    });
+    const env = parseFloat(envio.value) || 0;
+    subtotal.textContent = fmt(s);
+    total.textContent    = fmt(s + env);
+  }
+
+  function addRow() {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="position:relative">
+        <input type="text" class="form-control form-control-sm it-ins-input" autocomplete="off" placeholder="Buscar insumo..." data-ins-id="">
+        <div class="list-group position-absolute shadow-sm it-ins-sugs" style="z-index:1057;max-height:220px;overflow-y:auto;display:none;width:100%;top:100%"></div>
+      </td>
+      <td><input type="text" class="form-control form-control-sm it-um" readonly style="background:#f8f9fa"></td>
+      <td><input type="number" class="form-control form-control-sm text-end it-cant" min="0" step="1" value="0"></td>
+      <td><input type="number" class="form-control form-control-sm text-end it-pu" min="0" step="0.0001" value="0"></td>
+      <td><input type="number" class="form-control form-control-sm text-end it-sub" min="0" step="0.01" value="0"></td>
+      <td class="text-end"><button type="button" class="btn-tbl danger it-del" title="Eliminar"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+    const iIns  = tr.querySelector('.it-ins-input');
+    const iId   = iIns.dataset;
+    const iUm   = tr.querySelector('.it-um');
+    const iCant = tr.querySelector('.it-cant');
+    const iPu   = tr.querySelector('.it-pu');
+    const iSub  = tr.querySelector('.it-sub');
+    const sugs  = tr.querySelector('.it-ins-sugs');
+
+    let tIns = null;
+    function hide(){ sugs.style.display='none'; sugs.innerHTML=''; }
+    function buscar() {
+      fetch(URL_INS_BUSCAR + '?q=' + encodeURIComponent(iIns.value || ''), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      })
+      .then(r => r.json())
+      .then(d => {
+        const items = d.items || [];
+        if (!items.length) {
+          sugs.innerHTML = '<div class="list-group-item text-muted small">Sin coincidencias en insumos aprobados.</div>';
+        } else {
+          sugs.innerHTML = items.map(i =>
+            `<button type="button" class="list-group-item list-group-item-action py-1" data-id="${i.id}" data-cod="${i.codigo||''}" data-desc="${(i.descripcion||'').replace(/"/g,'&quot;')}" data-um="${i.unidad||''}">
+              <div class="fw-semibold" style="font-size:.78rem"><code>${i.codigo||'—'}</code> · ${i.descripcion||''}</div>
+            </button>`
+          ).join('');
+        }
+        sugs.style.display = '';
+        sugs.querySelectorAll('[data-id]').forEach(b => {
+          b.addEventListener('click', () => {
+            iIns.value = b.dataset.desc;
+            iIns.dataset.insId = b.dataset.id;
+            iUm.value = b.dataset.um;
+            hide();
+            // fila nueva automática si esta fila es la última
+            if (tr === tbody.lastElementChild) addRow();
+            iCant.focus();
+          });
+        });
+      })
+      .catch(hide);
+    }
+    iIns.addEventListener('input', () => { iIns.dataset.insId = ''; clearTimeout(tIns); tIns = setTimeout(buscar, 180); });
+    iIns.addEventListener('focus', buscar);
+    document.addEventListener('click', ev => {
+      if (!iIns.contains(ev.target) && !sugs.contains(ev.target)) hide();
+    });
+
+    iCant.addEventListener('input', () => recalcRow(tr));
+    iPu.addEventListener('input',   () => recalcRow(tr));
+    iSub.addEventListener('input',  () => recalcFromSub(tr));
+    tr.querySelector('.it-del').addEventListener('click', () => {
+      tr.remove();
+      if (!tbody.querySelector('tr')) addRow();
+      recalcTotales();
+    });
+  }
+
+  document.getElementById('oc-add-item').addEventListener('click', addRow);
+  envio.addEventListener('input', recalcTotales);
+
+  // Inicializar: fecha de hoy + una fila vacía
+  const modalEl = document.getElementById('modal-oc');
+  if (modalEl) {
+    modalEl.addEventListener('shown.bs.modal', () => {
+      if (!document.getElementById('oc-fecha').value) {
+        document.getElementById('oc-fecha').value = new Date().toISOString().slice(0,10);
+      }
+      if (!tbody.querySelector('tr')) addRow();
+      recalcTotales();
+    });
+  }
+
+  // ── Guardar ─────────────────────────────────────────────────────────
+  document.getElementById('btn-oc-guardar').addEventListener('click', function(){
+    const err = document.getElementById('oc-err');
+    err.style.display = 'none';
+    if (!pId.value) { err.textContent = 'Elegí un proveedor del catálogo.'; err.style.display=''; return; }
+    const items = [];
+    tbody.querySelectorAll('tr').forEach(tr => {
+      const cant = parseFloat(tr.querySelector('.it-cant').value) || 0;
+      const pu   = parseFloat(tr.querySelector('.it-pu').value) || 0;
+      const iIns = tr.querySelector('.it-ins-input');
+      const desc = iIns.value.trim();
+      const um   = tr.querySelector('.it-um').value.trim();
+      const ins_id = iIns.dataset.insId || '';
+      if (cant > 0 && desc) {
+        items.push({ insumo_id: ins_id || null, descripcion: desc, unidad: um, cantidad: cant, precio_unitario: pu });
+      }
+    });
+    if (!items.length) { err.textContent = 'Agregá al menos un ítem con cantidad.'; err.style.display=''; return; }
+
+    const payload = {
+      proveedor_id:   pId.value,
+      fecha_entrega:  document.getElementById('oc-fecha').value,
+      tipo_pago:      document.getElementById('oc-tipo-pago').value,
+      numero_factura: document.getElementById('oc-factura').value,
+      costo_envio:    envio.value,
+      observaciones:  document.getElementById('oc-obs').value,
+      items:          items,
+    };
+
+    const btn = this;
+    btn.disabled = true;
+    const html = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem"></span>';
+    fetch(URL_OC_CREAR, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) { err.textContent = d.error || 'Error al guardar.'; err.style.display=''; return; }
+      location.reload();
+    })
+    .catch(e => { err.textContent = e.message || 'Error de red.'; err.style.display=''; })
+    .finally(() => { btn.disabled = false; btn.innerHTML = html; });
+  });
+
+  // ── Ver OC ──────────────────────────────────────────────────────────
+  window.verOC = function(pk) {
+    const body  = document.getElementById('oc-ver-body');
+    const title = document.getElementById('oc-ver-title');
+    body.innerHTML = '<div class="text-muted">Cargando…</div>';
+    const m = new bootstrap.Modal(document.getElementById('modal-oc-ver'));
+    m.show();
+    fetch(URL_OC_BASE + pk + '/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) { body.innerHTML = '<div class="text-danger">' + (d.error || 'Error') + '</div>'; return; }
+        title.innerHTML = '<i class="bi bi-eye me-2"></i>Orden ' + d.numero;
+        const rows = d.items.map(it =>
+          `<tr><td><code>${it.codigo||'—'}</code></td><td>${it.descripcion}</td><td class="text-center">${it.unidad}</td><td class="text-end">${it.cantidad}</td><td class="text-end">${Number(it.precio_unitario).toFixed(4)}</td><td class="text-end">${Number(it.subtotal).toFixed(2)}</td></tr>`
+        ).join('');
+        body.innerHTML = `
+          <div class="row g-2 mb-3">
+            <div class="col-md-6"><strong>Proveedor:</strong> ${d.proveedor} ${d.ruc?'<span class="text-muted">('+d.ruc+')</span>':''}</div>
+            <div class="col-md-3"><strong>Tipo pago:</strong> ${d.tipo_pago}</div>
+            <div class="col-md-3"><strong>Entrega:</strong> ${d.fecha_entrega}</div>
+            <div class="col-md-6"><strong>N° Factura:</strong> ${d.numero_factura||'—'}</div>
+            <div class="col-md-3"><strong>Creada:</strong> ${d.created_at}</div>
+            <div class="col-md-3"><strong>Por:</strong> ${d.created_by}</div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead class="table-light"><tr><th>Código</th><th>Descripción</th><th class="text-center">Und</th><th class="text-end">Cant.</th><th class="text-end">P.U.</th><th class="text-end">Sub.</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-end mt-2" style="font-size:.86rem">
+            <div>
+              Subtotal: <strong>S/ ${Number(d.subtotal).toFixed(2)}</strong><br>
+              Envío: <strong>S/ ${Number(d.costo_envio).toFixed(2)}</strong><br>
+              <span style="font-size:1rem;color:#1d4ed8">Total: <strong>S/ ${Number(d.total).toFixed(2)}</strong></span>
+            </div>
+          </div>
+          ${d.observaciones ? '<div class="mt-2"><strong>Observaciones:</strong> '+d.observaciones+'</div>' : ''}
+        `;
+      })
+      .catch(e => { body.innerHTML = '<div class="text-danger">Error: ' + e.message + '</div>'; });
+  };
+
+  window.eliminarOC = function(pk, numero) {
+    if (!confirm('¿Eliminar la orden ' + numero + '?')) return;
+    fetch(URL_OC_BASE + pk + '/eliminar/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+    })
+    .then(r => r.json())
+    .then(d => { if (d.ok) location.reload(); else alert(d.error || 'Error'); });
+  };
+})();
+</script>
 {% endblock %}

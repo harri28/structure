@@ -5,7 +5,11 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from apps.proyectos.models import Proyecto
 from apps.registro.utils import log, notificar
-from .models import GuiaRemision, DetalleGuia, Transportista, Proveedor, ESTADOS_GUIA, MOTIVOS_TRASLADO
+from .models import (
+    GuiaRemision, DetalleGuia, Transportista, Proveedor,
+    OrdenCompraLog, DetalleOrdenCompraLog, TIPOS_PAGO_OC,
+    ESTADOS_GUIA, MOTIVOS_TRASLADO,
+)
 from .forms import GuiaRemisionForm, DetalleGuiaFormSet, TransportistaForm
 from config.permisos import requiere, proyecto_visible
 
@@ -1489,9 +1493,233 @@ def req_insumos_log(request, proyecto_id):
 @requiere('puede_ver_logistica')
 @proyecto_visible
 def compras_log(request, proyecto_id):
-    """Módulo Compras — placeholder 'En desarrollo'."""
+    """Lista de Órdenes de Compra del proyecto."""
+    from django.db.models import Q
     proyecto = _get_proyecto(proyecto_id)
-    return render(request, 'logistica/compras_log.html', {'proyecto': proyecto})
+    q = (request.GET.get('q') or '').strip()
+    qs = (OrdenCompraLog.objects
+          .filter(proyecto=proyecto)
+          .select_related('proveedor')
+          .prefetch_related('detalles'))
+    if q:
+        qs = qs.filter(Q(numero__icontains=q) |
+                       Q(proveedor__razon_social__icontains=q) |
+                       Q(proveedor__ruc__icontains=q) |
+                       Q(numero_factura__icontains=q))
+    items = []
+    for oc in qs:
+        items.append({
+            'obj':   oc,
+            'items_n': oc.detalles.count(),
+            'total': oc.total(),
+        })
+    return render(request, 'logistica/compras_log.html', {
+        'proyecto': proyecto,
+        'items':    items,
+        'q':        q,
+        'total':    qs.count(),
+        'TIPOS_PAGO_OC': TIPOS_PAGO_OC,
+    })
+
+
+def _siguiente_numero_oc(proyecto):
+    """Correlativo del día: OC{YYYYMMDD}-{nnnn}."""
+    import datetime
+    hoy = datetime.date.today()
+    prefijo = f'OC{hoy.strftime("%Y%m%d")}-'
+    mayor = 0
+    for numero in (OrdenCompraLog.objects
+                   .filter(proyecto=proyecto, numero__startswith=prefijo)
+                   .values_list('numero', flat=True)):
+        try:
+            mayor = max(mayor, int(numero.replace(prefijo, '')))
+        except ValueError:
+            continue
+    return f'{prefijo}{str(mayor + 1).zfill(4)}'
+
+
+@requiere('puede_ver_logistica')
+@proyecto_visible
+def oc_insumos_buscar_ajax(request, proyecto_id):
+    """GET AJAX: insumos del proyecto con cantidad_aprobada > 0 (desbloqueados
+    en algún REQ aprobado/parcial/cotizado/atendido). Para el autocomplete
+    del modal Nueva OC."""
+    from django.db.models import Sum, Q
+    from apps.requerimientos.models import DetalleRequerimiento
+    from apps.presupuesto.models import InsumoPresupuesto
+
+    proyecto = _get_proyecto(proyecto_id)
+    q = (request.GET.get('q') or '').strip()
+
+    estados_ok = ('APROBADO', 'COTIZADO', 'PARCIAL', 'ATENDIDO')
+    aprobados = (DetalleRequerimiento.objects
+                 .filter(requerimiento__proyecto=proyecto,
+                         requerimiento__estado__in=estados_ok,
+                         cantidad_aprobada__gt=0)
+                 .values('insumo_id')
+                 .annotate(aprobada=Sum('cantidad_aprobada')))
+    ids = [a['insumo_id'] for a in aprobados if a['insumo_id']]
+    if not ids:
+        return JsonResponse({'items': []})
+
+    qs = InsumoPresupuesto.objects.filter(pk__in=ids)
+    if q:
+        qs = qs.filter(Q(codigo__icontains=q) | Q(descripcion__icontains=q))
+    qs = qs.order_by('codigo', 'descripcion')[:30]
+    return JsonResponse({
+        'items': [{
+            'id':          ins.pk,
+            'codigo':      ins.codigo or '',
+            'descripcion': ins.descripcion or '',
+            'unidad':      ins.unidad or '',
+        } for ins in qs],
+    })
+
+
+@requiere('puede_gestionar_logistica')
+@proyecto_visible
+@require_POST
+def oc_crear_ajax(request, proyecto_id):
+    """Crea una Orden de Compra con sus ítems (POST JSON)."""
+    from decimal import Decimal, InvalidOperation
+    import datetime, json
+    from apps.presupuesto.models import InsumoPresupuesto
+
+    proyecto = _get_proyecto(proyecto_id)
+    try:
+        data = json.loads(request.body or b'{}')
+    except (ValueError, json.JSONDecodeError):
+        return JsonResponse({'ok': False, 'error': 'Payload inválido.'}, status=400)
+
+    prov_id = data.get('proveedor_id') or None
+    proveedor = Proveedor.objects.filter(pk=prov_id).first() if prov_id else None
+    if not proveedor:
+        return JsonResponse({'ok': False, 'error': 'Elegí un proveedor del catálogo.'}, status=400)
+
+    try:
+        fecha = datetime.date.fromisoformat((data.get('fecha_entrega') or '').strip())
+    except ValueError:
+        return JsonResponse({'ok': False, 'error': 'Fecha inválida.'}, status=400)
+
+    tipo_pago = (data.get('tipo_pago') or 'EFECTIVO').upper()
+    if tipo_pago not in dict(TIPOS_PAGO_OC):
+        tipo_pago = 'EFECTIVO'
+    numero_factura = (data.get('numero_factura') or '').strip()[:50]
+    observaciones  = (data.get('observaciones') or '').strip()
+
+    try:
+        costo_envio = Decimal(str(data.get('costo_envio') or '0'))
+    except InvalidOperation:
+        costo_envio = Decimal('0')
+    if costo_envio < 0:
+        costo_envio = Decimal('0')
+
+    items_raw = data.get('items') or []
+    if not items_raw:
+        return JsonResponse({'ok': False, 'error': 'Agregá al menos un ítem.'}, status=400)
+
+    items = []
+    for it in items_raw:
+        try:
+            cant = Decimal(str(it.get('cantidad') or '0'))
+            pu   = Decimal(str(it.get('precio_unitario') or '0'))
+        except InvalidOperation:
+            continue
+        desc = (it.get('descripcion') or '').strip()
+        if cant <= 0 or not desc:
+            continue
+        ins_id = it.get('insumo_id') or None
+        insumo = InsumoPresupuesto.objects.filter(pk=ins_id).first() if ins_id else None
+        items.append({
+            'insumo':      insumo,
+            'descripcion': desc[:400],
+            'unidad':      (it.get('unidad') or '').strip()[:20],
+            'cantidad':    cant,
+            'precio_unitario': pu,
+        })
+    if not items:
+        return JsonResponse({'ok': False, 'error': 'Los ítems enviados no son válidos.'}, status=400)
+
+    from django.db import transaction
+    with transaction.atomic():
+        numero = _siguiente_numero_oc(proyecto)
+        oc = OrdenCompraLog.objects.create(
+            proyecto=proyecto,
+            numero=numero,
+            proveedor=proveedor,
+            fecha_entrega=fecha,
+            tipo_pago=tipo_pago,
+            numero_factura=numero_factura,
+            costo_envio=costo_envio,
+            observaciones=observaciones,
+            created_by=request.user,
+        )
+        for it in items:
+            DetalleOrdenCompraLog.objects.create(
+                orden=oc,
+                insumo=it['insumo'],
+                descripcion=it['descripcion'],
+                unidad=it['unidad'],
+                cantidad=it['cantidad'],
+                precio_unitario=it['precio_unitario'],
+            )
+
+    log(request, 'CREAR', 'Logística',
+        f'Orden de compra {oc.numero} creada en {proyecto.codigo} ({proveedor.razon_social})')
+    return JsonResponse({'ok': True, 'id': oc.pk, 'numero': oc.numero})
+
+
+@requiere('puede_ver_logistica')
+@proyecto_visible
+def oc_detalle_ajax(request, proyecto_id, pk):
+    """GET AJAX: datos completos de la OC para mostrar en modal de detalle."""
+    proyecto = _get_proyecto(proyecto_id)
+    try:
+        oc = (OrdenCompraLog.objects
+              .select_related('proveedor', 'created_by')
+              .prefetch_related('detalles')
+              .get(pk=pk, proyecto=proyecto))
+    except OrdenCompraLog.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'No encontrada.'}, status=404)
+
+    return JsonResponse({
+        'ok': True,
+        'numero':         oc.numero,
+        'proveedor':      oc.proveedor.razon_social if oc.proveedor else '—',
+        'ruc':            oc.proveedor.ruc if oc.proveedor else '',
+        'fecha_entrega':  oc.fecha_entrega.isoformat() if oc.fecha_entrega else '',
+        'tipo_pago':      oc.get_tipo_pago_display(),
+        'numero_factura': oc.numero_factura,
+        'costo_envio':    str(oc.costo_envio),
+        'observaciones':  oc.observaciones,
+        'created_at':     oc.created_at.strftime('%d/%m/%Y %H:%M'),
+        'created_by':     (oc.created_by.get_full_name() or oc.created_by.username) if oc.created_by else '—',
+        'subtotal':       str(oc.subtotal_items()),
+        'total':          str(oc.total()),
+        'items': [{
+            'codigo':      (d.insumo.codigo if d.insumo else ''),
+            'descripcion': d.descripcion,
+            'unidad':      d.unidad,
+            'cantidad':    str(d.cantidad),
+            'precio_unitario': str(d.precio_unitario),
+            'subtotal':    str(d.subtotal()),
+        } for d in oc.detalles.all()],
+    })
+
+
+@requiere('puede_gestionar_logistica')
+@proyecto_visible
+@require_POST
+def oc_eliminar_ajax(request, proyecto_id, pk):
+    proyecto = _get_proyecto(proyecto_id)
+    try:
+        oc = OrdenCompraLog.objects.get(pk=pk, proyecto=proyecto)
+    except OrdenCompraLog.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'No encontrada.'}, status=404)
+    numero = oc.numero
+    oc.delete()
+    log(request, 'ELIMINAR', 'Logística', f'Orden de compra {numero} eliminada de {proyecto.codigo}')
+    return JsonResponse({'ok': True})
 
 
 @requiere('puede_ver_logistica')

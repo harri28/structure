@@ -43,6 +43,12 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/almacen/',            views.almacen_log,        name='almacen_log'),
     path('proyecto/<int:proyecto_id>/req-insumos/',        views.req_insumos_log,    name='req_insumos_log'),
     path('proyecto/<int:proyecto_id>/compras/',            views.compras_log,        name='compras_log'),
+    # Compras — Órdenes de Compra
+    path('proyecto/<int:proyecto_id>/compras/crear/',                      views.oc_crear_ajax,         name='oc_crear_ajax'),
+    path('proyecto/<int:proyecto_id>/compras/insumos/',                    views.oc_insumos_buscar_ajax,name='oc_insumos_buscar_ajax'),
+    path('proyecto/<int:proyecto_id>/compras/<int:pk>/',                   views.oc_detalle_ajax,       name='oc_detalle_ajax'),
+    path('proyecto/<int:proyecto_id>/compras/<int:pk>/eliminar/',          views.oc_eliminar_ajax,      name='oc_eliminar_ajax'),
+
     path('proyecto/<int:proyecto_id>/proveedores/',                        views.proveedores_log,       name='proveedores_log'),
     path('proyecto/<int:proyecto_id>/proveedores/buscar/',                 views.proveedor_buscar_ajax, name='proveedor_buscar_ajax'),
     path('proyecto/<int:proyecto_id>/proveedores/guardar/',                views.proveedor_guardar_ajax,name='proveedor_crear_ajax'),

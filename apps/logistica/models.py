@@ -133,3 +133,61 @@ class DetalleGuia(models.Model):
 
     def __str__(self):
         return self.descripcion
+
+
+# ── Órdenes de Compra (módulo Compras de Logística) ─────────────────────
+
+TIPOS_PAGO_OC = [
+    ('EFECTIVO',      'Efectivo'),
+    ('TRANSFERENCIA', 'Transferencia'),
+    ('CREDITO',       'Crédito'),
+]
+
+
+class OrdenCompraLog(models.Model):
+    """Orden de Compra gestionada desde el módulo Compras de Logística.
+    Independiente de almacen.OrdenCompra (ese modelo pertenece a un flujo
+    legacy)."""
+    proyecto         = models.ForeignKey('proyectos.Proyecto', on_delete=models.CASCADE, related_name='ordenes_compra_log')
+    numero           = models.CharField('N° Orden', max_length=30)
+    proveedor        = models.ForeignKey(Proveedor, null=True, blank=True, on_delete=models.SET_NULL, related_name='ordenes_compra')
+    fecha_entrega    = models.DateField('Fecha de entrega esperada')
+    tipo_pago        = models.CharField('Tipo de pago', max_length=20, choices=TIPOS_PAGO_OC, default='EFECTIVO')
+    numero_factura   = models.CharField('N° de factura', max_length=50, blank=True)
+    costo_envio      = models.DecimalField('Costo de envío', max_digits=12, decimal_places=2, default=Decimal('0'))
+    observaciones    = models.TextField(blank=True)
+    created_by       = models.ForeignKey('auth.User', null=True, blank=True, on_delete=models.SET_NULL, related_name='ordenes_compra_creadas')
+    created_at       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Orden de Compra'
+        verbose_name_plural = 'Órdenes de Compra'
+        ordering            = ['-created_at']
+        unique_together     = [('proyecto', 'numero')]
+
+    def __str__(self):
+        return self.numero
+
+    def subtotal_items(self):
+        return sum((d.subtotal() for d in self.detalles.all()), Decimal('0'))
+
+    def total(self):
+        return self.subtotal_items() + (self.costo_envio or Decimal('0'))
+
+
+class DetalleOrdenCompraLog(models.Model):
+    orden           = models.ForeignKey(OrdenCompraLog, on_delete=models.CASCADE, related_name='detalles')
+    insumo          = models.ForeignKey('presupuesto.InsumoPresupuesto', null=True, blank=True, on_delete=models.SET_NULL, related_name='en_ordenes_compra')
+    descripcion     = models.CharField(max_length=400)
+    unidad          = models.CharField(max_length=20, blank=True)
+    cantidad        = models.DecimalField(max_digits=12, decimal_places=3, default=Decimal('0'))
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=4, default=Decimal('0'))
+
+    class Meta:
+        ordering = ['id']
+
+    def subtotal(self):
+        return (self.cantidad or Decimal('0')) * (self.precio_unitario or Decimal('0'))
+
+    def __str__(self):
+        return f'{self.descripcion} x {self.cantidad}'

@@ -519,7 +519,7 @@ def proyecto_restablecer(request, pk):
 
     from apps.requerimientos.models import Requerimiento, DetalleRequerimiento, HistorialRevisionReq
     from apps.almacen.models import Entrada, Salida, Cotizacion, OrdenCompra
-    from apps.logistica.models import GuiaRemision
+    from apps.logistica.models import GuiaRemision, OrdenCompraLog
     from apps.maquinaria.models import (
         RegistroDiario, RegistroMaquinaria, Liquidacion,
         Trabajador, DocumentoTrabajador, Cuadrilla, IntegranteCuadrilla, Asistencia,
@@ -692,6 +692,7 @@ def proyecto_restablecer(request, pk):
         if 'cotizaciones' in seleccionados:
             Cotizacion.objects.filter(proyecto=proyecto).delete()
             OrdenCompra.objects.filter(proyecto=proyecto).delete()
+            OrdenCompraLog.objects.filter(proyecto=proyecto).delete()
             eliminados.append('Cotizaciones y OC')
 
         if 'almacen' in seleccionados:
