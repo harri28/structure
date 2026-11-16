@@ -1533,6 +1533,29 @@ def _parse_json(request):
 
 @requiere('puede_ver_logistica')
 @proyecto_visible
+def proveedor_buscar_ajax(request, proyecto_id):
+    """GET AJAX: devuelve proveedores activos del catálogo que matchean el
+    texto en razón social o RUC. Usado por el autocompletar del modal de
+    cotización."""
+    q = (request.GET.get('q') or '').strip()
+    qs = Proveedor.objects.filter(activo=True)
+    if q:
+        from django.db.models import Q
+        qs = qs.filter(Q(razon_social__icontains=q) | Q(ruc__icontains=q))
+    qs = qs.order_by('razon_social')[:20]
+    return JsonResponse({
+        'items': [{
+            'id':           p.pk,
+            'razon_social': p.razon_social,
+            'ruc':          p.ruc,
+            'direccion':    p.direccion,
+            'telefono':     p.telefono,
+        } for p in qs],
+    })
+
+
+@requiere('puede_ver_logistica')
+@proyecto_visible
 @require_POST
 def proveedor_guardar_ajax(request, proyecto_id, pk=None):
     """POST AJAX: crea o edita un proveedor.

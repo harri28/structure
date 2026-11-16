@@ -44,6 +44,7 @@ urlpatterns = [
     path('proyecto/<int:proyecto_id>/req-insumos/',        views.req_insumos_log,    name='req_insumos_log'),
     path('proyecto/<int:proyecto_id>/compras/',            views.compras_log,        name='compras_log'),
     path('proyecto/<int:proyecto_id>/proveedores/',                        views.proveedores_log,       name='proveedores_log'),
+    path('proyecto/<int:proyecto_id>/proveedores/buscar/',                 views.proveedor_buscar_ajax, name='proveedor_buscar_ajax'),
     path('proyecto/<int:proyecto_id>/proveedores/guardar/',                views.proveedor_guardar_ajax,name='proveedor_crear_ajax'),
     path('proyecto/<int:proyecto_id>/proveedores/<int:pk>/guardar/',       views.proveedor_guardar_ajax,name='proveedor_editar_ajax'),
     path('proyecto/<int:proyecto_id>/proveedores/<int:pk>/',               views.proveedor_detalle_ajax,name='proveedor_detalle_ajax'),
