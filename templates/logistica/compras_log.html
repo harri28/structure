@@ -491,14 +491,15 @@
     });
   }
 
-  // Abrir modal si la URL trae ?nueva_oc=1 (viene de aprobar cotización)
-  try {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('nueva_oc') === '1' && modalEl) {
-      const m = bootstrap.Modal.getOrCreateInstance(modalEl);
-      m.show();
-    }
-  } catch(_) {}
+  // Abrir modal si la URL trae ?nueva_oc=1 (acceso rápido desde Cotizaciones)
+  window.addEventListener('DOMContentLoaded', () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('nueva_oc') === '1' && modalEl && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      }
+    } catch(_) {}
+  });
 
   // ── Guardar ─────────────────────────────────────────────────────────
   document.getElementById('btn-oc-guardar').addEventListener('click', function(){
