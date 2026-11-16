@@ -151,11 +151,11 @@
         <i class="bi bi-file-earmark-text"></i> Requerimientos
         {% if req_solicitados %}<span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;padding:.2em .45em">{{ req_solicitados }}</span>{% endif %}
       </a>
-      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-reqs" aria-expanded="true" aria-label="Expandir Requerimientos">
+      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-reqs" aria-expanded="false" aria-label="Expandir Requerimientos">
         <i class="bi bi-chevron-right sb-arrow"></i>
       </button>
     </div>
-    <div class="collapse show" id="nav-reqs">
+    <div class="collapse" id="nav-reqs">
       <a href="{% url 'requerimientos:lista' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_req_lista %}{% endblock %}">
         <i class="bi bi-list-ul"></i> Solicitar Requerimiento
@@ -178,11 +178,11 @@
          class="sb-link {% block nav_almacen %}{% endblock %}">
         <i class="bi bi-box-seam"></i> Almacén
       </a>
-      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-almacen" aria-expanded="true" aria-label="Expandir Almacén">
+      <button type="button" class="sb-chevron-btn" data-bs-toggle="collapse" data-bs-target="#nav-almacen" aria-expanded="false" aria-label="Expandir Almacén">
         <i class="bi bi-chevron-right sb-arrow"></i>
       </button>
     </div>
-    <div class="collapse show" id="nav-almacen">
+    <div class="collapse" id="nav-almacen">
       <a href="{% url 'almacen:stock' proyecto_activo.pk %}"
          class="sb-link sb-sublink {% block nav_stock %}{% endblock %}">
         <i class="bi bi-archive"></i> Stock
@@ -601,11 +601,13 @@ document.querySelectorAll('table.table:not(.table-modern)').forEach(function (t)
 (function () {
   // Presupuesto: cerrado por defecto; se abre si tiene sub-link activo o si el user lo dejó abierto.
   // Almacén: abierto por defecto (desglosado); solo se cierra si el user lo colapsa explícitamente.
+  // Todos cerrados por defecto. Si el user está viendo un sub-módulo, el
+  // grupo correspondiente se abre automáticamente (chequeo tieneActivo abajo).
   var grupos = [
-    { id: 'nav-presupuesto', abiertoPorDefecto: false },
-    { id: 'nav-reqs',        abiertoPorDefecto: true  },
-    { id: 'nav-almacen',     abiertoPorDefecto: true  },
-    { id: 'nav-config-admin', abiertoPorDefecto: true }
+    { id: 'nav-presupuesto',  abiertoPorDefecto: false },
+    { id: 'nav-reqs',         abiertoPorDefecto: false },
+    { id: 'nav-almacen',      abiertoPorDefecto: false },
+    { id: 'nav-config-admin', abiertoPorDefecto: false }
   ];
 
   grupos.forEach(function (g) {
