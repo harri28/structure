@@ -1471,11 +1471,11 @@ def cot_aprobar(request, pk):
     if cot.requerimiento_origen_id:
         from apps.logistica.views import _recalcular_estado_req
         _recalcular_estado_req(cot.requerimiento_origen)
-    messages.success(request, f'Cotización COT{cot.numero} aprobada.')
     if request.POST.get('redirect_to') == 'compras_nueva_oc':
         from django.urls import reverse
         url = reverse('logistica:compras_log', args=[cot.proyecto_id])
-        return redirect(f'{url}?nueva_oc=1&cot={cot.pk}')
+        return redirect(f'{url}?nueva_oc=1')
+    messages.success(request, f'Cotización COT{cot.numero} aprobada.')
     if request.POST.get('volver') == 'lista':
         return redirect('almacen:cot_lista', proyecto_id=cot.proyecto_id)
     return redirect('almacen:cot_detalle', pk=cot.pk)
