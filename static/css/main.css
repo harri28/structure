@@ -216,8 +216,8 @@ body.sb-collapsed .sb-chevron-btn { display: none; }
   transition: background .15s, color .15s; white-space: nowrap;
 }
 .submodule-chips .s-chip:last-child { border-right: none; }
-.submodule-chips .s-chip:hover { background: #2563eb; color: #fff; }
-.submodule-chips .s-chip.active { background: #2563eb; color: #fff; font-weight: 600; }
+.submodule-chips .s-chip:hover { background: var(--accent); color: #fff; }
+.submodule-chips .s-chip.active { background: var(--accent); color: #fff; font-weight: 600; }
 
 /* Footer sidebar */
 .sb-footer {
@@ -875,8 +875,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   transition: background .15s, color .15s;
   user-select: none;
 }
-.req-chip:hover { background: #2563eb; color: #fff; }
-.req-chip.active { background: #2563eb; color: #fff; }
+.req-chip:hover { background: var(--accent); color: #fff; }
+.req-chip.active { background: var(--accent); color: #fff; }
 
 
 /* ── Chips de sección (unidades/cargos) ──────────────────────────── */
