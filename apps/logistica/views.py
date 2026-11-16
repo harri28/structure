@@ -1622,7 +1622,7 @@ def oc_crear_ajax(request, proyecto_id):
     prov_id = data.get('proveedor_id') or None
     proveedor = Proveedor.objects.filter(pk=prov_id).first() if prov_id else None
     if not proveedor:
-        return JsonResponse({'ok': False, 'error': 'Elige un proveedor del catálogo.'}, status=400)
+        return JsonResponse({'ok': False, 'error': 'Elige un proveedor.'}, status=400)
 
     try:
         fecha = datetime.date.fromisoformat((data.get('fecha_entrega') or '').strip())

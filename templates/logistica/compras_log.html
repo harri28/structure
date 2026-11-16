@@ -495,7 +495,7 @@
   document.getElementById('btn-oc-guardar').addEventListener('click', function(){
     const err = document.getElementById('oc-err');
     err.style.display = 'none';
-    if (!pId.value) { err.textContent = 'Elige un proveedor del catálogo.'; err.style.display=''; return; }
+    if (!pId.value) { err.textContent = 'Elige un proveedor.'; err.style.display=''; return; }
     const items = [];
     tbody.querySelectorAll('tr').forEach(tr => {
       const cant = parseFloat(tr.querySelector('.it-cant').value) || 0;
