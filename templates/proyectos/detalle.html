@@ -37,16 +37,25 @@
 
 <!-- Info del proyecto -->
 <div class="card mb-4">
-  <div class="card-header">Información del Proyecto</div>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Información del Proyecto</span>
+    {% if jefe_obra %}
+    <span class="text-muted" style="font-size:.72rem">
+      <i class="bi bi-person-badge me-1"></i>Datos leídos del perfil de
+      <strong>{{ jefe_obra.get_full_name|default:jefe_obra.username }}</strong>
+      (Jefe de Obra)
+    </span>
+    {% endif %}
+  </div>
   <div class="card-body">
     <div class="row g-3">
       <div class="col-sm-6 col-lg-3">
         <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em">Cliente</div>
-        <div class="fw-semibold mt-1">{{ proyecto.cliente|default:"—" }}</div>
+        <div class="fw-semibold mt-1">{{ info.cliente|default:"—" }}</div>
       </div>
       <div class="col-sm-6 col-lg-3">
         <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em">Responsable</div>
-        <div class="fw-semibold mt-1">{{ proyecto.responsable|default:"—" }}</div>
+        <div class="fw-semibold mt-1">{{ info.responsable|default:"—" }}</div>
       </div>
       <div class="col-sm-6 col-lg-3">
         <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em">Inicio</div>
@@ -56,16 +65,16 @@
         <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em">Fin</div>
         <div class="mt-1">{{ proyecto.fecha_fin|date:"d/m/Y"|default:"—" }}</div>
       </div>
-      {% if proyecto.ubicacion %}
+      {% if info.ubicacion %}
       <div class="col-12">
         <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em">Ubicación</div>
-        <div class="mt-1"><i class="bi bi-geo-alt text-muted me-1"></i>{{ proyecto.ubicacion }}</div>
+        <div class="mt-1"><i class="bi bi-geo-alt text-muted me-1"></i>{{ info.ubicacion }}</div>
       </div>
       {% endif %}
-      {% if proyecto.descripcion %}
+      {% if info.descripcion %}
       <div class="col-12">
         <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em">Descripción</div>
-        <div class="mt-1">{{ proyecto.descripcion }}</div>
+        <div class="mt-1">{{ info.descripcion }}</div>
       </div>
       {% endif %}
     </div>

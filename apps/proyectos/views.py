@@ -351,11 +351,33 @@ def detalle(request, pk):
     ids_miembros = miembros.values_list('usuario_id', flat=True)
     usuarios_disponibles = User.objects.exclude(pk__in=ids_miembros).order_by('first_name', 'username')
     roles_list = Rol.objects.all().order_by('nombre')
+
+    # Jefe de Obra del equipo: primero por rol específico del miembro, luego por
+    # rol global del perfil. Si hay varios, se toma el primero.
+    jefe_obra = None
+    for m in miembros:
+        rol_efectivo = m.rol or (m.usuario.perfil.rol if hasattr(m.usuario, 'perfil') and m.usuario.perfil else None)
+        if rol_efectivo and rol_efectivo.es_rol_jefe_obra:
+            jefe_obra = m.usuario
+            break
+
+    # Valores de "Información del Proyecto": si hay Jefe de Obra con el campo
+    # en su perfil, se usa eso; si no, cae al valor guardado en el proyecto.
+    perfil_jo = getattr(jefe_obra, 'perfil', None) if jefe_obra else None
+    info = {
+        'cliente':     (perfil_jo.cliente     if perfil_jo and perfil_jo.cliente     else proyecto.cliente),
+        'responsable': ((jefe_obra.get_full_name() or jefe_obra.username) if jefe_obra else proyecto.responsable),
+        'ubicacion':   (perfil_jo.ubicacion   if perfil_jo and perfil_jo.ubicacion   else proyecto.ubicacion),
+        'descripcion': (perfil_jo.descripcion if perfil_jo and perfil_jo.descripcion else proyecto.descripcion),
+    }
+
     return render(request, 'proyectos/detalle.html', {
         'proyecto':             proyecto,
         'miembros':             miembros,
         'usuarios_disponibles': usuarios_disponibles,
         'roles_list':           roles_list,
+        'jefe_obra':            jefe_obra,
+        'info':                 info,
     })
 
 

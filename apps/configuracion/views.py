@@ -677,14 +677,20 @@ def perfil(request):
         cargo      = request.POST.get('cargo', '').strip()
         telefono   = request.POST.get('telefono', '').strip()
         email      = request.POST.get('email', '').strip()
+        cliente     = request.POST.get('cliente', '').strip()
+        ubicacion   = request.POST.get('ubicacion', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
 
         request.user.first_name = first_name
         request.user.last_name  = last_name
         request.user.email      = email
         request.user.save()
 
-        perfil_obj.cargo    = cargo
-        perfil_obj.telefono = telefono
+        perfil_obj.cargo       = cargo
+        perfil_obj.telefono    = telefono
+        perfil_obj.cliente     = cliente
+        perfil_obj.ubicacion   = ubicacion
+        perfil_obj.descripcion = descripcion
         perfil_obj.save()
 
         messages.success(request, 'Perfil actualizado correctamente.')

@@ -173,6 +173,17 @@ class Rol(models.Model):
         nombre = (self.nombre or '').strip().lower()
         return nombre in ('logística', 'logistica', 'log', 'logistic')
 
+    @property
+    def es_rol_jefe_obra(self):
+        """True si este rol es el de Jefe de Obra (tolerante a capitalización
+        y acentos). Usado para resolver el 'Responsable' del proyecto desde
+        el equipo del mismo."""
+        nombre = (self.nombre or '').strip().lower()
+        return nombre in (
+            'jefe de obra', 'jefe obra', 'jefe_obra',
+            'administrador de obra', 'admin de obra', 'admin obra',
+        )
+
 
 class UnidadMedida(models.Model):
     """Catálogo de unidades de medida estandarizadas."""
@@ -314,10 +325,15 @@ class ImagenReporte(models.Model):
 
 
 class PerfilUsuario(models.Model):
-    usuario  = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
-    rol      = models.ForeignKey(Rol, null=True, blank=True, on_delete=models.SET_NULL, related_name='usuarios')
-    cargo    = models.CharField('Cargo', max_length=100, blank=True)
-    telefono = models.CharField('Teléfono', max_length=20, blank=True)
+    usuario     = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    rol         = models.ForeignKey(Rol, null=True, blank=True, on_delete=models.SET_NULL, related_name='usuarios')
+    cargo       = models.CharField('Cargo', max_length=100, blank=True)
+    telefono    = models.CharField('Teléfono', max_length=20, blank=True)
+    # Campos usados cuando el usuario asume el rol de Jefe de Obra en un
+    # proyecto: la vista detalle del proyecto los lee desde su perfil.
+    cliente     = models.CharField('Cliente', max_length=200, blank=True)
+    ubicacion   = models.CharField('Ubicación', max_length=300, blank=True)
+    descripcion = models.TextField('Descripción', blank=True)
 
     class Meta:
         verbose_name = 'Perfil de Usuario'
