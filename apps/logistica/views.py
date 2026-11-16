@@ -1523,19 +1523,20 @@ def compras_log(request, proyecto_id):
 
 
 def _siguiente_numero_oc(proyecto):
-    """Correlativo del día: OC{YYYYMMDD}-{nnnn}."""
+    """Correlativo anual por proyecto: OC{nnnnn}-{YYYY}."""
     import datetime
-    hoy = datetime.date.today()
-    prefijo = f'OC{hoy.strftime("%Y%m%d")}-'
+    anio = datetime.date.today().year
+    sufijo = f'-{anio}'
     mayor = 0
     for numero in (OrdenCompraLog.objects
-                   .filter(proyecto=proyecto, numero__startswith=prefijo)
+                   .filter(proyecto=proyecto, numero__endswith=sufijo)
                    .values_list('numero', flat=True)):
         try:
-            mayor = max(mayor, int(numero.replace(prefijo, '')))
+            correlativo = numero.replace(sufijo, '').replace('OC', '')
+            mayor = max(mayor, int(correlativo))
         except ValueError:
             continue
-    return f'{prefijo}{str(mayor + 1).zfill(4)}'
+    return f'OC{str(mayor + 1).zfill(5)}{sufijo}'
 
 
 def _saldos_comprables(proyecto):
