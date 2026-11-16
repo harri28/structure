@@ -370,7 +370,10 @@
       </td>
       <td><input type="text" class="form-control form-control-sm it-um" readonly style="background:#f8f9fa"></td>
       <td>
-        <input type="number" class="form-control form-control-sm text-end it-cant" min="0" step="1" placeholder="0">
+        <div class="d-flex align-items-center gap-1">
+          <input type="number" class="form-control form-control-sm text-end it-cant" min="0" step="1" placeholder="0" style="background-image:none">
+          <i class="bi bi-exclamation-circle it-cant-warn" style="display:none;color:#111;font-size:.95rem;flex:none" title="Supera el saldo"></i>
+        </div>
         <div class="invalid-feedback it-cant-fb text-end" style="font-size:.68rem;display:none"></div>
       </td>
       <td><input type="number" class="form-control form-control-sm text-end it-pu" min="0" step="0.0001" placeholder="0.00"></td>
@@ -457,14 +460,17 @@
       const saldo = parseFloat(iCant.dataset.saldo || '0');
       const val   = parseFloat(iCant.value || '0');
       const fb    = tr.querySelector('.it-cant-fb');
+      const warn  = tr.querySelector('.it-cant-warn');
       if (iIns.dataset.insId && saldo > 0 && val > saldo) {
         iCant.classList.add('is-invalid');
+        if (warn) warn.style.display = '';
         if (fb) {
           fb.textContent = 'Máx: ' + saldo.toFixed(2);
           fb.style.display = 'block';
         }
       } else {
         iCant.classList.remove('is-invalid');
+        if (warn) warn.style.display = 'none';
         if (fb) fb.style.display = 'none';
       }
     }
