@@ -1435,7 +1435,9 @@ def cot_aprobar(request, pk):
     # Validación cruzada contra el saldo del REQ: con las cantidades que están por
     # aprobarse acá + las ya aprobadas en OTRAS cotizaciones de este mismo REQ, no
     # se puede superar la cantidad_aprobada del detalle del requerimiento.
-    if cot.requerimiento_origen_id:
+    # Se omite cuando el flujo va a generar la OC (el control de saldo real pasa a
+    # vivir en Compras, no en la cotización).
+    if cot.requerimiento_origen_id and not precio_opcional:
         items_a_aprobar = [{
             'insumo_id': det.insumo_id,
             'descripcion': det.descripcion,
