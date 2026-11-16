@@ -639,12 +639,13 @@ document.querySelectorAll('table.table:not(.table-modern)').forEach(function (t)
     if (!col) return;
     var trigger = document.querySelector('[data-bs-target="#' + g.id + '"]');
     var guardado = localStorage.getItem('sb-' + g.id);   // '1' abierto, '0' cerrado, null nunca tocado
-    var tieneActivo = !!col.querySelector('.sb-link.active');
 
+    // Los grupos arrancan cerrados SIEMPRE, incluso cuando el user esta
+    // viendo un sub-modulo. Solo respetan la preferencia manual del user
+    // (guardado en localStorage al clickear el chevron).
     var abrir;
-    if (tieneActivo)          abrir = true;              // siempre abrir si el user está viendo un sub-módulo
-    else if (guardado != null) abrir = (guardado === '1');
-    else                       abrir = g.abiertoPorDefecto;
+    if (guardado != null) abrir = (guardado === '1');
+    else                  abrir = g.abiertoPorDefecto;
 
     if (abrir) col.classList.add('show');
     else       col.classList.remove('show');
