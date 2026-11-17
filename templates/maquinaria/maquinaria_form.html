@@ -36,31 +36,31 @@
       </h6>
       <div class="row g-3 mb-3">
         <div class="col-sm-3">
-          <label class="form-label fw-semibold" style="font-size:.83rem">COD</label>
+          <label class="form-label">COD</label>
           {{ form.codigo }}
         </div>
         <div class="col-sm-9">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Nombre <span class="text-danger">*</span></label>
+          <label class="form-label">Nombre <span class="text-danger">*</span></label>
           {{ form.nombre }}
           {% for e in form.nombre.errors %}<div class="text-danger mt-1" style="font-size:.8rem">{{ e }}</div>{% endfor %}
         </div>
       </div>
       <div class="row g-3 mb-4">
         <div class="col-sm-4">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Tipo de equipo</label>
+          <label class="form-label">Tipo de equipo</label>
           {{ form.tipo_equipo }}
         </div>
         <div class="col-sm-4">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Marca</label>
+          <label class="form-label">Marca</label>
           {{ form.marca }}
         </div>
         <div class="col-sm-4">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Modelo</label>
+          <label class="form-label">Modelo</label>
           {{ form.modelo }}
         </div>
       </div>
       <div class="mb-4" style="max-width:200px">
-        <label class="form-label fw-semibold" style="font-size:.83rem">Placa</label>
+        <label class="form-label">Placa</label>
         {{ form.placa }}
       </div>
 
@@ -71,15 +71,15 @@
       </h6>
       <div class="row g-3 mb-4">
         <div class="col-sm-4">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Costo (S/)</label>
+          <label class="form-label">Costo (S/)</label>
           {{ form.costo }}
         </div>
         <div class="col-sm-4">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Modalidad</label>
+          <label class="form-label">Modalidad</label>
           {{ form.modalidad_costo }}
         </div>
         <div class="col-sm-4">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Costo / hora (S/)</label>
+          <label class="form-label">Costo / hora (S/)</label>
           {{ form.costo_hora }}
         </div>
       </div>
@@ -91,7 +91,7 @@
       </h6>
       <div class="row g-3 mb-3">
         <div class="col-sm-6">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Ingrese Ruc o Dni del propietario</label>
+          <label class="form-label">Ingrese Ruc o Dni del propietario</label>
           <div class="d-flex align-items-stretch gap-2">
             {{ form.propietario_documento }}
             <button type="button" id="btn-buscar-propietario" class="btn btn-primary d-flex align-items-center justify-content-center" style="width:38px;padding:0;flex-shrink:0" title="Buscar RUC/DNI">
@@ -101,23 +101,23 @@
           <div id="doc-msg" style="font-size:.78rem;margin-top:.3rem;display:none"></div>
         </div>
         <div class="col-sm-6">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Razón social</label>
+          <label class="form-label">Razón social</label>
           {{ form.propietario_razon_social }}
         </div>
       </div>
       <div class="row g-3 mb-3">
         <div class="col-sm-6">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Celular</label>
+          <label class="form-label">Celular</label>
           {{ form.propietario_celular }}
         </div>
         <div class="col-sm-6">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Jr. / Dirección</label>
+          <label class="form-label">Jr. / Dirección</label>
           {{ form.propietario_direccion }}
         </div>
       </div>
       <div class="row g-3 mb-4">
         <div class="col-sm-6">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Operador</label>
+          <label class="form-label">Operador</label>
           {{ form.operador }}
         </div>
       </div>
@@ -129,15 +129,15 @@
       </h6>
       <div class="row g-3 mb-4">
         <div class="col-sm-4">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Fecha de llegada</label>
+          <label class="form-label">Fecha de llegada</label>
           {{ form.fecha_llegada }}
         </div>
         <div class="col-sm-4">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Reinicio de trabajo</label>
+          <label class="form-label">Reinicio de trabajo</label>
           {{ form.fecha_reinicio }}
         </div>
         <div class="col-sm-4">
-          <label class="form-label fw-semibold" style="font-size:.83rem">Salida de obra</label>
+          <label class="form-label">Salida de obra</label>
           {{ form.fecha_salida_obra }}
         </div>
       </div>
