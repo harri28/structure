@@ -170,12 +170,21 @@ def _back_ctx(request, obj=None):
 
 @requiere('puede_gestionar_maquinaria')
 def maquinaria_crear(request):
+    """Alta de una máquina. Responde JSON si la petición es AJAX (modal
+    flotante en maq_principal); renderiza la página completa si no."""
+    from django.http import JsonResponse
     initial = {'codigo': _siguiente_codigo_maq()}
     form    = MaquinariaForm(request.POST or None, initial=initial)
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if form.is_valid():
         obj = form.save()
+        if es_ajax:
+            return JsonResponse({'ok': True, 'pk': obj.pk, 'codigo': obj.codigo, 'nombre': obj.nombre})
         messages.success(request, 'Equipo/maquinaria creado.')
         return _volver_a_maquinaria(request, maquinaria_pk=obj.pk)
+    if es_ajax and request.method == 'POST':
+        errores = {k: [str(e) for e in v] for k, v in form.errors.items()}
+        return JsonResponse({'ok': False, 'errors': errores}, status=400)
     ctx = {'form': form, 'titulo': 'Nueva Maquinaria', **_back_ctx(request)}
     return render(request, 'maquinaria/maquinaria_form.html', ctx)
 
@@ -776,11 +785,13 @@ def maq_principal(request, proyecto_id):
             Q(tipo_equipo__icontains=q)
         )
     total_hm_proyecto = RegistroMaquinaria.objects.filter(proyecto=proyecto).aggregate(t=Sum('horas'))['t'] or 0
+    form_maq = MaquinariaForm(initial={'codigo': _siguiente_codigo_maq()})
     return render(request, 'maquinaria/maq_principal.html', {
         'proyecto':          proyecto,
         'maquinas':          maquinas,
         'total_hm_proyecto': total_hm_proyecto,
         'q':                 q,
+        'form':              form_maq,
     })
 
 

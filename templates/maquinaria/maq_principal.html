@@ -15,9 +15,9 @@
     <a href="{% url 'maquinaria:maq_registro_crear' proyecto.pk %}" class="btn btn-outline-primary btn-sm">
       <i class="bi bi-plus-lg me-1"></i>Nuevo turno
     </a>
-    <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary btn-sm">
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-nueva-maq">
       <i class="bi bi-plus-lg me-1"></i>Nueva maquinaria
-    </a>
+    </button>
   </div>
 </div>
 
@@ -101,10 +101,216 @@
   {% else %}
   <div class="fw-semibold mb-1">Sin maquinaria registrada</div>
   <div style="font-size:.82rem">Comienza agregando el primer equipo del proyecto.</div>
-  <a href="{% url 'maquinaria:maquinaria_crear' %}" class="btn btn-primary btn-sm mt-3">
+  <button type="button" class="btn btn-primary btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#modal-nueva-maq">
     <i class="bi bi-plus-lg me-1"></i>Nueva maquinaria
-  </a>
+  </button>
   {% endif %}
 </div>
 {% endif %}
+
+{# ───────────── Modal: Nueva Maquinaria ───────────── #}
+<div class="modal fade" id="modal-nueva-maq" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header py-2 d-flex align-items-center gap-3">
+        <h6 class="modal-title mb-0" style="font-size:1rem">
+          <i class="bi bi-truck me-2" style="color:#4f46e5"></i>Nueva Maquinaria
+        </h6>
+        <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.82rem;padding:.4em .7em">
+          COD <strong>{{ form.codigo.value }}</strong>
+        </span>
+        <button type="button" class="btn-close btn-sm ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="form-nueva-maq" class="form-compact" action="{% url 'maquinaria:maquinaria_crear' %}" method="post">
+          {% csrf_token %}
+
+          {# Identificación #}
+          <h6 class="fw-semibold mb-2 text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:.3rem">Identificación</h6>
+          <div class="row g-2 mb-3">
+            <div class="col-sm-3">
+              <label class="form-label">COD</label>
+              {{ form.codigo }}
+            </div>
+            <div class="col-sm-9">
+              <label class="form-label">Nombre *</label>
+              {{ form.nombre }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Tipo de equipo</label>
+              {{ form.tipo_equipo }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Marca</label>
+              {{ form.marca }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Modelo</label>
+              {{ form.modelo }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Placa</label>
+              {{ form.placa }}
+            </div>
+          </div>
+
+          {# Contrato #}
+          <h6 class="fw-semibold mb-2 text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:.3rem">Contrato</h6>
+          <div class="row g-2 mb-3">
+            <div class="col-sm-4">
+              <label class="form-label">Costo (S/)</label>
+              {{ form.costo }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Modalidad</label>
+              {{ form.modalidad_costo }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Costo / hora (S/)</label>
+              {{ form.costo_hora }}
+            </div>
+          </div>
+
+          {# Personal #}
+          <h6 class="fw-semibold mb-2 text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:.3rem">Personal</h6>
+          <div class="row g-2 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label">RUC o DNI del propietario</label>
+              <div class="d-flex align-items-stretch gap-2">
+                {{ form.propietario_documento }}
+                <button type="button" id="btn-buscar-prop-maq" class="btn btn-primary d-flex align-items-center justify-content-center" style="width:34px;padding:0;flex-shrink:0" title="Buscar RUC/DNI">
+                  <i class="bi bi-search"></i>
+                </button>
+              </div>
+              <div id="doc-msg-maq" style="font-size:.74rem;margin-top:.3rem;display:none"></div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Razón social</label>
+              {{ form.propietario_razon_social }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Celular</label>
+              {{ form.propietario_celular }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Jr. / Dirección</label>
+              {{ form.propietario_direccion }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Operador</label>
+              {{ form.operador }}
+            </div>
+          </div>
+
+          {# Fechas de obra #}
+          <h6 class="fw-semibold mb-2 text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:.3rem">Fechas en obra</h6>
+          <div class="row g-2 mb-3">
+            <div class="col-sm-4">
+              <label class="form-label">Fecha de llegada</label>
+              {{ form.fecha_llegada }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Reinicio de trabajo</label>
+              {{ form.fecha_reinicio }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Salida de obra</label>
+              {{ form.fecha_salida_obra }}
+            </div>
+          </div>
+
+          <div class="form-check mb-2">
+            {{ form.activo }}
+            <label class="form-check-label" style="font-size:.82rem">Activo</label>
+          </div>
+
+          <div id="maq-err" class="alert alert-danger py-2" style="display:none;font-size:.85rem"></div>
+        </form>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-guardar-maq">
+          <i class="bi bi-check-lg me-1"></i>Registrar maquinaria
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const URL_CREAR  = "{% url 'maquinaria:maquinaria_crear' %}";
+  const URL_DOC    = "{% url 'maquinaria:consulta_doc' %}";
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  // Autocompletar propietario desde SUNAT
+  const btnDoc = document.getElementById('btn-buscar-prop-maq');
+  if (btnDoc) {
+    btnDoc.addEventListener('click', () => {
+      const iDoc   = document.querySelector('[name="propietario_documento"]');
+      const iRazon = document.querySelector('[name="propietario_razon_social"]');
+      const iDir   = document.querySelector('[name="propietario_direccion"]');
+      const msg    = document.getElementById('doc-msg-maq');
+      const numero = (iDoc.value || '').trim();
+      if (numero.length !== 8 && numero.length !== 11) {
+        msg.textContent = 'DNI = 8 dígitos, RUC = 11 dígitos.';
+        msg.style.color = '#dc2626'; msg.style.display = 'block';
+        return;
+      }
+      msg.style.display = 'none';
+      btnDoc.disabled = true;
+      const orig = btnDoc.innerHTML;
+      btnDoc.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem"></span>';
+      fetch(URL_DOC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ numero }),
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) { msg.textContent = d.error || 'No encontrado.'; msg.style.color = '#dc2626'; msg.style.display = 'block'; return; }
+        if (d.razon_social) iRazon.value = d.razon_social;
+        if (d.direccion)    iDir.value   = d.direccion;
+        msg.textContent = 'Autocompletado desde SUNAT.'; msg.style.color = '#16a34a'; msg.style.display = 'block';
+      })
+      .catch(e => { msg.textContent = 'Error: ' + e.message; msg.style.color = '#dc2626'; msg.style.display = 'block'; })
+      .finally(() => { btnDoc.disabled = false; btnDoc.innerHTML = orig; });
+    });
+  }
+
+  // Guardar via AJAX
+  const btnSave = document.getElementById('btn-guardar-maq');
+  btnSave.addEventListener('click', () => {
+    const err  = document.getElementById('maq-err');
+    const form = document.getElementById('form-nueva-maq');
+    err.style.display = 'none'; err.textContent = '';
+    btnSave.disabled = true;
+    const fd = new FormData(form);
+    fetch(URL_CREAR, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      body: fd,
+    })
+    .then(r => r.json().then(d => ({ status: r.status, data: d })))
+    .then(({ status, data }) => {
+      if (data.ok) { window.location.reload(); return; }
+      let msg = 'Revisa los campos marcados.';
+      if (data.errors) {
+        const errs = [];
+        for (const [k, v] of Object.entries(data.errors)) errs.push(k + ': ' + v.join(', '));
+        msg = errs.join('\n');
+      }
+      err.textContent = msg; err.style.display = 'block';
+      btnSave.disabled = false;
+    })
+    .catch(e => {
+      err.textContent = 'Error de red: ' + e.message; err.style.display = 'block';
+      btnSave.disabled = false;
+    });
+  });
+})();
+</script>
 {% endblock %}
