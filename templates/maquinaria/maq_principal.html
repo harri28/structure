@@ -68,8 +68,10 @@
             <td style="font-size:.82rem;color:#6b7280">{{ m.marca|default:"—" }}</td>
             <td style="font-size:.82rem;color:#6b7280">{{ m.placa|default:"—" }}</td>
             <td style="font-size:.78rem;color:#6b7280">{{ m.get_modalidad_costo_display|default:"—" }}</td>
-            <td style="font-size:.82rem">{{ m.propietario_razon_social|default:"—" }}</td>
-            <td style="font-size:.82rem">{{ m.operador|default:"—" }}</td>
+            <td style="font-size:.82rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title="{{ m.propietario_razon_social|default:'—' }}">{{ m.propietario_razon_social|default:"—" }}</td>
+            <td style="font-size:.82rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title="{{ m.operador|default:'—' }}">{{ m.operador|default:"—" }}</td>
             <td class="fw-semibold" style="font-size:.82rem;color:#2563eb">{{ m.total_hm|default:0|floatformat:1 }}</td>
             <td style="font-size:.82rem;color:#6b7280">{{ m.n_turnos|default:0 }}</td>
             <td>
