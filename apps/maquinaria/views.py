@@ -757,6 +757,7 @@ def asistencia_exportar(request, proyecto_id):
 def maq_principal(request, proyecto_id):
     """Página principal de Maquinaria: catálogo de máquinas + uso (HM/turnos) en este proyecto."""
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
+    q = (request.GET.get('q') or '').strip()
     maquinas = (
         Maquinaria.objects.filter(activo=True)
         .annotate(
@@ -765,11 +766,21 @@ def maq_principal(request, proyecto_id):
         )
         .order_by('codigo')
     )
+    if q:
+        maquinas = maquinas.filter(
+            Q(codigo__icontains=q) |
+            Q(nombre__icontains=q) |
+            Q(marca__icontains=q) |
+            Q(modelo__icontains=q) |
+            Q(placa__icontains=q) |
+            Q(tipo_equipo__icontains=q)
+        )
     total_hm_proyecto = RegistroMaquinaria.objects.filter(proyecto=proyecto).aggregate(t=Sum('horas'))['t'] or 0
     return render(request, 'maquinaria/maq_principal.html', {
         'proyecto':          proyecto,
         'maquinas':          maquinas,
         'total_hm_proyecto': total_hm_proyecto,
+        'q':                 q,
     })
 
 
