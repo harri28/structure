@@ -122,66 +122,6 @@
   </div>
 </div>
 
-{# ── Liquidaciones ───────────────────────────────────────── #}
-<h6 style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280" class="mb-2">
-  Liquidaciones
-</h6>
-{% if liquidaciones %}
-<div class="card mb-4">
-  <div class="card-body p-0">
-    <table class="table-modern">
-      <thead>
-        <tr>
-          <th>N° Liquidación</th>
-          <th>Período</th>
-          <th class="text-end">Total HM</th>
-          <th class="text-center">Monto a pagar</th>
-          <th class="text-center">Estado</th>
-          <th class="text-center">Partes</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for liq in liquidaciones %}
-        <tr>
-          <td class="fw-semibold" style="font-size:.85rem">LIQ-{{ liq.numero|stringformat:"03d" }}</td>
-          <td style="font-size:.85rem">{{ liq.periodo|date:"F Y" }}</td>
-          <td class="text-end fw-semibold" style="color:#2563eb;font-size:.85rem">
-            {{ liq.total_hm|floatformat:2|default:"0.00" }}
-          </td>
-          <td class="text-center fw-semibold" style="font-size:.85rem">
-            {% if liq.maquinaria.costo %}S/ —{% else %}—{% endif %}
-          </td>
-          <td class="text-center">
-            {% if liq.estado == 'ABIERTA' %}
-            <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.7rem">Abierta</span>
-            {% else %}
-            <span class="badge bg-secondary" style="font-size:.7rem">Cerrada</span>
-            {% endif %}
-          </td>
-          <td class="text-center" style="font-size:.84rem">{{ liq.n_partes }}</td>
-          <td class="text-end">
-            <a href="{% url 'maquinaria:liquidacion_detalle' liq.pk %}"
-               class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size:.75rem"
-               title="Ver el parte diario imprimible de esta liquidación">
-              <i class="bi bi-eye me-1"></i>Ver parte diario
-            </a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% else %}
-<div class="card mb-4">
-  <div class="text-center py-4 text-muted" style="font-size:.85rem">
-    <i class="bi bi-file-earmark-text d-block mb-2" style="font-size:1.8rem;opacity:.3"></i>
-    Sin liquidaciones aún. Crea una para comenzar a registrar partes diarios.
-  </div>
-</div>
-{% endif %}
-
 {# ── Registros sin liquidación (legado) ─────────────────── #}
 {% if sin_liq %}
 <h6 style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280" class="mb-2">
