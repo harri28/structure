@@ -124,87 +124,105 @@
       <div class="modal-body">
         <form id="form-nueva-maq" class="form-compact" action="{% url 'maquinaria:maquinaria_crear' %}" method="post">
           {% csrf_token %}
+          {# Campo oculto COD: el badge del header ya lo muestra #}
+          <input type="hidden" name="codigo" value="{{ form.codigo.value }}">
 
-          {# Identificación #}
-          <h6 class="fw-semibold mb-2 text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:.3rem">Identificación</h6>
-          <div class="row g-2 mb-3">
+          {# Fila: Costo + Modalidad + Nombre #}
+          <div class="row g-2 mb-2">
             <div class="col-sm-3">
-              <label class="form-label">COD</label>
-              {{ form.codigo }}
-            </div>
-            <div class="col-sm-9">
-              <label class="form-label">Nombre *</label>
-              {{ form.nombre }}
-            </div>
-            <div class="col-sm-4">
-              <label class="form-label">Tipo de equipo</label>
-              {{ form.tipo_equipo }}
-            </div>
-            <div class="col-sm-4">
-              <label class="form-label">Marca</label>
-              {{ form.marca }}
-            </div>
-            <div class="col-sm-4">
-              <label class="form-label">Modelo</label>
-              {{ form.modelo }}
-            </div>
-            <div class="col-sm-4">
-              <label class="form-label">Placa</label>
-              {{ form.placa }}
-            </div>
-          </div>
-
-          {# Contrato #}
-          <h6 class="fw-semibold mb-2 text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:.3rem">Contrato</h6>
-          <div class="row g-2 mb-3">
-            <div class="col-sm-4">
               <label class="form-label">Costo (S/)</label>
               {{ form.costo }}
             </div>
             <div class="col-sm-4">
-              <label class="form-label">Modalidad</label>
-              {{ form.modalidad_costo }}
+              <label class="form-label d-flex justify-content-between align-items-center mb-1">
+                <span>Modalidad</span>
+                <a href="#" class="btn-nueva-opt" data-target="id_modalidad_costo" style="font-size:.7rem;color:#1d4ed8;text-decoration:none">
+                  <i class="bi bi-plus-circle"></i> Nueva
+                </a>
+              </label>
+              <select id="id_modalidad_costo" name="modalidad_costo" class="form-select form-select-sm">
+                <option value="">—</option>
+                {% for v in sug_modalidad %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+              </select>
             </div>
-            <div class="col-sm-4">
-              <label class="form-label">Costo / hora (S/)</label>
-              {{ form.costo_hora }}
+            <div class="col-sm-5">
+              <label class="form-label">Nombre *</label>
+              {{ form.nombre }}
             </div>
           </div>
 
-          {# Personal #}
-          <h6 class="fw-semibold mb-2 text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:.3rem">Personal</h6>
-          <div class="row g-2 mb-3">
-            <div class="col-sm-6">
-              <label class="form-label">RUC o DNI del propietario</label>
+          {# Fila: Equipo + Marca + Placa + Modelo #}
+          <div class="row g-2 mb-2">
+            <div class="col-sm-3">
+              <label class="form-label d-flex justify-content-between align-items-center mb-1">
+                <span>Equipo</span>
+                <a href="#" class="btn-nueva-opt" data-target="id_tipo_equipo" style="font-size:.7rem;color:#1d4ed8;text-decoration:none">
+                  <i class="bi bi-plus-circle"></i> Nueva
+                </a>
+              </label>
+              <select id="id_tipo_equipo" name="tipo_equipo" class="form-select form-select-sm">
+                <option value="">—</option>
+                {% for v in sug_equipo %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label d-flex justify-content-between align-items-center mb-1">
+                <span>Marca</span>
+                <a href="#" class="btn-nueva-opt" data-target="id_marca" style="font-size:.7rem;color:#1d4ed8;text-decoration:none">
+                  <i class="bi bi-plus-circle"></i> Nueva
+                </a>
+              </label>
+              <select id="id_marca" name="marca" class="form-select form-select-sm">
+                <option value="">—</option>
+                {% for v in sug_marca %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label">Placa</label>
+              {{ form.placa }}
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label">Modelo</label>
+              {{ form.modelo }}
+            </div>
+          </div>
+
+          {# Fila: Propietario con SUNAT #}
+          <div class="row g-2 mb-2">
+            <div class="col-sm-4">
+              <label class="form-label">RUC o DNI</label>
               <div class="d-flex align-items-stretch gap-2">
                 {{ form.propietario_documento }}
-                <button type="button" id="btn-buscar-prop-maq" class="btn btn-primary d-flex align-items-center justify-content-center" style="width:34px;padding:0;flex-shrink:0" title="Buscar RUC/DNI">
+                <button type="button" id="btn-buscar-prop-maq" class="btn btn-primary d-flex align-items-center justify-content-center" style="width:34px;padding:0;flex-shrink:0" title="Buscar en SUNAT">
                   <i class="bi bi-search"></i>
                 </button>
               </div>
               <div id="doc-msg-maq" style="font-size:.74rem;margin-top:.3rem;display:none"></div>
             </div>
-            <div class="col-sm-6">
-              <label class="form-label">Razón social</label>
+            <div class="col-sm-8">
+              <label class="form-label">Propietario (razón social)</label>
               {{ form.propietario_razon_social }}
             </div>
-            <div class="col-sm-6">
+            <div class="col-sm-4">
               <label class="form-label">Celular</label>
               {{ form.propietario_celular }}
             </div>
-            <div class="col-sm-6">
-              <label class="form-label">Jr. / Dirección</label>
+            <div class="col-sm-8">
+              <label class="form-label">Dirección</label>
               {{ form.propietario_direccion }}
             </div>
-            <div class="col-sm-6">
+          </div>
+
+          {# Fila: Operador #}
+          <div class="row g-2 mb-2">
+            <div class="col-sm-12">
               <label class="form-label">Operador</label>
               {{ form.operador }}
             </div>
           </div>
 
-          {# Fechas de obra #}
-          <h6 class="fw-semibold mb-2 text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:.3rem">Fechas en obra</h6>
-          <div class="row g-2 mb-3">
+          {# Fila: Fechas (K, L, M) #}
+          <div class="row g-2 mb-2">
             <div class="col-sm-4">
               <label class="form-label">Fecha de llegada</label>
               {{ form.fecha_llegada }}
@@ -245,6 +263,51 @@
     const m = document.cookie.match(/csrftoken=([^;]+)/);
     return m ? decodeURIComponent(m[1]) : '';
   }
+
+  // "+ Nueva" → convierte el <select> en un <input> de texto para que el
+  // usuario pueda ingresar un valor nuevo. Un botón pequeño (×) vuelve al select.
+  document.querySelectorAll('.btn-nueva-opt').forEach(a => {
+    a.addEventListener('click', ev => {
+      ev.preventDefault();
+      const id = a.dataset.target;
+      const sel = document.getElementById(id);
+      if (!sel || sel.tagName !== 'SELECT') return;
+      const wrap = sel.parentElement;
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.id = id;
+      inp.name = sel.name;
+      inp.className = 'form-control form-control-sm';
+      inp.placeholder = 'Nuevo valor...';
+      // Guardamos las opciones para poder volver
+      inp.dataset.restore = Array.from(sel.options).map(o => o.value).join('\n');
+      // Botón volver al select
+      const back = document.createElement('a');
+      back.href = '#';
+      back.textContent = '← Elegir existente';
+      back.style.cssText = 'font-size:.7rem;color:#6b7280;text-decoration:none;margin-top:.15rem;display:inline-block';
+      back.addEventListener('click', ev2 => {
+        ev2.preventDefault();
+        const vals = inp.dataset.restore.split('\n');
+        const newSel = document.createElement('select');
+        newSel.id = id;
+        newSel.name = sel.name;
+        newSel.className = 'form-select form-select-sm';
+        vals.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v; opt.textContent = v || '—';
+          newSel.appendChild(opt);
+        });
+        wrap.replaceChild(newSel, inp);
+        back.remove();
+        a.style.display = '';
+      });
+      wrap.replaceChild(inp, sel);
+      wrap.appendChild(back);
+      inp.focus();
+      a.style.display = 'none';
+    });
+  });
 
   // Autocompletar propietario desde SUNAT
   const btnDoc = document.getElementById('btn-buscar-prop-maq');

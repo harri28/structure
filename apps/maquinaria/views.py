@@ -786,12 +786,41 @@ def maq_principal(request, proyecto_id):
         )
     total_hm_proyecto = RegistroMaquinaria.objects.filter(proyecto=proyecto).aggregate(t=Sum('horas'))['t'] or 0
     form_maq = MaquinariaForm(initial={'codigo': _siguiente_codigo_maq()})
+
+    # Sugerencias para los dropdowns "con botón Nueva" (Modalidad / Equipo / Marca):
+    # combinamos las choices hardcodeadas con los valores distintos ya usados en DB.
+    from .models import TIPOS_EQUIPO, MODALIDADES_COSTO
+    def _combinar(choices, campo):
+        hard = [lbl for _, lbl in choices]
+        db   = list(
+            Maquinaria.objects.exclude(**{f'{campo}__in': ['', None]})
+            .values_list(campo, flat=True).distinct()
+        )
+        # label ya mostrable (si viene un código de choice, lo convertimos al display)
+        display_db = []
+        mapping = dict(choices)
+        for v in db:
+            display_db.append(mapping.get(v, v))
+        vistos, out = set(), []
+        for v in hard + display_db:
+            if v and v not in vistos:
+                vistos.add(v); out.append(v)
+        return out
+
+    sug_equipo    = _combinar(TIPOS_EQUIPO, 'tipo_equipo')
+    sug_modalidad = _combinar(MODALIDADES_COSTO, 'modalidad_costo')
+    sug_marca     = sorted({m for m in Maquinaria.objects.exclude(marca='')
+                            .values_list('marca', flat=True).distinct() if m})
+
     return render(request, 'maquinaria/maq_principal.html', {
         'proyecto':          proyecto,
         'maquinas':          maquinas,
         'total_hm_proyecto': total_hm_proyecto,
         'q':                 q,
         'form':              form_maq,
+        'sug_equipo':        sug_equipo,
+        'sug_modalidad':     sug_modalidad,
+        'sug_marca':         sug_marca,
     })
 
 

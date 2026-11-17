@@ -56,6 +56,14 @@ class MaquinariaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for f in ['tipo_equipo', 'modalidad_costo']:
             self.fields[f].required = False
+        # Permitir valores libres (no limitados a las choices hardcodeadas) para
+        # que el usuario pueda crear nuevos valores desde el modal (botón "Nueva").
+        self.fields['tipo_equipo']     = forms.CharField(required=False, max_length=50,
+            widget=forms.TextInput(attrs={'class': 'form-control form-control-sm', 'list': 'dl-tipo-equipo'}))
+        self.fields['modalidad_costo'] = forms.CharField(required=False, max_length=50,
+            widget=forms.TextInput(attrs={'class': 'form-control form-control-sm', 'list': 'dl-modalidad'}))
+        self.fields['marca'] = forms.CharField(required=False, max_length=100,
+            widget=forms.TextInput(attrs={'class': 'form-control form-control-sm', 'list': 'dl-marca'}))
 
 
 class CuadrillaForm(forms.ModelForm):
