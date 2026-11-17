@@ -255,6 +255,57 @@
 </div>
 
 <script>
+// Handler del botón Guardar: se registra FUERA de la IIFE grande para que no
+// dependa del éxito de esa IIFE (si algo mas falla antes, el boton sigue vivo).
+(function registrarGuardarMaq() {
+  const URL_CREAR = "{% url 'maquinaria:maquinaria_crear' %}";
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  const btn = document.getElementById('btn-guardar-maq');
+  if (!btn) { console.error('[maq] btn-guardar-maq no existe'); return; }
+  btn.addEventListener('click', function (ev) {
+    try {
+      ev.preventDefault();
+      const form = document.getElementById('form-nueva-maq');
+      if (!form) { alert('Form no encontrado'); return; }
+      const err = document.getElementById('maq-err');
+      if (err) { err.style.display = 'none'; err.textContent = ''; }
+      btn.disabled = true;
+      const fd = new FormData(form);
+      fetch(URL_CREAR, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd,
+      })
+      .then(r => r.json().then(d => ({ status: r.status, data: d })))
+      .then(({ status, data }) => {
+        if (data && data.ok) { window.location.reload(); return; }
+        let msg = 'Revisa los campos marcados.';
+        if (data && data.errors) {
+          const errs = [];
+          for (const [k, v] of Object.entries(data.errors)) errs.push(k + ': ' + v.join(', '));
+          msg = errs.join('\n');
+        }
+        if (err) { err.textContent = msg; err.style.display = 'block'; }
+        else alert(msg);
+        btn.disabled = false;
+      })
+      .catch(e => {
+        console.error('[maq] fetch error:', e);
+        if (err) { err.textContent = 'Error de red: ' + e.message; err.style.display = 'block'; }
+        else alert('Error de red: ' + e.message);
+        btn.disabled = false;
+      });
+    } catch (ex) {
+      console.error('[maq] click handler threw:', ex);
+      alert('Error inesperado: ' + ex.message);
+      btn.disabled = false;
+    }
+  });
+})();
+
 (function () {
   const URL_CREAR  = "{% url 'maquinaria:maquinaria_crear' %}";
   const URL_DOC    = "{% url 'maquinaria:consulta_doc' %}";
@@ -343,36 +394,7 @@
     });
   }
 
-  // Guardar via AJAX
-  const btnSave = document.getElementById('btn-guardar-maq');
-  btnSave.addEventListener('click', () => {
-    const err  = document.getElementById('maq-err');
-    const form = document.getElementById('form-nueva-maq');
-    err.style.display = 'none'; err.textContent = '';
-    btnSave.disabled = true;
-    const fd = new FormData(form);
-    fetch(URL_CREAR, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
-      body: fd,
-    })
-    .then(r => r.json().then(d => ({ status: r.status, data: d })))
-    .then(({ status, data }) => {
-      if (data.ok) { window.location.reload(); return; }
-      let msg = 'Revisa los campos marcados.';
-      if (data.errors) {
-        const errs = [];
-        for (const [k, v] of Object.entries(data.errors)) errs.push(k + ': ' + v.join(', '));
-        msg = errs.join('\n');
-      }
-      err.textContent = msg; err.style.display = 'block';
-      btnSave.disabled = false;
-    })
-    .catch(e => {
-      err.textContent = 'Error de red: ' + e.message; err.style.display = 'block';
-      btnSave.disabled = false;
-    });
-  });
+  // (El handler de "Registrar maquinaria" vive en registrarGuardarMaq, arriba.)
 })();
 </script>
 {% endblock %}
