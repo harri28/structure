@@ -424,9 +424,13 @@ class RegistroMaquinaria(models.Model):
     propietario = models.CharField(max_length=200, blank=True)
     operador    = models.CharField(max_length=200, blank=True)
 
-    # Turno — horómetro (lectura del contador de horas de la máquina)
+    # Turno — horómetro (lectura del contador de horas de la máquina). Legacy.
     hora_entrada = models.DecimalField('Horómetro entrada', max_digits=10, decimal_places=2, null=True, blank=True)
     hora_salida  = models.DecimalField('Horómetro salida',  max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Turno — reloj (HH:MM) — flujo nuevo del parte diario
+    hora_inicio = models.TimeField('Hora inicial', null=True, blank=True)
+    hora_fin    = models.TimeField('Hora final',   null=True, blank=True)
 
     # Actividad
     horas       = models.DecimalField(max_digits=6, decimal_places=2, default=0)
@@ -448,7 +452,15 @@ class RegistroMaquinaria(models.Model):
         return f'{self.fecha} — {self.nombre or (self.maquinaria or "")}'
 
     def save(self, *args, **kwargs):
-        if self.hora_entrada is not None and self.hora_salida is not None:
+        # Preferimos reloj (hora_inicio / hora_fin) sobre horómetro cuando ambos
+        # están presentes: es el flujo nuevo del parte diario.
+        if self.hora_inicio is not None and self.hora_fin is not None:
+            mins = (self.hora_fin.hour * 60 + self.hora_fin.minute) - \
+                   (self.hora_inicio.hour * 60 + self.hora_inicio.minute)
+            if mins < 0:  # caso cruce de medianoche
+                mins += 24 * 60
+            self.horas = (Decimal(mins) / Decimal('60')).quantize(Decimal('0.01'))
+        elif self.hora_entrada is not None and self.hora_salida is not None:
             diff = self.hora_salida - self.hora_entrada
             if diff > 0:
                 self.horas = diff.quantize(Decimal('0.01'))

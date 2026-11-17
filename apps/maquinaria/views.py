@@ -1022,20 +1022,23 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
         if maq:
             return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq.pk)
         return redirect('maquinaria:maq_principal', proyecto_id=proyecto_id)
-    # Último horómetro de salida registrado para esta máquina (si existe)
-    ultimo_horometro = None
+    # Datos de contexto para el header del form (sólo cuando hay máquina fija)
+    from apps.configuracion.models import ConfigEmpresa
+    empresa = ConfigEmpresa.get()
+    siguiente_parte = None
     if maquinaria_fija:
-        from django.db.models import Max
-        ultimo_horometro = RegistroMaquinaria.objects.filter(
+        ultimo = RegistroMaquinaria.objects.filter(
             maquinaria=maquinaria_fija
-        ).aggregate(m=Max('hora_salida'))['m']
+        ).order_by('-numero_parte').values_list('numero_parte', flat=True).first() or 0
+        siguiente_parte = ultimo + 1
 
     return render(request, 'maquinaria/maq_registro_form.html', {
         'form':             form,
         'proyecto':         proyecto,
         'maquinaria_fija':  maquinaria_fija,
-        'ultimo_horometro': ultimo_horometro,
-        'titulo':           f'Nuevo Turno — {maquinaria_fija.nombre} ({maquinaria_fija.codigo})' if maquinaria_fija else 'Nuevo Registro de Maquinaria',
+        'empresa':          empresa,
+        'siguiente_parte':  siguiente_parte,
+        'titulo':           f'Nuevo turno — {maquinaria_fija.nombre}' if maquinaria_fija else 'Nuevo Registro de Maquinaria',
     })
 
 

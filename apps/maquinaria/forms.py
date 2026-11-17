@@ -230,80 +230,41 @@ class RegistroMaquinariaForm(forms.ModelForm):
     class Meta:
         model  = RegistroMaquinaria
         fields = [
-            'maquinaria', 'fecha', 'hora_entrada', 'hora_salida',
-            'operador', 'insumo', 'partida', 'observacion',
+            'maquinaria', 'fecha', 'hora_inicio', 'hora_fin',
+            'combustible', 'observacion',
         ]
         widgets = {
-            'maquinaria':   forms.Select(attrs={'class': 'form-select'}),
-            'fecha':        forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'hora_entrada': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'min': '0', 'placeholder': 'Ej: 14015.4'}),
-            'hora_salida':  forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'min': '0', 'placeholder': 'Ej: 14022.4'}),
-            'operador':     forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del operador / conductor'}),
-            'insumo':       forms.Select(attrs={'class': 'form-select'}),
-            'partida':      forms.Select(attrs={'class': 'form-select'}),
-            'observacion':  forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'maquinaria':   forms.Select(attrs={'class': 'form-select form-select-sm'}),
+            'fecha':        forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date'}, format='%Y-%m-%d'),
+            'hora_inicio':  forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}, format='%H:%M'),
+            'hora_fin':     forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}, format='%H:%M'),
+            'combustible':  forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0', 'placeholder': '0.00'}),
+            'observacion':  forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 2}),
         }
 
     def __init__(self, proyecto=None, maquinaria=None, validar_horometro=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
             self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
-        from django.db.models import Count
-        from apps.presupuesto.models import Partida, InsumoPresupuesto
         self.validar_horometro = validar_horometro
         self.fields['maquinaria'].queryset    = Maquinaria.objects.filter(activo=True)
         self.fields['maquinaria'].empty_label = '— Seleccionar máquina —'
         if maquinaria:
             self.fields['maquinaria'].initial  = maquinaria
             self.fields['maquinaria'].required = True
-            # Máquina fija por contexto (se entró desde la ficha de esa máquina): ya no
-            # se elige por dropdown, viaja oculta y se muestra como texto de solo lectura.
+            # Máquina fija por contexto (se entró desde la ficha): oculta.
             self.fields['maquinaria'].widget = forms.HiddenInput()
-        if proyecto:
-            self.fields['partida'].queryset = (
-                Partida.objects
-                .annotate(n_hijos=Count('hijos'))
-                .filter(presupuesto__proyecto=proyecto, n_hijos=0)
-                .order_by('orden')
-            )
-            self.fields['insumo'].queryset = (
-                InsumoPresupuesto.objects
-                .filter(presupuesto__proyecto=proyecto)
-                .order_by('codigo')
-            )
-        else:
-            self.fields['insumo'].queryset = InsumoPresupuesto.objects.none()
-        self.fields['partida'].required    = False
-        self.fields['partida'].empty_label = '— Sin partida —'
-        self.fields['insumo'].required     = False
-        self.fields['insumo'].empty_label  = '— Sin insumo —'
-        self.fields['hora_entrada'].required = False
-        self.fields['hora_salida'].required  = False
+        self.fields['hora_inicio'].required = False
+        self.fields['hora_fin'].required    = False
+        self.fields['combustible'].required = False
 
     def clean(self):
         cleaned = super().clean()
         if self.validar_horometro:
-            maq     = cleaned.get('maquinaria')
-            entrada = cleaned.get('hora_entrada')
-            salida  = cleaned.get('hora_salida')
-
-            # Dentro del mismo turno: la salida nunca puede ser menor a la entrada
-            # (igual sí es válido — turno de 0 horas).
-            if entrada is not None and salida is not None and salida < entrada:
-                self.add_error('hora_salida', 'El horómetro de salida no puede ser menor al de entrada.')
-
-            if maq and entrada is not None:
-                from django.db.models import Max
-                qs = RegistroMaquinaria.objects.filter(maquinaria=maq)
-                if self.instance.pk:
-                    qs = qs.exclude(pk=self.instance.pk)
-                ultimo_salida = qs.aggregate(m=Max('hora_salida'))['m']
-                if ultimo_salida is not None and entrada < ultimo_salida:
-                    self.add_error(
-                        'hora_entrada',
-                        f'El horómetro de entrada debe ser mayor o igual a {ultimo_salida} '
-                        f'(último horómetro de salida registrado para esta máquina).'
-                    )
+            ini = cleaned.get('hora_inicio')
+            fin = cleaned.get('hora_fin')
+            if ini and fin and fin < ini:
+                self.add_error('hora_fin', 'La hora final no puede ser menor a la hora inicial.')
         return cleaned
 
 
