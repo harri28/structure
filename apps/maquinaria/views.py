@@ -868,6 +868,17 @@ def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
     )
 
     import datetime
+    from apps.configuracion.models import ConfigEmpresa
+    # Form para el modal "Nuevo turno" (en la misma pantalla)
+    form_turno = RegistroMaquinariaForm(
+        proyecto=proyecto, maquinaria=maquinaria,
+        initial={'fecha': datetime.date.today()},
+    )
+    ultimo = (RegistroMaquinaria.objects
+              .filter(maquinaria=maquinaria)
+              .order_by('-numero_parte').values_list('numero_parte', flat=True).first() or 0)
+    siguiente_parte = ultimo + 1
+
     return render(request, 'maquinaria/maq_maquinaria_detalle.html', {
         'proyecto':     proyecto,
         'maquinaria':   maquinaria,
@@ -876,6 +887,9 @@ def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
         'sin_liq_resumen': sin_liq_resumen,
         'total_hm':     total_hm,
         'hoy':          datetime.date.today().strftime('%Y-%m'),
+        'form_turno':      form_turno,
+        'siguiente_parte': siguiente_parte,
+        'empresa':         ConfigEmpresa.get(),
     })
 
 
@@ -988,6 +1002,7 @@ def resumen_mensual(request, proyecto_id):
 @requiere('puede_gestionar_maquinaria')
 @proyecto_visible
 def maq_registro_crear(request, proyecto_id, maq_pk=None):
+    from django.http import JsonResponse
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     maquinaria_fija = get_object_or_404(Maquinaria, pk=maq_pk) if maq_pk else None
     form     = RegistroMaquinariaForm(
@@ -997,6 +1012,7 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
         data=request.POST or None,
         initial={'fecha': __import__('datetime').date.today()},
     )
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if form.is_valid():
         reg = form.save(commit=False)
         reg.proyecto = proyecto
@@ -1011,6 +1027,8 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
                 periodo__year=reg.fecha.year, periodo__month=reg.fecha.month,
             ).first()
         reg.save()
+        if es_ajax:
+            return JsonResponse({'ok': True, 'pk': reg.pk, 'numero_parte': reg.numero_parte})
         if maq and not reg.liquidacion_id:
             messages.warning(
                 request,
@@ -1022,6 +1040,9 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
         if maq:
             return redirect('maquinaria:maq_detalle_maquinaria', proyecto_id=proyecto_id, maq_pk=maq.pk)
         return redirect('maquinaria:maq_principal', proyecto_id=proyecto_id)
+    if es_ajax and request.method == 'POST':
+        errores = {k: [str(e) for e in v] for k, v in form.errors.items()}
+        return JsonResponse({'ok': False, 'errors': errores}, status=400)
     # Datos de contexto para el header del form (sólo cuando hay máquina fija)
     from apps.configuracion.models import ConfigEmpresa
     empresa = ConfigEmpresa.get()
