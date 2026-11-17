@@ -13,11 +13,21 @@
     <a href="{% url 'maquinaria:maq_principal' proyecto.pk %}" class="btn-back">
       <i class="bi bi-chevron-left"></i> Maquinaria
     </a>
-    <h4><i class="bi bi-truck me-2"></i>{{ maquinaria.nombre }}</h4>
-    <div style="display:inline-block;font-size:.84rem;background:#dcfce7;color:#166534;padding:.4rem .8rem;border-radius:10px;user-select:none;margin-top:.35rem">
+    <h4 class="d-flex align-items-center gap-2 mb-1">
+      <i class="bi bi-truck"></i>{{ maquinaria.nombre }}
+      <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.82rem;padding:.4em .7em">
+        COD <strong>{{ maquinaria.codigo }}</strong>
+      </span>
+      {% if maquinaria.activo %}
+      <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.68rem;padding:.3em .55em">ACTIVO</span>
+      {% else %}
+      <span class="badge bg-secondary" style="font-size:.68rem;padding:.3em .55em">INACTIVO</span>
+      {% endif %}
+    </h4>
+    <div style="display:inline-block;font-size:.82rem;background:#f3f4f6;color:#374151;padding:.35rem .75rem;border-radius:8px;user-select:none">
       {% if maquinaria.placa %}<code style="background:transparent;padding:0;color:inherit;font-weight:600">{{ maquinaria.placa }}</code> &nbsp;·&nbsp;{% endif %}
       {% if maquinaria.propietario_razon_social %}{{ maquinaria.propietario_razon_social }} &nbsp;·&nbsp;{% endif %}
-      Total: <strong>{{ total_hm|floatformat:2 }} HM</strong>
+      Total: <strong style="color:#2563eb">{{ total_hm|floatformat:2 }} HM</strong>
     </div>
   </div>
   <div class="d-flex gap-2">
@@ -42,8 +52,9 @@
 {% endfor %}
 {% endif %}
 
-{# ── Datos de la máquina ────────────────────────────────── #}
+{# ── Datos de la máquina (orden del formulario A-M) ───────── #}
 <div class="row g-3 mb-4">
+  {# Identificación: Equipo, Marca, Modelo, Placa #}
   <div class="col-md-4">
     <div class="card h-100">
       <div class="card-header py-2 px-3" style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">
@@ -51,22 +62,19 @@
       </div>
       <div class="card-body" style="font-size:.84rem">
         <div class="row g-1">
-          {% if maquinaria.tipo_equipo %}
-          <div class="col-5 text-muted">Tipo</div><div class="col-7 fw-semibold">{{ maquinaria.get_tipo_equipo_display }}</div>
-          {% endif %}
-          {% if maquinaria.marca %}
-          <div class="col-5 text-muted">Marca</div><div class="col-7">{{ maquinaria.marca }}</div>
-          {% endif %}
-          {% if maquinaria.modelo %}
-          <div class="col-5 text-muted">Modelo</div><div class="col-7">{{ maquinaria.modelo }}</div>
-          {% endif %}
-          {% if maquinaria.placa %}
-          <div class="col-5 text-muted">Placa</div><div class="col-7"><code>{{ maquinaria.placa }}</code></div>
-          {% endif %}
+          <div class="col-5 text-muted">Equipo</div>
+          <div class="col-7 fw-semibold">{{ maquinaria.get_tipo_equipo_display|default:"—" }}</div>
+          <div class="col-5 text-muted">Marca</div>
+          <div class="col-7">{{ maquinaria.marca|default:"—" }}</div>
+          <div class="col-5 text-muted">Modelo</div>
+          <div class="col-7">{{ maquinaria.modelo|default:"—" }}</div>
+          <div class="col-5 text-muted">Placa</div>
+          <div class="col-7">{% if maquinaria.placa %}<code>{{ maquinaria.placa }}</code>{% else %}—{% endif %}</div>
         </div>
       </div>
     </div>
   </div>
+  {# Contrato: Costo, Modalidad, Propietario (razón social + doc + celular + dirección), Operador #}
   <div class="col-md-4">
     <div class="card h-100">
       <div class="card-header py-2 px-3" style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">
@@ -74,32 +82,27 @@
       </div>
       <div class="card-body" style="font-size:.84rem">
         <div class="row g-1">
-          {% if maquinaria.propietario_razon_social %}
-          <div class="col-5 text-muted">Propietario</div><div class="col-7">{{ maquinaria.propietario_razon_social }}</div>
-          {% endif %}
-          {% if maquinaria.propietario_documento %}
-          <div class="col-5 text-muted">RUC / DNI</div><div class="col-7"><code>{{ maquinaria.propietario_documento }}</code></div>
-          {% endif %}
-          {% if maquinaria.propietario_celular %}
-          <div class="col-5 text-muted">Celular</div><div class="col-7">{{ maquinaria.propietario_celular }}</div>
-          {% endif %}
-          {% if maquinaria.propietario_direccion %}
-          <div class="col-5 text-muted">Dirección</div><div class="col-7">{{ maquinaria.propietario_direccion }}</div>
-          {% endif %}
-          {% if maquinaria.operador %}
-          <div class="col-5 text-muted">Operador</div><div class="col-7">{{ maquinaria.operador }}</div>
-          {% endif %}
-          {% if maquinaria.modalidad_costo %}
-          <div class="col-5 text-muted">Modalidad</div><div class="col-7">{{ maquinaria.get_modalidad_costo_display }}</div>
-          {% endif %}
-          {% if maquinaria.costo %}
-          <div class="col-5 text-muted">Tarifa</div>
-          <div class="col-7 fw-semibold" style="color:#2563eb">S/ {{ maquinaria.costo|floatformat:2 }}{% if maquinaria.modalidad_costo == 'SECA' %}/hr{% endif %}</div>
-          {% endif %}
+          <div class="col-5 text-muted">Costo</div>
+          <div class="col-7 fw-semibold" style="color:#2563eb">
+            {% if maquinaria.costo %}S/ {{ maquinaria.costo|floatformat:2 }}{% if maquinaria.modalidad_costo == 'SECA' %}/hr{% endif %}{% else %}—{% endif %}
+          </div>
+          <div class="col-5 text-muted">Modalidad</div>
+          <div class="col-7">{{ maquinaria.get_modalidad_costo_display|default:"—" }}</div>
+          <div class="col-5 text-muted">Propietario</div>
+          <div class="col-7">{{ maquinaria.propietario_razon_social|default:"—" }}</div>
+          <div class="col-5 text-muted">RUC / DNI</div>
+          <div class="col-7">{% if maquinaria.propietario_documento %}<code>{{ maquinaria.propietario_documento }}</code>{% else %}—{% endif %}</div>
+          <div class="col-5 text-muted">Celular</div>
+          <div class="col-7">{{ maquinaria.propietario_celular|default:"—" }}</div>
+          <div class="col-5 text-muted">Dirección</div>
+          <div class="col-7">{{ maquinaria.propietario_direccion|default:"—" }}</div>
+          <div class="col-5 text-muted">Operador</div>
+          <div class="col-7 fw-semibold">{{ maquinaria.operador|default:"—" }}</div>
         </div>
       </div>
     </div>
   </div>
+  {# Fechas en obra: Llegada, Reinicio, Salida #}
   <div class="col-md-4">
     <div class="card h-100">
       <div class="card-header py-2 px-3" style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">
@@ -107,15 +110,12 @@
       </div>
       <div class="card-body" style="font-size:.84rem">
         <div class="row g-1">
-          {% if maquinaria.fecha_llegada %}
-          <div class="col-5 text-muted">Llegada</div><div class="col-7">{{ maquinaria.fecha_llegada|date:"d/m/Y" }}</div>
-          {% endif %}
-          {% if maquinaria.fecha_reinicio %}
-          <div class="col-5 text-muted">Reinicio</div><div class="col-7">{{ maquinaria.fecha_reinicio|date:"d/m/Y" }}</div>
-          {% endif %}
-          {% if maquinaria.fecha_salida_obra %}
-          <div class="col-5 text-muted">Salida</div><div class="col-7">{{ maquinaria.fecha_salida_obra|date:"d/m/Y" }}</div>
-          {% endif %}
+          <div class="col-5 text-muted">Llegada</div>
+          <div class="col-7">{{ maquinaria.fecha_llegada|date:"d/m/Y"|default:"—" }}</div>
+          <div class="col-5 text-muted">Reinicio</div>
+          <div class="col-7">{{ maquinaria.fecha_reinicio|date:"d/m/Y"|default:"—" }}</div>
+          <div class="col-5 text-muted">Salida</div>
+          <div class="col-7">{{ maquinaria.fecha_salida_obra|date:"d/m/Y"|default:"—" }}</div>
         </div>
       </div>
     </div>
