@@ -139,7 +139,7 @@
               </label>
               <select id="id_modalidad_costo" name="modalidad_costo" class="form-select form-select-sm">
                 <option value="">—</option>
-                {% for v in sug_modalidad %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+                {% for code, label in sug_modalidad %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
               </select>
             </div>
             <div class="col-sm-5">
@@ -159,7 +159,7 @@
               </label>
               <select id="id_tipo_equipo" name="tipo_equipo" class="form-select form-select-sm">
                 <option value="">—</option>
-                {% for v in sug_equipo %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+                {% for code, label in sug_equipo %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
               </select>
             </div>
             <div class="col-sm-3">

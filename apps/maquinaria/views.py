@@ -787,24 +787,21 @@ def maq_principal(request, proyecto_id):
     total_hm_proyecto = RegistroMaquinaria.objects.filter(proyecto=proyecto).aggregate(t=Sum('horas'))['t'] or 0
     form_maq = MaquinariaForm(initial={'codigo': _siguiente_codigo_maq()})
 
-    # Sugerencias para los dropdowns "con botón Nueva" (Modalidad / Equipo / Marca):
-    # combinamos las choices hardcodeadas con los valores distintos ya usados en DB.
+    # Sugerencias para los dropdowns "con botón Nueva" (Modalidad / Equipo / Marca).
+    # Devuelven lista de (value, label):
+    #   - choices hardcodeadas: value=code, label=display ("MENSUAL", "Mensual (tarifa fija)")
+    #   - valores custom en DB que no están en choices: value=label=texto tal cual
+    # Esto permite que la lógica interna que compara contra 'MENSUAL'/'SECA' siga
+    # funcionando para los valores estándar.
     from .models import TIPOS_EQUIPO, MODALIDADES_COSTO
     def _combinar(choices, campo):
-        hard = [lbl for _, lbl in choices]
-        db   = list(
-            Maquinaria.objects.exclude(**{f'{campo}__in': ['', None]})
-            .values_list(campo, flat=True).distinct()
-        )
-        # label ya mostrable (si viene un código de choice, lo convertimos al display)
-        display_db = []
         mapping = dict(choices)
-        for v in db:
-            display_db.append(mapping.get(v, v))
-        vistos, out = set(), []
-        for v in hard + display_db:
-            if v and v not in vistos:
-                vistos.add(v); out.append(v)
+        out = list(choices)  # (code, display)
+        codes_conocidos = set(mapping.keys())
+        for v in (Maquinaria.objects.exclude(**{f'{campo}__in': ['', None]})
+                  .values_list(campo, flat=True).distinct()):
+            if v and v not in codes_conocidos and v not in {c for c, _ in out}:
+                out.append((v, v))  # custom
         return out
 
     sug_equipo    = _combinar(TIPOS_EQUIPO, 'tipo_equipo')
