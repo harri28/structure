@@ -230,12 +230,13 @@ class RegistroMaquinariaForm(forms.ModelForm):
     class Meta:
         model  = RegistroMaquinaria
         fields = [
-            'maquinaria', 'fecha', 'hora_inicio', 'hora_fin',
+            'maquinaria', 'fecha', 'numero_parte', 'hora_inicio', 'hora_fin',
             'combustible', 'observacion',
         ]
         widgets = {
             'maquinaria':   forms.Select(attrs={'class': 'form-select form-select-sm'}),
             'fecha':        forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date'}, format='%Y-%m-%d'),
+            'numero_parte': forms.NumberInput(attrs={'class': 'form-control form-control-sm fw-semibold', 'min': '1', 'style': 'color:#1d4ed8'}),
             'hora_inicio':  forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}, format='%H:%M'),
             'hora_fin':     forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}, format='%H:%M'),
             'combustible':  forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0', 'placeholder': '0.00'}),
@@ -257,6 +258,7 @@ class RegistroMaquinariaForm(forms.ModelForm):
         self.fields['hora_inicio'].required = False
         self.fields['hora_fin'].required    = False
         self.fields['combustible'].required = False
+        self.fields['numero_parte'].required = False  # si viene vacío, save() autocalcula
 
     def clean(self):
         cleaned = super().clean()

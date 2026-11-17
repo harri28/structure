@@ -869,15 +869,15 @@ def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
 
     import datetime
     from apps.configuracion.models import ConfigEmpresa
-    # Form para el modal "Nuevo turno" (en la misma pantalla)
-    form_turno = RegistroMaquinariaForm(
-        proyecto=proyecto, maquinaria=maquinaria,
-        initial={'fecha': datetime.date.today()},
-    )
     ultimo = (RegistroMaquinaria.objects
               .filter(maquinaria=maquinaria)
               .order_by('-numero_parte').values_list('numero_parte', flat=True).first() or 0)
     siguiente_parte = ultimo + 1
+    # Form para el modal "Nuevo turno" (en la misma pantalla)
+    form_turno = RegistroMaquinariaForm(
+        proyecto=proyecto, maquinaria=maquinaria,
+        initial={'fecha': datetime.date.today(), 'numero_parte': siguiente_parte},
+    )
 
     return render(request, 'maquinaria/maq_maquinaria_detalle.html', {
         'proyecto':     proyecto,
@@ -1005,12 +1005,19 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
     from django.http import JsonResponse
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     maquinaria_fija = get_object_or_404(Maquinaria, pk=maq_pk) if maq_pk else None
+    # Preview del siguiente N° de parte (para preseleccionar en el input editable)
+    siguiente_parte_initial = None
+    if maquinaria_fija:
+        ultimo = (RegistroMaquinaria.objects
+                  .filter(maquinaria=maquinaria_fija)
+                  .order_by('-numero_parte').values_list('numero_parte', flat=True).first() or 0)
+        siguiente_parte_initial = ultimo + 1
     form     = RegistroMaquinariaForm(
         proyecto=proyecto,
         maquinaria=maquinaria_fija,
         validar_horometro=True,
         data=request.POST or None,
-        initial={'fecha': __import__('datetime').date.today()},
+        initial={'fecha': __import__('datetime').date.today(), 'numero_parte': siguiente_parte_initial},
     )
     es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if form.is_valid():
