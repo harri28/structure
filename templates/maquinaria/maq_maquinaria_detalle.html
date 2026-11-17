@@ -203,19 +203,26 @@
     <table class="table-modern">
       <thead>
         <tr>
-          <th>Fecha</th><th>Entrada</th><th>Salida</th>
-          <th class="text-end">HM</th><th>Operador</th><th>Observación</th><th></th>
+          <th style="width:70px">N° Parte</th>
+          <th style="width:90px">Fecha</th>
+          <th style="width:80px">Hora inicial</th>
+          <th style="width:80px">Hora final</th>
+          <th class="text-end" style="width:80px">Total hora</th>
+          <th class="text-end" style="width:90px">Petróleo (gal)</th>
+          <th>Observaciones</th>
+          <th style="width:40px"></th>
         </tr>
       </thead>
       <tbody>
         {% for r in sin_liq %}
         <tr>
+          <td class="fw-semibold" style="color:#1d4ed8;font-size:.83rem">{{ r.numero_parte|default:"—" }}</td>
           <td style="font-size:.83rem">{{ r.fecha|date:"d/m/Y" }}</td>
-          <td style="font-size:.83rem">{{ r.hora_entrada|time:"H:i"|default:"—" }}</td>
-          <td style="font-size:.83rem">{{ r.hora_salida|time:"H:i"|default:"—" }}</td>
+          <td style="font-size:.83rem">{{ r.hora_inicio|time:"H:i"|default:"—" }}</td>
+          <td style="font-size:.83rem">{{ r.hora_fin|time:"H:i"|default:"—" }}</td>
           <td class="text-end fw-semibold" style="color:#2563eb;font-size:.85rem">{{ r.horas|floatformat:2 }}</td>
-          <td style="font-size:.82rem">{{ r.operador|default:"—" }}</td>
-          <td style="font-size:.78rem;color:#6b7280">{{ r.observacion|truncatechars:40|default:"—" }}</td>
+          <td class="text-end" style="font-size:.83rem">{% if r.combustible %}{{ r.combustible|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td style="font-size:.78rem;color:#6b7280">{{ r.observacion|truncatechars:60|default:"—" }}</td>
           <td class="text-end">
             <a href="{% url 'maquinaria:maq_registro_editar' r.pk %}"
                class="btn-tbl" title="Editar"><i class="bi bi-pencil"></i></a>
