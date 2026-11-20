@@ -24,10 +24,16 @@
     {% endif %}
     <h4 class="d-flex align-items-center gap-2 mb-0">
       <i class="bi bi-clock-history" style="color:#2563eb"></i>
-      Nuevo turno {% if maquinaria_fija %}— <span class="fw-semibold">{{ maquinaria_fija.nombre }}</span>{% endif %}
+      {% if siguiente_turno %}Turno {{ siguiente_turno }}{% else %}Nuevo turno{% endif %}
+      {% if maquinaria_fija %}— <span class="fw-semibold">{{ maquinaria_fija.nombre }}</span>{% endif %}
       {% if siguiente_parte %}
       <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.82rem;padding:.4em .7em">
         N° Parte <strong>{{ siguiente_parte }}</strong>
+      </span>
+      {% endif %}
+      {% if hora_minima is not None %}
+      <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.78rem;padding:.35em .6em" title="Horómetro final del turno anterior">
+        <i class="bi bi-arrow-up-right"></i> Mín. {{ hora_minima|floatformat:2 }}
       </span>
       {% endif %}
     </h4>
@@ -84,11 +90,17 @@
               {% for e in form.fecha.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-sm-3">
-              <label class="form-label">Hora inicial</label>
+              <label class="form-label">Horómetro inicial</label>
               {{ form.hora_inicio }}
+              {% for e in form.hora_inicio.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ e }}</div>{% endfor %}
+              {% if hora_minima is not None %}
+              <div class="form-text" style="font-size:.72rem;color:#92400e">
+                Mín. {{ hora_minima|floatformat:2 }} (horómetro final del Turno anterior)
+              </div>
+              {% endif %}
             </div>
             <div class="col-sm-3">
-              <label class="form-label">Hora final</label>
+              <label class="form-label">Horómetro final</label>
               {{ form.hora_fin }}
               {% for e in form.hora_fin.errors %}<div class="text-danger mt-1" style="font-size:.78rem">{{ e }}</div>{% endfor %}
             </div>
@@ -133,36 +145,17 @@
   const ini = document.querySelector('[name="hora_inicio"]');
   const fin = document.querySelector('[name="hora_fin"]');
   const out = document.getElementById('total-hora');
-
-  // Por defecto: hora actual en ambos (si el input está vacío)
-  function setAhora(inp) {
-    if (!inp || inp.value) return;
-    const d = new Date();
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    inp.value = `${hh}:${mm}`;
-  }
-  setAhora(ini);
-  setAhora(fin);
-
-  function toMin(v) {
-    if (!v) return null;
-    const [h, m] = v.split(':').map(Number);
-    return h * 60 + m;
-  }
-  function format(mins) {
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${h}:${String(m).padStart(2, '0')}`;
+  function num(v) {
+    if (v === '' || v == null) return null;
+    const n = Number(v);
+    return isFinite(n) ? n : null;
   }
   function recalc() {
-    if (!ini || !fin || !out) return;
-    const a = toMin(ini.value);
-    const b = toMin(fin.value);
-    if (a == null || b == null) { out.textContent = '—'; return; }
-    let diff = b - a;
-    if (diff < 0) diff += 24 * 60;  // cruce de medianoche
-    out.textContent = format(diff);
+    if (!out) return;
+    const a = num(ini && ini.value);
+    const b = num(fin && fin.value);
+    if (a == null || b == null || b < a) { out.textContent = '—'; return; }
+    out.textContent = (b - a).toFixed(2);
   }
   if (ini) ini.addEventListener('input', recalc);
   if (fin) fin.addEventListener('input', recalc);

@@ -873,10 +873,23 @@ def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
               .filter(maquinaria=maquinaria)
               .order_by('-numero_parte').values_list('numero_parte', flat=True).first() or 0)
     siguiente_parte = ultimo + 1
-    # Form para el modal "Nuevo turno" (en la misma pantalla)
+    ultimo_turno = (RegistroMaquinaria.objects
+                    .filter(maquinaria=maquinaria)
+                    .order_by('-numero_turno').values_list('numero_turno', flat=True).first() or 0)
+    siguiente_turno = ultimo_turno + 1
+    # Horómetro mínimo del turno nuevo = horómetro final del último turno de esa máquina.
+    hora_minima = (RegistroMaquinaria.objects
+                   .filter(maquinaria=maquinaria, hora_fin__isnull=False)
+                   .order_by('-numero_turno', '-pk')
+                   .values_list('hora_fin', flat=True).first())
+    # Form para el modal "Turno N" (en la misma pantalla)
     form_turno = RegistroMaquinariaForm(
         proyecto=proyecto, maquinaria=maquinaria,
-        initial={'fecha': datetime.date.today(), 'numero_parte': siguiente_parte},
+        initial={
+            'fecha':        datetime.date.today(),
+            'numero_parte': siguiente_parte,
+            'hora_inicio':  hora_minima,  # preseleccionamos con el horómetro previo
+        },
     )
 
     return render(request, 'maquinaria/maq_maquinaria_detalle.html', {
@@ -889,6 +902,8 @@ def maq_detalle_maquinaria(request, proyecto_id, maq_pk):
         'hoy':          datetime.date.today().strftime('%Y-%m'),
         'form_turno':      form_turno,
         'siguiente_parte': siguiente_parte,
+        'siguiente_turno': siguiente_turno,
+        'hora_minima':     hora_minima,
         'empresa':         ConfigEmpresa.get(),
     })
 
@@ -1007,17 +1022,26 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
     maquinaria_fija = get_object_or_404(Maquinaria, pk=maq_pk) if maq_pk else None
     # Preview del siguiente N° de parte (para preseleccionar en el input editable)
     siguiente_parte_initial = None
+    hora_minima_initial = None
     if maquinaria_fija:
         ultimo = (RegistroMaquinaria.objects
                   .filter(maquinaria=maquinaria_fija)
                   .order_by('-numero_parte').values_list('numero_parte', flat=True).first() or 0)
         siguiente_parte_initial = ultimo + 1
+        hora_minima_initial = (RegistroMaquinaria.objects
+                               .filter(maquinaria=maquinaria_fija, hora_fin__isnull=False)
+                               .order_by('-numero_turno', '-pk')
+                               .values_list('hora_fin', flat=True).first())
     form     = RegistroMaquinariaForm(
         proyecto=proyecto,
         maquinaria=maquinaria_fija,
         validar_horometro=True,
         data=request.POST or None,
-        initial={'fecha': __import__('datetime').date.today(), 'numero_parte': siguiente_parte_initial},
+        initial={
+            'fecha':        __import__('datetime').date.today(),
+            'numero_parte': siguiente_parte_initial,
+            'hora_inicio':  hora_minima_initial,
+        },
     )
     es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if form.is_valid():
@@ -1054,11 +1078,21 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
     from apps.configuracion.models import ConfigEmpresa
     empresa = ConfigEmpresa.get()
     siguiente_parte = None
+    siguiente_turno = None
+    hora_minima = None
     if maquinaria_fija:
         ultimo = RegistroMaquinaria.objects.filter(
             maquinaria=maquinaria_fija
         ).order_by('-numero_parte').values_list('numero_parte', flat=True).first() or 0
         siguiente_parte = ultimo + 1
+        ultimo_turno = RegistroMaquinaria.objects.filter(
+            maquinaria=maquinaria_fija
+        ).order_by('-numero_turno').values_list('numero_turno', flat=True).first() or 0
+        siguiente_turno = ultimo_turno + 1
+        hora_minima = (RegistroMaquinaria.objects
+                       .filter(maquinaria=maquinaria_fija, hora_fin__isnull=False)
+                       .order_by('-numero_turno', '-pk')
+                       .values_list('hora_fin', flat=True).first())
 
     return render(request, 'maquinaria/maq_registro_form.html', {
         'form':             form,
@@ -1066,7 +1100,10 @@ def maq_registro_crear(request, proyecto_id, maq_pk=None):
         'maquinaria_fija':  maquinaria_fija,
         'empresa':          empresa,
         'siguiente_parte':  siguiente_parte,
-        'titulo':           f'Nuevo turno — {maquinaria_fija.nombre}' if maquinaria_fija else 'Nuevo Registro de Maquinaria',
+        'siguiente_turno':  siguiente_turno,
+        'hora_minima':      hora_minima,
+        'titulo':           (f'Turno {siguiente_turno} — {maquinaria_fija.nombre}'
+                             if maquinaria_fija else 'Nuevo Registro de Maquinaria'),
     })
 
 

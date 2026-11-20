@@ -237,8 +237,8 @@ class RegistroMaquinariaForm(forms.ModelForm):
             'maquinaria':   forms.Select(attrs={'class': 'form-select form-select-sm'}),
             'fecha':        forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date'}, format='%Y-%m-%d'),
             'numero_parte': forms.NumberInput(attrs={'class': 'form-control form-control-sm fw-semibold', 'min': '1', 'style': 'color:#1d4ed8'}),
-            'hora_inicio':  forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}, format='%H:%M'),
-            'hora_fin':     forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}, format='%H:%M'),
+            'hora_inicio':  forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '1', 'min': '0', 'inputmode': 'numeric', 'placeholder': 'Ej: 20000'}),
+            'hora_fin':     forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '1', 'min': '0', 'inputmode': 'numeric', 'placeholder': 'Ej: 20020'}),
             'combustible':  forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0', 'placeholder': '0.00'}),
             'observacion':  forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 2}),
         }
@@ -248,6 +248,7 @@ class RegistroMaquinariaForm(forms.ModelForm):
         if not self.instance.pk:
             self.initial.setdefault('fecha', date.today().strftime('%Y-%m-%d'))
         self.validar_horometro = validar_horometro
+        self._maquinaria_ctx   = maquinaria
         self.fields['maquinaria'].queryset    = Maquinaria.objects.filter(activo=True)
         self.fields['maquinaria'].empty_label = '— Seleccionar máquina —'
         if maquinaria:
@@ -262,11 +263,28 @@ class RegistroMaquinariaForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        if self.validar_horometro:
-            ini = cleaned.get('hora_inicio')
-            fin = cleaned.get('hora_fin')
-            if ini and fin and fin < ini:
-                self.add_error('hora_fin', 'La hora final no puede ser menor a la hora inicial.')
+        if not self.validar_horometro:
+            return cleaned
+        ini = cleaned.get('hora_inicio')
+        fin = cleaned.get('hora_fin')
+        if ini is not None and fin is not None and fin < ini:
+            self.add_error('hora_fin', 'El horómetro final no puede ser menor al inicial.')
+        # El horómetro de la máquina nunca retrocede: el inicio del turno N
+        # debe ser ≥ al horómetro final del turno N−1 (misma máquina).
+        maq = cleaned.get('maquinaria') or self._maquinaria_ctx
+        if maq and ini is not None:
+            qs = (RegistroMaquinaria.objects
+                  .filter(maquinaria=maq, hora_fin__isnull=False)
+                  .order_by('-numero_turno', '-pk'))
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            previo = qs.first()
+            if previo and previo.hora_fin is not None and ini < previo.hora_fin:
+                self.add_error(
+                    'hora_inicio',
+                    f'El horómetro inicial debe ser ≥ {previo.hora_fin} '
+                    f'(horómetro final del Turno {previo.numero_turno}).'
+                )
         return cleaned
 
 

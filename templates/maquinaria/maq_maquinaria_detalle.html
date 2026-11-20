@@ -32,7 +32,7 @@
   </div>
   <div class="d-flex gap-2">
     <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-nuevo-turno">
-      <i class="bi bi-plus-lg me-1"></i>Nuevo turno
+      <i class="bi bi-plus-lg me-1"></i>Turno {{ siguiente_turno }}
     </button>
     <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalLiq">
       <i class="bi bi-file-earmark-plus me-1"></i>Nueva Liquidación
@@ -132,10 +132,11 @@
     <table class="table-modern">
       <thead>
         <tr>
+          <th style="width:70px">Turno</th>
           <th style="width:70px">N° Parte</th>
           <th style="width:90px">Fecha</th>
-          <th style="width:80px">Hora inicial</th>
-          <th style="width:80px">Hora final</th>
+          <th class="text-end" style="width:100px">Horómetro ini.</th>
+          <th class="text-end" style="width:100px">Horómetro fin.</th>
           <th class="text-end" style="width:80px">Total hora</th>
           <th class="text-end" style="width:90px">Petróleo (gal)</th>
           <th>Observaciones</th>
@@ -145,10 +146,11 @@
       <tbody>
         {% for r in sin_liq %}
         <tr>
+          <td class="fw-semibold" style="color:#4f46e5;font-size:.83rem">{% if r.numero_turno %}Turno {{ r.numero_turno }}{% else %}—{% endif %}</td>
           <td class="fw-semibold" style="color:#1d4ed8;font-size:.83rem">{{ r.numero_parte|default:"—" }}</td>
           <td style="font-size:.83rem">{{ r.fecha|date:"d/m/Y" }}</td>
-          <td style="font-size:.83rem">{{ r.hora_inicio|time:"H:i"|default:"—" }}</td>
-          <td style="font-size:.83rem">{{ r.hora_fin|time:"H:i"|default:"—" }}</td>
+          <td class="text-end" style="font-size:.83rem">{% if r.hora_inicio is not None %}{{ r.hora_inicio|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="text-end" style="font-size:.83rem">{% if r.hora_fin is not None %}{{ r.hora_fin|floatformat:2 }}{% else %}—{% endif %}</td>
           <td class="text-end fw-semibold" style="color:#2563eb;font-size:.85rem">{{ r.horas|floatformat:2 }}</td>
           <td class="text-end" style="font-size:.83rem">{% if r.combustible %}{{ r.combustible|floatformat:2 }}{% else %}—{% endif %}</td>
           <td style="font-size:.78rem;color:#6b7280">{{ r.observacion|truncatechars:60|default:"—" }}</td>
@@ -170,11 +172,16 @@
     <div class="modal-content">
       <div class="modal-header py-2 d-flex align-items-center gap-3">
         <h6 class="modal-title mb-0" style="font-size:1rem">
-          <i class="bi bi-clock-history me-2" style="color:#4f46e5"></i>Nuevo turno — <span class="fw-semibold">{{ maquinaria.nombre }}</span>
+          <i class="bi bi-clock-history me-2" style="color:#4f46e5"></i>Turno {{ siguiente_turno }} — <span class="fw-semibold">{{ maquinaria.nombre }}</span>
         </h6>
         <span class="badge" style="background:#eff6ff;color:#1d4ed8;font-size:.82rem;padding:.4em .7em">
           N° Parte <strong>{{ siguiente_parte }}</strong>
         </span>
+        {% if hora_minima is not None %}
+        <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.78rem;padding:.35em .6em" title="Horómetro final del turno anterior">
+          <i class="bi bi-arrow-up-right"></i> Min. {{ hora_minima|floatformat:2 }}
+        </span>
+        {% endif %}
         <button type="button" class="btn-close btn-sm ms-auto" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -222,11 +229,16 @@
                   {{ form_turno.fecha }}
                 </div>
                 <div class="col-sm-3">
-                  <label class="form-label">Hora inicial</label>
+                  <label class="form-label">Horómetro inicial</label>
                   {{ form_turno.hora_inicio }}
+                  {% if hora_minima is not None %}
+                  <div class="form-text" style="font-size:.72rem;color:#92400e">
+                    Mín. {{ hora_minima|floatformat:2 }} (horómetro final del Turno anterior)
+                  </div>
+                  {% endif %}
                 </div>
                 <div class="col-sm-3">
-                  <label class="form-label">Hora final</label>
+                  <label class="form-label">Horómetro final</label>
                   {{ form_turno.hora_fin }}
                 </div>
                 <div class="col-sm-4">
@@ -307,31 +319,26 @@
   });
 })();
 
-// Autofill de hora + cálculo de Total hora
+// Cálculo de Total hora = Horómetro final − Horómetro inicial (sin autofill).
 (function () {
   const ini = document.querySelector('#form-nuevo-turno [name="hora_inicio"]');
   const fin = document.querySelector('#form-nuevo-turno [name="hora_fin"]');
   const out = document.getElementById('turno-total-hora');
-  const modalEl = document.getElementById('modal-nuevo-turno');
-  function setAhora(inp) {
-    if (!inp || inp.value) return;
-    const d = new Date();
-    inp.value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  function num(v) {
+    if (v === '' || v == null) return null;
+    const n = Number(v);
+    return isFinite(n) ? n : null;
   }
-  function toMin(v) { if (!v) return null; const [h,m]=v.split(':').map(Number); return h*60+m; }
-  function fmt(m) { return Math.floor(m/60) + ':' + String(m%60).padStart(2,'0'); }
   function recalc() {
     if (!out) return;
-    const a = toMin(ini && ini.value); const b = toMin(fin && fin.value);
-    if (a == null || b == null) { out.textContent = '—'; return; }
-    let d = b - a; if (d < 0) d += 24*60;
-    out.textContent = fmt(d);
+    const a = num(ini && ini.value);
+    const b = num(fin && fin.value);
+    if (a == null || b == null || b < a) { out.textContent = '—'; return; }
+    out.textContent = (b - a).toFixed(2);
   }
   if (ini) ini.addEventListener('input', recalc);
   if (fin) fin.addEventListener('input', recalc);
-  if (modalEl) {
-    modalEl.addEventListener('shown.bs.modal', () => { setAhora(ini); setAhora(fin); recalc(); });
-  }
+  recalc();
 })();
 </script>
 

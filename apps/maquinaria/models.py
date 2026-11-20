@@ -405,6 +405,10 @@ class RegistroMaquinaria(models.Model):
 
     # Parte diario
     numero_parte = models.PositiveIntegerField('N° de parte', null=True, blank=True)
+    # Correlativo propio de turnos por máquina (independiente de N° Parte).
+    # Se muestra como "Turno N" y se usa para validar que el horómetro crece
+    # monótonamente (el horómetro de una máquina nunca retrocede).
+    numero_turno = models.PositiveIntegerField('N° Turno', null=True, blank=True)
     combustible  = models.DecimalField('Combustible (gal)', max_digits=8, decimal_places=2, null=True, blank=True)
 
     # Identificación
@@ -428,9 +432,11 @@ class RegistroMaquinaria(models.Model):
     hora_entrada = models.DecimalField('Horómetro entrada', max_digits=10, decimal_places=2, null=True, blank=True)
     hora_salida  = models.DecimalField('Horómetro salida',  max_digits=10, decimal_places=2, null=True, blank=True)
 
-    # Turno — reloj (HH:MM) — flujo nuevo del parte diario
-    hora_inicio = models.TimeField('Hora inicial', null=True, blank=True)
-    hora_fin    = models.TimeField('Hora final',   null=True, blank=True)
+    # Turno — horómetro (lectura numérica del contador de horas de la máquina).
+    # No es reloj: es el acumulado que marca la máquina. El horómetro final del
+    # turno N debe ser el inicial del turno N+1 o mayor (nunca retrocede).
+    hora_inicio = models.DecimalField('Horómetro inicial', max_digits=10, decimal_places=2, null=True, blank=True)
+    hora_fin    = models.DecimalField('Horómetro final',   max_digits=10, decimal_places=2, null=True, blank=True)
 
     # Actividad
     horas       = models.DecimalField(max_digits=6, decimal_places=2, default=0)
@@ -452,25 +458,37 @@ class RegistroMaquinaria(models.Model):
         return f'{self.fecha} — {self.nombre or (self.maquinaria or "")}'
 
     def save(self, *args, **kwargs):
-        # Preferimos reloj (hora_inicio / hora_fin) sobre horómetro cuando ambos
-        # están presentes: es el flujo nuevo del parte diario.
+        # Total de horas = horómetro final − horómetro inicial.
         if self.hora_inicio is not None and self.hora_fin is not None:
-            mins = (self.hora_fin.hour * 60 + self.hora_fin.minute) - \
-                   (self.hora_inicio.hour * 60 + self.hora_inicio.minute)
-            if mins < 0:  # caso cruce de medianoche
-                mins += 24 * 60
-            self.horas = (Decimal(mins) / Decimal('60')).quantize(Decimal('0.01'))
+            diff = Decimal(self.hora_fin) - Decimal(self.hora_inicio)
+            if diff >= 0:
+                self.horas = diff.quantize(Decimal('0.01'))
         elif self.hora_entrada is not None and self.hora_salida is not None:
             diff = self.hora_salida - self.hora_entrada
             if diff > 0:
                 self.horas = diff.quantize(Decimal('0.01'))
-        if not self.numero_parte and self.maquinaria_id:
-            qs = RegistroMaquinaria.objects.filter(maquinaria_id=self.maquinaria_id)
+        if self.maquinaria_id:
+            qs_hermanos = RegistroMaquinaria.objects.filter(maquinaria_id=self.maquinaria_id)
             if self.pk:
-                qs = qs.exclude(pk=self.pk)
-            ultimo = qs.order_by('-numero_parte').values_list('numero_parte', flat=True).first() or 0
-            self.numero_parte = ultimo + 1
+                qs_hermanos = qs_hermanos.exclude(pk=self.pk)
+            if not self.numero_parte:
+                ultimo_np = (qs_hermanos
+                             .filter(numero_parte__isnull=False)
+                             .order_by('-numero_parte')
+                             .values_list('numero_parte', flat=True).first() or 0)
+                self.numero_parte = ultimo_np + 1
+            if not self.numero_turno:
+                ultimo_nt = (qs_hermanos
+                             .filter(numero_turno__isnull=False)
+                             .order_by('-numero_turno')
+                             .values_list('numero_turno', flat=True).first() or 0)
+                self.numero_turno = ultimo_nt + 1
         super().save(*args, **kwargs)
+
+    @property
+    def turno_label(self):
+        """Etiqueta visible: 'Turno 1', 'Turno 2', ..."""
+        return f'Turno {self.numero_turno}' if self.numero_turno else 'Turno —'
 
     def costo_maquinaria(self):
         if self.maquinaria:
