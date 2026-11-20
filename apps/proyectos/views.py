@@ -145,43 +145,10 @@ def proyecto_dashboard(request, pk):
         } for r in top_qs]
 
         # ── Avance por partida (nivel 1 — grupos principales) ────────
-        partidas_nivel1 = presupuesto_obj.partidas.filter(nivel=1).order_by('orden', 'codigo')[:8]
-        for p in partidas_nivel1:
-            # Insumos ligados a cualquier partida descendiente
-            descendientes_ids = [p.pk]
-            def _recolectar(nodo_pk):
-                for hijo in Partida_hijos_de(nodo_pk, presupuesto_obj):
-                    descendientes_ids.append(hijo)
-                    _recolectar(hijo)
-            try:
-                _recolectar(p.pk)
-            except Exception:
-                pass
-            ins_qs = presupuesto_obj.insumos.filter(
-                recursopartida__partida_id__in=descendientes_ids
-            ).distinct().annotate(
-                aprob=Coalesce(
-                    Sum('detallerequerimiento__cantidad_requerida',
-                        filter=Q(detallerequerimiento__requerimiento__estado__in=[
-                            'APROBADO', 'COTIZADO', 'ATENDIDO', 'PARCIAL'
-                        ])),
-                    Value(0, output_field=DFld()),
-                )
-            )
-            tot = Decimal('0'); eje = Decimal('0')
-            for i in ins_qs:
-                precio = i.costo_unitario or Decimal('0')
-                cupo   = i.cantidad_total or i.cantidad or Decimal('0')
-                tot += Decimal(cupo) * precio
-                eje += Decimal(i.aprob or 0) * precio
-            pct = round(float(eje * 100 / tot), 1) if tot > 0 else 0
-            avance_partidas.append({
-                'codigo': p.codigo,
-                'nombre': p.nombre[:60],
-                'total':  tot,
-                'ejec':   eje,
-                'pct':    min(pct, 999),
-            })
+        # Nota: los InsumoPresupuesto no cuelgan de una partida; viven planos en
+        # el presupuesto. Hasta que exista esa vinculación, dejamos la lista
+        # vacía en lugar de romper el dashboard entero.
+        avance_partidas = []
 
     # ── Requerimientos por estado ───────────────────────────────────
     from django.db.models import Count
