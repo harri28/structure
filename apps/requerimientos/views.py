@@ -42,15 +42,23 @@ def _errores_saldo_global(formset, excluir_req_pk=None):
     return errores
 
 
-def _siguiente_numero(proyecto):
-    ultimo = proyecto.requerimientos.order_by('-pk').first()
+def _siguiente_numero(proyecto, origen='OBRA'):
+    """Siguiente correlativo por proyecto, separado por origen.
+
+    - OBRA    → '001', '002', ... (compatibilidad: JO ve REQ001 como siempre).
+    - ALMACEN → 'A001', 'A002', ... (el prefijo queda dentro de `numero` para
+      que `REQ{numero}` concatene bien en templates como "REQA001").
+    """
+    qs = proyecto.requerimientos.filter(origen=origen)
+    ultimo = qs.order_by('-pk').first()
+    prefijo = 'A' if origen == 'ALMACEN' else ''
     if not ultimo:
-        return '001'
+        return f'{prefijo}001'
     try:
         n = int(''.join(filter(str.isdigit, str(ultimo.numero))))
-        return str(n + 1).zfill(3)
+        return f'{prefijo}{str(n + 1).zfill(3)}'
     except (ValueError, AttributeError):
-        return str(proyecto.requerimientos.count() + 1).zfill(3)
+        return f'{prefijo}{str(qs.count() + 1).zfill(3)}'
 
 
 def _siguiente_numero_global():
@@ -245,7 +253,7 @@ def solicitar(request, proyecto_id):
 
     proyecto = get_object_or_404(Proyecto, pk=proyecto_id)
     empresa = ConfigEmpresa.get()
-    siguiente = _siguiente_numero(proyecto)
+    siguiente = _siguiente_numero(proyecto, origen='ALMACEN')
     siguiente_global = _siguiente_numero_global()
 
     if request.method == 'POST':
@@ -260,13 +268,14 @@ def solicitar(request, proyecto_id):
                 return render(request, 'requerimientos/solicitar.html', {
                     'form': form, 'formset': formset, 'proyecto': proyecto,
                     'empresa': empresa,
-                    'titulo': 'Solicitar material',
+                    'titulo': 'Nuevo Requerimiento de Almacén',
                     'siguiente_numero': siguiente,
                     'numero_global': siguiente_global,
                 })
             req = form.save(commit=False)
             req.proyecto = proyecto
             req.estado = 'SOLICITADO'
+            req.origen = 'ALMACEN'
             req.numero = siguiente
             req.numero_global = siguiente_global
             req.created_by = request.user
@@ -310,7 +319,7 @@ def solicitar(request, proyecto_id):
     return render(request, 'requerimientos/solicitar.html', {
         'form': form, 'formset': formset, 'proyecto': proyecto,
         'empresa': empresa,
-        'titulo': 'Solicitar material',
+        'titulo': 'Nuevo Requerimiento de Almacén',
         'siguiente_numero': siguiente,
         'numero_global': siguiente_global,
     })

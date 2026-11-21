@@ -24,6 +24,15 @@ ESTADOS_REQ = [
     ('ANULADO', 'Anulado'),
 ]
 
+# Origen del requerimiento. El Jefe de Obra y el Almacenero comparten modelo
+# porque todo el flujo downstream (aprobación, cotización, guía) es idéntico,
+# pero cada uno tiene su propio correlativo para que no colisionen y para que
+# el Almacenero vea "Requerimientos de Almacén" en su UI sin tocar la del JO.
+ORIGEN_REQ = [
+    ('OBRA',    'Jefe de Obra'),
+    ('ALMACEN', 'Almacén'),
+]
+
 
 class Requerimiento(models.Model):
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='requerimientos')
@@ -56,6 +65,10 @@ class Requerimiento(models.Model):
     # El impacto formal en el presupuesto (crear Modificacion / aumentar cantidad_total)
     # NO está implementado — ver REGLAS_NEGOCIO.md §14 (TODO).
     es_ajuste = models.BooleanField(default=False)
+    # Origen: discrimina entre REQ del Jefe de Obra (REQ001, REQ002, ...) y REQ
+    # del Almacenero (REQA001, REQA002, ...) — correlativos independientes por
+    # proyecto para que puedan existir REQ001 y REQA001 sin colisión.
+    origen = models.CharField(max_length=10, choices=ORIGEN_REQ, default='OBRA')
 
     class Meta:
         verbose_name = 'Requerimiento'
