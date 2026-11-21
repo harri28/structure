@@ -25,6 +25,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework.authtoken',
     'apps.catalogo',
     'apps.proyectos',
     'apps.presupuesto',
@@ -35,7 +37,23 @@ INSTALLED_APPS = [
     'apps.logistica',
     'apps.registro',
     'apps.reportes',
+    'apps.api',
 ]
+
+# API REST — para la app móvil. Token auth + sessions (sessions sirve al navegador
+# si queremos probar endpoints desde el admin o la consola).
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

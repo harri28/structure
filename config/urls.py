@@ -28,6 +28,7 @@ urlpatterns = [
     path('registro/', include('apps.registro.urls', namespace='registro')),
     path('requerimientos/', include('apps.requerimientos.urls', namespace='requerimientos')),
     path('reportes/', include('apps.reportes.urls', namespace='reportes')),
+    path('api/', include('apps.api.urls', namespace='api')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

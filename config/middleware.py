@@ -7,6 +7,7 @@ _RUTAS_PUBLICAS = [
     '/admin/',
     '/static/',
     '/media/',
+    '/api/',  # DRF autentica por Token; no debe pasar por el redirect a /login/
 ]
 
 # Rutas que no necesitan los headers anti-caché (estáticos sirven por Apache/WhiteNoise)
